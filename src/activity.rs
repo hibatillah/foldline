@@ -1,4 +1,4 @@
-//! Collapsed activity contracts; see docs/adding-an-activity.md.
+//! Collapsed activity contracts; see docs/how-to/add-an-activity.md.
 
 use windows::{Win32::UI::WindowsAndMessaging::WM_APP, core::GUID};
 

@@ -199,6 +199,38 @@ fn drag_out(path: &Path, notch_thread: u32) -> bool {
     }
 }
 
+/// The clipboard's text, or `None` when it holds no text or another program has it open.
+pub fn clipboard_text() -> Option<String> {
+    use windows::Win32::{
+        Foundation::{HANDLE, HGLOBAL},
+        System::{
+            DataExchange::{CloseClipboard, GetClipboardData, OpenClipboard},
+            Memory::{GlobalLock, GlobalSize, GlobalUnlock},
+        },
+    };
+    const CF_UNICODETEXT: u32 = 13;
+    unsafe { OpenClipboard(None) }.ok()?;
+    let text = (|| {
+        let HANDLE(handle) = unsafe { GetClipboardData(CF_UNICODETEXT) }.ok()?;
+        let memory = HGLOBAL(handle);
+        let start = unsafe { GlobalLock(memory) }.cast::<u16>();
+        if start.is_null() {
+            return None;
+        }
+        // SAFETY: CF_UNICODETEXT is a null-terminated UTF-16 string that stays locked until GlobalUnlock.
+        // Bounded by the block's size, in case the text lacks its terminator.
+        let capacity = unsafe { GlobalSize(memory) } / size_of::<u16>();
+        let length = (0..capacity).take_while(|&offset| unsafe { *start.add(offset) } != 0).count();
+        let text = String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(start, length) });
+        let _ = unsafe { GlobalUnlock(memory) };
+        Some(text)
+    })();
+    if let Err(error) = unsafe { CloseClipboard() } {
+        crate::log::debug(&format!("could not close the clipboard: {error}"));
+    }
+    text
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

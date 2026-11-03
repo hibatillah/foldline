@@ -23,7 +23,7 @@ use session::{LyricsStatus, MediaInfo, MediaWatcher};
 use crate::{
     gfx::{Canvas, Color, Fonts, ImageSlot, Rect, Size, Spring, balance_lines, clamp_lines},
     log,
-    page::{Context, Frame, Mode, Page, PageSizes, PointerEvent, Priority, TimerId},
+    page::{Context, Control as SettingControl, Frame, Mode, Page, PageSizes, PointerEvent, Priority, TimerId},
     ui::Icon,
 };
 
@@ -355,6 +355,15 @@ impl Page for MediaPage {
 
     fn icon(&self) -> Icon {
         Icon::Music
+    }
+
+    fn settings(&self) -> Vec<SettingControl> {
+        vec![SettingControl::Switch {
+            key: SETTING_LYRICS,
+            label: "Show lyrics",
+            hint: "beside the player and in the pill",
+            default: true,
+        }]
     }
 
     fn priority(&self, mode: Mode) -> Option<Priority> {

@@ -6,7 +6,7 @@ use windows::{
     Win32::{
         Foundation::FILETIME,
         NetworkManagement::IpHelper::{FreeMibTable, GetIfTable2, MIB_IF_TABLE2},
-        Storage::FileSystem::GetDiskFreeSpaceExW,
+        Storage::FileSystem::{GetDiskFreeSpaceExW, GetDriveTypeW, GetLogicalDrives},
         System::{
             SystemInformation::{GetSystemInfo, GlobalMemoryStatusEx, MEMORYSTATUSEX, SYSTEM_INFO},
             Threading::GetSystemTimes,
@@ -15,9 +15,12 @@ use windows::{
     core::HSTRING,
 };
 
+use super::gpu::GpuCounters;
+
 const IF_TYPE_ETHERNET: u32 = 6;
 const IF_TYPE_WIFI: u32 = 71;
 const OPER_STATUS_UP: i32 = 1;
+const DRIVE_FIXED: u32 = 3;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NetworkKind {
@@ -36,7 +39,15 @@ impl NetworkKind {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+/// One disk or GPU: its short name and how full or busy it is.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Meter {
+    pub name: String,
+    /// `None` while a GPU still waits for its second reading.
+    pub percent: Option<f32>,
+}
+
+#[derive(Clone, Debug)]
 pub struct Sample {
     /// Busy share of all processors since the previous reading; `None` on the first reading.
     pub cpu_percent: Option<f32>,
@@ -48,8 +59,10 @@ pub struct Sample {
     pub download_bytes_per_second: Option<f64>,
     pub upload_bytes_per_second: Option<f64>,
     pub network_kind: NetworkKind,
-    pub disk_percent: f32,
-    pub disk_free_bytes: u64,
+    /// Every fixed drive, in drive-letter order.
+    pub disks: Vec<Meter>,
+    /// Every hardware GPU, in the order Windows lists them.
+    pub gpus: Vec<Meter>,
 }
 
 pub fn cpu_percent(previous: (u64, u64), now: (u64, u64)) -> Option<f32> {
@@ -67,31 +80,37 @@ pub fn used_percent(total: u64, free: u64) -> f32 {
     if total == 0 { 0.0 } else { 100.0 * (1.0 - free.min(total) as f32 / total as f32) }
 }
 
+/// The meters named in `wanted`, in that order, or the first ones without a list; never more than `limit`.
+pub fn chosen(meters: &[Meter], wanted: Option<&[String]>, limit: usize) -> Vec<Meter> {
+    let picked: Vec<Meter> = match wanted {
+        Some(names) => {
+            names.iter().filter_map(|name| meters.iter().find(|meter| &meter.name == name)).cloned().collect()
+        }
+        None => meters.to_vec(),
+    };
+    picked.into_iter().take(limit).collect()
+}
+
 pub struct Sampler {
     previous_cpu: Option<(u64, u64)>,
     previous_network: Option<(u64, u64, Instant)>,
-    drive: HSTRING,
-    drive_name: String,
+    gpu_counters: Option<GpuCounters>,
 }
 
 impl Sampler {
     pub fn new() -> Self {
-        let drive = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".to_owned());
-        Self {
-            previous_cpu: None,
-            previous_network: None,
-            drive: HSTRING::from(format!("{drive}\\")),
-            drive_name: drive,
-        }
+        Self { previous_cpu: None, previous_network: None, gpu_counters: None }
     }
 
-    pub fn disk_label(&self) -> String {
-        format!("Disk {}", self.drive_name)
-    }
-
+    /// Starts fresh readings and opens the GPU counters; `release` closes them.
     pub fn reset(&mut self) {
         self.previous_cpu = None;
         self.previous_network = None;
+        self.gpu_counters = GpuCounters::open();
+    }
+
+    pub fn release(&mut self) {
+        self.gpu_counters = None;
     }
 
     pub fn sample(&mut self) -> Sample {
@@ -115,10 +134,6 @@ impl Sampler {
 
         let mut memory = MEMORYSTATUSEX { dwLength: size_of::<MEMORYSTATUSEX>() as u32, ..Default::default() };
         let _ = unsafe { GlobalMemoryStatusEx(&mut memory) };
-        let (mut free_to_user, mut disk_total, mut disk_free) = (0u64, 0u64, 0u64);
-        let _ = unsafe {
-            GetDiskFreeSpaceExW(&self.drive, Some(&mut free_to_user), Some(&mut disk_total), Some(&mut disk_free))
-        };
         let mut info = SYSTEM_INFO::default();
         unsafe { GetSystemInfo(&mut info) };
 
@@ -131,10 +146,27 @@ impl Sampler {
             download_bytes_per_second: download,
             upload_bytes_per_second: upload,
             network_kind,
-            disk_percent: used_percent(disk_total, disk_free),
-            disk_free_bytes: disk_free,
+            disks: fixed_disks(),
+            gpus: self.gpu_counters.as_mut().map(GpuCounters::read).unwrap_or_default(),
         }
     }
+}
+
+fn fixed_disks() -> Vec<Meter> {
+    let drive_mask = unsafe { GetLogicalDrives() };
+    (0..26u8)
+        .filter(|index| drive_mask & (1 << index) != 0)
+        .filter_map(|index| {
+            let letter = char::from(b'A' + index);
+            let root = HSTRING::from(format!("{letter}:\\"));
+            if unsafe { GetDriveTypeW(&root) } != DRIVE_FIXED {
+                return None;
+            }
+            let (mut free_to_user, mut total, mut free) = (0u64, 0u64, 0u64);
+            unsafe { GetDiskFreeSpaceExW(&root, Some(&mut free_to_user), Some(&mut total), Some(&mut free)) }.ok()?;
+            (total > 0).then(|| Meter { name: format!("{letter}:"), percent: Some(used_percent(total, free)) })
+        })
+        .collect()
 }
 
 fn file_time_ticks(time: FILETIME) -> u64 {
@@ -217,6 +249,30 @@ mod tests {
         assert_eq!(used_percent(1000, 5000), 0.0);
     }
 
+    fn meters(names: &[&str]) -> Vec<Meter> {
+        names.iter().map(|name| Meter { name: (*name).to_owned(), percent: Some(50.0) }).collect()
+    }
+
+    fn names(meters: &[Meter]) -> Vec<&str> {
+        meters.iter().map(|meter| meter.name.as_str()).collect()
+    }
+
+    #[test]
+    fn without_a_list_the_first_meters_show_up_to_the_limit() {
+        let disks = meters(&["C:", "D:", "E:", "F:"]);
+        assert_eq!(names(&chosen(&disks, None, 3)), ["C:", "D:", "E:"]);
+        assert_eq!(names(&chosen(&disks[..2], None, 3)), ["C:", "D:"]);
+    }
+
+    #[test]
+    fn a_list_picks_the_meters_in_its_own_order_and_skips_missing_ones() {
+        let disks = meters(&["C:", "D:", "E:", "F:"]);
+        let wanted = ["F:".to_owned(), "X:".to_owned(), "C:".to_owned()];
+        assert_eq!(names(&chosen(&disks, Some(&wanted), 3)), ["F:", "C:"]);
+        let too_many = ["F:".to_owned(), "E:".to_owned(), "D:".to_owned(), "C:".to_owned()];
+        assert_eq!(names(&chosen(&disks, Some(&too_many), 3)), ["F:", "E:", "D:"]);
+    }
+
     #[test]
     fn a_real_reading_makes_sense() {
         let mut sampler = Sampler::new();
@@ -224,7 +280,8 @@ mod tests {
         assert!(first.cpu_percent.is_none() && first.download_bytes_per_second.is_none());
         assert!(first.memory_total_bytes > 0 && first.memory_percent <= 100.0);
         assert!(first.logical_processors > 0);
-        assert!(first.disk_percent >= 0.0 && first.disk_percent <= 100.0);
+        assert!(!first.disks.is_empty(), "the Windows drive is a fixed disk");
+        assert!(first.disks.iter().all(|disk| disk.percent.is_some_and(|percent| (0.0..=100.0).contains(&percent))));
         let second = sampler.sample();
         assert!(
             second.cpu_percent.is_some_and(|percent| (0.0..=100.0).contains(&percent)) || second.cpu_percent.is_none()

@@ -1,7 +1,6 @@
 //! How the stats page writes numbers. Pure, so it is tested without a window.
 
 const KILO: f64 = 1000.0;
-const GIGA: f64 = 1_000_000_000.0;
 const GIBI: f64 = 1024.0 * 1024.0 * 1024.0;
 
 pub fn percent_text(percent: f32) -> String {
@@ -23,11 +22,6 @@ pub fn rate_text(bytes_per_second: f64) -> String {
     } else {
         format!("{} GB/s", short_number(rate / (KILO * KILO * KILO)))
     }
-}
-
-/// A disk size in decimal gigabytes, the way Windows reports drives: "200 GB".
-pub fn disk_text(bytes: u64) -> String {
-    format!("{} GB", short_number(bytes as f64 / GIGA))
 }
 
 /// "8.1 of 16 GB": the memory in use and the total, which Windows reports in binary gigabytes.
@@ -64,11 +58,5 @@ mod tests {
     #[test]
     fn the_memory_pair_rounds_the_total_to_whole_gigabytes() {
         assert_eq!(memory_pair_text(8_697_308_160, 17_179_869_184), "8.1 of 16 GB");
-    }
-
-    #[test]
-    fn disks_are_in_decimal_gigabytes() {
-        assert_eq!(disk_text(200_000_000_000), "200 GB");
-        assert_eq!(disk_text(34_000_000_000), "34.0 GB");
     }
 }

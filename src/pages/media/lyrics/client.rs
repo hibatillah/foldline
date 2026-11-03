@@ -19,7 +19,7 @@ use windows::{
 
 use super::{Lyrics, parse_synced_lyrics};
 
-const USER_AGENT: &str = "notch/0.1 (personal desktop widget)";
+const USER_AGENT: &str = concat!("Notch/", env!("CARGO_PKG_VERSION"), " (Windows desktop app)");
 const RETRY_DELAYS: [Duration; 4] = [
     Duration::from_millis(1500),
     Duration::from_millis(3000),

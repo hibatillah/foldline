@@ -21,7 +21,7 @@ use windows::{
             },
             Input::{
                 GetCurrentInputMessageSource, IMDT_TOUCHPAD, INPUT_MESSAGE_SOURCE,
-                KeyboardAndMouse::{TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent},
+                KeyboardAndMouse::{GetKeyState, SetFocus, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent, VK_CONTROL},
             },
             WindowsAndMessaging::*,
         },
@@ -163,6 +163,27 @@ pub(super) fn restore_topmost(window: HWND) {
     }
 }
 
+/// Brings the notch to the front so it receives typing; returns the window that had the keyboard.
+pub fn take_keyboard(window: HWND) -> Option<HWND> {
+    let previous = unsafe { GetForegroundWindow() };
+    if unsafe { SetForegroundWindow(window) }.as_bool() {
+        if let Err(error) = unsafe { SetFocus(Some(window)) } {
+            log::debug(&format!("could not focus the notch: {error}"));
+        }
+    } else {
+        log::debug("could not bring the notch to the front for typing");
+    }
+    (!previous.is_invalid() && previous != window).then_some(previous)
+}
+
+/// Hands the keyboard back to the window that had it, when that window still exists.
+pub fn give_back_keyboard(previous: Option<HWND>) {
+    let Some(previous) = previous else { return };
+    if unsafe { IsWindow(Some(previous)) }.as_bool() && !unsafe { SetForegroundWindow(previous) }.as_bool() {
+        log::debug("could not give the keyboard back");
+    }
+}
+
 extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     let (x, y) = (low_word_signed(lparam.0), high_word_signed(lparam.0));
     match message {
@@ -220,6 +241,22 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
             LRESULT(0)
         }
         WM_MOUSEACTIVATE => LRESULT(MA_NOACTIVATE as isize),
+        WM_KEYDOWN => {
+            let is_control_down = unsafe { GetKeyState(i32::from(VK_CONTROL.0)) } < 0;
+            if with_notch(|notch| notch.key_pressed(wparam.0 as u16, is_control_down)) == Some(true) {
+                LRESULT(0)
+            } else {
+                unsafe { DefWindowProcW(window, message, wparam, lparam) }
+            }
+        }
+        WM_CHAR => {
+            with_notch(|notch| notch.character_typed(wparam.0 as u16));
+            LRESULT(0)
+        }
+        WM_ACTIVATE if (wparam.0 & 0xFFFF) as u32 == WA_INACTIVE => {
+            with_notch(|notch| notch.deactivated());
+            LRESULT(0)
+        }
         WM_TIMER => {
             with_notch(|notch| notch.timer_fired(wparam.0));
             LRESULT(0)

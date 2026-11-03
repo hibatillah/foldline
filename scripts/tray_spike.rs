@@ -1,6 +1,6 @@
 //! Throwaway spike: a Windows 11 style tray menu (system backdrop, rounded corners, 40 px rows, Direct2D text).
-//! Not run by any script. Run: `cargo run --example tray_spike -- --hold-seconds 10`. See
-//! docs/superpowers/spikes/2026-10-30-tray-menu-spike.md. Delete once the decision is recorded.
+//! Not run by any script. Run: `cargo run --example tray_spike -- --hold-seconds 10`. Delete once the tray menu
+//! decision is recorded.
 
 use std::{cell::RefCell, mem::size_of, time::Instant};
 

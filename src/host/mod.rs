@@ -13,6 +13,7 @@ mod registry;
 mod screen_mode;
 mod settings;
 mod settings_launcher;
+mod settings_panel;
 mod startup;
 mod tray;
 mod visibility;

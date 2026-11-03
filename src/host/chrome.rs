@@ -5,15 +5,11 @@ use crate::{
     ui::Icon,
 };
 
-/// Retains the settings button implementation while hiding it from the header.
-pub const SETTINGS_BUTTON_SHOWN: bool = false;
 pub const PADDING_TOP: f32 = 10.0;
 pub const PADDING_SIDE: f32 = 16.0;
 pub const PADDING_BOTTOM: f32 = 14.0;
 pub const HEADER_HEIGHT: f32 = 16.0;
 pub const HEADER_GAP: f32 = 10.0;
-/// Fixed content height for every open view, matching the media player's plain layout.
-pub const CONTENT_HEIGHT: f32 = 86.0;
 pub const WIDTH_EXTRA: f32 = 2.0 * PADDING_SIDE;
 pub const HEIGHT_EXTRA: f32 = PADDING_TOP + HEADER_HEIGHT + HEADER_GAP + PADDING_BOTTOM;
 
@@ -22,7 +18,8 @@ const ACTIVE_DOT_WIDTH: f32 = 16.0;
 const DOT_GAP: f32 = 4.0;
 const DOT_HIT_SLACK: f32 = 5.0;
 const SETTINGS_BUTTON: f32 = 20.0;
-const SETTINGS_OVERHANG: f32 = 4.0;
+/// The header's right end holds the gear; the clock and the statuses sit to its left.
+pub const SETTINGS_SLOT: f32 = SETTINGS_BUTTON + 6.0;
 const SETTINGS_SIZE: f32 = 14.0;
 const DOT_INACTIVE: Color = Color::rgb(0.227, 0.227, 0.267);
 const DOT_ACTIVE: Color = Color::rgb(0.9, 0.9, 0.92);
@@ -91,7 +88,7 @@ pub fn dot_at(dots: &[Rect], point: Point, scale: f32) -> Option<usize> {
 }
 
 pub fn settings_button(pill: Rect, scale: f32) -> Rect {
-    let right = pill.right - (PADDING_SIDE - SETTINGS_OVERHANG) * scale;
+    let right = pill.right - PADDING_SIDE * scale;
     let center_y = header_center_y(pill, scale);
     Rect::new(
         right - SETTINGS_BUTTON * scale,
@@ -163,7 +160,8 @@ mod tests {
     #[test]
     fn the_settings_button_sits_at_the_right_end_of_the_header() {
         let button = settings_button(PILL, 1.0);
-        assert!(button.right > PILL.right - PADDING_SIDE && button.right <= PILL.right);
+        assert_eq!(button.right, PILL.right - PADDING_SIDE);
+        assert!(header_rect(PILL, 1.0).right - SETTINGS_SLOT >= button.left - 6.0);
         assert_eq!(button.center_y(), PADDING_TOP + HEADER_HEIGHT / 2.0);
         assert!(button.contains(Point::new(button.center_x(), button.center_y())));
     }

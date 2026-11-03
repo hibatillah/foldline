@@ -11,8 +11,8 @@ paths:
 
 # Pages and host boundaries
 
-Read `docs/adding-a-page.md` before writing a page, `docs/adding-an-activity.md` before writing an activity and
-`docs/architecture.md` before restructuring.
+Read `docs/tutorials/add-a-page.md` before writing a page, `docs/how-to/add-an-activity.md` before writing an activity and
+`docs/explanation/architecture.md` before restructuring.
 
 - A page lives in `src/pages/<name>/` and is listed only in `src/pages/mod.rs`; adding or removing one touches no
   other file.

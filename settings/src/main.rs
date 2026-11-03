@@ -24,8 +24,9 @@ use layout::Page;
 const SIDEBAR_WIDTH: f32 = 200.0;
 const MINIMUM_WINDOW_SIZE: (f32, f32) = (720.0, 480.0);
 const DEFAULT_WINDOW_SIZE: (f32, f32) = (980.0, 620.0);
-const REPOSITORY_URL: &str = "https://github.com/hibatillah/notch";
-const REPOSITORY_LABEL: &str = "Repository";
+/// Installed beside `notch-settings.exe`; the sidebar's bottom link opens it.
+const LICENSES_FILE: &str = "THIRD-PARTY-LICENSES.txt";
+const LICENSES_LABEL: &str = "Licenses";
 const LOGO_SIZE: f32 = 22.0;
 // The notch's own font files (SIL Open Font License, assets/fonts/Geist-LICENSE.txt).
 const GEIST_FONTS: [&[u8]; 2] =
@@ -124,16 +125,10 @@ impl Render for SettingsWindow {
                 .child(div().font_weight(gpui::FontWeight::SEMIBOLD).child("Notch"))
                 .child(div().text_xs().text_color(sidebar_muted(cx)).child(concat!("v", env!("CARGO_PKG_VERSION")))),
         );
-        let repository = div().w_full().child(
-            SidebarMenu::new().child(
-                SidebarMenuItem::new(REPOSITORY_LABEL)
-                    .icon(IconName::GitHub)
-                    .suffix(div().text_color(sidebar_muted(cx)).child("\u{2197}"))
-                    .on_click(|_event, _window, cx| cx.open_url(REPOSITORY_URL)),
-            ),
-        );
-        let sidebar =
-            Sidebar::left().w(px(SIDEBAR_WIDTH)).collapsed(false).header(brand).child(menu).footer(repository);
+        let licenses = div().w_full().child(SidebarMenu::new().child(
+            SidebarMenuItem::new(LICENSES_LABEL).icon(IconName::File).on_click(|_event, _window, cx| open_licenses(cx)),
+        ));
+        let sidebar = Sidebar::left().w(px(SIDEBAR_WIDTH)).collapsed(false).header(brand).child(menu).footer(licenses);
         let content = div()
             .id("content")
             .flex_1()
@@ -152,6 +147,15 @@ impl Render for SettingsWindow {
             .text_color(cx.theme().foreground)
             .child(h_flex().size_full().child(sidebar).child(content))
             .child(div().absolute().top_0().left_0().right_0().child(TitleBar::new()))
+    }
+}
+
+/// Opens the license notices installed beside this program; a development build has none and does nothing.
+fn open_licenses(cx: &mut App) {
+    let path = std::env::current_exe().ok().and_then(|exe| Some(exe.parent()?.join(LICENSES_FILE)));
+    match path {
+        Some(path) if path.is_file() => cx.open_with_system(&path),
+        _ => eprintln!("could not find {LICENSES_FILE} beside the settings window"),
     }
 }
 

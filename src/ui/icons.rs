@@ -31,6 +31,8 @@ pub enum Icon {
     Calendar,
     Stopwatch,
     Chart,
+    Checklist,
+    Moon,
     Bluetooth,
     Close,
     CapsLock,
@@ -216,6 +218,23 @@ impl Icon {
             Icon::Bluetooth => {
                 (line(&[(7.0, 8.0), (17.0, 16.0), (12.0, 20.5), (12.0, 3.5), (17.0, 8.0), (7.0, 16.0)]), Paint::Line)
             }
+            Icon::Moon => {
+                // A crescent: the big circle's arc from the right round to the top, then the small circle's arc back.
+                let arc = |center: (f32, f32), radius: f32, from: f32, to: f32, steps: u32| {
+                    (0..=steps).map(move |step| {
+                        let angle = (from + (to - from) * step as f32 / steps as f32).to_radians();
+                        (center.0 + radius * angle.cos(), center.1 + radius * angle.sin())
+                    })
+                };
+                let points: Vec<(f32, f32)> =
+                    arc((12.0, 12.0), 9.0, 0.0, 270.0, 24).chain(arc((16.5, 7.5), 6.364, 225.0, 45.0, 12)).collect();
+                (line(&points), Paint::Line)
+            }
+            Icon::Checklist => {
+                let first = join(line(&[(4.0, 7.0), (6.0, 9.0), (9.5, 5.5)]), line(&[(12.5, 7.5), (20.0, 7.5)]));
+                let second = join(line(&[(4.0, 16.0), (6.0, 18.0), (9.5, 14.5)]), line(&[(12.5, 16.5), (20.0, 16.5)]));
+                (join(first, second), Paint::Line)
+            }
             Icon::Chart => {
                 let bars = join(line(&[(6.0, 20.0), (6.0, 12.0)]), line(&[(12.0, 20.0), (12.0, 5.0)]));
                 (join(bars, line(&[(18.0, 20.0), (18.0, 9.0)])), Paint::Line)
@@ -274,7 +293,7 @@ fn join(mut first: Path, second: Path) -> Path {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 25] = [
+    const ALL: [Icon; 27] = [
         Icon::Lyrics,
         Icon::Previous,
         Icon::Play,
@@ -297,6 +316,8 @@ mod tests {
         Icon::Calendar,
         Icon::Stopwatch,
         Icon::Chart,
+        Icon::Checklist,
+        Icon::Moon,
         Icon::Bluetooth,
         Icon::Close,
         Icon::CapsLock,

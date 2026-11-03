@@ -39,6 +39,9 @@ pub const CHOICES: [Choice; 4] = [
 
 pub const MAXIMIZED_KEY: &str = "notch.maximized";
 pub const FULLSCREEN_KEY: &str = "notch.fullscreen";
+// The keys `src/host/visibility.rs` reads; a test compares them.
+pub const HOVER_MAXIMIZED_KEY: &str = "notch.hover_maximized";
+pub const HOVER_FULLSCREEN_KEY: &str = "notch.hover_fullscreen";
 const DEFAULT_MAXIMIZED: &str = "lyrics";
 const DEFAULT_FULLSCREEN: &str = "hidden";
 
@@ -93,6 +96,17 @@ pub fn page() -> Page {
                     ),
                 ],
             ),
+            Group::titled(
+                "Opening on hover",
+                vec![
+                    Item::new("Open on hover over a maximized window", field::toggle(HOVER_MAXIMIZED_KEY, true))
+                        .description(
+                            "Off: pointing at the top edge never opens the notch while a maximized window is in front. Short messages still follow the choice above.",
+                        ),
+                    Item::new("Open on hover over a full-screen app", field::toggle(HOVER_FULLSCREEN_KEY, true))
+                        .description("Off: the pointer never opens the notch during full-screen apps and games."),
+                ],
+            ),
             Group::loose_titled("What each choice does", vec![meanings()]),
         ],
     )
@@ -137,6 +151,15 @@ mod tests {
         let _ = std::fs::remove_file(&path);
         assert_eq!(shown_word(&settings, MAXIMIZED_KEY, DEFAULT_MAXIMIZED), "music");
         assert_eq!(shown_word(&settings, FULLSCREEN_KEY, DEFAULT_FULLSCREEN), "activities");
+    }
+
+    #[test]
+    fn the_hover_keys_match_the_ones_the_host_reads() {
+        let host = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../src/host/visibility.rs"))
+            .expect("host visibility source");
+        for key in [HOVER_MAXIMIZED_KEY, HOVER_FULLSCREEN_KEY] {
+            assert!(host.contains(&format!("\"{key}\"")), "{key} missing in host");
+        }
     }
 
     #[test]

@@ -6,7 +6,7 @@ A tiny notch for the top of your Windows screen, written in Rust. It sits at the
 
 The notch draws straight to the screen with Direct2D: no UI framework, no web view. Every page and every pill message is its own module. Pages can be disabled; notifications are the only optional activity. A settings window, opened from the tray menu, is a separate program, so it adds nothing to the notch while closed. See [Resource use](#resource-use) for measured CPU and memory.
 
-![The open notch on the media page, playing a song with its synced lyrics beside the controls](docs/images/notch-lyrics.png)
+![The open notch on the media page, playing a song with its synced lyrics beside the controls](assets/images/notch-lyrics.png)
 
 ## What it includes
 
@@ -18,7 +18,9 @@ Pages (what you see when you open the notch; the time sits in the header of ever
 - File shelf: drop files to keep them for a while
 - Calendar: the week and the events of a day you pick
 - Focus timer
-- System stats (off until you add it)
+- Shalat (off until you add it): prayer times for any city in the world, worked out on your PC with no internet. The next prayer and today's times, a mark in the collapsed pill 30 minutes before, and a short message when a prayer starts. Choose the city, the calculation method and a few minutes of adjustment for each time in the page's settings. Times show on your PC's clock.
+- Todo: add a task by typing in the notch, tick it off or delete it; the list is `%APPDATA%\notch\todo.txt`
+- System stats: CPU, memory, up to 2 GPUs, up to 3 disks and network (off until you add it)
 
 Activities (what the collapsed pill shows while something happens):
 
@@ -34,7 +36,7 @@ Activities (what the collapsed pill shows while something happens):
 
 ### Maximized and full-screen windows
 
-Over a **maximized** window and over a **full-screen** app (a game, a video, an F11 window) the notch follows its own choice for each, saved as `notch.maximized` and `notch.fullscreen`. The choices, from hiding the notch to keeping music visible, are listed in [docs/configuration.md](docs/configuration.md). You set them in the **Behavior** section of **Settings…**; they take precedence over **Hide when idle**, and choices saved with the old tray options carry over.
+Over a **maximized** window and over a **full-screen** app (a game, a video, an F11 window) the notch follows its own choice for each, saved as `notch.maximized` and `notch.fullscreen`. The choices, from hiding the notch to keeping music visible, are listed in [docs/reference/settings-keys.md](docs/reference/settings-keys.md). You set them in the **Behavior** section of **Settings…**; they take precedence over **Hide when idle**, and choices saved with the old tray options carry over. The same section can stop the pointer from opening the notch over either kind of window, so it only opens from hover over regular windows.
 
 ### Status marks
 
@@ -42,7 +44,7 @@ While the notch is open, small marks beside the time show what is going on: the 
 
 ### Extensible
 
-The tray menu can switch **Notifications** on or off; the other activities are always enabled. The **Settings…** window changes the options, orders pages and switches them on or off, and the notch applies each change at once; the same keys can be edited in the settings file (the **Edit pages** view in the notch is switched off; see [docs/configuration.md](docs/configuration.md)). To go further, write your own page or activity: each is one folder or file and one line in a registry, with no other code to touch. See [docs/adding-a-page.md](docs/adding-a-page.md) and [docs/adding-an-activity.md](docs/adding-an-activity.md).
+The tray menu can switch **Notifications** on or off; the other activities are always enabled. The **Settings…** window changes the options, orders pages and switches them on or off, and the notch applies each change at once; the same keys can be edited in the settings file (see [docs/reference/settings-keys.md](docs/reference/settings-keys.md)). To go further, write your own page or activity: each is one folder or file and one line in a registry, with no other code to touch. See [docs/tutorials/add-a-page.md](docs/tutorials/add-a-page.md) and [docs/how-to/add-an-activity.md](docs/how-to/add-an-activity.md).
 
 ### Limitations
 
@@ -64,7 +66,8 @@ The tray menu can switch **Notifications** on or off; the other activities are a
 - **Calendar:** click a day of the week to list its events.
 - **Calendar:** paste your calendar's iCal address into **Settings… > Calendar**, which lists the Google Calendar steps for finding it. Treat the address like a password.
 - **Tray menu** (right-click the tray icon; the notch itself has no menu): **Notifications**, **Hide when idle**, **Start with Windows**, **Settings…**, and **Quit**. On Windows 11 the icon may sit under the `^` overflow menu.
-- **Settings window** (**Settings…** in the tray menu): General (startup, notifications, music and timer, in cards), Pages, Behavior, Calendar and Advanced. Toggles apply at once; type a value into a field and press Enter, or click away, to save it. Pages sets the order and which pages are on, and Behavior sets what the notch shows over a maximized window and over a full-screen app. [docs/configuration.md](docs/configuration.md) lists every setting.
+- **Settings in the notch:** while the notch is open, a gear in its header opens a settings panel. Its first tab holds the open page's own settings (the timer lengths, lyrics, the calendar address, which disks and GPUs the stats page shows), followed by General, Behavior and **Pages**. On Pages, drag a page by its dotted handle to reorder it, double-click it to remove it, click a dashed one to add it. **Done** closes the panel.
+- **Settings window** (**Settings…** in the tray menu): General (startup, notifications, music and timer, in cards), Pages, Behavior, Calendar and Advanced. Toggles apply at once; type a value into a field and press Enter, or click away, to save it. Pages sets the order and which pages are on, and Behavior sets what the notch shows over a maximized window and over a full-screen app. [docs/reference/settings-keys.md](docs/reference/settings-keys.md) lists every setting.
 
 | Option | Default |
 | --- | --- |
@@ -72,6 +75,8 @@ The tray menu can switch **Notifications** on or off; the other activities are a
 | Hide when idle | Off |
 | Over a maximized window | Lyrics only |
 | Over a full-screen app | Hidden |
+| Open on hover over a maximized window | On |
+| Open on hover over a full-screen app | On |
 | Start with Windows | On in the installer |
 
 Defaults apply when no choice has been saved; existing notification, visibility and startup choices are retained.
@@ -89,15 +94,11 @@ The orange folded-tab logo identifies Notch in the tray, File Explorer, the inst
 
 ## Download
 
-Download `notch-<version>-windows-x64-setup.exe` from the [latest release](https://github.com/hibatillah/notch/releases/latest) and run it. The installer is not code-signed, so Windows may show a SmartScreen warning. The notch starts with Windows unless you untick that in the installer or in the tray menu (**Start with Windows**). Or clone the repository and build it yourself; see [Development](#development).
+Run `notch-<version>-windows-x64-setup.exe`. The installer is not code-signed, so Windows may show a SmartScreen warning. The notch starts with Windows unless you untick that in the installer or in the tray menu (**Start with Windows**). 
 
 ### Updating
 
-Notch has no automatic update. It does not look for new versions, because the only things it connects to the internet for are lyrics and a calendar link you set yourself (see [Privacy](#privacy)). To update, download the newer `-setup.exe` from the [releases](https://github.com/hibatillah/notch/releases) page and run it. The installer sees that Notch is already installed, says which version is installed and which one it would put in its place, and asks whether to continue. If you say yes it closes the running notch, replaces it in place and starts it again. You do not uninstall the old version first, and your settings stay.
-
-## Contributing
-
-This project does not take contributions: pull requests and issues may be ignored. Clone or fork it and change your copy. [docs/architecture.md](docs/architecture.md) explains how the code is organized.
+Notch has no automatic update. It does not look for new versions, because the only things it connects to the internet for are lyrics and a calendar link you set yourself (see [Privacy](#privacy)). To update, run the newer `-setup.exe`. The installer sees that Notch is already installed, says which version is installed and which one it would put in its place, and asks whether to continue. If you say yes it closes the running notch, replaces it in place and starts it again. You do not uninstall the old version first, and your settings stay.
 
 ## Development
 
@@ -132,16 +133,16 @@ Tests sit at the bottom of the source file they test. `scripts/perf.sh` measures
 
 | Doc                                            | What it covers                                                                      |
 | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
-| [docs/development.md](docs/development.md)     | requirements, build, run, development loop, checks, code style, dependency licenses |
-| [docs/testing.md](docs/testing.md)             | where the tests live, how to write one, the performance check                       |
-| [docs/performance.md](docs/performance.md)     | measured CPU/RAM, workloads and measurement limits                                 |
-| [docs/architecture.md](docs/architecture.md)   | how the code is organized                                                           |
-| [docs/adding-a-page.md](docs/adding-a-page.md) | write, register and remove a page                                                   |
-| [docs/adding-an-activity.md](docs/adding-an-activity.md) | write, register and remove an activity                                    |
-| [docs/configuration.md](docs/configuration.md) | which pages and activities are on, settings file, environment variables             |
-| [docs/releasing.md](docs/releasing.md)         | the CI and release workflows, and how to publish a release                          |
+| [docs/how-to/build-run-and-debug.md](docs/how-to/build-run-and-debug.md)     | requirements, build, run, development loop, checks, code style, dependency licenses |
+| [docs/how-to/test-and-snapshot.md](docs/how-to/test-and-snapshot.md)             | where the tests live, how to write one, the performance check                       |
+| [docs/reference/performance-baseline.md](docs/reference/performance-baseline.md)     | measured CPU/RAM, workloads and measurement limits                                 |
+| [docs/explanation/architecture.md](docs/explanation/architecture.md)   | how the code is organized                                                           |
+| [docs/tutorials/add-a-page.md](docs/tutorials/add-a-page.md) | write, register and remove a page                                                   |
+| [docs/how-to/add-an-activity.md](docs/how-to/add-an-activity.md) | write, register and remove an activity                                    |
+| [docs/reference/settings-keys.md](docs/reference/settings-keys.md) | which pages and activities are on, settings file, environment variables             |
+| [docs/how-to/cut-a-release.md](docs/how-to/cut-a-release.md)         | the CI and release workflows, and how to publish a release                          |
 
-For an AI coding agent, [CLAUDE.md](CLAUDE.md) and `.claude/rules/` hold the project rules.
+For an AI coding agent, [AGENTS.md](AGENTS.md) and `.claude/rules/` hold the project rules, and [docs/README.md](docs/README.md) indexes the documentation.
 
 ## Resource use
 
@@ -164,11 +165,11 @@ All baseline checks passed in this run. Earlier runs intermittently exceeded CPU
 one passing sample does not establish their cause or guarantee the same result on every machine.
 Music playback, live lyrics, held hover and swiping were not measured in this latest baseline.
 
-These figures are for `notch.exe`. The settings window is a separate process with a higher footprint while it is open; see [docs/performance.md](docs/performance.md#settings-window).
+These figures are for `notch.exe`. The settings window is a separate process with a higher footprint while it is open; see [docs/reference/performance-baseline.md](docs/reference/performance-baseline.md#settings-window).
 
 Run `scripts/perf.sh` to repeat the baseline, or add `--extended` for held hover and swiping.
 The check moves the mouse and replaces the running Notch; afterwards run `scripts/reload.sh` to restore normal pages.
-See [docs/testing.md](docs/testing.md) for options and limits.
+See [docs/how-to/test-and-snapshot.md](docs/how-to/test-and-snapshot.md) for options and limits.
 
 ## Privacy
 
@@ -183,10 +184,12 @@ It connects out for two things only:
 
 Notch is heavily inspired by Apple's Dynamic Island, and by the apps that bring the same idea to screens that have no hardware notch: [NotchNook](https://lo.cafe/notchnook) for the Mac and [Nusa](https://rama2555.github.io/nusa/) for Windows. They showed what a notch overlay can hold and how it should feel: the media player, the file shelf, the calendar and the short messages that open the pill.
 
-Notch itself is written independently, from scratch in Rust. It draws with Direct2D and uses no UI framework (only its separate settings window does), and every page and every pill message is its own module, so you can remove one or write your own. It is open source under the MIT license: clone or fork it and change your copy (see [Contributing](#contributing)).
+The shalat page's city list is derived from [GeoNames](https://www.geonames.org) data (cities of 15,000 people or more), licensed under [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/); it was reduced to names, countries and coordinates (`scripts/build-cities.sh`). Its times are calculated with the MIT-licensed [salah](https://crates.io/crates/salah) crate, kept in `vendor/salah` with one crash fix (see `vendor/salah/VENDORED.md`). Where the sun does not rise or set (far from the equator, about 62 degrees and beyond around midsummer) the page says there are no prayer times, and where the sun never gets deep enough for the Fajr or Isha angle, those times follow the middle-of-the-night rule. The calculation is within a few minutes of published tables (a Jakarta check against Aladhan's Kemenag method was 0 to 2 minutes later), so the adjustment settings exist; check the times against your local authority before relying on them.
+
+Notch itself is written independently, from scratch in Rust. It draws with Direct2D and uses no UI framework (only its separate settings window does), and every page and every pill message is its own module, so you can remove one or write your own.
 
 Notch is not affiliated with or endorsed by Apple, NotchNook, Nusa or their developers. Dynamic Island is a trademark of Apple Inc., and the other names belong to their owners.
 
 ## License
 
-[MIT](LICENSE)
+Proprietary. Copyright (c) 2026 hibatillah. All rights reserved; see [LICENSE](LICENSE). The third-party components in Notch are licensed under their own terms, listed in `THIRD-PARTY-LICENSES.txt` (installed beside `notch.exe`, and opened by **Licenses** in the settings window).

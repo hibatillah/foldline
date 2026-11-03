@@ -2,7 +2,7 @@
 name = "notch-settings"
 version = "0.4.0"
 edition = "2024"
-license = "MIT"
+license-file = "../LICENSE"
 publish = false
 
 [dependencies]

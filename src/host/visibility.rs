@@ -14,6 +14,8 @@ pub const DEFAULT_FULLSCREEN: Showing = Showing::Hidden;
 
 pub const MAXIMIZED_KEY: &str = "notch.maximized";
 pub const FULLSCREEN_KEY: &str = "notch.fullscreen";
+pub const HOVER_MAXIMIZED_KEY: &str = "notch.hover_maximized";
+pub const HOVER_FULLSCREEN_KEY: &str = "notch.hover_fullscreen";
 
 const OLD_HIDE_FOR_FULLSCREEN_KEY: &str = "notch.hide_for_fullscreen";
 const OLD_SHOW_OVER_MAXIMIZED_KEY: &str = "notch.show_over_maximized";
@@ -45,6 +47,15 @@ pub fn showing_for(mode: ScreenMode, maximized: Showing, fullscreen: Showing) ->
         ScreenMode::Normal => None,
         ScreenMode::Maximized => Some(maximized),
         ScreenMode::Fullscreen => Some(fullscreen),
+    }
+}
+
+/// Whether the pointer may open the notch; a regular window always allows it.
+pub fn opens_on_hover(mode: ScreenMode, over_maximized: bool, over_fullscreen: bool) -> bool {
+    match mode {
+        ScreenMode::Normal => true,
+        ScreenMode::Maximized => over_maximized,
+        ScreenMode::Fullscreen => over_fullscreen,
     }
 }
 
@@ -117,6 +128,15 @@ mod tests {
         assert_eq!(showing_for(ScreenMode::Normal, Showing::Music, Showing::Music), None);
         assert_eq!(showing_for(ScreenMode::Maximized, Showing::Music, Showing::Hidden), Some(Showing::Music));
         assert_eq!(showing_for(ScreenMode::Fullscreen, Showing::Music, Showing::Hidden), Some(Showing::Hidden));
+    }
+
+    #[test]
+    fn hover_opening_follows_the_switch_for_the_window_in_front_and_always_opens_over_a_regular_window() {
+        assert!(opens_on_hover(ScreenMode::Normal, false, false));
+        assert!(!opens_on_hover(ScreenMode::Maximized, false, true));
+        assert!(opens_on_hover(ScreenMode::Maximized, true, false));
+        assert!(!opens_on_hover(ScreenMode::Fullscreen, true, false));
+        assert!(opens_on_hover(ScreenMode::Fullscreen, false, true));
     }
 
     #[test]

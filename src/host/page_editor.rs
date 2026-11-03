@@ -14,15 +14,17 @@ const LABEL_GAP: f32 = 6.0;
 const CHIP_PADDING: f32 = 10.0;
 const CHIP_ICON: f32 = 14.0;
 const CHIP_ICON_GAP: f32 = 6.0;
+/// Room for the drag handle on a page that is on, or the plus on one that can be added.
+const HANDLE_SLOT: f32 = 8.0;
+const HANDLE_DOT: f32 = 2.0;
 const DONE_WIDTH: f32 = 54.0;
 const DONE_HEIGHT: f32 = 24.0;
 const DOUBLE_CLICK_MILLISECONDS: u64 = 450;
 const DRAG_THRESHOLD: f32 = 4.0;
 
-pub const TITLE: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Medium, Align::Leading);
 const LABEL: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Medium, Align::Leading);
 pub const CHIP: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Leading);
-const DONE: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Medium, Align::Center);
+const HANDLE_PLUS: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Medium, Align::Center);
 
 const CHIP_FILL: Color = Color::rgb(0.125, 0.125, 0.153);
 const CHIP_FILL_DRAGGED: Color = Color::rgb(0.184, 0.227, 0.282);
@@ -42,7 +44,7 @@ pub struct Entry {
 }
 
 pub fn chip_width(text_width: f32) -> f32 {
-    2.0 * CHIP_PADDING + CHIP_ICON + CHIP_ICON_GAP + text_width.ceil()
+    2.0 * CHIP_PADDING + HANDLE_SLOT + CHIP_ICON_GAP + CHIP_ICON + CHIP_ICON_GAP + text_width.ceil()
 }
 
 pub struct Layout {
@@ -50,7 +52,6 @@ pub struct Layout {
     pub available_label: Rect,
     pub on_chips: Vec<(usize, Rect)>,
     pub off_chips: Vec<(usize, Rect)>,
-    pub title: Rect,
     pub done: Rect,
     pub content_height: f32,
 }
@@ -95,7 +96,6 @@ pub fn layout(entries: &[Entry], content: Rect, header: Rect, scale: f32) -> Lay
         available_label: label(available_top),
         on_chips: on.iter().zip(on_rects).map(|(entry, rect)| (entry.page, place(rect))).collect(),
         off_chips: off.iter().zip(off_rects).map(|(entry, rect)| (entry.page, place(rect))).collect(),
-        title: Rect::new(header.left, header.top, header.right - (DONE_WIDTH + 12.0) * scale, header.bottom),
         done: Rect::new(
             header.right - DONE_WIDTH * scale,
             header.center_y() - DONE_HEIGHT * scale / 2.0,
@@ -229,15 +229,27 @@ pub fn draw_chip(canvas: &Canvas, rect: Rect, view: &ChipView, is_on: bool, is_d
             OFF_BORDER.faded(opacity),
         );
     }
-    let icon_center = Point::new(rect.left + (CHIP_PADDING + CHIP_ICON / 2.0) * scale, rect.center_y());
+    let handle_left = rect.left + CHIP_PADDING * scale;
+    if is_on {
+        // Two columns of three dots: the page can be dragged to a new place.
+        for column in 0..2 {
+            for row in 0..3 {
+                let center = Point::new(
+                    handle_left + (1.0 + column as f32 * 4.0) * scale,
+                    rect.center_y() + (row as f32 - 1.0) * 4.0 * scale,
+                );
+                canvas.fill_circle(center, HANDLE_DOT * scale / 2.0, icon_color.faded(opacity * 0.7));
+            }
+        }
+    } else {
+        let plus = Rect::new(handle_left, rect.top, handle_left + HANDLE_SLOT * scale, rect.bottom);
+        canvas.text(&HANDLE_PLUS, "+", plus, icon_color.faded(opacity));
+    }
+    let icon_left = handle_left + (HANDLE_SLOT + CHIP_ICON_GAP) * scale;
+    let icon_center = Point::new(icon_left + CHIP_ICON * scale / 2.0, rect.center_y());
     view.icon.draw(canvas, icon_center, CHIP_ICON * scale, icon_color, opacity);
-    let text_left = rect.left + (CHIP_PADDING + CHIP_ICON + CHIP_ICON_GAP) * scale;
+    let text_left = icon_left + (CHIP_ICON + CHIP_ICON_GAP) * scale;
     canvas.text(&CHIP, view.name, Rect::new(text_left, rect.top, rect.right, rect.bottom), text_color.faded(opacity));
-}
-
-pub fn draw_done(canvas: &Canvas, layout: &Layout, opacity: f32) {
-    canvas.fill_rounded_rect(layout.done, layout.done.height() / 2.0, Color::WHITE.faded(opacity));
-    canvas.text(&DONE, "Done", layout.done, Color::BLACK.faded(opacity));
 }
 
 #[cfg(test)]
@@ -285,7 +297,6 @@ mod tests {
     fn the_done_button_is_at_the_right_end_of_the_header() {
         let layout = laid_out(&entries(&[(0, 80.0)], &[]));
         assert_eq!(layout.done.right, 428.0);
-        assert!(layout.title.right < layout.done.left);
     }
 
     #[test]
@@ -365,7 +376,7 @@ mod tests {
     }
 
     #[test]
-    fn a_chip_is_as_wide_as_its_padding_icon_and_name() {
-        assert_eq!(chip_width(40.2), 2.0 * CHIP_PADDING + CHIP_ICON + CHIP_ICON_GAP + 41.0);
+    fn a_chip_is_as_wide_as_its_padding_handle_icon_and_name() {
+        assert_eq!(chip_width(40.2), 2.0 * CHIP_PADDING + HANDLE_SLOT + 2.0 * CHIP_ICON_GAP + CHIP_ICON + 41.0);
     }
 }

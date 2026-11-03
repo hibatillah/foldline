@@ -26,7 +26,7 @@ use self::{
 use crate::{
     activity::Presence,
     gfx::{Align, Canvas, Color, FontStyle, Fonts, Point, Rect, Size, UI_FONT, Weight},
-    page::{Context, Frame, Mode, Notifier, Page, PageSizes, PointerEvent, Priority, TimerId},
+    page::{Context, Control, Frame, Mode, Notifier, Page, PageSizes, PointerEvent, Priority, TimerId},
     platform,
     ui::Icon,
 };
@@ -423,6 +423,26 @@ impl Page for CalendarPage {
 
     fn icon(&self) -> Icon {
         Icon::Calendar
+    }
+
+    fn settings(&self) -> Vec<Control> {
+        vec![
+            Control::Text {
+                key: LINK_SETTING,
+                label: "Address (.ics)",
+                placeholder: "Click, then paste the secret iCal address",
+                is_secret: true,
+            },
+            Control::Stepper {
+                key: REFRESH_SETTING,
+                label: "Refresh",
+                unit: "min",
+                default: DEFAULT_REFRESH_MINUTES as i32,
+                min: 1,
+                max: 1440,
+                step: 5,
+            },
+        ]
     }
 
     fn priority(&self, mode: Mode) -> Option<Priority> {

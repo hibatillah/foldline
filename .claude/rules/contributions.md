@@ -1,4 +1,4 @@
 # Contributions
 
-The project takes no outside contributions. Send other developers to clone or fork the repository, and leave out
-contributor guides and pull request or issue templates.
+The project is closed-source and takes no outside contributions. Do not suggest cloning or forking the repository, and
+leave out contributor guides and pull request or issue templates.

@@ -16,7 +16,7 @@ use self::{
 use crate::{
     activity::{FLASH_TIMER, Flash, Presence},
     gfx::{Align, Canvas, Color, FontStyle, Fonts, Rect, UI_FONT, Weight},
-    page::{Context, Frame, Mode, Page, PageSizes, PointerEvent, Priority, TimerId},
+    page::{Context, Control, Frame, Mode, Page, PageSizes, PointerEvent, Priority, TimerId},
     ui::{self, Icon, PillButton, Ring},
 };
 
@@ -173,6 +173,38 @@ impl Page for TimerPage {
 
     fn icon(&self) -> Icon {
         Icon::Stopwatch
+    }
+
+    fn settings(&self) -> Vec<Control> {
+        vec![
+            Control::Stepper {
+                key: "timer.focus_minutes",
+                label: "Focus",
+                unit: "min",
+                default: 25,
+                min: 5,
+                max: 120,
+                step: 5,
+            },
+            Control::Stepper {
+                key: "timer.short_break_minutes",
+                label: "Short break",
+                unit: "min",
+                default: 5,
+                min: 1,
+                max: 120,
+                step: 1,
+            },
+            Control::Stepper {
+                key: "timer.long_break_minutes",
+                label: "Long break",
+                unit: "min",
+                default: 15,
+                min: 1,
+                max: 120,
+                step: 1,
+            },
+        ]
     }
 
     fn priority(&self, mode: Mode) -> Option<Priority> {

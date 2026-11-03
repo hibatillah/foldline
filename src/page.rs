@@ -1,4 +1,4 @@
-//! Host/page contracts; see docs/adding-a-page.md.
+//! Host/page contracts; see docs/tutorials/add-a-page.md.
 
 use windows::{
     Win32::{
@@ -19,6 +19,10 @@ use crate::{
 /// Device-independent pixels; resting content is centered within this height.
 pub const RESTING_HEIGHT: f32 = 33.0;
 pub const RESTING_MIN_WIDTH: f32 = 150.0;
+/// The open content height most pages use.
+pub const DEFAULT_CONTENT_HEIGHT: f32 = 86.0;
+/// The tallest open content the notch window holds, below its header and padding.
+pub const MAX_CONTENT_HEIGHT: f32 = 220.0;
 
 pub(crate) const WM_PAGE_NOTIFY: u32 = WM_APP + 1;
 /// Win32 timer ids from this up to `PAGE_TIMER_LIMIT` belong to pages; each page owns `TIMERS_PER_PAGE` of them.
@@ -45,7 +49,8 @@ pub enum Mode {
     Expanded,
 }
 
-/// Content sizes in DIP; the host fixes expanded height to 82 and adds padding and a header.
+/// Content sizes in DIP; the host adds padding and a header. `expanded.height` defaults to `DEFAULT_CONTENT_HEIGHT`
+/// and is capped at `MAX_CONTENT_HEIGHT`.
 #[derive(Clone, Copy, Debug)]
 pub struct PageSizes {
     pub resting_width: f32,
@@ -80,6 +85,69 @@ pub enum PointerEvent {
     SecondaryReleased(Point),
 }
 
+/// Typing delivered to the page that holds the keyboard (`Context::take_keyboard`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum KeyInput {
+    /// Typed or pasted characters, without line breaks or other control characters.
+    Text(String),
+    Backspace,
+    Delete,
+    Left,
+    Right,
+    Home,
+    End,
+    Enter,
+    Escape,
+}
+
+/// One setting the notch draws in its settings panel, saved under one settings key.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Control {
+    /// Saved as `on` or `off`.
+    Switch { key: &'static str, label: &'static str, hint: &'static str, default: bool },
+    /// A whole number changed by - and + in steps, saved as digits (with a minus sign when negative).
+    Stepper { key: &'static str, label: &'static str, unit: &'static str, default: i32, min: i32, max: i32, step: i32 },
+    /// One word out of `options` (saved word, shown label).
+    Choice {
+        key: &'static str,
+        label: &'static str,
+        options: &'static [(&'static str, &'static str)],
+        default: &'static str,
+    },
+    /// Typed in the notch; a secret shows dots.
+    Text { key: &'static str, label: &'static str, placeholder: &'static str, is_secret: bool },
+    /// Typed in the notch; `Page::search` lists matches and picking one saves its values. `key` holds the shown name.
+    Search { key: &'static str, label: &'static str, placeholder: &'static str },
+    /// Up to `max` of `options`, saved as a comma list in the order picked; no saved list means the first ones.
+    Picks { key: &'static str, label: &'static str, options: Vec<String>, max: usize },
+}
+
+impl Control {
+    pub fn key(&self) -> &'static str {
+        match self {
+            Control::Switch { key, .. }
+            | Control::Stepper { key, .. }
+            | Control::Choice { key, .. }
+            | Control::Text { key, .. }
+            | Control::Search { key, .. }
+            | Control::Picks { key, .. } => key,
+        }
+    }
+}
+
+/// One match of a `Control::Search`: what it shows, and the settings keys picking it writes.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SearchHit {
+    pub label: String,
+    pub values: Vec<(&'static str, String)>,
+}
+
+/// A tab of a page's settings in the notch's panel.
+pub struct SettingsGroup {
+    pub title: &'static str,
+    pub controls: Vec<Control>,
+}
+
 /// Identifies one of a page's timers. Must be below `TIMERS_PER_PAGE` (16).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TimerId(pub u8);
@@ -106,10 +174,12 @@ pub trait Page {
     /// All pages receive hover changes, including those not currently selected.
     fn on_hover_changed(&mut self, _is_hovering: bool, _context: &mut Context) {}
 
+    /// Labels the page adds to the tray menu.
     fn menu_items(&self) -> Vec<String> {
         Vec::new()
     }
 
+    /// A tray item of this page was chosen; `index` is its position in `menu_items`.
     fn on_menu_item(&mut self, _index: usize, _context: &mut Context) {}
 
     /// True for a page that takes files dropped on the notch; the first such page that is switched on gets them.
@@ -129,7 +199,30 @@ pub trait Page {
 
     fn on_timer(&mut self, _timer: TimerId, _context: &mut Context) {}
 
+    /// Typing, delivered only while this page holds the keyboard.
+    fn on_key(&mut self, _key: KeyInput, _context: &mut Context) {}
+
+    /// The keyboard went elsewhere without the page releasing it (a click in another window): stop editing.
+    fn on_keyboard_lost(&mut self, _context: &mut Context) {}
+
+    /// A background thread called this page's `Notifier`: read the shared state and request a repaint.
     fn on_notify(&mut self, _context: &mut Context) {}
+
+    /// The page's own settings, shown in the first tab of the notch's settings panel; empty means none.
+    fn settings(&self) -> Vec<Control> {
+        Vec::new()
+    }
+
+    /// The page's settings as tabs; a page with more settings than one tab holds overrides this.
+    fn settings_groups(&self) -> Vec<SettingsGroup> {
+        let controls = self.settings();
+        if controls.is_empty() { Vec::new() } else { vec![SettingsGroup { title: self.name(), controls }] }
+    }
+
+    /// Matches for what was typed into a `Control::Search`, best first; at most a handful.
+    fn search(&self, _key: &str, _query: &str) -> Vec<SearchHit> {
+        Vec::new()
+    }
 
     /// Called after another program changed settings.txt and the host re-read it: re-read this page's keys here.
     fn on_settings_changed(&mut self, _context: &mut Context) {}
@@ -164,6 +257,7 @@ pub trait Page {
     /// Draws the status mark into `area` (device pixels, as high as the header), faded by `opacity`.
     fn draw_header_status(&self, _canvas: &Canvas, _area: Rect, _scale: f32, _opacity: f32) {}
 
+    /// What the Pages tab and the settings panel call the page.
     fn name(&self) -> &'static str {
         self.id()
     }
@@ -172,6 +266,7 @@ pub trait Page {
         Icon::Clock
     }
 
+    /// True for a page that starts switched off until the user adds it.
     fn is_opt_in(&self) -> bool {
         false
     }
@@ -186,6 +281,8 @@ pub trait Page {
 pub(crate) struct Requests {
     pub repaint: bool,
     pub animate: bool,
+    /// The page that asked for the keyboard (`true`) or gave it back (`false`).
+    pub keyboard: Option<(usize, bool)>,
 }
 
 pub struct Context<'a> {
@@ -263,6 +360,17 @@ impl<'a> Context<'a> {
         unsafe {
             let _ = KillTimer(Some(self.window), self.timer_key(timer));
         }
+    }
+
+    /// Takes the keyboard from the app in front so `Page::on_key` gets typing; call it only from a click, never on
+    /// hover. The notch stays open until `release_keyboard` or `Page::on_keyboard_lost`.
+    pub fn take_keyboard(&mut self) {
+        self.requests.keyboard = Some((self.owner_index, true));
+    }
+
+    /// Gives the keyboard back to the app that had it.
+    pub fn release_keyboard(&mut self) {
+        self.requests.keyboard = Some((self.owner_index, false));
     }
 
     pub fn notifier(&self) -> Notifier {

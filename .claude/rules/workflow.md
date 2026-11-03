@@ -8,7 +8,8 @@
 - Mouse-driven checks (`scripts/perf.sh`) and screenshots need an unlocked screen; while it is locked (a `LogonUI`
   process runs) screenshots come out black. Verify through the `NOTCH_DEBUG` log or unit tests then. A check that
   opens windows over the screen or moves the mouse is run on purpose, after telling the user.
-- When the `Page` trait or anything pages use changes, update `docs/adding-a-page.md` in the same change; its example is
-  a real page that compiled. Do the same for the `Activity` trait and `docs/adding-an-activity.md`.
+- When the `Page` trait or anything pages use changes, update `docs/tutorials/add-a-page.md` in the same change; its example is
+  a real page that compiled. Do the same for the `Activity` trait and `docs/how-to/add-an-activity.md`.
 - When behavior a user can see changes, update `README.md` and the doc that covers it in the same change.
 - Commit only when the user asks.
+- Write brainstorming specs, plans and spikes to `.superpowers/` (`specs/`, `plans/`, `spikes/`), which git ignores; `docs/` holds only documentation.

@@ -23,7 +23,6 @@ AppId={{B4D1E7A2-5C3F-4F68-9A0E-2D7C61B8E4F3}
 AppName=Notch
 AppVersion={#AppVersion}
 AppPublisher=hibatillah
-AppPublisherURL=https://github.com/hibatillah/notch
 DefaultDirName={localappdata}\Programs\Notch
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest

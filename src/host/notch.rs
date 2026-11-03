@@ -17,6 +17,8 @@ use super::{
     page_editor::{self, ChipView, Entry, Outcome, PageEditor},
     screen_mode::ScreenMode,
     settings::Settings,
+    settings_panel::{self, Editing, Tab},
+    startup,
     visibility::{self, Showing},
 };
 use crate::{
@@ -24,13 +26,15 @@ use crate::{
     gfx::{Canvas, Color, Fonts, Point, Rect, Size, Spring, Surface, lerp},
     log,
     page::{
-        Context, Frame, Mode, Page, PointerEvent, Priority, RESTING_HEIGHT, Requests, split_owned_timer_key,
-        split_timer_key,
+        Context, Control, Frame, KeyInput, Mode, Page, PointerEvent, Priority, RESTING_HEIGHT, Requests, SearchHit,
+        split_owned_timer_key, split_timer_key,
     },
+    ui::{FieldOutcome, TextField},
 };
 
 pub const WINDOW_WIDTH: f32 = 1200.0;
-pub const WINDOW_HEIGHT: f32 = 260.0;
+/// Room for the tallest page (`page::MAX_CONTENT_HEIGHT`), its header, the drag growth and the shadow.
+pub const WINDOW_HEIGHT: f32 = 340.0;
 const DRAG_GROWTH: Size = Size::new(28.0, 14.0);
 
 const RESTING_RADIUS: f32 = 12.0;
@@ -87,7 +91,6 @@ const PAGE_GAP: f32 = 24.0;
 const EMPTY_PAGE_SIZE: Size = Size::new(220.0, 0.0);
 const LAST_PAGE_SETTING: &str = "navigation.page";
 const PAGE_ORDER_SETTING: &str = "navigation.order";
-const EDITOR_WIDTH: f32 = 428.0;
 const PAGES_OFF_SETTING: &str = "navigation.disabled";
 const KNOWN_PAGES_SETTING: &str = "pages.known";
 
@@ -145,6 +148,8 @@ pub struct Notch {
     hides_when_idle: bool,
     maximized_showing: Showing,
     fullscreen_showing: Showing,
+    opens_on_hover_over_maximized: bool,
+    opens_on_hover_over_fullscreen: bool,
     screen_mode: ScreenMode,
     is_revealed: bool,
     has_resting_content: bool,
@@ -153,6 +158,17 @@ pub struct Notch {
     is_animating: bool,
     pointer_captured: bool,
     is_dragging_files: bool,
+    /// The page typing goes to, and the window that had the keyboard before it.
+    keyboard_owner: Option<KeyboardOwner>,
+    /// Which tab the settings panel shows, the page whose settings its first tab holds, and the text being typed.
+    panel_tab: Tab,
+    panel_page: Option<usize>,
+    panel_editing: Option<Editing>,
+    /// The matches of the search being typed; their labels show as chips.
+    panel_hits: Vec<SearchHit>,
+    keyboard_previous: Option<HWND>,
+    /// The first half of a character outside the basic plane, waiting for its second `WM_CHAR`.
+    pending_high_surrogate: Option<u16>,
     last_tick: i64,
     ticks_per_second: i64,
     frame_interval_milliseconds: u32,
@@ -196,6 +212,8 @@ impl Notch {
         let hides_when_idle = settings.get_bool(HIDE_WHEN_IDLE_SETTING, false);
         let maximized_showing = read_showing(&settings, visibility::MAXIMIZED_KEY, visibility::DEFAULT_MAXIMIZED);
         let fullscreen_showing = read_showing(&settings, visibility::FULLSCREEN_KEY, visibility::DEFAULT_FULLSCREEN);
+        let opens_on_hover_over_maximized = settings.get_bool(visibility::HOVER_MAXIMIZED_KEY, true);
+        let opens_on_hover_over_fullscreen = settings.get_bool(visibility::HOVER_FULLSCREEN_KEY, true);
         Self {
             window,
             scale,
@@ -231,6 +249,8 @@ impl Notch {
             hides_when_idle,
             maximized_showing,
             fullscreen_showing,
+            opens_on_hover_over_maximized,
+            opens_on_hover_over_fullscreen,
             screen_mode: ScreenMode::Normal,
             is_revealed: false,
             has_resting_content: false,
@@ -239,6 +259,13 @@ impl Notch {
             is_animating: false,
             pointer_captured: false,
             is_dragging_files: false,
+            keyboard_owner: None,
+            panel_tab: Tab::General,
+            panel_page: None,
+            panel_editing: None,
+            panel_hits: Vec::new(),
+            keyboard_previous: None,
+            pending_high_surrogate: None,
             last_tick: 0,
             ticks_per_second,
             frame_interval_milliseconds: display::frame_interval_milliseconds(),
@@ -300,7 +327,7 @@ impl Notch {
         self.cancel_close();
         self.set_hovering(true);
         let frame = self.frame();
-        let is_over_settings = chrome::SETTINGS_BUTTON_SHOWN
+        let is_over_settings = self.editor.is_none()
             && frame.is_open()
             && chrome::settings_button(frame.bounds, self.scale).contains(point);
         if is_over_settings != self.is_settings_hovered {
@@ -566,8 +593,13 @@ impl Notch {
                     let _ = KillTimer(Some(self.window), CLOSE_TIMER_ID);
                 }
                 self.is_close_pending = false;
-                // The pointer may have come back without moving, which sends no message.
-                if !self.pointer_captured && !self.is_dragging_files && !self.pointer_is_over_window() {
+                // The pointer may have come back without moving, which sends no message; a page that is typing keeps
+                // the notch open until it gives the keyboard back.
+                if !self.pointer_captured
+                    && !self.is_dragging_files
+                    && self.keyboard_owner.is_none()
+                    && !self.pointer_is_over_window()
+                {
                     self.set_hovering(false);
                     self.flush();
                 }
@@ -729,8 +761,8 @@ impl Notch {
             self.go_to_page(self.navigable[position]);
             return true;
         }
-        if chrome::SETTINGS_BUTTON_SHOWN && chrome::settings_button(frame.bounds, self.scale).contains(point) {
-            self.editor = Some(PageEditor::default());
+        if chrome::settings_button(frame.bounds, self.scale).contains(point) {
+            self.open_panel();
             return true;
         }
         false
@@ -757,14 +789,197 @@ impl Notch {
     }
 
     fn editor_size(&self) -> Size {
-        let bounds = Rect::new(0.0, 0.0, EDITOR_WIDTH, 0.0);
-        let layout = page_editor::layout(&self.editor_entries(), bounds, Rect::new(0.0, 0.0, EDITOR_WIDTH, 16.0), 1.0);
-        Size::new(EDITOR_WIDTH, layout.content_height)
+        let width = settings_panel::PANEL_WIDTH;
+        let height = if self.panel_tab == Tab::Pages {
+            let bounds = Rect::new(0.0, 0.0, width, 0.0);
+            page_editor::layout(&self.editor_entries(), bounds, Rect::new(0.0, 0.0, width, 16.0), 1.0).content_height
+        } else {
+            settings_panel::content_height(&self.panel_controls())
+        };
+        Size::new(width, height)
+    }
+
+    /// Opens the settings panel on the open page's own settings when it has any.
+    fn open_panel(&mut self) {
+        self.panel_page = self.expanded_index.filter(|&index| !self.pages[index].settings_groups().is_empty());
+        self.panel_tab = if self.panel_page.is_some() { Tab::Page(0) } else { Tab::General };
+        self.editor = Some(PageEditor::default());
+        self.pending.repaint = true;
+    }
+
+    fn close_panel(&mut self) {
+        self.finish_panel_editing(false);
+        self.editor = None;
+        self.pending.repaint = true;
+    }
+
+    fn panel_tabs(&self) -> Vec<(Tab, &'static str)> {
+        let groups = self.panel_page.map(|index| self.pages[index].settings_groups()).unwrap_or_default();
+        let page_tabs = groups.iter().enumerate().map(|(position, group)| (Tab::Page(position), group.title));
+        page_tabs.chain([(Tab::General, "General"), (Tab::Behavior, "Behavior"), (Tab::Pages, "Pages")]).collect()
+    }
+
+    fn panel_controls(&self) -> Vec<Control> {
+        match self.panel_tab {
+            Tab::Page(position) => self
+                .panel_page
+                .and_then(|index| self.pages[index].settings_groups().into_iter().nth(position))
+                .map(|group| group.controls)
+                .unwrap_or_default(),
+            Tab::General => settings_panel::general_controls(),
+            Tab::Behavior => settings_panel::behavior_controls(),
+            Tab::Pages => Vec::new(),
+        }
+    }
+
+    fn saved_value(&self, key: &str) -> Option<String> {
+        if key == settings_panel::START_WITH_WINDOWS_KEY {
+            return Some(if startup::is_enabled() { "on" } else { "off" }.to_owned());
+        }
+        self.settings.get_string(key).map(str::to_owned)
+    }
+
+    fn save_setting(&mut self, key: &str, value: &str) {
+        log::debug(&format!("setting {key} changed in the notch"));
+        if key == settings_panel::START_WITH_WINDOWS_KEY {
+            startup::set_enabled(value == "on");
+        } else {
+            self.settings.set_string(key, value);
+            self.reload_settings();
+        }
+        self.pending.repaint = true;
+    }
+
+    fn panel_layout(&self, frame: &Frame) -> (settings_panel::TabsLayout, Vec<settings_panel::Placed>) {
+        let measure = |label: &str| self.fonts.measure(&page_editor::CHIP, label);
+        let tabs = settings_panel::tabs_layout(
+            &self.panel_tabs(),
+            chrome::header_rect(frame.bounds, self.scale),
+            self.scale,
+            &measure,
+        );
+        let controls = self.panel_controls();
+        let content = chrome::content_rect(frame.bounds, self.scale);
+        let results = self.hit_labels();
+        (tabs, settings_panel::layout(&controls, content, self.scale, &measure, &results))
+    }
+
+    fn press_panel(&mut self, point: Point) -> bool {
+        let frame = self.frame();
+        let (tabs, placed) = self.panel_layout(&frame);
+        if tabs.done.contains(point) {
+            self.close_panel();
+            return true;
+        }
+        if let Some(&(tab, _)) = tabs.tabs.iter().find(|(_, rect)| rect.contains(point)) {
+            self.finish_panel_editing(false);
+            self.panel_tab = tab;
+            self.pending.repaint = true;
+            return true;
+        }
+        if self.panel_tab == Tab::Pages {
+            return false;
+        }
+        let controls = self.panel_controls();
+        let Some((index, part)) = settings_panel::hit(&placed, point) else {
+            self.finish_panel_editing(true);
+            return true;
+        };
+        let control = &controls[index];
+        if let settings_panel::Part::Result(position) = part {
+            self.pick_hit(position);
+        } else if part == settings_panel::Part::Field {
+            if self.panel_editing.as_ref().is_some_and(|editing| editing.control == index) {
+                return true;
+            }
+            self.finish_panel_editing(true);
+            let mut field = TextField::new(settings_panel::TEXT_LIMIT);
+            if !matches!(control, Control::Search { .. }) {
+                field.apply(&KeyInput::Text(self.saved_value(control.key()).unwrap_or_default()));
+            }
+            self.panel_editing = Some(Editing { control: index, field });
+            self.take_keyboard_for(KeyboardOwner::Panel);
+        } else {
+            self.finish_panel_editing(true);
+            let saved = self.saved_value(control.key());
+            if let Some(value) = settings_panel::pressed_value(control, part, saved.as_deref()) {
+                self.save_setting(control.key(), &value);
+            }
+        }
+        self.pending.repaint = true;
+        true
+    }
+
+    fn panel_key(&mut self, key: &KeyInput) {
+        let Some(editing) = self.panel_editing.as_mut() else { return };
+        let outcome = editing.field.apply(key);
+        let (control, query) = (editing.control, editing.field.text().to_owned());
+        let is_search = matches!(self.panel_controls().get(control), Some(Control::Search { .. }));
+        match outcome {
+            FieldOutcome::Submitted if is_search => {
+                self.pick_hit(0);
+                self.finish_panel_editing(false);
+            }
+            FieldOutcome::Submitted => self.finish_panel_editing(true),
+            FieldOutcome::Cancelled => self.finish_panel_editing(false),
+            FieldOutcome::Changed | FieldOutcome::Unchanged => {
+                if is_search {
+                    self.refresh_hits(control, &query);
+                }
+            }
+        }
+        self.pending.repaint = true;
+    }
+
+    fn hit_labels(&self) -> Vec<&str> {
+        self.panel_hits.iter().map(|hit| hit.label.as_str()).collect()
+    }
+
+    /// Asks the open page for matches once at least two characters are typed.
+    fn refresh_hits(&mut self, control: usize, query: &str) {
+        let key = self.panel_controls().get(control).map(Control::key);
+        self.panel_hits = match (self.panel_page, key) {
+            (Some(index), Some(key)) if query.trim().chars().count() >= 2 => {
+                self.pages[index].search(key, query.trim())
+            }
+            _ => Vec::new(),
+        };
+    }
+
+    /// Saves every value of one match, then re-reads the settings once.
+    fn pick_hit(&mut self, position: usize) {
+        let Some(hit) = self.panel_hits.get(position).cloned() else { return };
+        for (key, value) in &hit.values {
+            self.settings.set_string(key, value);
+        }
+        log::debug(&format!("search match {} picked in the notch", hit.label));
+        self.panel_hits.clear();
+        self.finish_panel_editing(false);
+        self.reload_settings();
+        self.pending.repaint = true;
+    }
+
+    /// Ends typing in the panel; `save` keeps what was typed.
+    fn finish_panel_editing(&mut self, save: bool) {
+        let Some(editing) = self.panel_editing.take() else { return };
+        self.panel_hits.clear();
+        let is_search = |control: &Control| matches!(control, Control::Search { .. });
+        if save && let Some(control) = self.panel_controls().get(editing.control).filter(|control| !is_search(control))
+        {
+            let typed = editing.field.text().trim().to_owned();
+            if self.saved_value(control.key()).unwrap_or_default() != typed {
+                self.save_setting(control.key(), &typed);
+            }
+        }
+        if self.keyboard_owner == Some(KeyboardOwner::Panel) {
+            self.give_keyboard_back();
+        }
+        self.pending.repaint = true;
     }
 
     fn press_editor(&mut self, point: Point) {
         let frame = self.frame();
-        if !frame.is_open() {
+        if !frame.is_open() || self.press_panel(point) {
             return;
         }
         let layout = self.editor_layout(&frame);
@@ -791,7 +1006,7 @@ impl Notch {
         match outcome {
             Outcome::Nothing => return,
             Outcome::Done => {
-                self.editor = None;
+                self.close_panel();
             }
             Outcome::Move { page, position } => {
                 let on_pages: Vec<usize> =
@@ -817,9 +1032,21 @@ impl Notch {
     }
 
     fn draw_editor(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
+        let (tabs, placed) = self.panel_layout(frame);
+        settings_panel::draw_tabs(canvas, &tabs, &self.panel_tabs(), self.panel_tab, opacity);
+        if self.panel_tab != Tab::Pages {
+            let controls = self.panel_controls();
+            for item in &placed {
+                let control = &controls[item.control];
+                let saved = self.saved_value(control.key());
+                let editing = self.panel_editing.as_ref().filter(|editing| editing.control == item.control);
+                let field = editing.map(|editing| &editing.field);
+                let results = self.hit_labels();
+                settings_panel::draw_control(canvas, control, item, saved.as_deref(), field, &results, opacity);
+            }
+            return;
+        }
         let layout = self.editor_layout(frame);
-        canvas.text(&page_editor::TITLE, "Edit pages", layout.title, Color::WHITE.faded(opacity));
-        page_editor::draw_done(canvas, &layout, opacity);
         page_editor::draw_labels(canvas, &layout, opacity);
         let dragged = self.editor.as_ref().and_then(PageEditor::dragged);
         for (is_on, chips) in [(true, &layout.on_chips), (false, &layout.off_chips)] {
@@ -927,6 +1154,9 @@ impl Notch {
 
     fn flush(&mut self) {
         let requests = std::mem::take(&mut self.pending);
+        if let Some((index, wants_keyboard)) = requests.keyboard {
+            self.set_keyboard(index, wants_keyboard);
+        }
         let layout_changed = self.refresh_layout();
         if requests.animate {
             self.start_animation();
@@ -940,8 +1170,100 @@ impl Notch {
         }
     }
 
+    fn set_keyboard(&mut self, index: usize, wants_keyboard: bool) {
+        if wants_keyboard {
+            self.take_keyboard_for(KeyboardOwner::Page(index));
+        } else if self.keyboard_owner == Some(KeyboardOwner::Page(index)) {
+            self.give_keyboard_back();
+        }
+    }
+
+    fn take_keyboard_for(&mut self, owner: KeyboardOwner) {
+        if self.keyboard_owner == Some(owner) {
+            return;
+        }
+        match self.keyboard_owner.replace(owner) {
+            Some(previous_owner) => self.keyboard_lost_by(previous_owner),
+            None => self.keyboard_previous = super::window::take_keyboard(self.window),
+        }
+        log::debug(&format!("keyboard taken by {owner:?}"));
+    }
+
+    fn give_keyboard_back(&mut self) {
+        let Some(owner) = self.keyboard_owner.take() else { return };
+        self.pending_high_surrogate = None;
+        super::window::give_back_keyboard(self.keyboard_previous.take());
+        log::debug(&format!("keyboard given back by {owner:?}"));
+        self.close_if_pointer_is_away();
+    }
+
+    fn keyboard_lost_by(&mut self, owner: KeyboardOwner) {
+        match owner {
+            KeyboardOwner::Page(index) => self.with_page(index, |page, context| page.on_keyboard_lost(context)),
+            KeyboardOwner::Panel => {
+                self.panel_editing = None;
+                self.pending.repaint = true;
+            }
+        }
+    }
+
+    /// The notch lost activation to another window while a page was typing.
+    pub fn deactivated(&mut self) {
+        let Some(owner) = self.keyboard_owner.take() else { return };
+        self.keyboard_previous = None;
+        self.pending_high_surrogate = None;
+        log::debug(&format!("keyboard lost by {owner:?}"));
+        self.keyboard_lost_by(owner);
+        self.close_if_pointer_is_away();
+        self.flush();
+    }
+
+    fn close_if_pointer_is_away(&mut self) {
+        if self.is_hovering && !self.pointer_captured && !self.pointer_is_over_window() {
+            self.set_hovering(false);
+        }
+    }
+
+    /// Handles `WM_KEYDOWN`; returns false for keys no page wants, so Windows handles them.
+    pub fn key_pressed(&mut self, virtual_key: u16, is_control_down: bool) -> bool {
+        let Some(owner) = self.keyboard_owner else { return false };
+        let Some(key) = key_input(virtual_key, is_control_down) else { return false };
+        self.deliver_key(owner, key);
+        self.flush();
+        true
+    }
+
+    /// Handles `WM_CHAR`, joining surrogate pairs and skipping control characters.
+    pub fn character_typed(&mut self, unit: u16) {
+        let Some(owner) = self.keyboard_owner else { return };
+        let units: Vec<u16> = match (self.pending_high_surrogate.take(), unit) {
+            (_, 0xD800..=0xDBFF) => {
+                self.pending_high_surrogate = Some(unit);
+                return;
+            }
+            (Some(high), 0xDC00..=0xDFFF) => vec![high, unit],
+            _ => vec![unit],
+        };
+        let typed: String =
+            char::decode_utf16(units).filter_map(Result::ok).filter(|character| !character.is_control()).collect();
+        if typed.is_empty() {
+            return;
+        }
+        self.deliver_key(owner, KeyInput::Text(typed));
+        self.flush();
+    }
+
+    fn deliver_key(&mut self, owner: KeyboardOwner, key: KeyInput) {
+        match owner {
+            KeyboardOwner::Page(index) => self.with_page(index, |page, context| page.on_key(key, context)),
+            KeyboardOwner::Panel => self.panel_key(&key),
+        }
+    }
+
     fn sync_shown_page(&mut self) -> bool {
-        let shown = (self.is_hovering && self.editor.is_none()).then_some(self.expanded_index).flatten();
+        let shown = ((self.is_hovering || self.keyboard_owner.is_some()) && self.editor.is_none())
+            .then_some(self.expanded_index)
+            .flatten();
         if shown == self.shown_page {
             return false;
         }
@@ -1002,7 +1324,7 @@ impl Notch {
             (&mut self.resting_width, resting_target),
             (&mut self.resting_height, resting_height_target),
             (&mut self.expanded_width, expanded.width + chrome::WIDTH_EXTRA + growth.width),
-            (&mut self.expanded_height, chrome::CONTENT_HEIGHT + chrome::HEIGHT_EXTRA + growth.height),
+            (&mut self.expanded_height, content_height(expanded.height) + chrome::HEIGHT_EXTRA + growth.height),
             (&mut self.activity_blend, if transient_widths.is_empty() && banner.is_none() { 0.0 } else { 1.0 }),
             (&mut self.badge_width, badge_space),
         ] {
@@ -1127,6 +1449,14 @@ impl Notch {
         visibility::showing_for(self.screen_mode, self.maximized_showing, self.fullscreen_showing)
     }
 
+    fn opens_on_hover(&self) -> bool {
+        visibility::opens_on_hover(
+            self.screen_mode,
+            self.opens_on_hover_over_maximized,
+            self.opens_on_hover_over_fullscreen,
+        )
+    }
+
     fn is_suppressed(&self) -> bool {
         self.current_showing() == Some(Showing::Hidden)
     }
@@ -1222,6 +1552,10 @@ impl Notch {
         self.hides_when_idle = self.settings.get_bool(HIDE_WHEN_IDLE_SETTING, self.hides_when_idle);
         self.maximized_showing = read_showing(&self.settings, visibility::MAXIMIZED_KEY, self.maximized_showing);
         self.fullscreen_showing = read_showing(&self.settings, visibility::FULLSCREEN_KEY, self.fullscreen_showing);
+        self.opens_on_hover_over_maximized =
+            self.settings.get_bool(visibility::HOVER_MAXIMIZED_KEY, self.opens_on_hover_over_maximized);
+        self.opens_on_hover_over_fullscreen =
+            self.settings.get_bool(visibility::HOVER_FULLSCREEN_KEY, self.opens_on_hover_over_fullscreen);
         let navigable_before = self.navigable.clone();
         self.reload_page_list();
         for index in 0..self.pages.len() {
@@ -1342,7 +1676,9 @@ impl Notch {
         log::debug(&format!("hovering={is_hovering}"));
         super::drop_target::set_hovering(is_hovering);
         let waits_to_reveal = is_hovering && self.is_hidden();
-        if waits_to_reveal {
+        if is_hovering && !self.opens_on_hover() {
+            log::debug("hover opening is off over this window");
+        } else if waits_to_reveal {
             unsafe {
                 SetTimer(Some(self.window), REVEAL_TIMER_ID, self.reveal_delay(), None);
             }
@@ -1632,10 +1968,13 @@ impl Notch {
             Point::new((bounds.left + bounds.right - badge_room) / 2.0, bounds.top + RESTING_HEIGHT * scale / 2.0);
         let time_width = clock::text_width(canvas) * scale;
         let header = chrome::header_rect(bounds, scale);
-        let open = Point::new(header.right - time_width / 2.0, header.center_y());
+        let open = Point::new(header.right - chrome::SETTINGS_SLOT * scale - time_width / 2.0, header.center_y());
         let center = clock::center(collapsed, open, (frame.expansion / HEADER_STAGE).clamp(0.0, 1.0));
         let area = Rect::around(center, clock::HALF_WIDTH * scale, RESTING_HEIGHT * scale / 2.0);
-        clock::draw_time(canvas, area, opacity);
+        // The settings panel's tabs take over the header, so the clock stays out of it.
+        if self.editor.is_none() {
+            clock::draw_time(canvas, area, opacity);
+        }
         if header_opacity > 0.01 && self.editor.is_none() {
             self.draw_header_statuses(canvas, center.x - time_width / 2.0, center.y, header_opacity);
         }
@@ -1697,9 +2036,7 @@ impl Notch {
             let dots = chrome::dot_rects(self.navigable.len(), self.track.position, frame.bounds, self.scale);
             chrome::draw_dots(canvas, &dots, self.track.position, opacity);
         }
-        if chrome::SETTINGS_BUTTON_SHOWN {
-            chrome::draw_settings(canvas, frame.bounds, self.scale, self.is_settings_hovered, opacity);
-        }
+        chrome::draw_settings(canvas, frame.bounds, self.scale, self.is_settings_hovered, opacity);
     }
 
     fn draw_transients(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
@@ -1765,6 +2102,47 @@ fn activity_setting_key(id: &str) -> String {
 }
 
 /// A missing key or an unknown word gives `fallback`: the default at start, the current choice on reload.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum KeyboardOwner {
+    Page(usize),
+    Panel,
+}
+
+/// The keys a text field uses; Ctrl+V pastes the clipboard's text on one line.
+fn key_input(virtual_key: u16, is_control_down: bool) -> Option<KeyInput> {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{
+        VK_BACK, VK_DELETE, VK_END, VK_ESCAPE, VK_HOME, VK_LEFT, VK_RETURN, VK_RIGHT,
+    };
+    const VK_V: u16 = 0x56;
+    Some(match virtual_key {
+        key if key == VK_BACK.0 => KeyInput::Backspace,
+        key if key == VK_DELETE.0 => KeyInput::Delete,
+        key if key == VK_LEFT.0 => KeyInput::Left,
+        key if key == VK_RIGHT.0 => KeyInput::Right,
+        key if key == VK_HOME.0 => KeyInput::Home,
+        key if key == VK_END.0 => KeyInput::End,
+        key if key == VK_RETURN.0 => KeyInput::Enter,
+        key if key == VK_ESCAPE.0 => KeyInput::Escape,
+        VK_V if is_control_down => KeyInput::Text(single_line(&crate::platform::clipboard_text()?)),
+        _ => return None,
+    })
+}
+
+/// Pasted text on one line: line breaks and tabs become spaces, other control characters go.
+fn single_line(text: &str) -> String {
+    let joined: String = text
+        .chars()
+        .map(|character| if matches!(character, '\r' | '\n' | '\t') { ' ' } else { character })
+        .filter(|character| !character.is_control())
+        .collect();
+    joined.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// A page's own content height, capped to what the window holds; nothing reported means the shared default.
+fn content_height(reported: f32) -> f32 {
+    if reported > 0.0 { reported.min(crate::page::MAX_CONTENT_HEIGHT) } else { crate::page::DEFAULT_CONTENT_HEIGHT }
+}
+
 fn read_showing(settings: &Settings, key: &str, fallback: Showing) -> Showing {
     settings.get_string(key).and_then(Showing::parse).unwrap_or(fallback)
 }
@@ -1798,6 +2176,30 @@ mod tests {
         assert_eq!(staged(96.0, 240.0, 280.0, 1.0), 280.0);
         assert_eq!(staged(96.0, 240.0, 280.0, 0.25), 168.0);
         assert_eq!(staged(96.0, 240.0, 280.0, 0.75), 260.0);
+    }
+
+    #[test]
+    fn pasted_text_lands_on_one_line_without_control_characters() {
+        assert_eq!(single_line("Buy milk\r\nand\teggs\u{7}"), "Buy milk and eggs");
+        assert_eq!(single_line("   "), "");
+    }
+
+    #[test]
+    fn only_editing_keys_reach_a_text_field() {
+        use windows::Win32::UI::Input::KeyboardAndMouse::{VK_BACK, VK_ESCAPE, VK_F5, VK_RETURN};
+        assert_eq!(key_input(VK_BACK.0, false), Some(KeyInput::Backspace));
+        assert_eq!(key_input(VK_RETURN.0, false), Some(KeyInput::Enter));
+        assert_eq!(key_input(VK_ESCAPE.0, false), Some(KeyInput::Escape));
+        assert_eq!(key_input(VK_F5.0, false), None);
+        assert_eq!(key_input(0x56, false), None);
+    }
+
+    #[test]
+    fn a_page_sets_its_own_open_height_up_to_what_the_window_holds() {
+        assert_eq!(content_height(86.0), 86.0);
+        assert_eq!(content_height(150.0), 150.0);
+        assert_eq!(content_height(400.0), crate::page::MAX_CONTENT_HEIGHT);
+        assert_eq!(content_height(0.0), crate::page::DEFAULT_CONTENT_HEIGHT);
     }
 
     #[test]

@@ -5,8 +5,7 @@ use crate::{
 };
 
 // Layout converts content DIP to device pixels; the host adds padding and the header.
-/// Must match the fixed CONTENT_HEIGHT in host/chrome.rs.
-pub const PLAIN_HEIGHT: f32 = 86.0;
+pub const PLAIN_HEIGHT: f32 = crate::page::DEFAULT_CONTENT_HEIGHT;
 pub const TEXT_MAX_WIDTH: f32 = 180.0;
 pub const TEXT_MIN_WIDTH: f32 = 140.0;
 const ARTWORK_SIZE: f32 = 86.0;

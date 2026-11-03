@@ -1,0 +1,34 @@
+==============================================================================
+GeoNames city data (the shalat page's city search)
+------------------------------------------------------------------------------
+The list of cities in assets/cities.tsv is derived from GeoNames data (https://www.geonames.org), licensed under the
+Creative Commons Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/). The data was
+changed: only cities with 15,000 inhabitants or more were kept, and only their name, country, latitude and longitude.
+The data is provided "as is" without warranty or any representation of accuracy, timeliness or completeness.
+
+==============================================================================
+option-ext 0.2.0 (Mozilla Public License 2.0)
+------------------------------------------------------------------------------
+The settings window includes the unmodified crate option-ext, licensed under the Mozilla Public License, version 2.0
+(the text is above, with the other licenses). Its source code is available at
+https://crates.io/crates/option-ext/0.2.0 and https://github.com/soc/option-ext. The MPL applies to that crate's files
+only and does not apply to the rest of this software.
+
+==============================================================================
+Lucide icons (ISC License)
+------------------------------------------------------------------------------
+The "sliders-horizontal", "copy" and "x" icons are redrawn from Lucide (https://lucide.dev). Lucide is licensed under
+the ISC License; portions are copyright Cole Bemis 2013-2022 as part of Feather (MIT License). All other copyright is
+held by Lucide Contributors 2022. The license text is at https://lucide.dev/license.
+
+==============================================================================
+Geist font (SIL Open Font License 1.1)
+------------------------------------------------------------------------------
+The Geist font files are bundled under the SIL Open Font License, version 1.1. Its text is in Geist-LICENSE.txt, which is
+installed beside this file.
+
+==============================================================================
+salah (MIT License)
+------------------------------------------------------------------------------
+Prayer times are calculated with a copy of the salah crate (https://crates.io/crates/salah), changed in one function to
+avoid a crash; its MIT license text is above, with the other licenses.

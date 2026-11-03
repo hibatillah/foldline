@@ -63,6 +63,8 @@ if crates_without_text:
     lines += ["=" * 78, "Crates whose sources contain no license file (see their declared license):",
               *[f"  {label}" for label in crates_without_text], ""]
 
+extra_notices = (repository_root / "scripts" / "third_party_extra.txt").read_text(encoding="utf-8").replace("\r\n", "\n")
+lines += ["", extra_notices]
 (repository_root / "THIRD-PARTY-LICENSES.txt").write_text("\n".join(lines), encoding="utf-8", newline="\n")
 print(f"{len(texts_to_crates)} distinct texts; {len(crates_without_text)} crates without a license file", file=sys.stderr)
 for label in crates_without_text:

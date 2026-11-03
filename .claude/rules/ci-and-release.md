@@ -9,7 +9,7 @@ paths:
 
 # CI and release
 
-`docs/releasing.md` describes both workflows.
+`docs/how-to/cut-a-release.md` describes both workflows.
 
 - `ci.yml` runs on pushes to the default branch only. Tags and pull requests start nothing there.
 - `release.yml` runs on `v*` tag pushes only, and fails unless the tag equals `v` plus the version in both `Cargo.toml` and `settings/Cargo.toml`.
