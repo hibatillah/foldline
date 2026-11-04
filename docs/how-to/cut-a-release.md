@@ -8,7 +8,7 @@ takes none.
 | Workflow | Starts when | Does |
 | --- | --- | --- |
 | `ci.yml` | a push to `master` or `main` (a tag push does not start it) | `cargo fmt --all --check`, `cargo clippy --workspace -D warnings`, `cargo test --workspace`, `cargo build --release --workspace` |
-| `release.yml` | a push of a tag that starts with `v` | the same checks, then builds and publishes a GitHub release |
+| `release.yml` | a push of a tag that starts with `v` | the same checks, then builds and publishes a GitHub release (a pre-release when the tag has a suffix, such as `v0.5.0-alpha.1`; see [share a pre-release](#share-a-pre-release)) |
 
 Both install the MSVC toolchain, because the settings crate (GPUI) does not build with the GNU one. Locally use `cargo +stable-x86_64-pc-windows-msvc` for the settings crate.
 
@@ -69,3 +69,23 @@ otch.iss`; the result
   warning; do not pin an old compiler unless a release is urgent.
 - To delete a bad release, delete the release and its tag on GitHub (or `git push --delete origin <tag>`), fix, and tag
   again.
+
+## Share a pre-release
+
+For a build a teammate should try before the real release, tag it with a SemVer suffix:
+
+1. Set `version` in `Cargo.toml` and `settings/Cargo.toml` to the coming number (for example `0.5.0`), commit and push.
+2. `git tag v0.5.0-alpha.1 && git push origin v0.5.0-alpha.1`
+
+The tag is `v<crate version>-<stage>.<number>`: `alpha` (rough, a few testers), `beta` (feature-complete, still tested),
+`rc` (release candidate), then the plain `v0.5.0`. SemVer orders them `alpha < beta < rc < final` and compares the number
+as a number, so write `alpha.2`, not `alpha2`. The crate versions stay `0.5.0` for the whole series.
+
+`release.yml` checks only the part of the tag before the first `-` against the crate versions, builds the same installer
+and publishes the release as a pre-release, so it is not shown as the latest one. The installer carries the whole tag
+version (`0.5.0-alpha.1`), which the update prompt and Add or remove programs show. Inno Setup cannot compare a suffixed
+version, so over an installed copy the prompt reads "Replace it with version 0.5.0-alpha.1?" and the user confirms; a
+plain version still gets "Update it to…". Delete the pre-release and its tag when it is no longer needed.
+
+For code that is not committed, run `scripts/test-build.sh`: it builds the working tree into `dist/` (an installer with
+Inno Setup installed, otherwise a zip) and needs no GitHub.

@@ -30,6 +30,7 @@ Four kinds of document, each with one job ([Diátaxis](https://diataxis.fr)). Ev
 | [Settings window](reference/settings-window.md) | what each section of `notch-settings.exe` sets |
 | [Source map](reference/source-map.md) | where a file lives and which module may use which |
 | [Layout](reference/layout.md) | padding, header and the open and collapsed shapes |
+| [Design rules](reference/design-rules.md) | order, gaps, colors and fonts of what the user sees, and the reason for each |
 | [Test map](reference/test-map.md) | which file tests which behavior |
 | [Performance baseline](reference/performance-baseline.md) | the latest measured CPU and memory |
 | [Dependencies and licenses](reference/dependencies-and-licenses.md) | adding or auditing a dependency |

@@ -20,6 +20,7 @@ cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 scripts/reload.sh [--debug]               # build, start the new build, close the old one (Git Bash)
 scripts/watch.sh                          # debug build of the notch, relaunched on every saved source file (Git Bash)
+scripts/test-build.sh                     # installer (zip without Inno Setup) of the current code in dist/ for a teammate (Git Bash)
 scripts/perf.sh [--no-build]              # memory and CPU checks; moves the mouse for about two minutes
 ```
 
@@ -49,9 +50,16 @@ polling, memory budget) and `contributions.md` (no outside contributions).
 | a test, a snapshot, the manual checklist | `docs/how-to/test-and-snapshot.md`, `docs/reference/test-map.md` |
 | `perf.sh`, a CPU or memory number | `docs/how-to/run-the-perf-check.md`, `docs/reference/performance-baseline.md` |
 | padding, the header, the open and collapsed shapes | `docs/reference/layout.md` |
+| order, spacing, color or font of anything visible, or a new visual decision | `docs/reference/design-rules.md` |
 | restructuring, or where something lives | `docs/explanation/architecture.md`, `docs/reference/source-map.md` |
 | a dependency, a license | `docs/reference/dependencies-and-licenses.md` |
 | the installer, a release, updating | `docs/how-to/cut-a-release.md` |
+
+## Design rules
+
+The "Notch Design" canvas and `docs/reference/design-rules.md` set what the user sees and why. Follow them for every visual
+change. When the user decides something they do not cover (an order, a gap, a color, a font), or a change would break
+one, say so and propose a rule with its reason for that doc; write it in the same change once the user agrees.
 
 ## Debugging
 
