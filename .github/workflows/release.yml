@@ -7,12 +7,16 @@ on:
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   release:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The release notes need the tags and the history between them.
+          fetch-depth: 0
 
       - name: Check the tag matches the crate version
         shell: bash
@@ -42,7 +46,13 @@ jobs:
 
       - name: Build
         shell: bash
-        run: cargo build --release --workspace
+        env:
+          # The settings window shows the whole tag version (0.5.0-alpha.1), not the plain crate version.
+          NOTCH_RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          # The program strips the leading v itself; export without it so the value matches the installer's.
+          export NOTCH_RELEASE_VERSION="${NOTCH_RELEASE_VERSION#v}"
+          cargo build --release --workspace
 
       - name: Package
         shell: bash
@@ -72,6 +82,8 @@ jobs:
         run: |
           prerelease_flag=""
           case "$GITHUB_REF_NAME" in *-*) prerelease_flag="--prerelease" ;; esac
+          # The merged pull requests since the previous release, grouped by label and credited to their assignees.
+          notes="$(bash scripts/release-notes.sh "$GITHUB_REF_NAME")"
           gh release create "$GITHUB_REF_NAME" $prerelease_flag \
             "dist/$INSTALLER" "dist/$INSTALLER.sha256" \
-            --title "$GITHUB_REF_NAME" --generate-notes
+            --title "$GITHUB_REF_NAME" --notes "$notes"

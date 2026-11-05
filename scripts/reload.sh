@@ -18,6 +18,7 @@ run_directory="run"
 mkdir -p "$run_directory"
 # A settings window that is still open locks its copy, so a failed copy keeps the old one.
 cp "target/x86_64-pc-windows-msvc/$profile_directory/notch-settings.exe" "$run_directory/notch-settings.exe" 2>/dev/null || true
+cp THIRD-PARTY-LICENSES.txt "$run_directory/" 2>/dev/null || true
 
 # A running .exe is locked on Windows, so each launch uses its own copy of the build output.
 built_executable="target/x86_64-pc-windows-msvc/$profile_directory/notch.exe"

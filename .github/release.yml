@@ -1,0 +1,16 @@
+# How GitHub groups the generated release notes (scripts/release-notes.sh asks for them). A pull request lands in the
+# group of its `type:` label, which the CI workflow sets from the pull request's title.
+changelog:
+  exclude:
+    labels: ["type: chore", "type: docs", "type: test", "type: style", "type: ci", "type: build"]
+  categories:
+    - title: Breaking changes
+      labels: ["type: breaking"]
+    - title: Features
+      labels: ["type: feat"]
+    - title: Fixes
+      labels: ["type: fix"]
+    - title: Performance and refactors
+      labels: ["type: perf", "type: refactor"]
+    - title: Other changes
+      labels: ["*"]
