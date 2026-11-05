@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Measures memory and CPU; moves the pointer while checking the limits in scripts/perf.rs.
+# Measures memory and CPU; moves the pointer while checking the limits in crates/notch/examples/perf.rs.
 #
 #   scripts/perf.sh                 build and check (about two minutes)
 #   scripts/perf.sh --no-build      reuse the release build
@@ -30,7 +30,7 @@ done
 mkdir -p run
 cp target/x86_64-pc-windows-msvc/release/notch.exe run/notch-perf.exe
 
-cargo run --release --quiet --example perf -- \
+cargo run --release --quiet -p notch --example perf -- \
     --exe "$(cygpath -w "$PWD/run/notch-perf.exe")" \
     --log "$(cygpath -w "$PWD/run/perf.log")" \
     "${extra_arguments[@]}"

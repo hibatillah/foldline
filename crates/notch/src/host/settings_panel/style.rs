@@ -1,0 +1,41 @@
+//! Sizes, fonts and colors of the settings panel.
+
+use crate::gfx::{Align, Color, FontStyle, UI_FONT, Weight};
+
+pub(super) const GAP: f32 = 8.0;
+pub(super) const CARD_RADIUS: f32 = 12.0;
+pub(super) const CARD_PADDING: f32 = 12.0;
+pub(super) const SWITCH_ROW: f32 = 44.0;
+pub(super) const STEPPER_ROW: f32 = 58.0;
+pub(super) const LABELLED_ROW: f32 = 62.0;
+pub(super) const TEXT_ROW: f32 = 40.0;
+pub(super) const SEARCH_ROW: f32 = 96.0;
+pub(super) const SEARCH_FIELD_TOP: f32 = 24.0;
+pub(super) const SEARCH_FIELD_HEIGHT: f32 = 28.0;
+pub(super) const SEARCH_RESULT_TOP: f32 = 60.0;
+pub(super) const SWITCH_SIZE: (f32, f32) = (30.0, 18.0);
+pub(super) const ROUND_BUTTON: f32 = 24.0;
+pub(super) const SEGMENT_HEIGHT: f32 = 26.0;
+pub(super) const CHIP_HEIGHT: f32 = 26.0;
+pub(super) const CHIP_PADDING: f32 = 12.0;
+pub(super) const TAB_HEIGHT: f32 = 22.0;
+pub(super) const TAB_PADDING: f32 = 12.0;
+pub(super) const DONE_WIDTH: f32 = 54.0;
+pub(super) const SWITCHES_PER_ROW: usize = 2;
+pub(super) const STEPPERS_PER_ROW: usize = 3;
+pub(super) const LABEL: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Regular, Align::Leading);
+pub(super) const SMALL_LABEL: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Leading);
+pub(super) const HINT: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Leading);
+pub(super) const VALUE: FontStyle = FontStyle::new("Consolas", 14.0, Weight::Medium, Align::Center);
+pub(super) const CENTERED: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Medium, Align::Center);
+pub(super) const BUTTON: FontStyle = FontStyle::new(UI_FONT, 14.0, Weight::Medium, Align::Center);
+pub(super) const CARD: Color = Color::rgb(0.078, 0.078, 0.094);
+pub(super) const SUNKEN: Color = Color::rgb(0.043, 0.043, 0.055);
+pub(super) const RAISED: Color = Color::rgb(0.165, 0.165, 0.188);
+pub(super) const GRAY: Color = Color::rgb(0.604, 0.604, 0.651);
+pub(super) const DIM: Color = Color::rgb(0.431, 0.431, 0.478);
+pub(super) const OFF_TRACK: Color = Color::rgb(0.227, 0.227, 0.267);
+pub(super) const ON_TRACK: Color = Color::rgb(0.19, 0.82, 0.35);
+pub(super) const PICKED: Color = Color::rgb(0.071, 0.188, 0.106);
+pub(super) const PICKED_BORDER: Color = Color::rgb(0.251, 0.753, 0.341);
+pub(super) const FIELD_BORDER: Color = Color::rgb(0.251, 0.561, 1.0);

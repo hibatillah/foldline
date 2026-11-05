@@ -3607,28 +3607,13 @@ dependencies = [
 name = "notch"
 version = "0.5.0"
 dependencies = [
- "notch-store",
  "salah",
+ "store",
  "windows 0.62.2",
  "windows-collections 0.3.2",
  "windows-core 0.62.2",
  "windows-numerics 0.3.1",
 ]
-
-[[package]]
-name = "notch-settings"
-version = "0.5.0"
-dependencies = [
- "gpui",
- "gpui-component",
- "gpui-component-assets",
- "notch-store",
- "windows 0.62.2",
-]
-
-[[package]]
-name = "notch-store"
-version = "0.5.0"
 
 [[package]]
 name = "notify"
@@ -5289,6 +5274,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "settings"
+version = "0.5.0"
+dependencies = [
+ "gpui",
+ "gpui-component",
+ "gpui-component-assets",
+ "store",
+ "windows 0.62.2",
+]
+
+[[package]]
 name = "sha1_smol"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5510,6 +5506,10 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "store"
+version = "0.5.0"
 
 [[package]]
 name = "str_indices"

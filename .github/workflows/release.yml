@@ -14,18 +14,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check the tag matches both crate versions
+      - name: Check the tag matches the crate version
         shell: bash
         run: |
-          # A suffix after the version (v0.5.0-alpha.1) marks a pre-release; the crate versions stay plain (0.5.0).
+          # A suffix after the version (v0.5.0-alpha.1) marks a pre-release; the crate version stays plain (0.5.0).
+          # Every crate inherits its version from the workspace in Cargo.toml.
           tag_version="${GITHUB_REF_NAME%%-*}"
-          for manifest in Cargo.toml settings/Cargo.toml; do
-            version=$(grep -m1 '^version' "$manifest" | cut -d'"' -f2)
-            if [ "$tag_version" != "v$version" ]; then
-              echo "Tag $GITHUB_REF_NAME does not match $manifest version $version" >&2
-              exit 1
-            fi
-          done
+          version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          if [ "$tag_version" != "v$version" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match the workspace version $version" >&2
+            exit 1
+          fi
 
       - name: Install Rust
         shell: bash
@@ -48,8 +47,8 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          name=$(grep -m1 '^name' Cargo.toml | cut -d'"' -f2)
-          settings_name=$(grep -m1 '^name' settings/Cargo.toml | cut -d'"' -f2)
+          name=$(grep -m1 '^name' crates/notch/Cargo.toml | cut -d'"' -f2)
+          settings_name=$(grep -A3 '^\[\[bin\]\]' crates/settings/Cargo.toml | grep -m1 '^name' | cut -d'"' -f2)
           release_directory="$PWD/target/x86_64-pc-windows-msvc/release"
           # The installer shows the whole tag version, so a tester sees 0.5.0-alpha.1 and not 0.5.0.
           version="${GITHUB_REF_NAME#v}"

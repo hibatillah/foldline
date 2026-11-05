@@ -1,4 +1,4 @@
-// Shared by the build scripts of notch and notch-settings (`include!`): compiles one icon resource file.
+// Shared by the build scripts of the notch and settings crates (`include!`): compiles one icon resource file.
 use std::{env, error::Error, fs, io, path::PathBuf, process::Command};
 
 fn resource_compiler() -> io::Result<PathBuf> {

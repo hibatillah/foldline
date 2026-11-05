@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 TARGET = "x86_64-pc-windows-msvc"
-ROOT_PACKAGE_NAMES = {"notch", "notch-settings"}
+ROOT_PACKAGE_NAMES = {"notch", "settings", "store"}
 LICENSE_FILE_PREFIXES = ("license", "licence", "copying", "unlicense", "notice")
 
 repository_root = Path(__file__).resolve().parent.parent
@@ -35,7 +35,7 @@ texts_to_crates = {}
 crates_without_text = []
 for package_id in sorted(linked_ids, key=lambda pid: (packages_by_id[pid]["name"], packages_by_id[pid]["version"])):
     package = packages_by_id[package_id]
-    if package["name"] in ROOT_PACKAGE_NAMES or package["name"] == "notch-store":
+    if package["name"] in ROOT_PACKAGE_NAMES:
         continue
     crate_label = f'{package["name"]} {package["version"]}'
     crate_directory = Path(package["manifest_path"]).parent

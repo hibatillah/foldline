@@ -3,8 +3,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-name=$(grep -m1 '^name' Cargo.toml | cut -d'"' -f2)
-settings_name=$(grep -m1 '^name' settings/Cargo.toml | cut -d'"' -f2)
+name=$(grep -m1 '^name' crates/notch/Cargo.toml | cut -d'"' -f2)
+settings_name=$(grep -A3 '^\[\[bin\]\]' crates/settings/Cargo.toml | grep -m1 '^name' | cut -d'"' -f2)
 version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
 commit=$(git rev-parse --short HEAD 2>/dev/null || echo nogit)
 git diff --quiet HEAD 2>/dev/null || commit="$commit-dirty"
@@ -12,7 +12,7 @@ package="$name-$version-test-$commit-windows-x64"
 
 cargo build --release
 # GPUI builds only with the MSVC host toolchain.
-cargo +stable-x86_64-pc-windows-msvc build --release -p notch-settings
+cargo +stable-x86_64-pc-windows-msvc build --release -p settings
 
 release_directory="$PWD/target/x86_64-pc-windows-msvc/release"
 mkdir -p dist

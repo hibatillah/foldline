@@ -12,7 +12,7 @@ fi
 
 cargo build "${build_arguments[@]}"
 # GPUI builds only with the MSVC host toolchain; the tray's Settings… item starts this program from the notch's folder.
-cargo +stable-x86_64-pc-windows-msvc build "${build_arguments[@]}" -p notch-settings
+cargo +stable-x86_64-pc-windows-msvc build "${build_arguments[@]}" -p settings
 
 run_directory="run"
 mkdir -p "$run_directory"
