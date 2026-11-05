@@ -11,5 +11,5 @@
 - When the `Page` trait or anything pages use changes, update `docs/tutorials/add-a-page.md` in the same change; its example is
   a real page that compiled. Do the same for the `Activity` trait and `docs/how-to/add-an-activity.md`.
 - When behavior a user can see changes, update `README.md` and the doc that covers it in the same change.
-- Commit only when the user asks.
+- Commit only when the user asks, and then with `/group-commit` (see `AGENTS.md`).
 - Write brainstorming specs, plans and spikes to `.superpowers/` (`specs/`, `plans/`, `spikes/`), which git ignores; `docs/` holds only documentation.

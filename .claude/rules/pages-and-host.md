@@ -16,7 +16,7 @@ Read `docs/tutorials/add-a-page.md` before writing a page, `docs/how-to/add-an-a
 
 - A page lives in `crates/notch/src/pages/<name>/` and is listed only in `crates/notch/src/pages/mod.rs`; adding or removing one touches no
   other file.
-- A page depends on `page`, `activity` (for `Presence` and `Flash`), `gfx`, `ui` and `platform` only.
+- A page depends on `page`, `activity` (for `Presence` and `Flash`), `gfx`, `ui`, `platform` and the `places` crate only.
 - `host`, `gfx`, `ui`, `page` and `activity` stay ignorant of any particular page or activity.
 - Page timer ids are `100 + page_index * 16 + n`, with `n` below 16; activity timer ids are
   `1000 + activity_index * 16 + n`.

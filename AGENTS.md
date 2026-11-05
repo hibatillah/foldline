@@ -37,10 +37,17 @@ done, no commits unless asked, never kill the notch, specs and plans go to `.sup
 polling, memory budget) and `contributions.md` (no outside contributions).
 `module-layout.md` sets how Rust files are cut (one job per file, about 400 lines) and applies to every source file.
 
+## Commits
+
+Commit only when the user asks. When they do, in any wording, run `/group-commit` (the Skill tool, `group-commit`) for
+it: never `git commit` by hand and never another commit skill. It makes one commit when the changes share a scope, a few
+when they do not, and never pushes.
+
 ## Code layout
 
 The repository is a Cargo workspace: `crates/notch` (the pill), `crates/settings` (the settings window, built as
-`notch-settings.exe`) and `crates/store` (the shared settings file code), with the patched `salah` crate in
+`notch-settings.exe`), `crates/store` (the shared settings file code) and `crates/places` (the city list and the shared
+location), with the patched `salah` crate in
 `vendor/salah`. The layout of the code is defined in `docs/explanation/architecture.md` (the reasons) and
 `docs/reference/source-map.md` (where each module lives, and how a module is laid out); keep new code to it.
 
