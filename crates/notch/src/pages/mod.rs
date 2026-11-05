@@ -7,6 +7,7 @@ mod shelf;
 mod stats;
 mod timer;
 mod todo;
+mod weather;
 
 use crate::page::Page;
 
@@ -19,6 +20,7 @@ pub fn all() -> Vec<Box<dyn Page>> {
         Box::new(todo::TodoPage::new()),
         Box::new(shalat::ShalatPage::new()),
         Box::new(stats::StatsPage::new()),
+        Box::new(weather::WeatherPage::new()),
     ]
 }
 
@@ -32,6 +34,8 @@ pub struct SampleOptions {
     pub file_drag: bool,
     /// The shalat page shows its collapsed mark (`1`) or its prayer-time message (`2`); `0` shows neither.
     pub shalat_mark: u8,
+    /// The weather page shows its days (`1`), its offline message (`2`) or its hours (`0`).
+    pub weather: u8,
 }
 
 #[cfg(test)]
@@ -51,5 +55,10 @@ pub fn samples(fonts: &crate::gfx::Fonts, directory: &std::path::Path, options: 
             _ => shalat::ShalatPage::sample(),
         }),
         Box::new(stats::StatsPage::sample()),
+        Box::new(match options.weather {
+            1 => weather::WeatherPage::sample(true),
+            2 => weather::WeatherPage::sample_offline(),
+            _ => weather::WeatherPage::sample(false),
+        }),
     ]
 }

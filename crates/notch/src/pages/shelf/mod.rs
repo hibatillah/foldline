@@ -1,6 +1,6 @@
 //! The shelf stores paths; adding, dragging, and removing entries never moves or deletes the originals.
 
-use self::items::{Shelf, added_text};
+use self::items::{MAX_FILES, Shelf, added_text};
 use crate::{
     activity::{FLASH_TIMER, Flash, Presence},
     gfx::{Align, Canvas, Color, FontStyle, ImageBrush, ImageData, Point, Rect, Size, Spring, UI_FONT, Weight},
@@ -9,8 +9,8 @@ use crate::{
     ui::{self, Icon},
 };
 use layout::{
-    Slot, Target, file_index, fitted, is_double_click, name_lines, preview_rect, remove_center, slot_rect, slots,
-    target_at,
+    Target, content_height, file_index, fitted, is_double_click, name_lines, preview_rect, remove_center, shown_count,
+    slot_rect, target_at,
 };
 use std::{
     cell::RefCell,
@@ -26,9 +26,8 @@ mod layout;
 
 mod items;
 
-const EXPANDED_WIDTH: f32 = 2.0 * ZONE_PADDING + MAX_SLOTS as f32 * FILE_WIDTH + (MAX_SLOTS - 1) as f32 * FILE_GAP;
-
-const EXPANDED_SIZE: Size = Size::new(EXPANDED_WIDTH, 86.0);
+const EXPANDED_WIDTH: f32 =
+    2.0 * ZONE_PADDING + SLOTS_PER_ROW as f32 * FILE_WIDTH + (SLOTS_PER_ROW - 1) as f32 * FILE_GAP;
 
 const RESTING_WIDTH: f32 = 150.0;
 
@@ -50,8 +49,10 @@ const NAME_TOP: f32 = 3.0;
 
 const NAME_LINE_HEIGHT: f32 = 12.0;
 
-/// Files shown at once; with more, the last place says how many more there are.
-const MAX_SLOTS: usize = 6;
+/// Files in a row; the seventh starts a second row.
+const SLOTS_PER_ROW: usize = 6;
+
+const ROW_GAP: f32 = 6.0;
 
 const DRAG_START_DISTANCE: f32 = 5.0;
 
@@ -76,7 +77,9 @@ const EMPTY_TITLE: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Medium, Ali
 
 const EMPTY_DETAIL: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Center);
 
-const BORDER: Color = Color::rgb(0.227, 0.227, 0.267);
+const BORDER: Color = Color::rgb(0.33, 0.33, 0.375);
+
+const FULL_RED: Color = Color::rgb(1.0, 0.27, 0.23);
 
 const ACCENT: Color = Color::rgb(0.25, 0.56, 1.0);
 
@@ -161,7 +164,7 @@ impl ShelfPage {
                 .collect();
         page.shelf.add(files);
         page.refresh_names(fonts);
-        for path in page.shelf.items().iter().take(MAX_SLOTS) {
+        for path in page.shelf.items().iter().take(MAX_FILES) {
             if let Some(image) = platform::file_preview(path, PREVIEW_PIXELS) {
                 page.previews.get_mut().insert(path.clone(), Preview::new(image));
             }
@@ -194,17 +197,22 @@ impl Page for ShelfPage {
     }
 
     fn sizes(&self) -> PageSizes {
-        PageSizes { resting_width: RESTING_WIDTH, expanded: EXPANDED_SIZE }
+        PageSizes {
+            resting_width: RESTING_WIDTH,
+            expanded: Size::new(EXPANDED_WIDTH, content_height(self.shelf.len())),
+        }
     }
 
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}
 
     fn draw_expanded(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
         let (bounds, scale) = (frame.bounds, frame.scale);
+        let is_refusing = self.is_drag_over && self.shelf.is_full();
+        let accent = if is_refusing { FULL_RED } else { ACCENT };
         if self.is_drag_over {
-            canvas.fill_rounded_rect(bounds, ZONE_RADIUS * scale, ACCENT.with_alpha(0.1 * opacity));
+            canvas.fill_rounded_rect(bounds, ZONE_RADIUS * scale, accent.with_alpha(0.1 * opacity));
         }
-        let border = if self.is_drag_over { ACCENT } else { BORDER };
+        let border = if self.is_drag_over { accent } else { BORDER };
         ui::draw_dashed_outline(
             canvas,
             bounds,
@@ -215,6 +223,12 @@ impl Page for ShelfPage {
             border.faded(opacity),
         );
 
+        if is_refusing {
+            let area =
+                Rect::new(bounds.left, bounds.center_y() - 8.0 * scale, bounds.right, bounds.center_y() + 8.0 * scale);
+            canvas.text(&EMPTY_DETAIL, "The shelf is full. Remove a file to add more.", area, FULL_RED.faded(opacity));
+            return;
+        }
         if self.shelf.len() == 0 {
             let (title, detail, title_color, detail_color) = if self.is_drag_over {
                 ("Release to add", "Files stay where they are", Color::WHITE, ACCENT)
@@ -230,8 +244,8 @@ impl Page for ShelfPage {
             canvas.text(&EMPTY_DETAIL, detail, detail_area, detail_color.faded(opacity));
             return;
         }
-        for (position, slot) in slots(self.shelf.len()).into_iter().enumerate() {
-            self.draw_slot(canvas, position, slot, bounds, opacity);
+        for position in 0..shown_count(self.shelf.len()) {
+            self.draw_slot(canvas, position, bounds, opacity);
         }
     }
 
@@ -258,7 +272,7 @@ impl Page for ShelfPage {
         let before = self.shelf.len();
         let added = self.shelf.add(paths);
         if added > 0 {
-            for (order, path) in self.shelf.items()[before..].iter().take(MAX_SLOTS).enumerate() {
+            for (order, path) in self.shelf.items()[before..].iter().enumerate() {
                 // Starting below zero holds each later file back until its turn.
                 let mut spring = Spring::new(-ARRIVAL_STAGGER * order as f32, ARRIVAL_RESPONSE.0, ARRIVAL_RESPONSE.1);
                 spring.target = 1.0;
@@ -365,6 +379,10 @@ impl Page for ShelfPage {
             }
             _ => {}
         }
+    }
+
+    fn uses_right_click(&self, point: Point, frame: &Frame) -> bool {
+        frame.is_open() && target_at(point, frame.bounds, frame.scale, self.shelf.len()).is_some()
     }
 
     fn on_timer(&mut self, timer: TimerId, context: &mut Context) {

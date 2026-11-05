@@ -1,7 +1,7 @@
 //! What the shelf does with its files: save, preview, remove, drag out.
 
 use super::items::{count_text, file_name, removed_text};
-use super::{MAX_SLOTS, PREVIEW_PIXELS, ShelfPage, name_lines};
+use super::{MAX_FILES, PREVIEW_PIXELS, ShelfPage, name_lines};
 use crate::{
     gfx::Fonts,
     page::Context,
@@ -28,7 +28,7 @@ impl ShelfPage {
 
     pub(super) fn refresh_names(&mut self, fonts: &Fonts) {
         self.names =
-            self.shelf.items().iter().take(MAX_SLOTS).map(|path| name_lines(&file_name(path), fonts)).collect();
+            self.shelf.items().iter().take(MAX_FILES).map(|path| name_lines(&file_name(path), fonts)).collect();
     }
 
     pub(super) fn request_previews(&mut self, context: &Context) {
@@ -36,7 +36,7 @@ impl ShelfPage {
         self.requested.retain(|path| items.contains(path));
         self.previews.get_mut().retain(|path, _| items.contains(path));
         let notifier = context.notifier();
-        for path in items.iter().take(MAX_SLOTS) {
+        for path in items.iter().take(MAX_FILES) {
             if !self.requested.insert(path.clone()) {
                 continue;
             }

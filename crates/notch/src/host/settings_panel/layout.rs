@@ -1,9 +1,9 @@
 //! Where the panel's controls and tabs sit, and what a press hits.
 
 use super::{
-    CARD_PADDING, CHIP_HEIGHT, CHIP_PADDING, DONE_WIDTH, GAP, LABELLED_ROW, ROUND_BUTTON, SEARCH_FIELD_HEIGHT,
-    SEARCH_FIELD_TOP, SEARCH_RESULT_TOP, SEARCH_ROW, SEGMENT_HEIGHT, STEPPER_ROW, STEPPERS_PER_ROW, SWITCH_ROW,
-    SWITCHES_PER_ROW, TAB_HEIGHT, TAB_PADDING, TEXT_ROW, Tab,
+    CARD_PADDING, CHIP_HEIGHT, CHIP_PADDING, DONE_WIDTH, GAP, LABELLED_ROW, PICKS_ROW, ROUND_BUTTON,
+    SEARCH_FIELD_HEIGHT, SEARCH_FIELD_TOP, SEARCH_RESULT_TOP, SEARCH_ROW, SEGMENT_HEIGHT, STEPPER_ROW,
+    STEPPERS_PER_ROW, SWITCH_ROW, SWITCHES_PER_ROW, TAB_HEIGHT, TAB_PADDING, TEXT_ROW, Tab,
 };
 use crate::{
     gfx::{Point, Rect},
@@ -32,7 +32,8 @@ pub(super) fn row_height(control: &Control) -> f32 {
     match control {
         Control::Switch { .. } => SWITCH_ROW,
         Control::Stepper { .. } => STEPPER_ROW,
-        Control::Choice { .. } | Control::Picks { .. } => LABELLED_ROW,
+        Control::Choice { .. } => LABELLED_ROW,
+        Control::Picks { .. } => PICKS_ROW,
         Control::Text { .. } => TEXT_ROW,
         Control::Search { .. } => SEARCH_ROW,
     }
@@ -139,18 +140,22 @@ pub(super) fn parts(
             std::iter::once((Part::Field, field)).chain(chips).collect()
         }
         Control::Picks { options, .. } => {
-            let top = card.bottom - padding * 0.8 - CHIP_HEIGHT * scale;
-            let mut left = card.left + padding;
-            options
+            // The choices sit right of the label, from the card's right edge inward, centered in the row.
+            let top = card.center_y() - CHIP_HEIGHT * scale / 2.0;
+            let mut right = card.right - padding;
+            let mut parts: Vec<(Part, Rect)> = options
                 .iter()
                 .enumerate()
+                .rev()
                 .map(|(option, name)| {
                     let width = (measure(name) + 2.0 * CHIP_PADDING + 12.0) * scale;
-                    let rect = Rect::new(left, top, left + width, top + CHIP_HEIGHT * scale);
-                    left = rect.right + 6.0 * scale;
+                    let rect = Rect::new(right - width, top, right, top + CHIP_HEIGHT * scale);
+                    right = rect.left - 6.0 * scale;
                     (Part::Pick(option), rect)
                 })
-                .collect()
+                .collect();
+            parts.reverse();
+            parts
         }
     }
 }

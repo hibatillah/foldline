@@ -62,6 +62,7 @@ impl GpuCounters {
             .iter()
             .map(|adapter| Meter {
                 name: adapter.name.clone(),
+                capacity: None,
                 percent: have_values.then(|| adapter_load(&adapter.luid, &instances)),
             })
             .collect()

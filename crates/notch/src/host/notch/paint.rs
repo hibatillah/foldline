@@ -103,6 +103,9 @@ impl Notch {
                             self.draw_open_pages(canvas, &frame, expanded_opacity);
                         }
                     }
+                    if let Some(menu) = &self.menu {
+                        menu.draw(canvas, expanded_opacity);
+                    }
                 });
             },
         );

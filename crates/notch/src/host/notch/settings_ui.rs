@@ -3,6 +3,9 @@ use super::{
     read_showing,
 };
 use crate::page::SearchHit;
+
+/// Matches the location search lists in the panel.
+const LOCATION_HITS: usize = 5;
 use windows::Win32::{System::SystemInformation::GetTickCount64, UI::Input::KeyboardAndMouse::SetCapture};
 
 use crate::host::{
@@ -206,10 +209,13 @@ impl Notch {
     /// Asks the open page for matches once at least two characters are typed.
     pub(super) fn refresh_hits(&mut self, control: usize, query: &str) {
         let key = self.panel_controls().get(control).map(Control::key);
+        let query = query.trim();
         self.panel.hits = match (self.panel.page, key) {
-            (Some(index), Some(key)) if query.trim().chars().count() >= 2 => {
-                self.pages[index].search(key, query.trim())
-            }
+            (_, Some(places::CITY_KEY)) if query.chars().count() >= 2 => places::search(query, LOCATION_HITS)
+                .into_iter()
+                .map(|city| SearchHit { label: city.label(), values: places::values_of(&city) })
+                .collect(),
+            (Some(index), Some(key)) if query.chars().count() >= 2 => self.pages[index].search(key, query),
             _ => Vec::new(),
         };
     }

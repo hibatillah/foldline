@@ -1,8 +1,8 @@
 //! What the panel lays out and saves.
 
-use crate::page::Control;
+use crate::{gfx::Rect, page::Control};
 
-use super::{layout::rows, *};
+use super::{draw::picks_note, layout::rows, *};
 
 fn switch(key: &'static str) -> Control {
     Control::Switch { key, label: "Label", hint: "hint", default: true }
@@ -76,4 +76,27 @@ fn picks_toggle_in_order_and_refuse_past_the_limit() {
     assert_eq!(pressed_value(&control, Part::Pick(3), None), None);
     assert_eq!(pressed_value(&control, Part::Pick(3), Some("G:,C:")), Some("G:,C:,H:".to_owned()));
     assert_eq!(picked(Some("X:,G:"), &options, 3), ["G:"]);
+}
+
+#[test]
+fn the_picks_note_counts_what_is_chosen_or_says_only_one_was_found() {
+    assert_eq!(picks_note("Disks", 4, 2, 3), "Show up to 3 \u{00b7} 2 chosen");
+    assert_eq!(picks_note("Disks", 1, 1, 3), "One disk found");
+    assert_eq!(picks_note("GPUs", 1, 1, 2), "One GPU found");
+}
+
+#[test]
+fn the_choices_sit_at_the_right_of_the_card_in_order_and_centered() {
+    let controls = vec![Control::Picks {
+        key: "stats.disks",
+        label: "Disks",
+        options: vec!["C:".to_owned(), "G:".to_owned()],
+        max: 3,
+    }];
+    let content = Rect::new(0.0, 0.0, 400.0, 200.0);
+    let placed = layout(&controls, content, 1.0, &|name| name.len() as f32 * 6.0, &[]);
+    let parts = &placed[0].parts;
+    assert!(parts[0].1.right < parts[1].1.left, "the first choice stays left of the second");
+    assert!((placed[0].card.right - CARD_PADDING - parts[1].1.right).abs() < 0.01);
+    assert!((parts[0].1.center_y() - placed[0].card.center_y()).abs() < 0.01);
 }

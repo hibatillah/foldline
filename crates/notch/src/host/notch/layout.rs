@@ -5,7 +5,7 @@ use crate::host::{
 };
 use crate::{
     activity::Presence,
-    gfx::{Size, Spring},
+    gfx::{Point, Size, Spring},
     page::{Frame, Mode, Priority},
 };
 
@@ -36,6 +36,15 @@ pub(super) fn highest_priority(priorities: impl IntoIterator<Item = Option<Prior
 impl Notch {
     pub(super) fn page_frame(&self, frame: &Frame) -> Frame {
         Frame { bounds: chrome::content_rect(frame.bounds, self.scale), ..*frame }
+    }
+
+    /// Whether the open page has its own use for a right-click at `point`.
+    pub(super) fn page_uses_right_click(&self, point: Point) -> bool {
+        let Some(index) = self.expanded_index else { return false };
+        let viewport = self.frame();
+        let index = if self.navigable.len() < 2 { index } else { self.page_at(self.track.position) };
+        let frame = self.natural_page_frame(index, &viewport, 0.0);
+        self.pages[index].uses_right_click(point, &frame)
     }
 
     pub(super) fn natural_page_frame(&self, index: usize, viewport: &Frame, center_offset: f32) -> Frame {

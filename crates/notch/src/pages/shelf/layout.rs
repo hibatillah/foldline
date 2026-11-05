@@ -1,7 +1,11 @@
 //! Where the shelf's places, previews and remove buttons sit, and what a press hits.
 
-use super::{EXPANDED_WIDTH, FILE_GAP, FILE_WIDTH, MAX_SLOTS, NAME, NAME_LINE_HEIGHT, NAME_TOP, ZONE_PADDING};
+use super::{
+    EXPANDED_WIDTH, FILE_GAP, FILE_WIDTH, MAX_FILES, NAME, NAME_LINE_HEIGHT, NAME_TOP, ROW_GAP, SLOTS_PER_ROW,
+    ZONE_PADDING,
+};
 use crate::gfx::{Fonts, Point, Rect, clamp_lines};
+use crate::page::DEFAULT_CONTENT_HEIGHT;
 use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
@@ -13,33 +17,34 @@ pub(super) const REMOVE_HIT_RADIUS: f32 = 9.0;
 pub(super) const PREVIEW_SIZE: f32 = 40.0;
 pub(super) const NAME_LINES: usize = 2;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Slot {
-    File(usize),
-    More(usize),
+/// How many files get a place; the shelf never holds more than `MAX_FILES`.
+pub(super) fn shown_count(count: usize) -> usize {
+    count.min(MAX_FILES)
 }
 
-pub(super) fn slots(count: usize) -> Vec<Slot> {
-    if count <= MAX_SLOTS {
-        (0..count).map(Slot::File).collect()
-    } else {
-        (0..MAX_SLOTS - 1).map(Slot::File).chain(std::iter::once(Slot::More(count - (MAX_SLOTS - 1)))).collect()
-    }
+/// Rows of six the files need, at least one so an empty shelf keeps its height.
+pub(super) fn rows(count: usize) -> usize {
+    shown_count(count).div_ceil(SLOTS_PER_ROW).max(1)
 }
 
 pub(super) fn file_index(position: usize, count: usize) -> Option<usize> {
-    match slots(count).get(position) {
-        Some(Slot::File(index)) => Some(*index),
-        _ => None,
-    }
+    (position < shown_count(count)).then_some(position)
 }
 
-/// Keep slots centered while the drop target expands the page.
-pub(super) fn slot_rect(position: usize, bounds: Rect, scale: f32) -> Rect {
+/// The open height: the usual page height for one row, taller for each further row.
+pub(super) fn content_height(count: usize) -> f32 {
+    let rows = rows(count) as f32;
+    (2.0 * ZONE_PADDING + rows * COLUMN_HEIGHT + (rows - 1.0) * ROW_GAP).max(DEFAULT_CONTENT_HEIGHT)
+}
+
+/// Keep the places centered while the drop target expands the page.
+pub(super) fn slot_rect(position: usize, count: usize, bounds: Rect, scale: f32) -> Rect {
+    let needed = 2.0 * ZONE_PADDING + rows(count) as f32 * COLUMN_HEIGHT + (rows(count) - 1) as f32 * ROW_GAP;
     let spare_width = (bounds.width() - EXPANDED_WIDTH * scale).max(0.0) / 2.0;
-    let spare_height = (bounds.height() - (COLUMN_HEIGHT + 2.0 * ZONE_PADDING) * scale).max(0.0) / 2.0;
-    let left = bounds.left + spare_width + (ZONE_PADDING + position as f32 * (FILE_WIDTH + FILE_GAP)) * scale;
-    let top = bounds.top + spare_height + ZONE_PADDING * scale;
+    let spare_height = (bounds.height() - needed * scale).max(0.0) / 2.0;
+    let (row, column) = (position / SLOTS_PER_ROW, position % SLOTS_PER_ROW);
+    let left = bounds.left + spare_width + (ZONE_PADDING + column as f32 * (FILE_WIDTH + FILE_GAP)) * scale;
+    let top = bounds.top + spare_height + (ZONE_PADDING + row as f32 * (COLUMN_HEIGHT + ROW_GAP)) * scale;
     Rect::new(left, top, left + FILE_WIDTH * scale, top + COLUMN_HEIGHT * scale)
 }
 
@@ -65,17 +70,14 @@ pub(super) enum Target {
 }
 
 pub(super) fn target_at(point: Point, bounds: Rect, scale: f32, count: usize) -> Option<Target> {
-    let places = slots(count);
-    for (position, slot) in places.iter().enumerate() {
-        if !matches!(slot, Slot::File(_)) {
-            continue;
-        }
-        let center = remove_center(preview_rect(slot_rect(position, bounds, scale), scale), scale);
+    let places = shown_count(count);
+    for position in 0..places {
+        let center = remove_center(preview_rect(slot_rect(position, count, bounds, scale), scale), scale);
         if (point.x - center.x).hypot(point.y - center.y) <= REMOVE_HIT_RADIUS * scale {
             return Some(Target::Remove(position));
         }
     }
-    (0..places.len()).find(|&position| slot_rect(position, bounds, scale).contains(point)).map(Target::Slot)
+    (0..places).find(|&position| slot_rect(position, count, bounds, scale).contains(point)).map(Target::Slot)
 }
 
 pub(super) fn name_lines(name: &str, fonts: &Fonts) -> Vec<String> {
@@ -98,13 +100,12 @@ mod tests {
     const BOUNDS: Rect = Rect::new(0.0, 0.0, EXPANDED_WIDTH, 86.0);
 
     #[test]
-    fn six_files_fit_and_a_seventh_uses_the_last_place_for_overflow() {
-        assert_eq!(slots(6), (0..6).map(Slot::File).collect::<Vec<_>>());
-        assert_eq!(
-            slots(7),
-            vec![Slot::File(0), Slot::File(1), Slot::File(2), Slot::File(3), Slot::File(4), Slot::More(2)]
-        );
-        assert_eq!(EXPANDED_SIZE.width, 507.0);
+    fn six_files_fit_a_row_and_a_seventh_starts_a_second_one() {
+        assert_eq!(rows(0), 1);
+        assert_eq!(rows(6), 1);
+        assert_eq!(rows(7), 2);
+        assert_eq!(rows(MAX_FILES), 2);
+        assert_eq!(EXPANDED_WIDTH, 507.0);
     }
 
     fn middle(rect: Rect) -> Point {
@@ -112,47 +113,54 @@ mod tests {
     }
 
     #[test]
-    fn a_few_files_each_get_a_place() {
-        assert!(slots(0).is_empty());
-        assert_eq!(slots(3), vec![Slot::File(0), Slot::File(1), Slot::File(2)]);
-        assert_eq!(slots(MAX_SLOTS).len(), MAX_SLOTS);
-    }
-
-    #[test]
-    fn too_many_files_end_in_a_place_that_counts_the_rest() {
-        let places = slots(12);
-        assert_eq!(places.len(), MAX_SLOTS);
-        assert_eq!(places[MAX_SLOTS - 1], Slot::More(12 - (MAX_SLOTS - 1)));
-        assert_eq!(places[0], Slot::File(0));
-    }
-
-    #[test]
-    fn only_a_place_that_shows_a_file_has_a_file() {
-        assert_eq!(file_index(1, 3), Some(1));
-        assert_eq!(file_index(MAX_SLOTS - 1, 12), None);
+    fn the_shelf_holds_twelve_files_and_no_place_exists_past_them() {
+        assert_eq!(shown_count(3), 3);
+        assert_eq!(shown_count(40), MAX_FILES);
+        assert_eq!(file_index(11, 12), Some(11));
+        assert_eq!(file_index(12, 40), None);
         assert_eq!(file_index(4, 3), None);
     }
 
     #[test]
+    fn the_page_is_the_usual_height_for_one_row_and_taller_for_two() {
+        assert_eq!(content_height(0), DEFAULT_CONTENT_HEIGHT);
+        assert_eq!(content_height(6), DEFAULT_CONTENT_HEIGHT);
+        let two = 2.0 * ZONE_PADDING + 2.0 * COLUMN_HEIGHT + ROW_GAP;
+        assert_eq!(content_height(7), two);
+        assert_eq!(content_height(MAX_FILES), two);
+        assert!(two <= crate::page::MAX_CONTENT_HEIGHT);
+    }
+
+    #[test]
     fn the_places_sit_side_by_side_and_fill_the_page_from_edge_to_edge_of_its_padding() {
-        let first = slot_rect(0, BOUNDS, 1.0);
-        let second = slot_rect(1, BOUNDS, 1.0);
+        let first = slot_rect(0, 3, BOUNDS, 1.0);
+        let second = slot_rect(1, 3, BOUNDS, 1.0);
         assert_eq!(second.left - first.right, FILE_GAP);
         assert_eq!(first.left, ZONE_PADDING);
-        let last = slot_rect(MAX_SLOTS - 1, BOUNDS, 1.0);
+        let last = slot_rect(SLOTS_PER_ROW - 1, 6, BOUNDS, 1.0);
         assert!((BOUNDS.right - last.right - ZONE_PADDING).abs() < 0.01, "{last:?}");
     }
 
     #[test]
+    fn the_seventh_file_starts_the_second_row_under_the_first() {
+        let tall = Rect::new(0.0, 0.0, EXPANDED_WIDTH, content_height(7));
+        let first = slot_rect(0, 7, tall, 1.0);
+        let seventh = slot_rect(SLOTS_PER_ROW, 7, tall, 1.0);
+        assert_eq!(seventh.left, first.left);
+        assert_eq!(seventh.top - first.bottom, ROW_GAP);
+        assert!((tall.bottom - seventh.bottom - ZONE_PADDING).abs() < 0.01, "{seventh:?}");
+    }
+
+    #[test]
     fn the_padding_is_the_same_on_every_side_of_a_column() {
-        let column = slot_rect(0, BOUNDS, 1.0);
+        let column = slot_rect(0, 3, BOUNDS, 1.0);
         assert_eq!(column.left - BOUNDS.left, column.top - BOUNDS.top);
         assert!((BOUNDS.bottom - column.bottom - ZONE_PADDING).abs() < 0.01, "{column:?}");
     }
 
     #[test]
     fn a_press_finds_the_file_or_the_cross_under_it() {
-        let column = slot_rect(1, BOUNDS, 1.0);
+        let column = slot_rect(1, 3, BOUNDS, 1.0);
         let inside = Point::new(column.center_x(), column.bottom - 2.0);
         assert_eq!(target_at(inside, BOUNDS, 1.0, 3), Some(Target::Slot(1)));
         let cross = remove_center(preview_rect(column, 1.0), 1.0);
@@ -161,22 +169,23 @@ mod tests {
     }
 
     #[test]
-    fn the_more_place_has_no_cross() {
-        let more = slot_rect(MAX_SLOTS - 1, BOUNDS, 1.0);
-        let corner = remove_center(preview_rect(more, 1.0), 1.0);
-        assert_eq!(target_at(corner, BOUNDS, 1.0, 12), Some(Target::Slot(MAX_SLOTS - 1)));
+    fn every_file_of_a_full_shelf_has_a_cross() {
+        let tall = Rect::new(0.0, 0.0, EXPANDED_WIDTH, content_height(MAX_FILES));
+        let last = slot_rect(MAX_FILES - 1, MAX_FILES, tall, 1.0);
+        let corner = remove_center(preview_rect(last, 1.0), 1.0);
+        assert_eq!(target_at(corner, tall, 1.0, MAX_FILES), Some(Target::Remove(MAX_FILES - 1)));
     }
 
     #[test]
     fn an_empty_shelf_has_nothing_to_press() {
         assert_eq!(target_at(Point::new(40.0, 40.0), BOUNDS, 1.0, 0), None);
-        assert_eq!(target_at(middle(slot_rect(0, BOUNDS, 1.0)), BOUNDS, 1.0, 0), None);
+        assert_eq!(target_at(middle(slot_rect(0, 0, BOUNDS, 1.0)), BOUNDS, 1.0, 0), None);
     }
 
     #[test]
     fn the_page_is_exactly_as_wide_as_its_places_and_padding() {
-        let places = MAX_SLOTS as f32 * FILE_WIDTH + (MAX_SLOTS - 1) as f32 * FILE_GAP;
-        assert_eq!(EXPANDED_SIZE.width, places + 2.0 * ZONE_PADDING);
+        let places = SLOTS_PER_ROW as f32 * FILE_WIDTH + (SLOTS_PER_ROW - 1) as f32 * FILE_GAP;
+        assert_eq!(EXPANDED_WIDTH, places + 2.0 * ZONE_PADDING);
     }
 
     #[test]

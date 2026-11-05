@@ -5,6 +5,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// The most files the shelf holds: two rows of six.
+pub const MAX_FILES: usize = 12;
+
 const LABEL_LENGTH: usize = 4;
 
 fn extension(path: &Path) -> String {
@@ -63,9 +66,17 @@ impl Shelf {
         self.items.len()
     }
 
+    pub fn is_full(&self) -> bool {
+        self.items.len() >= MAX_FILES
+    }
+
+    /// Adds what fits and returns how many were added; a full shelf adds nothing.
     pub fn add(&mut self, paths: impl IntoIterator<Item = PathBuf>) -> usize {
         let before = self.items.len();
         for path in paths {
+            if self.is_full() {
+                break;
+            }
             if path.exists() && !self.items.contains(&path) {
                 self.items.push(path);
             }
@@ -154,5 +165,19 @@ mod tests {
     #[test]
     fn a_missing_storage_file_gives_an_empty_shelf() {
         assert_eq!(Shelf::load(Path::new(r"C:\no\such\shelf.txt")).len(), 0);
+    }
+
+    #[test]
+    fn a_full_shelf_takes_twelve_files_and_refuses_the_rest() {
+        let directory = temporary_directory("full");
+        let paths: Vec<PathBuf> = (0..15).map(|number| file(&directory, &format!("file-{number}.txt"))).collect();
+        let mut shelf = Shelf::default();
+        assert_eq!(shelf.add(paths.clone()), MAX_FILES);
+        assert!(shelf.is_full());
+        assert_eq!(shelf.add(paths), 0);
+        assert_eq!(shelf.len(), MAX_FILES);
+        shelf.remove(0);
+        assert!(!shelf.is_full());
+        let _ = fs::remove_dir_all(directory);
     }
 }

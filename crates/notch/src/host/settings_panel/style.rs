@@ -8,6 +8,7 @@ pub(super) const CARD_PADDING: f32 = 12.0;
 pub(super) const SWITCH_ROW: f32 = 44.0;
 pub(super) const STEPPER_ROW: f32 = 58.0;
 pub(super) const LABELLED_ROW: f32 = 62.0;
+pub(super) const PICKS_ROW: f32 = 52.0;
 pub(super) const TEXT_ROW: f32 = 40.0;
 pub(super) const SEARCH_ROW: f32 = 96.0;
 pub(super) const SEARCH_FIELD_TOP: f32 = 24.0;

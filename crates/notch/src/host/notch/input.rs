@@ -34,7 +34,11 @@ impl Notch {
             self.hover.is_settings_hovered = is_over_settings;
             self.pending.repaint = true;
         }
-        if let Some(editor) = self.editor.as_mut() {
+        if let Some(menu) = self.menu.as_mut() {
+            if menu.moved(point, self.scale) {
+                self.pending.repaint = true;
+            }
+        } else if let Some(editor) = self.editor.as_mut() {
             if editor.moved(point) {
                 self.pending.repaint = true;
             }
@@ -46,6 +50,15 @@ impl Notch {
 
     pub fn pointer_pressed(&mut self, window_x: i32, window_y: i32) {
         let point = self.to_surface_space(window_x, window_y);
+        if let Some(menu) = &self.menu {
+            match menu.action_at(point, self.scale) {
+                Some(action) => self.run_menu_action(action),
+                None if menu.contains(point) => {}
+                None => self.close_menu(),
+            }
+            self.flush();
+            return;
+        }
         if self.editor.is_some() {
             self.press_editor(point);
             self.flush();
@@ -106,19 +119,34 @@ impl Notch {
         self.flush();
     }
 
+    /// A right-click anywhere on the open notch opens the menu, except where the page uses it itself (a file on the shelf).
     pub fn right_clicked(&mut self, window_x: i32, window_y: i32) {
         let point = self.to_surface_space(window_x, window_y);
         let frame = self.frame();
-        if self.editor.is_some() || !frame.is_open() || !chrome::content_rect(frame.bounds, self.scale).contains(point)
-        {
+        if self.menu.is_some() {
+            self.close_menu();
+            self.flush();
             return;
         }
-        self.route_pointer(PointerEvent::SecondaryReleased(point));
+        if self.editor.is_some() || !frame.is_open() || !frame.bounds.contains(point) {
+            return;
+        }
+        let in_content = crate::host::chrome::content_rect(frame.bounds, self.scale).contains(point);
+        if in_content && self.page_uses_right_click(point) {
+            self.route_pointer(PointerEvent::SecondaryReleased(point));
+        } else {
+            self.open_menu(point);
+        }
         self.flush();
     }
 
     pub fn scrolled(&mut self, amount: i32, is_horizontal: bool, is_touchpad: bool) {
         if !self.hover.is_hovering || self.editor.is_some() {
+            return;
+        }
+        if self.menu.is_some() {
+            self.close_menu();
+            self.flush();
             return;
         }
         let toward_next = if is_horizontal { amount } else { -amount };

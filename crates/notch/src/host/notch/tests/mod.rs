@@ -27,6 +27,7 @@ use crate::{
     ui::{self, Icon},
 };
 
+mod context_menu;
 mod hiding_rules;
 mod images;
 mod page_navigation;

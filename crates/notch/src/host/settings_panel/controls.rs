@@ -42,6 +42,7 @@ pub fn general_controls() -> Vec<Control> {
             hint: "off reads \"New message\"",
             default: true,
         },
+        Control::Search { key: places::CITY_KEY, label: "Location", placeholder: "Click, then type a city" },
     ]
 }
 

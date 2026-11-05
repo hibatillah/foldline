@@ -105,6 +105,7 @@ impl Notch {
         self.hover.is_hovering = is_hovering;
         if !is_hovering {
             self.editor = None;
+            self.menu = None;
             self.hover.is_settings_hovered = false;
             self.cancel_close();
         }

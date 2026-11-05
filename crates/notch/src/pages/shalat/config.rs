@@ -3,12 +3,9 @@
 use super::times;
 use super::times::{PRAYERS, Place, Rules};
 use crate::host::Settings;
+use places::Location;
 use salah::Madhab;
 
-pub(super) const CITY_KEY: &str = "shalat.city";
-pub(super) const LATITUDE_KEY: &str = "shalat.lat";
-pub(super) const LONGITUDE_KEY: &str = "shalat.lon";
-pub(super) const COUNTRY_KEY: &str = "shalat.country";
 pub(super) const METHOD_KEY: &str = "shalat.method";
 pub(super) const HANAFI_KEY: &str = "shalat.hanafi";
 pub(super) const MESSAGE_KEY: &str = "shalat.message";
@@ -26,12 +23,10 @@ pub(super) struct Config {
 
 impl Config {
     pub(super) fn read(get: &dyn Fn(&str) -> Option<String>) -> Self {
-        let number = |key: &str| get(key).and_then(|text| text.trim().parse::<f64>().ok());
-        let place = number(LATITUDE_KEY)
-            .zip(number(LONGITUDE_KEY))
-            .filter(|(latitude, longitude)| latitude.abs() <= 90.0 && longitude.abs() <= 180.0)
-            .map(|(latitude, longitude)| Place { latitude, longitude });
-        let country = get(COUNTRY_KEY).unwrap_or_default();
+        let location = Location::read(get);
+        let place =
+            location.as_ref().map(|location| Place { latitude: location.latitude, longitude: location.longitude });
+        let country = location.as_ref().map(|location| location.country.clone()).unwrap_or_default();
         let method = times::parse_method(get(METHOD_KEY).as_deref().unwrap_or("auto"), &country);
         let is_on = |key: &str, default: bool| match get(key).as_deref() {
             Some("on") => true,
@@ -44,7 +39,7 @@ impl Config {
                 get(prayer.offset_key()).and_then(|text| text.trim().parse::<i64>().ok()).unwrap_or(0).clamp(-30, 30);
         }
         Self {
-            city: get(CITY_KEY).unwrap_or_default(),
+            city: location.map(|location| location.label).unwrap_or_default(),
             place,
             rules: Rules {
                 method,

@@ -68,7 +68,7 @@ fn save(notch: &Notch, name: &str, height_dip: f32) {
 fn snapshots_of_every_open_page() {
     let options = SampleOptions { media: Some((true, false)), timer: true, calendar: true, ..SampleOptions::default() };
     let mut notch = rig(options);
-    for id in ["media", "shelf", "calendar", "timer", "stats", "todo", "shalat"] {
+    for id in ["media", "shelf", "calendar", "timer", "stats", "todo", "shalat", "weather"] {
         open(&mut notch, id);
         save(&notch, &format!("open-{id}"), WINDOW_HEIGHT);
     }

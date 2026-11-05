@@ -172,15 +172,19 @@ pub fn draw_control(
             }
         }
         Control::Picks { label, options, max, .. } => {
+            let chosen = picked(saved, options, *max);
+            canvas.text(&LABEL, label, label_area(9.0, 25.0), Color::WHITE.faded(opacity));
             canvas.text(
                 &SMALL_LABEL,
-                &format!("{label} \u{00b7} up to {max}"),
-                label_area(8.0, 22.0),
+                &picks_note(label, options.len(), chosen.len(), *max),
+                label_area(27.0, 41.0),
                 GRAY.faded(opacity),
             );
-            let chosen = picked(saved, options, *max);
+            let is_limit_reached = chosen.len() >= *max;
             for ((_, rect), name) in item.parts.iter().zip(options) {
                 let is_picked = chosen.contains(name);
+                let is_dimmed = !is_picked && is_limit_reached;
+                let outline = if is_dimmed { OFF_TRACK.with_alpha(0.5) } else { OFF_TRACK };
                 let radius = rect.height() / 2.0;
                 if is_picked {
                     canvas.fill_rounded_rect(*rect, radius, PICKED_BORDER.faded(opacity));
@@ -194,7 +198,7 @@ pub fn draw_control(
                         scale,
                         4.0 * scale,
                         3.0 * scale,
-                        OFF_TRACK.faded(opacity),
+                        outline.faded(opacity),
                     );
                 }
                 let text = if is_picked {
@@ -202,8 +206,25 @@ pub fn draw_control(
                 } else {
                     std::borrow::Cow::Borrowed(name.as_str())
                 };
-                canvas.text(&CENTERED, &text, *rect, if is_picked { Color::WHITE } else { GRAY }.faded(opacity));
+                let color = if is_picked {
+                    Color::WHITE
+                } else if is_dimmed {
+                    DIM
+                } else {
+                    GRAY
+                };
+                canvas.text(&CENTERED, &text, *rect, color.faded(opacity));
             }
         }
     }
+}
+
+/// The line under a picks label: what is allowed and how many are chosen, or that only one thing exists to choose.
+pub(super) fn picks_note(label: &str, found: usize, chosen: usize, max: usize) -> String {
+    if found <= 1 {
+        let noun = label.strip_suffix('s').unwrap_or(label);
+        let noun = if noun.chars().all(char::is_uppercase) { noun.to_owned() } else { noun.to_lowercase() };
+        return format!("One {noun} found");
+    }
+    format!("Show up to {max} \u{00b7} {chosen} chosen")
 }

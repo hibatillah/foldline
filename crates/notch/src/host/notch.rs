@@ -19,6 +19,7 @@ use animation::Springs;
 use hiding::{HidingState, read_showing};
 use hover::HoverState;
 use keyboard::{KeyboardOwner, KeyboardState};
+use menu::ContextMenu;
 use pages::activity_setting_key;
 use settings_ui::PanelState;
 
@@ -28,6 +29,7 @@ mod hover;
 mod input;
 mod keyboard;
 mod layout;
+mod menu;
 mod pages;
 mod paint;
 mod settings_ui;
@@ -115,6 +117,8 @@ pub struct Notch {
     hiding: HidingState,
     has_resting_content: bool,
     hover: HoverState,
+    /// The right-click menu while it is open.
+    menu: Option<ContextMenu>,
     is_animating: bool,
     keyboard: KeyboardState,
     panel: PanelState,
@@ -187,6 +191,7 @@ impl Notch {
             hiding,
             has_resting_content: false,
             hover: HoverState::default(),
+            menu: None,
             is_animating: false,
             keyboard: KeyboardState::default(),
             panel: PanelState::default(),

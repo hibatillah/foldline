@@ -4,6 +4,9 @@ use std::{fs, io::ErrorKind, path::PathBuf};
 
 use crate::log;
 
+/// Done tasks count too: a finished task keeps its row until it is cleared.
+pub const MAX_TASKS: usize = 5;
+
 const OPEN_MARK: &str = "- [ ]";
 const DONE_MARKS: [&str; 2] = ["- [x]", "- [X]"];
 
@@ -43,6 +46,15 @@ impl TodoList {
         Self { items, path: None }
     }
 
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn is_full(&self) -> bool {
+        self.items.len() >= MAX_TASKS
+    }
+
     pub fn open_count(&self) -> usize {
         self.items.iter().filter(|item| !item.is_done).count()
     }
@@ -62,8 +74,11 @@ impl TodoList {
         self.items.get(index)
     }
 
-    /// Adds an open item; blank text adds nothing and returns false.
+    /// Adds an open item; blank text or a full list adds nothing and returns false.
     pub fn add(&mut self, text: &str) -> bool {
+        if self.is_full() {
+            return false;
+        }
         let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
         if text.is_empty() {
             return false;

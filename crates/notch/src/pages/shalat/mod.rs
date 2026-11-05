@@ -12,9 +12,8 @@ use crate::{
     },
     ui::{self, Icon},
 };
-use config::{
-    BADGE_KEY, CITY_KEY, COUNTRY_KEY, Config, HANAFI_KEY, LATITUDE_KEY, LONGITUDE_KEY, MESSAGE_KEY, METHOD_KEY,
-};
+use config::{BADGE_KEY, Config, HANAFI_KEY, MESSAGE_KEY, METHOD_KEY};
+use places::CITY_KEY;
 use salah::{DateTime, Utc};
 use schedule::Schedule;
 use text::{badge_text, clock_text, remaining_text};
@@ -24,8 +23,6 @@ mod schedule;
 #[cfg(test)]
 mod tests;
 mod text;
-
-mod cities;
 
 mod times;
 
@@ -115,6 +112,7 @@ impl ShalatPage {
 
     #[cfg(test)]
     pub fn sample() -> Self {
+        use places::{COUNTRY_KEY, LATITUDE_KEY, LONGITUDE_KEY};
         use salah::Local;
         use schedule::compute;
         let get = |key: &str| match key {
@@ -300,17 +298,9 @@ impl Page for ShalatPage {
         if key != CITY_KEY {
             return Vec::new();
         }
-        cities::search(query, MAX_HITS)
+        places::search(query, MAX_HITS)
             .into_iter()
-            .map(|city| SearchHit {
-                label: city.label(),
-                values: vec![
-                    (CITY_KEY, city.label()),
-                    (LATITUDE_KEY, format!("{:.3}", city.latitude)),
-                    (LONGITUDE_KEY, format!("{:.3}", city.longitude)),
-                    (COUNTRY_KEY, city.country),
-                ],
-            })
+            .map(|city| SearchHit { label: city.label(), values: places::values_of(&city) })
             .collect()
     }
 

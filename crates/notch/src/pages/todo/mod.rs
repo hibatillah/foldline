@@ -4,7 +4,7 @@ mod list;
 
 #[cfg(test)]
 use self::list::Item;
-use self::list::TodoList;
+use self::list::{MAX_TASKS, TodoList};
 use crate::{
     gfx::{Align, Canvas, Color, FontStyle, Point, Rect, Size, UI_FONT, Weight},
     page::{Context, DEFAULT_CONTENT_HEIGHT, Frame, KeyInput, Mode, Page, PageSizes, PointerEvent, Priority},
@@ -23,13 +23,14 @@ const ROW_PADDING: f32 = 10.0;
 const CHECK_SIZE: f32 = 14.0;
 const TEXT_LEFT: f32 = ROW_PADDING + CHECK_SIZE + 10.0;
 const DELETE_SIZE: f32 = 22.0;
-/// Rows the open notch shows at most; more appear as a "more" line.
-const MAX_ROWS: usize = 4;
+/// Rows the open notch shows at most; a longer list from an older version ends in a "more" line.
+const MAX_ROWS: usize = MAX_TASKS;
 const MAX_CHARACTERS: usize = 120;
 const ADD_BUTTON: Size = Size::new(64.0, 26.0);
 
 const TITLE: FontStyle = FontStyle::new(UI_FONT, 22.0, Weight::Medium, Align::Leading);
 const COUNT: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Leading);
+const NOTE: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Leading);
 const ROW_TEXT: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Regular, Align::Leading);
 const HINT: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Trailing);
 const EMPTY: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Center);
@@ -43,6 +44,7 @@ const DELETE_FILL: Color = Color::rgb(0.165, 0.165, 0.188);
 const FIELD_BORDER: Color = Color::rgb(0.251, 0.561, 1.0);
 const DONE_GREEN: Color = Color::rgb(0.19, 0.82, 0.35);
 const ACCENT: Color = Color::rgb(0.9, 0.9, 0.92);
+const LIMIT_NOTE: Color = Color::rgb(0.49, 0.53, 0.72);
 
 /// What a row of the list shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -127,6 +129,9 @@ impl TodoPage {
     }
 
     fn start_adding(&mut self, context: &mut Context) {
+        if self.list.is_full() {
+            return;
+        }
         self.is_adding = true;
         self.field.clear();
         context.take_keyboard();
@@ -211,6 +216,11 @@ impl TodoPage {
     }
 }
 
+/// What the Add button says while the list is full: tick one off, or clear one that is already done.
+fn limit_note(has_done: bool) -> [&'static str; 2] {
+    ["Limit of 5.", if has_done { "Clear a done task." } else { "Tick one off to add." }]
+}
+
 /// The open height: today's height until the rows need more, up to `MAX_ROWS` rows.
 fn content_height(row_count: usize) -> f32 {
     let rows = row_count as f32;
@@ -255,15 +265,26 @@ impl Page for TodoPage {
         };
         let count_area = Rect { top: bounds.top + 32.0 * scale, bottom: bounds.top + 48.0 * scale, ..title_area };
         canvas.text(&COUNT, &count, count_area, GRAY.faded(opacity));
-        let add = PillButton {
-            label: "+ Add",
-            area: Self::add_button(bounds, scale),
-            is_primary: false,
-            is_destructive: false,
-            is_hovered: self.is_add_hovered,
-            accent: ACCENT,
-        };
-        add.draw(canvas, opacity);
+        let add_area = Self::add_button(bounds, scale);
+        if self.list.is_full() {
+            canvas.fill_rounded_rect(add_area, add_area.height() / 2.0, ROW.faded(opacity));
+            canvas.text(&EMPTY, "+ Add", add_area, DIM.faded(opacity));
+            for (line, text) in limit_note(self.list.done_count() > 0).into_iter().enumerate() {
+                let top = add_area.bottom + (6.0 + line as f32 * 14.0) * scale;
+                let area = Rect::new(add_area.left, top, bounds.left + SIDE_WIDTH * scale, top + 14.0 * scale);
+                canvas.text(&NOTE, text, area, LIMIT_NOTE.faded(opacity));
+            }
+        } else {
+            let add = PillButton {
+                label: "+ Add",
+                area: add_area,
+                is_primary: false,
+                is_destructive: false,
+                is_hovered: self.is_add_hovered,
+                accent: ACCENT,
+            };
+            add.draw(canvas, opacity);
+        }
 
         let divider_left = bounds.left + (SIDE_WIDTH + DIVIDER_GAP) * scale;
         let divider = Rect::new(divider_left, bounds.top, divider_left + scale, bounds.bottom);
@@ -379,24 +400,46 @@ mod tests {
     }
 
     #[test]
-    fn a_short_list_keeps_the_usual_height_and_a_long_one_grows_to_four_rows() {
+    fn a_short_list_keeps_the_usual_height_and_a_long_one_grows_to_five_rows() {
         assert_eq!(content_height(0), DEFAULT_CONTENT_HEIGHT);
         assert_eq!(content_height(2), DEFAULT_CONTENT_HEIGHT);
         assert_eq!(content_height(3), 3.0 * ROW_HEIGHT + 2.0 * ROW_GAP);
-        assert_eq!(content_height(MAX_ROWS), 4.0 * ROW_HEIGHT + 3.0 * ROW_GAP);
+        assert_eq!(content_height(MAX_ROWS), 5.0 * ROW_HEIGHT + 4.0 * ROW_GAP);
+        assert_eq!(content_height(MAX_ROWS), 184.0);
     }
 
     #[test]
     fn more_items_than_rows_end_with_a_count_of_the_rest() {
-        let page = page_with(5, 1);
-        assert_eq!(page.rows(), [Row::Item(0), Row::Item(1), Row::Item(2), Row::More(3)]);
+        // A list saved by an older version can hold more than the limit; it still shows, ending in a count.
+        let page = page_with(5, 2);
+        assert_eq!(page.rows(), [Row::Item(0), Row::Item(1), Row::Item(2), Row::Item(3), Row::More(3)]);
+    }
+
+    #[test]
+    fn a_sixth_task_is_refused_and_a_done_task_counts_toward_the_five() {
+        let mut list =
+            TodoList::with_items((0..4).map(|index| Item { text: format!("task {index}"), is_done: false }).collect());
+        assert!(list.add("fifth"));
+        assert!(list.is_full());
+        assert!(!list.add("sixth"));
+        assert_eq!(list.len(), MAX_TASKS);
+        list.toggle(0);
+        assert!(list.is_full(), "a finished task keeps its row until it is cleared");
+        list.remove(0);
+        assert!(list.add("replacement"));
+    }
+
+    #[test]
+    fn the_limit_note_tells_what_frees_a_place() {
+        assert_eq!(limit_note(false), ["Limit of 5.", "Tick one off to add."]);
+        assert_eq!(limit_note(true), ["Limit of 5.", "Clear a done task."]);
     }
 
     #[test]
     fn the_add_field_takes_the_first_row_while_adding() {
         let mut page = page_with(4, 0);
         page.is_adding = true;
-        assert_eq!(page.rows(), [Row::Field, Row::Item(0), Row::Item(1), Row::More(2)]);
+        assert_eq!(page.rows(), [Row::Field, Row::Item(0), Row::Item(1), Row::Item(2), Row::Item(3)]);
         let mut short = page_with(1, 0);
         short.is_adding = true;
         assert_eq!(short.rows(), [Row::Field, Row::Item(0)]);

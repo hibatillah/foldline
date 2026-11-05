@@ -197,6 +197,12 @@ pub trait Page {
 
     fn on_pointer(&mut self, _event: PointerEvent, _frame: &Frame, _context: &mut Context) {}
 
+    /// Whether a right-click at `point` means something on this page. When it does the page gets
+    /// `PointerEvent::SecondaryReleased`; otherwise the host opens its own menu.
+    fn uses_right_click(&self, _point: Point, _frame: &Frame) -> bool {
+        false
+    }
+
     fn on_timer(&mut self, _timer: TimerId, _context: &mut Context) {}
 
     /// Typing, delivered only while this page holds the keyboard.

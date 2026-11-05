@@ -2,7 +2,7 @@
 
 use super::items::tile_label;
 use super::{
-    GRAY, NAME, NAME_COLOR, NAME_LINE_HEIGHT, NAME_TOP, ShelfPage, Slot, Target, fitted, preview_rect, remove_center,
+    GRAY, NAME, NAME_COLOR, NAME_LINE_HEIGHT, NAME_TOP, ShelfPage, Target, fitted, preview_rect, remove_center,
     slot_rect,
 };
 use crate::{
@@ -51,24 +51,21 @@ impl ShelfPage {
         Icon::Close.draw(canvas, center, 10.0 * scale, Color::WHITE, opacity);
     }
 
-    pub(super) fn draw_slot(&self, canvas: &Canvas, position: usize, slot: Slot, bounds: Rect, opacity: f32) {
+    pub(super) fn draw_slot(&self, canvas: &Canvas, position: usize, bounds: Rect, opacity: f32) {
         let scale = canvas.scale();
-        let column = slot_rect(position, bounds, scale);
-        let arrival = match slot {
-            Slot::File(index) => self.arrivals.get(&self.shelf.items()[index]).map(|spring| spring.position),
-            Slot::More(_) => None,
-        };
-        let Some(progress) = arrival else { return self.draw_column(canvas, position, slot, column, opacity) };
+        let column = slot_rect(position, self.shelf.len(), bounds, scale);
+        let arrival = self.arrivals.get(&self.shelf.items()[position]).map(|spring| spring.position);
+        let Some(progress) = arrival else { return self.draw_column(canvas, position, column, opacity) };
         let shown = progress.max(0.0);
         let rise = (1.0 - shown) * ARRIVAL_FALL * scale;
         let column = Rect::new(column.left, column.top - rise, column.right, column.bottom - rise);
         let factor = ARRIVAL_SCALE + (1.0 - ARRIVAL_SCALE) * shown;
         let center = Point::new(column.center_x(), column.center_y());
         let faded = opacity * progress.clamp(0.0, 1.0);
-        canvas.scaled_about(center, factor, || self.draw_column(canvas, position, slot, column, faded));
+        canvas.scaled_about(center, factor, || self.draw_column(canvas, position, column, faded));
     }
 
-    pub(super) fn draw_column(&self, canvas: &Canvas, position: usize, slot: Slot, column: Rect, opacity: f32) {
+    pub(super) fn draw_column(&self, canvas: &Canvas, position: usize, column: Rect, opacity: f32) {
         let scale = canvas.scale();
         let is_hovered = matches!(self.hovered, Some(Target::Slot(at) | Target::Remove(at)) if at == position);
         if is_hovered {
@@ -83,26 +80,16 @@ impl ShelfPage {
         let preview = preview_rect(column, scale);
         let name_top = preview.bottom + NAME_TOP * scale;
         let name_color = if is_hovered { Color::WHITE } else { NAME_COLOR };
-        match slot {
-            Slot::File(index) => {
-                let path = &self.shelf.items()[index];
-                let faded = if self.dragging.as_ref() == Some(path) { opacity * 0.35 } else { opacity };
-                self.draw_preview(canvas, path, preview, faded);
-                for (line, text) in self.names.get(index).into_iter().flatten().enumerate() {
-                    let top = name_top + line as f32 * NAME_LINE_HEIGHT * scale;
-                    let rect = Rect::new(column.left, top, column.right, top + NAME_LINE_HEIGHT * scale);
-                    canvas.text(&NAME, text, rect, name_color.faded(faded));
-                }
-                if is_hovered {
-                    self.draw_remove_button(canvas, preview, self.hovered == Some(Target::Remove(position)), opacity);
-                }
-            }
-            Slot::More(count) => {
-                canvas.fill_rounded_rect(preview, PREVIEW_RADIUS * scale, Color::gray(0.16).faded(opacity));
-                canvas.text(&TILE_LABEL, &format!("+{count}"), preview, Color::WHITE.faded(opacity));
-                let rect = Rect::new(column.left, name_top, column.right, name_top + NAME_LINE_HEIGHT * scale);
-                canvas.text(&NAME, "more", rect, name_color.faded(opacity));
-            }
+        let path = &self.shelf.items()[position];
+        let faded = if self.dragging.as_ref() == Some(path) { opacity * 0.35 } else { opacity };
+        self.draw_preview(canvas, path, preview, faded);
+        for (line, text) in self.names.get(position).into_iter().flatten().enumerate() {
+            let top = name_top + line as f32 * NAME_LINE_HEIGHT * scale;
+            let rect = Rect::new(column.left, top, column.right, top + NAME_LINE_HEIGHT * scale);
+            canvas.text(&NAME, text, rect, name_color.faded(faded));
+        }
+        if is_hovered {
+            self.draw_remove_button(canvas, preview, self.hovered == Some(Target::Remove(position)), opacity);
         }
     }
 }

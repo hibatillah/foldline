@@ -2,6 +2,7 @@
 
 use self::times::{PRAYERS, Place, Prayer};
 use crate::page::{Control, Page};
+use places::{COUNTRY_KEY, LATITUDE_KEY, LONGITUDE_KEY};
 use salah::{Local, Madhab, Utc};
 
 use super::{schedule::wait_milliseconds, *};

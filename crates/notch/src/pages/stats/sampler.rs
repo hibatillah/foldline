@@ -43,6 +43,8 @@ impl NetworkKind {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Meter {
     pub name: String,
+    /// Bytes in use and in total, for a disk; `None` for a GPU.
+    pub capacity: Option<(u64, u64)>,
     /// `None` while a GPU still waits for its second reading.
     pub percent: Option<f32>,
 }
@@ -164,7 +166,11 @@ fn fixed_disks() -> Vec<Meter> {
             }
             let (mut free_to_user, mut total, mut free) = (0u64, 0u64, 0u64);
             unsafe { GetDiskFreeSpaceExW(&root, Some(&mut free_to_user), Some(&mut total), Some(&mut free)) }.ok()?;
-            (total > 0).then(|| Meter { name: format!("{letter}:"), percent: Some(used_percent(total, free)) })
+            (total > 0).then(|| Meter {
+                name: format!("{letter}:"),
+                capacity: Some((total.saturating_sub(free), total)),
+                percent: Some(used_percent(total, free)),
+            })
         })
         .collect()
 }
@@ -250,7 +256,7 @@ mod tests {
     }
 
     fn meters(names: &[&str]) -> Vec<Meter> {
-        names.iter().map(|name| Meter { name: (*name).to_owned(), percent: Some(50.0) }).collect()
+        names.iter().map(|name| Meter { name: (*name).to_owned(), capacity: None, percent: Some(50.0) }).collect()
     }
 
     fn names(meters: &[Meter]) -> Vec<&str> {
