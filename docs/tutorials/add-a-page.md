@@ -12,14 +12,14 @@ device-independent pixels); the notch adds 50 for the header and padding (136 to
 
 ### 1. Create the folder
 
-Make `src/pages/<name>/mod.rs`. A page may be one file or many; keep everything it needs inside its folder. A page
+Make `crates/notch/src/pages/<name>/mod.rs`. A page may be one file or many; keep everything it needs inside its folder. A page
 can use `page`, `activity`, `gfx`, `ui` and `platform`, but never another page.
 
 ### 2. Implement `Page`
 
 A page needs five methods; the rest are optional hooks. This is a complete page, a greeting that follows the time
 of day and switches between casual and formal wording when you click it while the notch is open. Copy it to
-`src/pages/greeting/mod.rs`:
+`crates/notch/src/pages/greeting/mod.rs`:
 
 ```rust
 //! A greeting that follows the time of day. Click it while open to switch between casual and formal wording.
@@ -141,7 +141,7 @@ What each part does:
 
 ### 3. Register it
 
-Open `src/pages/mod.rs`, declare the module and add the page to `all()`:
+Open `crates/notch/src/pages/mod.rs`, declare the module and add the page to `all()`:
 
 ```rust
 mod greeting;

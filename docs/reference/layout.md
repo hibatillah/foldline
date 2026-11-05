@@ -4,7 +4,7 @@
 
 The host owns the shape, the padding and the header. A page draws only the content area inside them, and all sizes
 are in device-independent pixels (multiply by the display scale when drawing). The numbers are constants in
-`src/host/chrome.rs`; the time is drawn by `src/host/clock.rs`.
+`crates/notch/src/host/chrome.rs`; the time is drawn by `crates/notch/src/host/clock.rs`.
 
 **Open (pointer over the notch)**, here a page whose content is 300 px wide (the height is always 86):
 
@@ -65,13 +65,13 @@ are in device-independent pixels (multiply by the display scale when drawing). T
 
 | To change | Edit |
 | --- | --- |
-| padding, header height, the gap, the dots, the content height | `src/host/chrome.rs` |
-| the time and the collapsed pill's minimum width | `src/host/clock.rs` |
-| which page shows, swiping, hover, the springs, hiding | `src/host/notch.rs` |
-| maximized and full-screen detection | `src/host/screen_mode.rs` |
-| the tray menu | `src/host/tray.rs` (the items), `src/host/window.rs` (what they do) |
-| the settings window | `settings/src/sections/` (one file per section), `settings/src/field.rs` (toggles and text fields); [adding-a-setting.md](../how-to/add-a-setting.md) |
-| start with Windows | `src/host/startup.rs` (the tray item), `settings/src/startup.rs` (the window's switch), `installer/notch.iss` (the installer's choice) |
-| a page's content and size | that page's folder in `src/pages/` |
-| register a page | `src/pages/mod.rs` |
-| register an activity | `src/activities/mod.rs` |
+| padding, header height, the gap, the dots, the content height | `crates/notch/src/host/chrome.rs` |
+| the time and the collapsed pill's minimum width | `crates/notch/src/host/clock.rs` |
+| which page shows, swiping, hover, the springs, hiding | `crates/notch/src/host/notch/` (`animation.rs`, `hover.rs`, `hiding.rs`, `layout.rs`) |
+| maximized and full-screen detection | `crates/notch/src/host/screen_mode.rs` |
+| the tray menu | `crates/notch/src/host/tray.rs` (the items), `crates/notch/src/host/window.rs` (what they do) |
+| the settings window | `crates/settings/src/sections/` (one file per section), `crates/settings/src/field.rs` (toggles and text fields); [adding-a-setting.md](../how-to/add-a-setting.md) |
+| start with Windows | `crates/notch/src/host/startup.rs` (the tray item), `crates/settings/src/startup.rs` (the window's switch), `installer/notch.iss` (the installer's choice) |
+| a page's content and size | that page's folder in `crates/notch/src/pages/` |
+| register a page | `crates/notch/src/pages/mod.rs` |
+| register an activity | `crates/notch/src/activities/mod.rs` |

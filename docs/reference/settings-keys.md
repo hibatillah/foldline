@@ -83,13 +83,13 @@ Things a developer tunes by editing source:
 
 | What | Where |
 | --- | --- |
-| which pages exist and their order (the order breaks priority ties) | `src/pages/mod.rs` |
-| which activities exist and their order (optional tray entries, badges) | `src/activities/mod.rs` |
+| which pages exist and their order (the order breaks priority ties) | `crates/notch/src/pages/mod.rs` |
+| which activities exist and their order (optional tray entries, badges) | `crates/notch/src/activities/mod.rs` |
 | when a page is shown | the page's `priority()` |
 | how big a page is | the page's `sizes()` |
-| corner radius, spring stiffness, window size | `src/host/notch.rs` |
+| corner radius, spring stiffness, window size | `crates/notch/src/host/notch.rs` and `crates/notch/src/host/notch/` |
 | text styles | `const FontStyle`s in each page |
-| the limits of the performance test | `scripts/perf.rs` |
+| the limits of the performance test | `crates/notch/examples/perf.rs` |
 
 ## Start with Windows
 

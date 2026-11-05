@@ -21,7 +21,7 @@ add the target once:
 rustup target add x86_64-pc-windows-msvc
 ```
 
-The settings window (`settings/`, GPUI) builds only with the MSVC host toolchain: install it with
+The settings window (`crates/settings/`, GPUI) builds only with the MSVC host toolchain: install it with
 `rustup toolchain install stable-x86_64-pc-windows-msvc` and run its commands as `cargo +stable-x86_64-pc-windows-msvc`.
 
 ## Build
@@ -33,7 +33,7 @@ cargo build --release
 ```
 
 The executable is `target\x86_64-pc-windows-msvc\release\notch.exe`. The workspace's default member is the notch, so
-this does not build the settings window; `cargo +stable-x86_64-pc-windows-msvc build --release -p notch-settings` builds
+this does not build the settings window; `cargo +stable-x86_64-pc-windows-msvc build --release -p settings` builds
 `notch-settings.exe` beside it, and `--workspace` builds both. A debug build (`cargo build`) works too, but
 animation is noticeably slower, so use release for anything you look at.
 
@@ -44,7 +44,7 @@ animation is noticeably slower, so use release for anything you look at.
 After changing the master, regenerate the export from Git Bash with `scripts/export-icon.sh` (requires `uv`; Pillow
 is used only for this export, not by the app or normal builds).
 
-`build.rs` uses the Windows SDK resource compiler to embed `logo.rc` and `logo.ico` in the executable, and `settings/build.rs` embeds `settings.rc` (the same icon as resource 1) in `notch-settings.exe` for its window and taskbar button; both share `scripts/icon_resource.rs`. The window and
+`crates/notch/build.rs` uses the Windows SDK resource compiler to embed `logo.rc` and `logo.ico` in the executable, and `crates/settings/build.rs` embeds `settings.rc` (the same icon as resource 1) in `notch-settings.exe` for its window and taskbar button; both share `scripts/icon_resource.rs`. The window and
 tray load this same resource at the current display scale. The installer uses the same ICO, and its Start menu
 shortcut and installed-app entry use the executable's embedded icon. No image files are needed beside the installed
 executable. Rebuild and restart Notch to see an icon change; updating an installed copy requires the newer installer.
@@ -81,7 +81,7 @@ scripts/watch.sh
 ```
 
 It does the same with a debug build (`scripts/reload.sh --debug`, about 2 s after a small edit, against about 20 s for
-release) every time a file in `src/`, `store/` or `Cargo.toml` changes (a saved file in `settings/` does not trigger it; the next rebuild picks the change up), and checks for saved files every 2 s. A debug build is
+release) every time a file under `crates/` or `Cargo.toml` changes, and checks for saved files every 2 s. A debug build is
 slower and larger, so use the release build and `scripts/perf.sh` for performance numbers. If a build fails, the
 error shows and the previous copy keeps running until the next save.
 
@@ -104,8 +104,8 @@ cargo test
 scripts/perf.sh          # when you touched the host, animation, timers or drawing
 ```
 
-The checks above cover only the notch; add `--workspace` (with the MSVC toolchain) to include `store/` and `settings/`.
-CI runs the first three on every push to the default branch ([releasing.md](cut-a-release.md)); run them yourself first. Where the tests live and what they cover: [testing.md](test-and-snapshot.md).
+The checks above cover only the notch; add `--workspace` (with the MSVC toolchain) to include `crates/store/` and `crates/settings/`.
+The release workflow runs the first three on every tag push ([releasing.md](cut-a-release.md)); run them yourself first. Where the tests live and what they cover: [testing.md](test-and-snapshot.md).
 `scripts/perf.sh` moves the mouse for about two minutes, so leave the mouse alone while it runs.
 
 ## A page does not show up

@@ -8,15 +8,15 @@ The source is the reference; each hook has a doc comment. `codegraph_explore` re
 
 | Part | Defined in |
 | --- | --- |
-| `Page` trait and every hook | `src/page.rs` |
-| `Context` (repaint, timers, notifier, keyboard, settings, fonts), `Frame`, `PointerEvent`, `KeyInput` | `src/page.rs` |
-| `Control`, `SettingsGroup`, `SearchHit` (a page's settings in the notch's panel) | `src/page.rs` |
-| `DEFAULT_CONTENT_HEIGHT` (86), `MAX_CONTENT_HEIGHT` (220), `RESTING_HEIGHT` (33), `RESTING_MIN_WIDTH` (150) | `src/page.rs` |
-| `Presence`, `Flash` (what a page shows in the collapsed pill) | `src/activity.rs` |
-| `Canvas` drawing calls | `src/gfx/canvas.rs` |
-| `FontStyle`, `UI_FONT`, text measuring | `src/gfx/fonts.rs` |
-| `Spring`, geometry, colors, `Path`, `Mask` | `src/gfx/` |
-| widgets: `IconButton`, `PillButton`, `Ring`, `TextField`, `Icon`, `draw_dashed_outline`, HUD layouts | `src/ui/` |
+| `Page` trait and every hook | `crates/notch/src/page.rs` |
+| `Context` (repaint, timers, notifier, keyboard, settings, fonts), `Frame`, `PointerEvent`, `KeyInput` | `crates/notch/src/page.rs` |
+| `Control`, `SettingsGroup`, `SearchHit` (a page's settings in the notch's panel) | `crates/notch/src/page.rs` |
+| `DEFAULT_CONTENT_HEIGHT` (86), `MAX_CONTENT_HEIGHT` (220), `RESTING_HEIGHT` (33), `RESTING_MIN_WIDTH` (150) | `crates/notch/src/page.rs` |
+| `Presence`, `Flash` (what a page shows in the collapsed pill) | `crates/notch/src/activity.rs` |
+| `Canvas` drawing calls | `crates/notch/src/gfx/canvas.rs` |
+| `FontStyle`, `UI_FONT`, text measuring | `crates/notch/src/gfx/fonts.rs` |
+| `Spring`, geometry, colors, `Path`, `Mask` | `crates/notch/src/gfx/` |
+| widgets: `IconButton`, `PillButton`, `Ring`, `TextField`, `Icon`, `draw_dashed_outline`, HUD layouts | `crates/notch/src/ui/` |
 
 ## Rules the signatures do not show
 
@@ -35,7 +35,7 @@ The source is the reference; each hook has a doc comment. `codegraph_explore` re
 ## Drawing
 
 - Text styles are `const FontStyle::new(family, size, weight, align)` declared in the page. `.wrapped()` wraps long text instead of cutting it with an ellipsis.
-- Icons are shapes built from a `Path` and drawn into small cached images by `ui::Icon`, not font glyphs. Add one in `src/ui/icons.rs` and list it in that file's `ALL` test array.
+- Icons are shapes built from a `Path` and drawn into small cached images by `ui::Icon`, not font glyphs. Add one in `crates/notch/src/ui/icons.rs` and list it in that file's `ALL` test array.
 - Do not use Direct2D geometry (`ID2D1PathGeometry`, `FillGeometry`, `DrawGeometry`): its first use adds about 10 MB. Describe a shape with `Path`, rasterize it with `Mask`, and reuse it through `Canvas::cached_image`.
 - `Spring` eases a value toward a target. Call `step(elapsed_seconds)` from the page's `animate` and return `true` while `is_settled()` is `false`.
 

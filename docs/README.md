@@ -2,6 +2,8 @@
 
 Four kinds of document, each with one job ([Diátaxis](https://diataxis.fr)). Every document opens with a line that says when to read it and when to skip it. Find the task, open one file.
 
+New to the team? Start with [ONBOARDING.md](../ONBOARDING.md) at the repository root: setup, structure and the rules the code follows.
+
 ## Tutorials: learn by doing
 
 | Read | When |

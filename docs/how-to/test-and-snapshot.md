@@ -29,7 +29,7 @@ cargo test snapshots -- --ignored
 ```
 
 These tests are ignored by default. They draw every page off-screen with example content and write the pictures to
-`target/snapshots` (BMP files; `host/notch/snapshots.rs` holds them): each open page, the collapsed pill in its
+`target/snapshots` (BMP files; `host/notch/tests/images.rs` holds them): each open page, the collapsed pill in its
 states, the short messages, the notification banner and the shelf with files dragged over it. Look at the pictures
 after a change to drawing or layout. Two more ignored tests need a real screen and open windows for a moment:
 

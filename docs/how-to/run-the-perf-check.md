@@ -34,7 +34,7 @@ notch use CPU forever; it shows up there as several percent of a core.
 
 The latest recorded baseline and its workload are summarized in [README.md](../../README.md#resource-use).
 Run the check for your current machine. The limits are set
-in constants at the top of `scripts/perf.rs`; they exist to catch regressions, so fix the cause rather than raising one.
+in constants at the top of `crates/notch/examples/perf.rs`; they exist to catch regressions, so fix the cause rather than raising one.
 
 `--with-media` prints memory and CPU with every page on and your music playing. It has no limits, because the result
 depends on the track and on how often its lyrics change.
@@ -51,7 +51,7 @@ set; the reported swipe peak is sampled at each end of a swipe, not a continuous
 
 - `scripts/perf.sh` is only a runner: it parses the options, builds, copies the executable to `run/` and starts the
   measuring program.
-- `scripts/perf.rs` does the measuring. It is a Rust program (run with `cargo run --release --example perf`) that
+- `crates/notch/examples/perf.rs` does the measuring. It is a Rust program (run with `cargo run --release -p notch --example perf`) that
   starts the notch, moves the pointer with `SetCursorPos`, and reads CPU time, handles and private memory from the
   process. A shell script cannot move the mouse or read those numbers, and an example is not part of the shipped
   `notch.exe`. The limits are constants at the top of the file.

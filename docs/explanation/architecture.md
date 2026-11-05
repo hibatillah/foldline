@@ -1,5 +1,7 @@
 # Architecture
 
+> **Explanation.** Read when: you want to know how the notch fits together and why. Skip if: you need a file's location or a step to follow; see the [source map](../reference/source-map.md) or the how-to guides.
+
 The notch is a small window pinned to the top of the screen. It shows one **page** at a time, either collapsed
 (a slim pill) or open (while the pointer is over it). While it is collapsed, **activities** (a volume change, a
 charger being plugged in, a notification) take over the pill for a moment or add a small badge to it. The code is split
@@ -10,28 +12,16 @@ window, `notch-settings.exe`, started from the tray (see [Two processes](#two-pr
 
 ## The host
 
-`host/` owns everything that is not specific to a page.
+`host/` owns everything that is not specific to a page: the window and its message loop, hover, the springs that open
+and close the pill, which page shows, input, the tray and the settings panel. It names no page. `window.rs` turns
+Windows messages into calls on the `Notch`, and the `Notch` decides what to show and draws it.
 
-| File | Job |
-| --- | --- |
-| `window.rs` | creates the window, runs the message loop, turns Windows messages into calls on the notch |
-| `notch.rs` | the `Notch`: animates the pill, tracks hover, selects pages, routes input, paints |
-| `registry.rs` | decides which registered pages are switched on (`NOTCH_PAGES`, the `pages` setting) |
-| `navigation.rs` | the user's page order and which pages are on, which page opens, wheel and swipe rules (pure) |
-| `drop_target.rs` | a second thread with an almost invisible window that takes dragged files (OLE needs a single-threaded apartment) and tells the notch to open |
-| `chrome.rs` | the padding and the header (page dots, status marks and the time) around every open page |
-| `clock.rs` | the time: in the header of the open notch, and in the collapsed pill while no page or activity has anything to show |
-| `screen_mode.rs` | whether the window in front is maximized or full screen, from Windows' event hooks (no polling) |
-| `visibility.rs` | what the notch shows over a maximized or full-screen window: the four words, `allows`, and the one-time migration of the retired keys (pure) |
-| `startup.rs` | the "Start with Windows" entry under the user's `Run` key |
-| `page_editor.rs` | the Pages tab of the settings panel: chip layout, drag and double-click rules, drawing |
-| `settings_panel.rs` | the settings panel inside the notch: tabs, controls (switch, stepper, choice, text, picks), the value a press saves |
-| `activity_layout.rs` | which transient activities show and where each one starts (pure functions) |
-| `settings.rs` | re-exports `Settings` from `notch-store`, the persistent key-value store pages and activities share |
-| `tray.rs` | the tray icon and its menu: a checkable item per activity, the pages' items, the notch's own options, Settings…, Quit |
-| `settings_launcher.rs` | starts `notch-settings.exe` from the folder of the running `notch.exe`, without waiting |
-| `display.rs` | display scale and refresh rate |
-| `notch/snapshots.rs` | tests that draw pages off-screen, and the tests of the hiding rules |
+`Notch` is one struct whose methods are split one job per file (`host/notch/`), and a job that keeps its own state
+owns a small struct for it (`Springs`, `HoverState`, `HidingState`, `KeyboardState`, `PanelState`). The reason is
+reach: with one 2,000-line file every change could touch every field, and a reader had to hold the whole notch in
+mind. With a file per job, the springs can only be changed through `animation.rs`, hover only through `hover.rs`, and
+a job's logic that takes and returns plain values can be tested without a window. [The source
+map](../reference/source-map.md#host-files) lists every host file and what it does.
 
 ### Choosing a page
 
@@ -69,13 +59,13 @@ by `chrome::SETTINGS_BUTTON_SHOWN`. A page can be opt-in (`Page::is_opt_in`), wh
 Pointing at the notch starts a timer; if the pointer stays, the notch opens in two legs, a header-only pill first and
 then the whole page, and it closes in two legs the other way, after a short delay once the pointer leaves. One spring,
 `expansion`, goes from 0 (collapsed) through `HEADER_STAGE` (the header-only pill) to 1 (open), and the sizes, the
-fades and the time's glide all follow it. The springs, delays and fades are constants at the top of `notch.rs`.
+fades and the time's glide all follow it. The springs, delays and fades are constants in `notch.rs` and the file that uses them (`notch/animation.rs`, `notch/hover.rs`, `notch/hiding.rs`).
 The closing spring uses stiffness 330 and damping 22 for a small bounce into idle; the opening response is separate.
 While files are dragged over the notch it opens at once on the page that takes drops and grows a little, as if ready.
 
 ### Hiding
 
-The notch can step out of the way in two ways, both in `notch.rs` (`is_hidden`, `is_suppressed`), with the rules in
+The notch can step out of the way in two ways, both in `notch/hiding.rs` (`is_hidden`, `is_suppressed`), with the rules in
 `visibility.rs`:
 
 - **Hide when idle** (a tray option, over regular windows): with nothing to show it shrinks to a nearly invisible
@@ -123,7 +113,7 @@ gesture. Large deltas stay in touchpad mode once a swipe starts. Input-end timer
 Smooth scroll sensitivity is 400 units per page. Wheel input still moves one page per notch and can queue up to two
 pages ahead; wheel and dot navigation use a critically damped transition to a page center.
 The pages form a loop (past the last comes the first), and the page left open is remembered as `navigation.page` in
-the settings. `host/navigation.rs` holds the rules as pure functions; `notch.rs` applies them.
+the settings. `host/navigation.rs` holds the rules as pure functions; `notch/pages.rs` and `notch/layout.rs` apply them.
 
 ### Sizes
 
@@ -191,13 +181,13 @@ has no timers running except the host's own clock (once a minute) and a page's o
 
 ## Two processes
 
-`settings/` (GPUI) and `src/` depend on `store/` and never on each other, so the notch links no UI framework. The notch
+`crates/settings/` (GPUI) and `crates/notch/` depend on `crates/store/` and never on each other, so the notch links no UI framework. The notch
 publishes `pages.known` when it starts so the window can list pages it does not link. The window writes keys through
-`store/` and tells the notch to re-read them; the message, keys and field behavior are in
+`crates/store/` and tells the notch to re-read them; the message, keys and field behavior are in
 [configuration.md](../reference/performance-baseline.md#settings-window). The idle budget applies to `notch.exe` only
 ([performance.md](../reference/performance-baseline.md#settings-window)).
 
-| File in `settings/src/` | Job |
+| File in `crates/settings/src/` | Job |
 | --- | --- |
 | `main.rs` | the window: the logo and page list in the sidebar, the selected page, a clear title bar over both, in the system's light or dark theme |
 | `layout.rs` | `Page`, `Group` and `Item`: the page title and description, the bordered groups and their rows |

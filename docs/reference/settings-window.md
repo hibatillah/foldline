@@ -3,7 +3,7 @@
 > **Reference.** Read when: you need what each section of `notch-settings.exe` sets, or how it saves. Skip if: you want settings inside the notch; they come from each page's `settings()` ([page API](page-api.md)).
 
 Open it from the tray menu's **Settings…** item. The tray starts `notch-settings.exe` from the folder of the running
-`notch.exe` without waiting for it (`src/host/settings_launcher.rs`) and logs `could not start settings` when the program
+`notch.exe` without waiting for it (`crates/notch/src/host/settings_launcher.rs`) and logs `could not start settings` when the program
 is missing. The window allows one instance: starting it again focuses the open one.
 
 | Section | What you set | Key |

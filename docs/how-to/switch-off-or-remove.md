@@ -22,7 +22,7 @@ set NOTCH_PAGES=shelf
 notch.exe
 ```
 
-To change which pages are *compiled in*, edit `src/pages/mod.rs`; see [adding-a-page.md](../tutorials/add-a-page.md).
+To change which pages are *compiled in*, edit `crates/notch/src/pages/mod.rs`; see [adding-a-page.md](../tutorials/add-a-page.md).
 
 ## Switch an activity off
 
@@ -42,7 +42,7 @@ ignore saved disable settings and reject toggle requests.
 
 ## Remove a page for good
 
-Delete its folder, its `mod` line and its entry in `all()` in `src/pages/mod.rs`. Nothing else refers to it. When no
+Delete its folder, its `mod` line and its entry in `all()` in `crates/notch/src/pages/mod.rs`. Nothing else refers to it. When no
 page has a priority, the collapsed pill shows the time and the open notch only its header.
 
 To only turn a page off without deleting it, list the pages you want in `NOTCH_PAGES` or the `pages` setting; see

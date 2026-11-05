@@ -12,12 +12,12 @@ What an activity can show, and the built-in ones, are in [the activities referen
 
 ### 1. Create the file
 
-Make `src/activities/<name>.rs` (or a folder when it has several parts, like `notifications/`). An activity depends on
+Make `crates/notch/src/activities/<name>.rs` (or a folder when it has several parts, like `notifications/`). An activity depends on
 `activity`, `page` (for `Context`), `gfx`, `ui` and `platform`, never on a page or another activity.
 
 ### 2. Implement `Activity`
 
-Four methods are required; the rest are hooks. `src/activities/brightness.rs` is a complete small activity: it
+Four methods are required; the rest are hooks. `crates/notch/src/activities/brightness.rs` is a complete small activity: it
 listens to one Windows power setting and flashes a level bar when it changes.
 
 | Method | Job |
@@ -40,7 +40,7 @@ activity that needs more timers starts from `TimerId(1)`. Timer ids and wake-up 
 so an activity and a page never collide.
 
 Draw messages with `ui::draw_level` (icon, bar, value) or `ui::draw_message` (icon, text, optional value) so every
-transient looks alike, and add an `Icon` to `src/ui/icons.rs` when you need a new glyph.
+transient looks alike, and add an `Icon` to `crates/notch/src/ui/icons.rs` when you need a new glyph.
 
 ### 3. Get events without polling
 
@@ -57,5 +57,5 @@ The notch must use no CPU while nothing happens, so an activity never polls. Pic
 
 ### 4. Register it
 
-Add the module and an entry to `all()` in `src/activities/mod.rs`. Registration order controls badges and optional
+Add the module and an entry to `all()` in `crates/notch/src/activities/mod.rs`. Registration order controls badges and optional
 tray entries; filtering the tray must preserve the registered activity indices.

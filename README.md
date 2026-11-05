@@ -2,72 +2,48 @@
 
 <img src="assets/branding/logo.png" alt="Notch folded-tab logo" width="96" />
 
-A tiny notch for the top of your Windows screen, written in Rust. It sits at the top edge as a slim black pill, and opens when you hover over it. While music plays, it shows the track and scrolls the synced lyrics inline, line by line. It also keeps a file shelf, a calendar, a focus timer and system stats, and shows short messages (volume, notifications, Caps Lock) in the pill.
+Notch puts a slim black pill at the top of your Windows screen. Hover over it and it opens into a media player with synced lyrics, a file shelf, a calendar, a focus timer, prayer times, a todo list and system stats. Short messages (volume, notifications, Caps Lock) appear in the pill while they happen.
 
-The notch draws straight to the screen with Direct2D: no UI framework, no web view. Every page and every pill message is its own module. Pages can be disabled; notifications are the only optional activity. A settings window, opened from the tray menu, is a separate program, so it adds nothing to the notch while closed. See [Resource use](#resource-use) for measured CPU and memory.
+It is written in Rust and draws straight to the screen with Direct2D: no UI framework, no web view. It idles at 0 % CPU and stays under 50 MB of memory.
 
 ![The open notch on the media page, playing a song with its synced lyrics beside the controls](assets/images/notch-lyrics.png)
 
+## Install
+
+Run `notch-<version>-windows-x64-setup.exe`. The installer is not code-signed, so Windows may show a SmartScreen warning. Notch starts with Windows unless you untick that in the installer or in the tray menu (**Start with Windows**).
+
+Requirements: Windows 10 or 11, 64-bit (tested on Windows 11). The media page needs a player that appears in the Windows media controls.
+
+**Updating.** Notch does not check for new versions. Run the newer `-setup.exe`: the installer sees the installed copy, says which version it has and which it would put in its place, and asks whether to continue. If you say yes, it closes the running notch, replaces it and starts it again. Your settings stay.
+
 ## What it includes
 
-Pages (what you see when you open the notch; the time sits in the header of every one):
+Pages are what you see when you open the notch; the time sits in the header of every one.
 
-- Media player with synced lyrics; with lyrics off, the collapsed pill fits the song title up to 400 DIP wide
-- The idle pill is 36 DIP tall (33 DIP content + 3 DIP bottom padding), with a minimum width of 150 DIP.
-- The outer curves joining the top screen edge use a 6 DIP radius when idle and 12 DIP when open.
-- File shelf: drop files to keep them for a while
-- Calendar: the week and the events of a day you pick
-- Focus timer
-- Shalat (off until you add it): prayer times for any city in the world, worked out on your PC with no internet. The next prayer and today's times, a mark in the collapsed pill 30 minutes before, and a short message when a prayer starts. Choose the city, the calculation method and a few minutes of adjustment for each time in the page's settings. Times show on your PC's clock.
-- Todo: add a task by typing in the notch, tick it off or delete it; the list is `%APPDATA%\notch\todo.txt`
-- System stats: CPU, memory, up to 2 GPUs, up to 3 disks and network (off until you add it)
+- **Media:** the current track with synced lyrics, line by line. With lyrics off, the collapsed pill fits the song title.
+- **Shelf:** drop files to keep them for a while.
+- **Calendar:** the week and the events of a day you pick.
+- **Timer:** a focus timer.
+- **Shalat** (off until you add it): prayer times for any city, worked out on your PC with no internet. It shows the next prayer and today's times, puts a mark in the collapsed pill 30 minutes before, and shows a short message when a prayer starts. You choose the city, the calculation method and a few minutes of adjustment per time.
+- **Todo:** type a task into the notch, tick it off or delete it. The list is the file `%APPDATA%\notch\todo.txt`.
+- **System stats** (off until you add it): CPU, memory, up to 2 GPUs, up to 3 disks and the network.
 
-Activities (what the collapsed pill shows while something happens):
+Activities are what the collapsed pill shows while something happens: volume, brightness, charger and battery, Bluetooth devices, microphone in use, camera in use, copied to the clipboard, Caps Lock, and Windows notifications. A notification opens the pill into a banner with the app's logo for a few seconds; point at it to keep it on screen. A message that was cut short grows taller to show all its text.
 
-- Volume
-- Brightness
-- Charger and battery
-- Bluetooth devices
-- Microphone in use
-- Camera in use
-- Copied to the clipboard
-- Caps Lock on and off
-- Windows notifications: the pill opens into a banner with the app's logo for a few seconds, between its idle and open sizes; point at it to keep it on screen; a message that was cut short grows taller to show all of its text
+While the notch is open, small marks beside the time show what is going on: a wave while music plays, a ring while a focus timer runs, a crossed speaker while the sound is muted, an arrow while Caps Lock is on.
 
-### Maximized and full-screen windows
+## Use it
 
-Over a **maximized** window and over a **full-screen** app (a game, a video, an F11 window) the notch follows its own choice for each, saved as `notch.maximized` and `notch.fullscreen`. The choices, from hiding the notch to keeping music visible, are listed in [docs/reference/settings-keys.md](docs/reference/settings-keys.md). You set them in the **Behavior** section of **Settings…**; they take precedence over **Hide when idle**, and choices saved with the old tray options carry over. The same section can stop the pointer from opening the notch over either kind of window, so it only opens from hover over regular windows.
+- **Open and close.** Hover over the pill to open it. Move away to close it.
+- **Switch pages.** Scroll the wheel, swipe two fingers on a touchpad, or click a dot. A touchpad swipe follows your fingers and centers the nearest page when you stop. Pages loop, and the notch opens on the page you left.
+- **Media.** Click the buttons. The speech-bubble button turns lyrics on and off.
+- **Shelf.** Drag files onto the notch; it turns blue when it is ready. It shows six places, and the last one shows the overflow count. Double-click a file to open it, drag it out to copy it into another app, and right-click it or press the cross on its corner to remove it from the shelf.
+- **Calendar.** Click a day of the week to list its events. Paste your calendar's iCal address into **Settings… > Calendar**, which lists the Google Calendar steps for finding it. Treat the address like a password.
+- **Tray menu.** Right-click the tray icon (on Windows 11 it may sit under the `^` menu): **Notifications**, **Hide when idle**, **Start with Windows**, **Settings…**, **Quit**.
+- **Settings in the notch.** While the notch is open, the gear in its header opens a panel. Its first tab holds the open page's own settings, followed by General, Behavior and Pages. On Pages, drag a page by its dotted handle to reorder it, double-click it to remove it, click a dashed one to add it. **Done** closes the panel.
+- **Settings window.** **Settings…** in the tray menu opens General, Pages, Behavior, Calendar and Advanced. Toggles apply at once; type a value and press Enter, or click away, to save it.
 
-### Status marks
-
-While the notch is open, small marks beside the time show what is going on: the wave while music plays, a ring while a focus timer runs, a crossed speaker while the sound is muted, and an arrow while Caps Lock is on.
-
-### Extensible
-
-The tray menu can switch **Notifications** on or off; the other activities are always enabled. The **Settings…** window changes the options, orders pages and switches them on or off, and the notch applies each change at once; the same keys can be edited in the settings file (see [docs/reference/settings-keys.md](docs/reference/settings-keys.md)). To go further, write your own page or activity: each is one folder or file and one line in a registry, with no other code to touch. See [docs/tutorials/add-a-page.md](docs/tutorials/add-a-page.md) and [docs/how-to/add-an-activity.md](docs/how-to/add-an-activity.md).
-
-### Limitations
-
-- Windows only, on the primary display, centered at the top. Multiple monitors and display changes while running get no special handling; only the window in front on the primary display is looked at. The display scale is read once at start-up.
-- Microphone and camera show that an app has the device **open**, not that it is recording. An app that keeps the microphone open while you are muted (Google Meet in a browser) keeps the orange dot. The microphone follows the default recording device at start-up. The camera is found through the Windows Frame Server log, so it misses some older DirectShow apps and a camera already on at start-up. This was built on Windows 11 build 26300; other versions are untested.
-- Notifications show a few seconds after Windows shows their own banner, and only as a banner: there is no list of past ones, and the banner has no buttons (the buttons of the notification itself are not available to it). The text of a message can be left out with `notifications.show_text=off` in the settings file.
-- Calendar reads an iCal address, not a Google sign-in. A daylight-saving event can show an hour off.
-- The file shelf keeps the paths of files, not copies. Dragging a file out copies it and never moves or deletes the original.
-- The open notch is 86 px high for every page, so the calendar lists two events at a time.
-- Brightness follows the laptop panel only.
-- Version 0.1: expect rough edges.
-
-## How to use it
-
-- **Hover** over the pill to open it; move away to close it with a small bounce into the idle state.
-- **Pages:** scroll the wheel (or swipe two fingers on a touchpad) or click a dot. Touchpad scrolling follows your fingers and gently centers the nearest page after input stops. Each page keeps its own width, and the notch gradually changes width with the swipe. The wheel and page dots use a firmer transition. Pages loop, and the notch opens on the page you left.
-- **Media:** click the buttons; the speech-bubble button turns lyrics on and off.
-- **Shelf:** drag files onto the notch (it turns blue when it is ready). The shelf shows six places; when there are more files, the last place shows the overflow count. Double-click a file to open it, drag it out to take it off the shelf into another app, and right-click it or press the cross on its corner to remove it.
-- **Calendar:** click a day of the week to list its events.
-- **Calendar:** paste your calendar's iCal address into **Settings… > Calendar**, which lists the Google Calendar steps for finding it. Treat the address like a password.
-- **Tray menu** (right-click the tray icon; the notch itself has no menu): **Notifications**, **Hide when idle**, **Start with Windows**, **Settings…**, and **Quit**. On Windows 11 the icon may sit under the `^` overflow menu.
-- **Settings in the notch:** while the notch is open, a gear in its header opens a settings panel. Its first tab holds the open page's own settings (the timer lengths, lyrics, the calendar address, which disks and GPUs the stats page shows), followed by General, Behavior and **Pages**. On Pages, drag a page by its dotted handle to reorder it, double-click it to remove it, click a dashed one to add it. **Done** closes the panel.
-- **Settings window** (**Settings…** in the tray menu): General (startup, notifications, music and timer, in cards), Pages, Behavior, Calendar and Advanced. Toggles apply at once; type a value into a field and press Enter, or click away, to save it. Pages sets the order and which pages are on, and Behavior sets what the notch shows over a maximized window and over a full-screen app. [docs/reference/settings-keys.md](docs/reference/settings-keys.md) lists every setting.
+[docs/reference/settings-keys.md](docs/reference/settings-keys.md) lists every setting and its key.
 
 | Option | Default |
 | --- | --- |
@@ -79,117 +55,89 @@ The tray menu can switch **Notifications** on or off; the other activities are a
 | Open on hover over a full-screen app | On |
 | Start with Windows | On in the installer |
 
-Defaults apply when no choice has been saved; existing notification, visibility and startup choices are retained.
+Defaults apply when no choice has been saved. Choices saved with older versions carry over.
 
-After unlocking or resuming Windows, Notch restores its position above app windows and resets hover so the hidden
-strip can open again, without taking focus from the app you are using.
+### Over maximized and full-screen windows
 
-The orange folded-tab logo identifies Notch in the tray, File Explorer, the installer, the installed-app list and Start search.
+Over a **maximized** window and over a **full-screen** app (a game, a video, an F11 window), the notch follows its own choice for each, from hiding to keeping music visible. Set them in **Settings… > Behavior**. They take precedence over **Hide when idle**. The same section can stop the pointer from opening the notch over either kind of window.
 
-## Device requirements
+After you unlock Windows or resume from sleep, Notch moves back above app windows and resets hover so the hidden strip can open again. It does not take focus from the app you are using.
 
-- Windows 10 or 11, 64-bit (tested on Windows 11)
-- For the media page: a player that appears in the Windows media controls
-- Internet only for lyrics and a calendar link (see [Privacy](#privacy))
+## Limitations
 
-## Download
+- Windows only, on the primary display, centered at the top. Other monitors and display changes while running get no special handling, and the display scale is read once at start-up.
+- Microphone and camera show that an app has the device open, not that it is recording. An app that keeps the microphone open while you are muted (Google Meet in a browser) keeps the orange dot. The camera is found through the Windows Frame Server log, so it misses some older DirectShow apps and a camera that was already on at start-up.
+- Notifications show a few seconds after Windows shows its own banner, and only as a banner: there is no list of past ones and no buttons. `notifications.show_text=off` in the settings file leaves the text out.
+- The calendar reads an iCal address, not a Google sign-in. An event that crosses a daylight-saving change can show an hour off.
+- The shelf keeps the paths of files, not copies. Dragging a file out copies it and never moves or deletes the original.
+- The open notch is 86 px high for every page, so the calendar lists two events at a time.
+- Brightness follows the laptop panel only.
+- Prayer times are within a few minutes of published tables. Check them against your local authority before relying on them.
+- Notch is at version 0.5: expect rough edges.
 
-Run `notch-<version>-windows-x64-setup.exe`. The installer is not code-signed, so Windows may show a SmartScreen warning. The notch starts with Windows unless you untick that in the installer or in the tray menu (**Start with Windows**). 
+## Resource use
 
-### Updating
+The numbers below are the latest recorded run of `scripts/perf.sh`, on 2026-11-03: Windows 11 Home build 26300, Ryzen 5 8645HS, 15.3 GiB RAM, Rust 1.97.1, release build. The test used the shelf page, 20-second idle samples and 10 open/close cycles. CPU is a percentage of one core; RAM is private working set.
 
-Notch has no automatic update. It does not look for new versions, because the only things it connects to the internet for are lyrics and a calendar link you set yourself (see [Privacy](#privacy)). To update, run the newer `-setup.exe`. The installer sees that Notch is already installed, says which version is installed and which one it would put in its place, and asks whether to continue. If you say yes it closes the running notch, replaces it in place and starts it again. You do not uninstall the old version first, and your settings stay.
+| Measurement | Result | Limit |
+| --- | ---: | ---: |
+| Initial RAM | 24.3 MiB | 30 MiB |
+| Collapsed idle CPU | 0 % | 0.1 % |
+| CPU time per open/close cycle | 131 ms | 400 ms |
+| RAM growth over 10 cycles | 0.6 MiB | 3 MiB |
+| Handle growth over 10 cycles | -9 | 20 |
+| Hover events | 20 of 20 | exactly 20 |
+| Idle CPU after the cycles | 0 % | 0.1 % |
 
-## Development
+Every gate passed in this run. The run did not measure music playback, live lyrics, held hover or swiping, and one passing run does not guarantee the same result on every machine. The settings window is a separate program with a higher footprint while it is open (about 45 MiB private working set); see [docs/reference/performance-baseline.md](docs/reference/performance-baseline.md).
 
-Requirements for building (running a built `notch.exe` needs only Windows 10 or 11):
+## Privacy
 
-- [Rust](https://rustup.rs) 1.88 or newer (tested with 1.97)
-- Visual Studio Build Tools with the **Desktop development with C++** workload (MSVC linker and Windows SDK)
-- Git Bash, only for the `scripts/*.sh` helpers
-- To build the settings window (`notch-settings`), the MSVC Rust toolchain (`stable-x86_64-pc-windows-msvc`); the default `cargo build` builds only the notch
+Notch runs on your computer, with no account and no analytics. Everything below stays on your machine unless it is listed under "Leaves your computer".
 
-Build and run:
+**What it reads, locally**
+
+- What is playing, from the Windows media controls.
+- The text and app of your Windows notifications.
+- Whether the clipboard changed. It never reads what you copied.
+- The paths of the files on your shelf, and the todo list in `%APPDATA%\notch\todo.txt`.
+- Which window is in front, only to tell whether it is maximized or full screen.
+- Caps Lock, through a keyboard hook that looks at that one key and keeps nothing it sees.
+- CPU, memory, GPU, disk and network readings for the stats page.
+- The city you pick for prayer times. The city list ships with the app and the times are calculated on your PC; no location is sent anywhere.
+
+Settings are in `%APPDATA%\notch\settings.txt`. The installer adds a "Start with Windows" entry under your user's `Run` key unless you untick it.
+
+**Leaves your computer**
+
+- **Lyrics.** When a track starts, Notch asks [LRCLIB](https://lrclib.net) for synced lyrics and sends the artist, title, album and length. The player itself (Spotify, a browser) is only read through Windows, never contacted. Set `NOTCH_LYRICS=off` to stop lookups; the lyrics button only hides them.
+- **Calendar.** If you set a calendar link, Notch downloads that file every 15 minutes. The link sits in the settings file, so treat that file like a password.
+
+**Planned.** A weather page is planned. It will need to ask a weather service for conditions at a place you choose. This section will name the service and what it receives before that feature ships.
+
+## For developers
+
+New to the project? Read [ONBOARDING.md](ONBOARDING.md) for the setup, the structure and the rules the code follows. [AGENTS.md](AGENTS.md) and `.claude/rules/` hold the rules for AI coding agents, and [docs/README.md](docs/README.md) indexes the documentation.
 
 ```
-git clone https://github.com/hibatillah/notch.git
-cd notch
 cargo build --release
 target\x86_64-pc-windows-msvc\release\notch.exe
 ```
 
-While developing, run `scripts/watch.sh` from Git Bash to rebuild and relaunch on every save, or `scripts/reload.sh` for a single release build. It builds, starts the new build and closes the previous one without a gap (a running `.exe` cannot be overwritten on Windows).
-
-Before finishing a change:
-
-```
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test
-scripts/perf.sh
-```
-
-Tests sit at the bottom of the source file they test. `scripts/perf.sh` measures the memory and CPU of a running notch.
-
-| Doc                                            | What it covers                                                                      |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------- |
-| [docs/how-to/build-run-and-debug.md](docs/how-to/build-run-and-debug.md)     | requirements, build, run, development loop, checks, code style, dependency licenses |
-| [docs/how-to/test-and-snapshot.md](docs/how-to/test-and-snapshot.md)             | where the tests live, how to write one, the performance check                       |
-| [docs/reference/performance-baseline.md](docs/reference/performance-baseline.md)     | measured CPU/RAM, workloads and measurement limits                                 |
-| [docs/explanation/architecture.md](docs/explanation/architecture.md)   | how the code is organized                                                           |
-| [docs/tutorials/add-a-page.md](docs/tutorials/add-a-page.md) | write, register and remove a page                                                   |
-| [docs/how-to/add-an-activity.md](docs/how-to/add-an-activity.md) | write, register and remove an activity                                    |
-| [docs/reference/settings-keys.md](docs/reference/settings-keys.md) | which pages and activities are on, settings file, environment variables             |
-| [docs/how-to/cut-a-release.md](docs/how-to/cut-a-release.md)         | the CI and release workflows, and how to publish a release                          |
-
-For an AI coding agent, [AGENTS.md](AGENTS.md) and `.claude/rules/` hold the project rules, and [docs/README.md](docs/README.md) indexes the documentation.
-
-## Resource use
-
-Latest recorded baseline: **2026-10-28**, after the convention audit, using `scripts/perf.sh --no-build`.
-Windows 11 Home build 26300, Ryzen 5 8645HS, 15.3 GiB usable RAM; Rust 1.97.1, Windows x64 release build.
-The test used the shelf page, existing activity settings, 20-second idle samples and 10 open/close cycles.
-CPU is a percentage of **one core**; RAM is **private working set** in MiB.
-
-| Measurement | Result |
-| --- | ---: |
-| Collapsed idle CPU | 0.078% |
-| Initial RAM | 22.1 MiB |
-| CPU time per open/close cycle | 131 ms |
-| RAM growth over 10 cycles | 0.5 MiB |
-| Handle growth over 10 cycles | -8 |
-| Hover events | 20/20 |
-| Idle CPU after cycles | 0% |
-
-All baseline checks passed in this run. Earlier runs intermittently exceeded CPU and memory-growth limits;
-one passing sample does not establish their cause or guarantee the same result on every machine.
-Music playback, live lyrics, held hover and swiping were not measured in this latest baseline.
-
-These figures are for `notch.exe`. The settings window is a separate process with a higher footprint while it is open; see [docs/reference/performance-baseline.md](docs/reference/performance-baseline.md#settings-window).
-
-Run `scripts/perf.sh` to repeat the baseline, or add `--extended` for held hover and swiping.
-The check moves the mouse and replaces the running Notch; afterwards run `scripts/reload.sh` to restore normal pages.
-See [docs/how-to/test-and-snapshot.md](docs/how-to/test-and-snapshot.md) for options and limits.
-
-## Privacy
-
-Notch is a local program. You download it and it runs on your computer, with no account and no analytics. It reads what is playing, your notifications (their text and app), the clipboard state and your shelf files only on your machine, and never reads what you copy. It sees which window is in front only to tell whether it is maximized or full screen. For Caps Lock it installs a keyboard hook that looks at that one key and keeps nothing it sees. Settings stay in `%APPDATA%\notch\settings.txt`, and a "Start with Windows" entry is added under your user's `Run` key unless you untick it.
-
-It connects out for two things only:
-
-- **Lyrics:** when a track starts, it asks [LRCLIB](https://lrclib.net) for synced lyrics, sending the artist, title, album and length. The player itself (Spotify, a browser) is only read through Windows, never contacted. Set `NOTCH_LYRICS=off` to stop lookups; the lyrics button only hides them.
-- **Calendar:** if you set a calendar link (for example Google Calendar's iCal address), it downloads that file every 15 minutes. The link sits in the settings file, so treat that file like a password.
-
 ## Acknowledgements
 
-Notch is heavily inspired by Apple's Dynamic Island, and by the apps that bring the same idea to screens that have no hardware notch: [NotchNook](https://lo.cafe/notchnook) for the Mac and [Nusa](https://rama2555.github.io/nusa/) for Windows. They showed what a notch overlay can hold and how it should feel: the media player, the file shelf, the calendar and the short messages that open the pill.
+Notch is inspired by Apple's Dynamic Island. Apple and Dynamic Island are trademarks of Apple Inc.; Notch is not affiliated with or endorsed by Apple.
 
-The shalat page's city list is derived from [GeoNames](https://www.geonames.org) data (cities of 15,000 people or more), licensed under [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/); it was reduced to names, countries and coordinates (`scripts/build-cities.sh`). Its times are calculated with the MIT-licensed [salah](https://crates.io/crates/salah) crate, kept in `vendor/salah` with one crash fix (see `vendor/salah/VENDORED.md`). Where the sun does not rise or set (far from the equator, about 62 degrees and beyond around midsummer) the page says there are no prayer times, and where the sun never gets deep enough for the Fajr or Isha angle, those times follow the middle-of-the-night rule. The calculation is within a few minutes of published tables (a Jakarta check against Aladhan's Kemenag method was 0 to 2 minutes later), so the adjustment settings exist; check the times against your local authority before relying on them.
+It builds on public APIs and resources:
 
-Notch itself is written independently, from scratch in Rust. It draws with Direct2D and uses no UI framework (only its separate settings window does), and every page and every pill message is its own module, so you can remove one or write your own.
-
-Notch is not affiliated with or endorsed by Apple, NotchNook, Nusa or their developers. Dynamic Island is a trademark of Apple Inc., and the other names belong to their owners.
+- **Windows APIs** for media controls, notifications, window events and the tray, through the [`windows`](https://crates.io/crates/windows) crate.
+- **[LRCLIB](https://lrclib.net)** for synced lyrics.
+- **[GeoNames](https://www.geonames.org)** for the prayer-time city list: cities of 15,000 people or more, reduced to names, countries and coordinates (`scripts/build-cities.sh`), under [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **[salah](https://crates.io/crates/salah)** (MIT) for the prayer-time calculation, kept in `vendor/salah` with one crash fix (see `vendor/salah/VENDORED.md`). A Jakarta check against Aladhan's Kemenag method was 0 to 2 minutes later.
+- **[Geist](https://vercel.com/font)** for the font and **[Lucide](https://lucide.dev)** (ISC) for some icons.
+- **[GPUI](https://www.gpui.rs)** and gpui-component for the settings window.
+- **iCal** (RFC 5545) calendar addresses, such as the one Google Calendar gives you.
 
 ## License
 
-Proprietary. Copyright (c) 2026 hibatillah. All rights reserved; see [LICENSE](LICENSE). The third-party components in Notch are licensed under their own terms, listed in `THIRD-PARTY-LICENSES.txt` (installed beside `notch.exe`, and opened by **Licenses** in the settings window).
+Proprietary. Copyright © 2026 hibatillah. All rights reserved; see [LICENSE](LICENSE). Third-party components keep their own licenses, listed in `THIRD-PARTY-LICENSES.txt` and under **Licenses** in the settings window.

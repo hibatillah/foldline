@@ -47,7 +47,16 @@ narrower than ring and clock (150). The order is fixed and never re-sorts by tim
 - A message that reports a percentage (Bluetooth device, charging, on battery, low battery) shows a 32 px ring around
   its icon, like the battery; that pill grows to 48 px.
 - A message's value takes its icon's color (the percentage, "25 min", "15:19"); the name stays white.
-- A notification opens the pill into a 400 px card: app icon, sender, two lines; hovering shows the whole message.
+- A notification opens the pill into a 400 px card: app icon, sender, two lines of the message. The two lines are
+  clamped with an ellipsis, hovered or not; hover adds buttons and never grows the text, so the buttons do not move
+  under the pointer.
+- The heading is the sender in white, then the app name in grey (`#8e8e99`, regular weight) with no separator, so a
+  missing sender cannot leave a dangling mark. A sender that is empty or only whitespace counts as missing and the
+  app name takes its place, in white.
+- Hover shows two buttons: Dismiss (secondary: translucent white fill, white text) and Open (primary: white fill,
+  black text). A click on the card does nothing, so it never opens an app by accident.
+- Open focuses the sending app and removes the notification, as a click on the native banner does; Dismiss only
+  removes it. With the text hidden (privacy mode) Open still names the app.
 
 ## Color and type
 
@@ -66,9 +75,18 @@ narrower than ring and clock (150). The order is fixed and never re-sorts by tim
 - Between lyric lines (intro, instrumental) the slot's content is not decided; a "♪" placeholder that keeps lyric mode
   for the whole song is proposed.
 
+- The idle pill's clock position and the case of a PC without a battery are under review on the "raw" page (board
+  "Idle layout"); the order above stays until that is decided. The code has no idle battery ring that I found: the
+  battery activity only reports plugging, unplugging and low charge.
+
 ## Code gaps
 
-- The event countdown is drawn in Consolas (`BADGE_TIME`, `src/pages/calendar/mod.rs`); the rules say Geist.
+- The event countdown is drawn in Consolas (`BADGE_TIME`, `crates/notch/src/pages/calendar/mod.rs`); the rules say Geist.
 - Camera and microphone are drawn as one dot badge at the pill's right end (`Presence::Badge` in
-  `src/activities/privacy.rs`); the rules put two stacked dots beside the battery ring.
+  `crates/notch/src/activities/privacy.rs`); the rules put two stacked dots beside the battery ring.
+- The notification card shows the whole message on hover (`Words::shown` in `crates/notch/src/activities/notifications/mod.rs`) and
+  has no buttons or click handling.
+- The notification heading is built as "sender · app" (`heading` in `crates/notch/src/activities/notifications/items.rs`) and tests
+  only an empty sender, so a sender of only whitespace likely shows "· Discord" (not reproduced); the rules drop
+  the separator and style the app name grey.
 - The battery ring, the percentage rings and the lyric layout have not been checked against the code.

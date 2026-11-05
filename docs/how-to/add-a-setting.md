@@ -7,12 +7,12 @@ keys, defaults and the window's sections are listed in [configuration.md](../ref
 
 1. **Pick the key and the default.** Start the key with `notch.`, `activity.<id>` or the page id. Write booleans as `on`
    or `off`. The same default goes into the notch and the window, and a test does not compare them (the Behavior
-   section's words are the exception: its test reads `src/host/visibility.rs`), so check both by hand.
+   section's words are the exception: its test reads `crates/notch/src/host/visibility.rs`), so check both by hand.
 2. **Read it in the notch.** Read the key once at start into a field of `Notch`, a page or an activity, through
    `Context::settings`. Read it again on `WM_SETTINGS_CHANGED`: `Notch::reload_settings` and `on_settings_changed` run
    then, and the re-read falls back to the field's current value, not the default. A missing or unreadable value uses
    the documented default.
-3. **Add the control to the window** (`settings/src/`):
+3. **Add the control to the window** (`crates/settings/src/`):
    - A toggle: add `Item::new(label, field::toggle(key, default)).description(text)` to a `Group` in the section's
      `page()`.
    - A text or number field: use `field::input(key, Kind::Text { width }, placeholder)` or
@@ -35,7 +35,7 @@ To show a page's setting in the notch's own panel, return it from the page's `Pa
 comma list). A page with more settings than one tab holds (220 px) returns several `SettingsGroup`s from
 `settings_groups()`, each its own tab. The
 panel shows them under the page's name, saves each through the same settings file and re-reads it, so the page's
-`on_settings_changed` runs as usual. Global switches and choices are listed in `src/host/settings_panel.rs`.
+`on_settings_changed` runs as usual. Global switches and choices are listed in `crates/notch/src/host/settings_panel/controls.rs`.
 
 A tray toggle follows [the same rules](../../.claude/rules/settings-and-tray.md): one key, read at start, re-read on
 `WM_SETTINGS_CHANGED`.
