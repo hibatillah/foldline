@@ -1,6 +1,6 @@
 use super::{
     EXPAND_TIMER_ID, HIDDEN_HEIGHT, HIDE_WHEN_IDLE_SETTING, HOVER_WATCH_TIMER_ID, Notch, RAISE_TIMER_ID,
-    REVEAL_TIMER_ID, STAGE_TIMER_ID,
+    REVEAL_TIMER_ID,
 };
 use crate::host::settings::Settings;
 use windows::Win32::UI::{
@@ -123,8 +123,8 @@ impl Notch {
         self.set_hovering(false);
         self.hiding.is_revealed = false;
         self.cancel_close();
-        self.end_swipe();
-        for timer_key in [REVEAL_TIMER_ID, EXPAND_TIMER_ID, STAGE_TIMER_ID, HOVER_WATCH_TIMER_ID] {
+        self.scroll_gate.reset();
+        for timer_key in [REVEAL_TIMER_ID, EXPAND_TIMER_ID, HOVER_WATCH_TIMER_ID] {
             unsafe {
                 let _ = KillTimer(Some(self.window), timer_key);
             }
@@ -157,15 +157,5 @@ impl Notch {
         if !is_suppressed {
             self.paint();
         }
-    }
-
-    pub fn toggle_hide_when_idle(&mut self) {
-        self.hiding.hides_when_idle = !self.hiding.hides_when_idle;
-        self.settings.set_bool(HIDE_WHEN_IDLE_SETTING, self.hiding.hides_when_idle);
-        self.flush();
-    }
-
-    pub fn hides_when_idle(&self) -> bool {
-        self.hiding.hides_when_idle
     }
 }

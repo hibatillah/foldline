@@ -4,15 +4,17 @@ pub struct Spring {
     velocity: f32,
     stiffness: f32,
     damping: f32,
-    /// Extra damping on the return from overshoot prevents a second swing.
-    rebound_damping_factor: f32,
-    approach: f32,
+    /// Seconds over which the pull toward a new target fades in from nothing, so a move starts gently.
+    lead_in_seconds: f32,
+    lead_in_elapsed: f32,
     last_target: f32,
 }
 
 const SUBSTEP_SECONDS: f32 = 1.0 / 240.0;
 const SETTLE_DISTANCE: f32 = 0.0005;
 const SETTLE_VELOCITY: f32 = 0.005;
+/// A spring slower than this counts as resting when it gets a new target.
+const LEAD_IN_REST_VELOCITY: f32 = 0.05;
 
 impl Spring {
     pub fn new(position: f32, stiffness: f32, damping: f32) -> Self {
@@ -22,34 +24,40 @@ impl Spring {
             velocity: 0.0,
             stiffness,
             damping,
-            rebound_damping_factor: 1.0,
-            approach: 0.0,
+            lead_in_seconds: 0.0,
+            lead_in_elapsed: 0.0,
             last_target: position,
         }
     }
 
-    /// Changes response without resetting position or velocity.
-    pub fn set_response(&mut self, stiffness: f32, damping: f32) {
-        self.stiffness = stiffness;
-        self.damping = damping;
+    /// Eases the start of every move that begins at rest: the pull toward the target grows along a smoothstep curve.
+    pub fn with_lead_in(mut self, seconds: f32) -> Self {
+        self.lead_in_seconds = seconds;
+        self
     }
 
-    pub fn with_rebound_damping(mut self, factor: f32) -> Self {
-        self.rebound_damping_factor = factor;
-        self
+    /// Share of the full pull at this moment; a retarget while moving keeps the pull it had.
+    fn pull_gain(&self) -> f32 {
+        if self.lead_in_elapsed >= self.lead_in_seconds {
+            return 1.0;
+        }
+        let progress = self.lead_in_elapsed / self.lead_in_seconds;
+        progress * progress * (3.0 - 2.0 * progress)
     }
 
     pub fn step(&mut self, elapsed_seconds: f32) {
         if self.target != self.last_target {
-            self.approach = (self.target - self.position).signum();
             self.last_target = self.target;
+            if self.velocity.abs() < LEAD_IN_REST_VELOCITY {
+                self.lead_in_elapsed = 0.0;
+            }
         }
         let mut remaining = elapsed_seconds;
         while remaining > 0.0 {
             let substep = remaining.min(SUBSTEP_SECONDS);
-            let is_past_target = (self.position - self.target) * self.approach > 0.0;
-            let damping = if is_past_target { self.damping * self.rebound_damping_factor } else { self.damping };
-            let acceleration = self.stiffness * (self.target - self.position) - damping * self.velocity;
+            let pull = self.stiffness * self.pull_gain() * (self.target - self.position);
+            let acceleration = pull - self.damping * self.velocity;
+            self.lead_in_elapsed += substep;
             self.velocity += acceleration * substep;
             self.position += self.velocity * substep;
             remaining -= substep;
@@ -111,34 +119,26 @@ mod tests {
     }
 
     #[test]
-    fn a_spring_with_rebound_damping_overshoots_but_returns_without_swinging_back() {
-        let mut spring = Spring::new(0.0, 230.0, 18.5).with_rebound_damping(2.0);
-        spring.target = 1.0;
-        let (mut highest, mut lowest_after_peak) = (0.0_f32, f32::MAX);
-        for _ in 0..240 {
-            spring.step(1.0 / 60.0);
-            if spring.position > highest {
-                highest = spring.position;
-            } else if highest > 1.0 {
-                lowest_after_peak = lowest_after_peak.min(spring.position);
-            }
+    fn a_lead_in_starts_a_move_slower_than_a_plain_spring_and_still_arrives() {
+        let (mut plain, mut eased) = (Spring::new(0.0, 200.0, 16.0), Spring::new(0.0, 200.0, 16.0).with_lead_in(0.1));
+        (plain.target, eased.target) = (1.0, 1.0);
+        for _ in 0..6 {
+            plain.step(1.0 / 60.0);
+            eased.step(1.0 / 60.0);
         }
-        assert!(highest > 1.0, "it should still overshoot, peaked at {highest}");
-        assert!(lowest_after_peak >= 1.0 - 0.001, "it swung back to {lowest_after_peak}");
+        assert!(eased.position < plain.position * 0.5, "{} vs {}", eased.position, plain.position);
+        run(&mut eased, 3.0);
+        assert!(eased.is_settled());
     }
 
     #[test]
-    fn a_softer_response_takes_longer_to_arrive() {
-        let steps_to_reach = |stiffness: f32, damping: f32| {
-            let mut spring = Spring::new(0.0, 480.0, 29.0);
-            spring.set_response(stiffness, damping);
-            spring.target = 1.0;
-            (0..600).find(|_| {
-                spring.step(1.0 / 240.0);
-                spring.position >= 0.9
-            })
-        };
-        assert!(steps_to_reach(330.0, 25.0) > steps_to_reach(480.0, 29.0));
+    fn a_retarget_while_moving_does_not_restart_the_lead_in() {
+        let mut spring = Spring::new(0.0, 200.0, 16.0).with_lead_in(0.1);
+        spring.target = 1.0;
+        run(&mut spring, 0.5);
+        spring.target = 0.0;
+        spring.step(1.0 / 60.0);
+        assert_eq!(spring.pull_gain(), 1.0);
     }
 
     #[test]

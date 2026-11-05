@@ -24,7 +24,6 @@ pub enum Icon {
     Camera,
     Copy,
     Bell,
-    Sliders,
     Clock,
     Music,
     Folder,
@@ -173,25 +172,6 @@ impl Icon {
                     .curve_to(at(12.8, 21.0), at(13.4, 20.5), at(13.8, 19.5));
                 (join(join(dome, clapper), line(&[(12.0, 3.5), (12.0, 5.5)])), Paint::Line)
             }
-            // Lucide "sliders-horizontal" (ISC license, https://lucide.dev).
-            Icon::Sliders => {
-                let bars = [
-                    [(3.0, 5.0), (10.0, 5.0)],
-                    [(14.0, 5.0), (21.0, 5.0)],
-                    [(3.0, 12.0), (8.0, 12.0)],
-                    [(12.0, 12.0), (21.0, 12.0)],
-                    [(3.0, 19.0), (12.0, 19.0)],
-                    [(16.0, 19.0), (21.0, 19.0)],
-                    [(14.0, 3.0), (14.0, 7.0)],
-                    [(8.0, 10.0), (8.0, 14.0)],
-                    [(16.0, 17.0), (16.0, 21.0)],
-                ];
-                let mut sliders = Path::new();
-                for bar in bars {
-                    sliders.append(line(&bar));
-                }
-                (sliders, Paint::Line)
-            }
             Icon::Clock => {
                 let face = circle(at(12.0, 12.0), 9.0 * unit);
                 (join(face, line(&[(12.0, 7.0), (12.0, 12.0), (15.5, 14.0)])), Paint::Line)
@@ -308,7 +288,7 @@ fn join(mut first: Path, second: Path) -> Path {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 28] = [
+    const ALL: [Icon; 27] = [
         Icon::Lyrics,
         Icon::Previous,
         Icon::Play,
@@ -324,7 +304,6 @@ mod tests {
         Icon::Camera,
         Icon::Copy,
         Icon::Bell,
-        Icon::Sliders,
         Icon::Clock,
         Icon::Music,
         Icon::Folder,

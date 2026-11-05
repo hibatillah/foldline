@@ -12,13 +12,14 @@ use places::Location;
 use salah::{DateTime, Duration, Local, Utc};
 
 use self::{
-    fetch::{Outcome, place_key},
+    fetch::{Failure, Outcome, place_key},
     forecast::{Forecast, rain_line},
     picture::draw_symbol,
 };
 use crate::{
     activity::{FLASH_TIMER, Flash, Presence},
     gfx::{Align, Canvas, Color, FontStyle, Point, Rect, Size, UI_FONT, Weight},
+    log,
     page::{Context, Control, Frame, Mode, Page, PageSizes, PointerEvent, Priority, TimerId},
     ui::{self, Icon},
 };
@@ -65,6 +66,8 @@ pub struct WeatherPage {
     location: Option<Location>,
     forecast: Option<Forecast>,
     is_offline: bool,
+    /// The request failed for a reason other than the network (a bad status or an unreadable answer).
+    is_service_error: bool,
     shows_days: bool,
     rain_alert: bool,
     /// The first rainy hour the alert was already shown for, so one rain gives one message.
@@ -82,6 +85,7 @@ impl WeatherPage {
             location: None,
             forecast: None,
             is_offline: false,
+            is_service_error: false,
             shows_days: false,
             rain_alert: true,
             alerted_for: None,
@@ -151,7 +155,21 @@ impl WeatherPage {
         if expected != Some(place) {
             return;
         }
-        let parsed = result.ok().and_then(|body| Forecast::parse(&body, self.now()));
+        let parsed = match result {
+            Ok(body) => {
+                let parsed = Forecast::parse(&body, self.now());
+                if parsed.is_none() {
+                    log::debug(&format!("weather: the response is not a forecast ({} bytes)", body.len()));
+                }
+                self.is_service_error = parsed.is_none();
+                parsed
+            }
+            Err(failure) => {
+                log::debug(&format!("weather: request failed: {}", failure.reason()));
+                self.is_service_error = matches!(failure, Failure::Service(_));
+                None
+            }
+        };
         self.is_offline = parsed.is_none();
         if let Some(forecast) = parsed {
             self.forecast = Some(forecast);
@@ -374,12 +392,13 @@ impl Page for WeatherPage {
             return;
         }
         if self.is_offline {
+            let cause = if self.is_service_error { "The weather service did not answer." } else { "No internet." };
             let detail = match &self.forecast {
                 Some(forecast) => format!(
-                    "No internet. Last update at {}; it will try again on its own.",
+                    "{cause} Last update at {}; it will try again on its own.",
                     forecast.fetched_at.with_timezone(&Local).format("%H:%M")
                 ),
-                None => "No internet. It will try again on its own.".to_owned(),
+                None => format!("{cause} It will try again on its own."),
             };
             Self::draw_message(canvas, bounds, scale, "Can't update the weather", &detail, opacity);
             return;
@@ -417,6 +436,7 @@ impl Page for WeatherPage {
         if self.location != previous {
             self.forecast = None;
             self.is_offline = false;
+            self.is_service_error = false;
             self.alerted_for = None;
             self.start_fetch(context);
             context.request_repaint();

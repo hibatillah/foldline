@@ -68,23 +68,9 @@ fn with_notch<R>(action: impl FnOnce(&mut Notch) -> R) -> Option<R> {
 }
 
 fn show_menu(window: HWND) {
-    let activities = with_notch(|notch| notch.activity_menu()).unwrap_or_default();
-    let page_items = with_notch(|notch| notch.page_menu()).unwrap_or_default();
-    let state =
-        with_notch(|notch| tray::MenuState { hides_when_idle: notch.hides_when_idle(), starts_with_windows: false })
-            .unwrap_or_default();
-    let state = tray::MenuState { starts_with_windows: startup::is_enabled(), ..state };
-    match tray::show_context_menu(window, &activities, &page_items, state) {
-        Some(tray::MenuChoice::ToggleHideWhenIdle) => {
-            with_notch(|notch| notch.toggle_hide_when_idle());
-        }
+    let state = tray::MenuState { starts_with_windows: startup::is_enabled() };
+    match tray::show_context_menu(window, state) {
         Some(tray::MenuChoice::ToggleStartWithWindows) => startup::set_enabled(!state.starts_with_windows),
-        Some(tray::MenuChoice::PageItem { page, item }) => {
-            with_notch(|notch| notch.page_menu_item_chosen(page, item));
-        }
-        Some(tray::MenuChoice::Toggle(index)) => {
-            with_notch(|notch| notch.toggle_activity(index));
-        }
         Some(tray::MenuChoice::OpenSettings) => settings_launcher::open_settings_window(),
         Some(tray::MenuChoice::Quit) => unsafe { PostQuitMessage(0) },
         None => {}

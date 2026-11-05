@@ -156,10 +156,6 @@ impl Activity for NotificationsActivity {
         "notifications"
     }
 
-    fn label(&self) -> &'static str {
-        "Notifications"
-    }
-
     fn is_optional(&self) -> bool {
         true
     }

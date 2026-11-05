@@ -1,56 +1,129 @@
 //! Wheel, touchpad and dot navigation between pages.
 
+use std::time::{Duration, Instant};
+
 use super::*;
 
-#[test]
-fn touchpad_only_centers_after_release_and_can_be_interrupted_from_the_visible_position() {
+fn media_rig() -> Notch {
     let mut notch = rig(SampleOptions { media: Some((true, false)), timer: true, ..SampleOptions::default() });
     open(&mut notch, "media");
-    notch.drag_pages(0.35);
+    notch
+}
+
+fn settle_track(notch: &mut Notch) {
+    notch.track.snap_to_target();
     notch.flush();
-    for _ in 0..10 {
-        notch.refresh_layout();
-    }
-    assert!((notch.track.target - 0.35).abs() < 0.001, "input must stay fractional until the quiet period ends");
-    notch.track.step(1.0 / 60.0);
-    let visible_position = notch.track.position;
-    notch.end_swipe();
-    assert_eq!(notch.track.target, 0.0);
-    assert_eq!(notch.track.position, visible_position, "release must not jump the rendered position");
-    notch.drag_pages(0.1);
-    assert!((notch.track.target - visible_position - 0.1).abs() < 0.001);
+}
+
+fn at(start: Instant, milliseconds: u64) -> Instant {
+    start + Duration::from_millis(milliseconds)
 }
 
 #[test]
-fn touchpad_progress_interpolates_between_the_pages_real_widths() {
-    let mut notch = rig(SampleOptions { media: Some((true, false)), timer: true, ..SampleOptions::default() });
-    open(&mut notch, "media");
-    let first_width = notch.pages[notch.navigable[0]].sizes().expanded.width;
-    let next_width = notch.pages[notch.navigable[1]].sizes().expanded.width;
-    assert!(first_width > next_width);
-    notch.drag_pages(0.25);
-    for progress in [0.25, 0.5, 0.75] {
-        notch.track.jump_to(progress);
-        notch.refresh_layout();
-        let expected = lerp(first_width, next_width, progress) + chrome::WIDTH_EXTRA;
-        assert!(
-            (notch.springs.expanded_width.target - expected).abs() < 0.01,
-            "width must follow swipe progress {progress}"
-        );
-    }
+fn one_wheel_notch_moves_one_page_and_the_next_notch_waits_for_the_cooldown() {
+    let mut notch = media_rig();
+    let origin = notch.track.target;
+    let start = Instant::now();
+    notch.scrolled_at(start, -120, false, false);
+    assert_eq!(notch.track.target, origin + 1.0);
+    notch.scrolled_at(at(start, 120), -120, false, false);
+    notch.scrolled_at(at(start, 240), -120, false, false);
+    assert_eq!(notch.track.target, origin + 1.0, "notches inside the cooldown are ignored");
+    notch.scrolled_at(at(start, 320), -120, false, false);
+    assert_eq!(notch.track.target, origin + 2.0);
 }
 
 #[test]
-fn visible_page_frames_keep_natural_widths_and_the_shorter_page_enters_early() {
-    let mut notch = rig(SampleOptions { media: Some((true, false)), timer: true, ..SampleOptions::default() });
-    open(&mut notch, "media");
+fn the_wheel_loops_from_the_last_page_to_the_first_and_back() {
+    let mut notch = media_rig();
+    let count = notch.navigable.len();
+    let first_page = *notch.navigable.first().unwrap();
+    let last_page = *notch.navigable.last().unwrap();
+    let start = Instant::now();
+    notch.scrolled_at(start, 120, false, false);
+    assert_eq!(notch.selected_page, Some(last_page), "previous from the first page goes to the last");
+    settle_track(&mut notch);
+    notch.scrolled_at(at(start, 1000), -120, false, false);
+    assert_eq!(notch.selected_page, Some(first_page), "next from the last page goes to the first");
+    settle_track(&mut notch);
+    for step in 0..count as u64 {
+        notch.scrolled_at(at(start, 2000 + 1000 * step), -120, false, false);
+        settle_track(&mut notch);
+    }
+    assert_eq!(notch.selected_page, Some(notch.page_at(notch.track.target)), "a full lap returns to the same page");
+    assert_eq!(notch.selected_page, Some(first_page));
+}
+
+#[test]
+fn a_touchpad_swipe_switches_one_page_per_gesture_even_when_it_keeps_going() {
+    let mut notch = media_rig();
+    let origin = notch.track.target;
+    let start = Instant::now();
+    for tick in 0..40 {
+        notch.scrolled_at(at(start, tick * 16), -30, false, true);
+    }
+    assert_eq!(notch.track.target, origin + 1.0);
+    for tick in 0..40 {
+        notch.scrolled_at(at(start, 2000 + tick * 16), -30, false, true);
+    }
+    assert_eq!(notch.track.target, origin + 2.0, "a new gesture after a quiet gap moves one more page");
+}
+
+#[test]
+fn a_large_delta_inside_a_touchpad_gesture_is_not_taken_for_a_wheel_notch() {
+    let mut notch = media_rig();
+    let origin = notch.track.target;
+    let start = Instant::now();
+    notch.scrolled_at(start, -30, false, false);
+    notch.scrolled_at(at(start, 16), -120, false, false);
+    notch.scrolled_at(at(start, 32), -120, false, false);
+    notch.scrolled_at(at(start, 48), -120, false, false);
+    assert_eq!(notch.track.target, origin + 1.0);
+}
+
+#[test]
+fn a_horizontal_swipe_goes_the_other_way_for_the_same_sign() {
+    let mut notch = media_rig();
+    let origin = notch.track.target;
+    notch.scrolled_at(Instant::now(), 130, true, true);
+    assert_eq!(notch.track.target, origin + 1.0);
+}
+
+#[test]
+fn a_page_switch_gives_width_and_height_new_targets_for_springs_that_animate_them() {
+    let mut notch = media_rig();
+    let (width, height) = (notch.springs.expanded_width.position, notch.springs.expanded_height.position);
+    let next = notch.navigable[1];
+    let next_size = notch.pages[next].sizes().expanded;
+    notch.scrolled_at(Instant::now(), -120, false, false);
+    assert!(notch.is_animating || notch.pending.animate || notch.track.target > 0.0);
+    assert_eq!(notch.springs.expanded_width.position, width, "the size must not snap");
+    assert_eq!(notch.springs.expanded_height.position, height, "the size must not snap");
+    assert!((notch.springs.expanded_width.target - (next_size.width + chrome::WIDTH_EXTRA)).abs() < 0.01);
+}
+
+#[test]
+fn explicit_page_controls_stay_unrestricted_and_can_jump_across_the_row() {
+    let mut notch = media_rig();
+    let first_page = notch.selected_page.unwrap();
+    let last_page = *notch.navigable.last().unwrap();
+    notch.go_to_page(last_page);
+    notch.flush();
+    assert_eq!(notch.selected_page, Some(last_page));
+    settle_track(&mut notch);
+    notch.go_to_page(first_page);
+    notch.flush();
+    assert_eq!(notch.selected_page, Some(first_page));
+}
+
+#[test]
+fn page_blend_between_neighbours_keeps_natural_widths_and_the_shorter_page_enters_early() {
+    let mut notch = media_rig();
     let first_width = notch.pages[notch.navigable[0]].sizes().expanded.width;
     let next_width = notch.pages[notch.navigable[1]].sizes().expanded.width;
-    notch.holds_page_position = true;
     for progress in [0.25, 0.5, 0.75] {
         notch.track.jump_to(progress);
         notch.refresh_layout();
-        notch.follow_page_width();
         let viewport = notch.frame();
         let [(first, first_frame, _), (next, next_frame, _)] = notch.visible_page_frames(&viewport).unwrap();
         assert_eq!((first, next), (notch.navigable[0], notch.navigable[1]));
@@ -58,107 +131,5 @@ fn visible_page_frames_keep_natural_widths_and_the_shorter_page_enters_early() {
         assert!((next_frame.bounds.width() / SCALE - next_width).abs() < 0.01);
         assert_eq!(next_frame.expanded.width, next_width);
         assert!((next_frame.bounds.left - first_frame.bounds.right - PAGE_GAP * SCALE).abs() < 0.01);
-        assert!(next_frame.bounds.left < chrome::content_rect(viewport.bounds, SCALE).right);
-        assert!(
-            (notch.springs.expanded_width.position - chrome::WIDTH_EXTRA - lerp(first_width, next_width, progress))
-                .abs()
-                < 0.01
-        );
     }
-}
-
-#[test]
-fn explicit_page_controls_keep_mouse_and_dot_navigation_centered() {
-    let mut notch = rig(SampleOptions { media: Some((true, false)), timer: true, ..SampleOptions::default() });
-    open(&mut notch, "media");
-    let first_page = notch.selected_page.unwrap();
-    notch.drag_pages(0.35);
-    notch.track.snap_to_target();
-    notch.flush();
-    notch.go_to_page(first_page);
-    notch.flush();
-    assert!(!notch.holds_page_position);
-    assert!(notch.track.target.abs() < 0.001);
-    notch.track.snap_to_target();
-    notch.drag_pages(0.35);
-    notch.end_swipe();
-    notch.track.snap_to_target();
-    notch.scrolled(-120, false, false);
-    assert!(!notch.holds_page_position);
-    assert!((notch.track.target - 1.0).abs() < 0.001);
-}
-
-#[test]
-fn touchpad_scroll_keeps_large_deltas_in_the_same_gesture() {
-    let mut notch = rig(SampleOptions { media: Some((false, false)), timer: true, ..SampleOptions::default() });
-    open(&mut notch, "media");
-    notch.scrolled(-30, false, false);
-    notch.scrolled(-120, false, false);
-    assert!(notch.swipe.is_some(), "a large touchpad delta must not turn into a mouse-wheel snap");
-    assert!((notch.track.target - 0.375).abs() < 0.001);
-}
-
-#[test]
-fn a_tagged_touchpad_starts_smoothly_even_with_a_full_wheel_sized_delta() {
-    let mut notch = rig(SampleOptions { media: Some((false, false)), timer: true, ..SampleOptions::default() });
-    open(&mut notch, "media");
-    notch.scrolled(-120, false, true);
-    assert!(notch.swipe.is_some());
-    assert!((notch.track.target - 0.3).abs() < 0.001);
-    assert_eq!(notch.track.position, 0.0);
-}
-
-#[test]
-fn touchpad_scroll_does_not_change_logical_selection_at_the_midpoint() {
-    let mut notch = rig(SampleOptions { media: Some((false, false)), timer: true, ..SampleOptions::default() });
-    open(&mut notch, "media");
-    let selection = notch.selected_page;
-    for delta in [0.45, 0.1, -0.1, 0.1] {
-        notch.drag_pages(delta);
-        notch.flush();
-        assert_eq!(notch.selected_page, selection);
-    }
-    notch.end_swipe();
-    notch.flush();
-    assert_ne!(notch.selected_page, selection);
-}
-
-#[test]
-fn touchpad_scroll_ignores_a_snap_timer_queued_before_the_latest_input() {
-    let mut notch = rig(SampleOptions { media: Some((false, false)), timer: true, ..SampleOptions::default() });
-    open(&mut notch, "media");
-    notch.drag_pages(0.25);
-    notch.timer_fired(SWIPE_END_TIMER_ID);
-    assert!(notch.swipe.is_some(), "fresh input must win over a previously queued timer");
-    assert_eq!(notch.track.target, 0.25);
-}
-
-#[test]
-fn a_touchpad_drag_follows_smoothly_and_can_continue_across_pages() {
-    let mut notch = rig(SampleOptions { media: Some((false, false)), timer: true, ..SampleOptions::default() });
-    open(&mut notch, "media");
-    let origin = notch.track.position;
-    notch.drag_pages(0.25);
-    assert_eq!(notch.track.position, origin, "input must not teleport the rendered page");
-    assert_eq!(notch.track.target, origin + 0.25);
-    notch.track.step(1.0 / 60.0);
-    assert!(notch.track.position > origin && notch.track.position < notch.track.target);
-    notch.end_swipe();
-    assert_eq!(notch.track.target, origin);
-    for _ in 0..60 {
-        notch.track.step(1.0 / 120.0);
-    }
-    assert!(notch.track.is_settled());
-
-    for _ in 0..30 {
-        notch.drag_pages(0.125);
-        notch.track.step(1.0 / 60.0);
-    }
-    assert_eq!(notch.track.target, origin + 3.75);
-    notch.end_swipe();
-    assert_eq!(notch.track.target, origin + 4.0);
-    for _ in 0..90 {
-        notch.track.step(1.0 / 120.0);
-    }
-    assert!(notch.track.is_settled());
 }

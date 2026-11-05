@@ -73,26 +73,17 @@ fn snapshots_of_every_open_page() {
         save(&notch, &format!("open-{id}"), WINDOW_HEIGHT);
     }
     open(&mut notch, "media");
-    notch.holds_page_position = true;
     for (name, progress) in [("swipe-long-short-25", 0.25), ("swipe-long-short-50", 0.5), ("swipe-long-short-75", 0.75)]
     {
         notch.track.jump_to(progress);
         notch.refresh_layout();
-        notch.follow_page_width();
         save(&notch, name, 260.0);
     }
-    notch.track.jump_to(0.5);
-    notch.follow_page_width();
-    save(&notch, "open-swipe", 260.0);
-    notch.drag_pages(0.0);
-    notch.end_swipe();
-    notch.refresh_layout();
-    save(&notch, "open-swipe-release", 260.0);
     let mut plain = rig(SampleOptions { media: Some((false, false)), ..options });
     open(&mut plain, "media");
     save(&plain, "open-media-plain", 260.0);
     open(&mut notch, "media");
-    for (name, expansion) in [("stage-header", HEADER_STAGE), ("stage-halfway", 0.75)] {
+    for (name, expansion) in [("stage-header", 0.5), ("stage-halfway", 0.75)] {
         notch.springs.expansion.jump_to(expansion);
         notch.refresh_layout();
         save(&notch, name, 260.0);

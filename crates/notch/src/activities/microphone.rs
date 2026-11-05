@@ -159,10 +159,6 @@ impl Activity for MicrophoneActivity {
         "microphone"
     }
 
-    fn label(&self) -> &'static str {
-        "Microphone in use"
-    }
-
     fn presence(&self) -> Option<Presence> {
         self.privacy.presence()
     }

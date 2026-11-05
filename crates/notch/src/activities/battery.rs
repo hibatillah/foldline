@@ -89,10 +89,6 @@ impl Activity for BatteryActivity {
         "battery"
     }
 
-    fn label(&self) -> &'static str {
-        "Charger and battery"
-    }
-
     fn presence(&self) -> Option<Presence> {
         self.flash.is_visible().then_some(Presence::Transient { width: self.width })
     }

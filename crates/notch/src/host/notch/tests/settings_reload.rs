@@ -1,41 +1,18 @@
-//! The activity menu and what a settings reload changes.
+//! What a settings reload changes.
 
 use super::*;
 
 #[test]
-fn only_notifications_appear_in_the_activity_menu() {
-    let settings_file = SettingsFile::new("activity-menu");
-    let notch = configured_rig(SampleOptions::default(), settings_file.load(), crate::activities::all());
-    assert_eq!(notch.activity_menu().len(), 1);
-    assert!(notch.activities.iter().all(|slot| slot.is_enabled));
-    let notifications_index = notch.activities.iter().position(|slot| slot.activity.id() == "notifications").unwrap();
-    assert_eq!(notch.activity_menu(), vec![(notifications_index, "Notifications", true)]);
-}
-
-#[test]
-fn notifications_can_still_be_switched_off() {
-    let settings_file = SettingsFile::new("notifications");
-    let mut notch = configured_rig(SampleOptions::default(), settings_file.load(), crate::activities::all());
-    let notifications_index = notch.activity_menu()[0].0;
-    notch.toggle_activity(notifications_index);
-    assert_eq!(notch.activity_menu(), vec![(notifications_index, "Notifications", false)]);
-    assert!(!settings_file.load().get_bool("activity.notifications", true));
-    assert!(notch.activities.iter().filter(|slot| slot.activity.id() != "notifications").all(|slot| slot.is_enabled));
-}
-
-#[test]
-fn required_activities_ignore_saved_disables_and_cannot_be_toggled_off() {
+fn required_activities_ignore_a_saved_disable() {
     let settings_file = SettingsFile::new("required-activities");
     let mut settings = settings_file.load();
     settings.set_bool("activity.volume", false);
     settings.set_bool("activity.notifications", false);
-    let mut notch = configured_rig(SampleOptions::default(), settings, crate::activities::all());
+    let notch = configured_rig(SampleOptions::default(), settings, crate::activities::all());
     let volume_index = notch.activities.iter().position(|slot| slot.activity.id() == "volume").unwrap();
     let notifications_index = notch.activities.iter().position(|slot| slot.activity.id() == "notifications").unwrap();
     assert!(notch.activities[volume_index].is_enabled);
     assert!(!notch.activities[notifications_index].is_enabled);
-    notch.toggle_activity(volume_index);
-    assert!(notch.activities[volume_index].is_enabled);
 }
 
 #[test]
@@ -154,10 +131,6 @@ struct CountingActivity {
 impl Activity for CountingActivity {
     fn id(&self) -> &'static str {
         "counting"
-    }
-
-    fn label(&self) -> &'static str {
-        "Counting"
     }
 
     fn is_optional(&self) -> bool {

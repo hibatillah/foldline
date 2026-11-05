@@ -17,7 +17,7 @@ use windows::Win32::Foundation::{HWND, POINT};
 use super::*;
 use crate::{
     activity::{Activity, Presence},
-    gfx::{Canvas, Color, Fonts, Rect, Surface, lerp},
+    gfx::{Canvas, Color, Fonts, Rect, Surface},
     host::{
         chrome, navigation::PageList, page_editor::PageEditor, screen_mode::ScreenMode, settings::Settings,
         settings_panel::Tab, visibility::Showing,
@@ -95,8 +95,6 @@ pub(super) fn settle(notch: &mut Notch) {
 
 pub(super) fn open(notch: &mut Notch, page_id: &str) {
     let index = notch.pages.iter().position(|page| page.id() == page_id).unwrap();
-    notch.swipe = None;
-    notch.holds_page_position = false;
     notch.selected_page = Some(index);
     notch.hover.is_hovering = true;
     notch.springs.expansion.target = 1.0;

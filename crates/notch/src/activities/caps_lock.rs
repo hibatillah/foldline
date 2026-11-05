@@ -90,10 +90,6 @@ impl Activity for CapsLockActivity {
         "caps_lock"
     }
 
-    fn label(&self) -> &'static str {
-        "Caps Lock"
-    }
-
     fn presence(&self) -> Option<Presence> {
         self.flash.is_visible().then_some(Presence::Transient { width: self.width })
     }

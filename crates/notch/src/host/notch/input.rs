@@ -1,13 +1,12 @@
-use super::{Notch, SWIPE_END_TIMER_ID};
+use std::time::Instant;
+
+use super::Notch;
 use windows::Win32::{
     Foundation::{POINT, RECT},
-    UI::{
-        Input::KeyboardAndMouse::ReleaseCapture,
-        WindowsAndMessaging::{GetCursorPos, KillTimer, SetTimer},
-    },
+    UI::{Input::KeyboardAndMouse::ReleaseCapture, WindowsAndMessaging::GetCursorPos},
 };
 
-use crate::host::{chrome, navigation};
+use crate::host::motion::WHEEL_NOTCH;
 use crate::{gfx::Point, log, page::PointerEvent};
 
 impl Notch {
@@ -26,14 +25,6 @@ impl Notch {
         }
         self.cancel_close();
         self.set_hovering(true);
-        let frame = self.frame();
-        let is_over_settings = self.editor.is_none()
-            && frame.is_open()
-            && chrome::settings_button(frame.bounds, self.scale).contains(point);
-        if is_over_settings != self.hover.is_settings_hovered {
-            self.hover.is_settings_hovered = is_over_settings;
-            self.pending.repaint = true;
-        }
         if let Some(menu) = self.menu.as_mut() {
             if menu.moved(point, self.scale) {
                 self.pending.repaint = true;
@@ -141,6 +132,10 @@ impl Notch {
     }
 
     pub fn scrolled(&mut self, amount: i32, is_horizontal: bool, is_touchpad: bool) {
+        self.scrolled_at(Instant::now(), amount, is_horizontal, is_touchpad);
+    }
+
+    pub(super) fn scrolled_at(&mut self, now: Instant, amount: i32, is_horizontal: bool, is_touchpad: bool) {
         if !self.hover.is_hovering || self.editor.is_some() {
             return;
         }
@@ -150,52 +145,12 @@ impl Notch {
             return;
         }
         let toward_next = if is_horizontal { amount } else { -amount };
-        match navigation::classify_scroll(toward_next, is_touchpad || is_horizontal || self.swipe.is_some()) {
-            navigation::Scroll::Pages(steps) => {
-                self.end_swipe();
-                self.navigate(steps.clamp(-(navigation::MAX_WHEEL_TRAVEL as i32), navigation::MAX_WHEEL_TRAVEL as i32));
-            }
-            navigation::Scroll::Drag(pages) => self.drag_pages(pages),
+        let is_smooth =
+            is_touchpad || is_horizontal || toward_next.abs() < WHEEL_NOTCH || self.scroll_gate.is_in_gesture(now);
+        if let Some(step) = self.scroll_gate.feed(now, toward_next, is_smooth) {
+            self.navigate(step);
         }
         self.flush();
-    }
-
-    pub(super) fn drag_pages(&mut self, pages: f32) {
-        if self.navigable.len() < 2 {
-            return;
-        }
-        self.wrap_track();
-        self.holds_page_position = true;
-        let position = self.swipe.get_or_insert_with(|| navigation::Swipe::new(self.track.position)).drag_by(pages);
-        // Smooth discrete wheel-message deltas without restarting the visible position or velocity.
-        self.track.set_response(navigation::PAGE_DRAG_RESPONSE.0, navigation::PAGE_DRAG_RESPONSE.1);
-        self.track.target = position;
-        self.arm_swipe_end();
-        self.start_animation();
-    }
-
-    pub(super) fn arm_swipe_end(&self) {
-        if let Some(swipe) = &self.swipe {
-            let remaining_milliseconds = swipe.quiet_remaining().as_millis().max(1) as u32;
-            unsafe {
-                SetTimer(Some(self.window), SWIPE_END_TIMER_ID, remaining_milliseconds, None);
-            }
-        }
-    }
-
-    pub(super) fn end_swipe(&mut self) {
-        unsafe {
-            let _ = KillTimer(Some(self.window), SWIPE_END_TIMER_ID);
-        }
-        if let Some(swipe) = self.swipe.take() {
-            self.holds_page_position = false;
-            self.track.set_response(navigation::TOUCHPAD_SNAP_RESPONSE.0, navigation::TOUCHPAD_SNAP_RESPONSE.1);
-            self.track.target = swipe.destination();
-            if !self.navigable.is_empty() {
-                self.select_page(self.page_at(self.track.target));
-            }
-            self.start_animation();
-        }
     }
 
     pub fn pointer_released(&mut self, window_x: i32, window_y: i32) {

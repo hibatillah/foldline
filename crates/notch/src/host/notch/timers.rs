@@ -1,6 +1,5 @@
 use super::{
     ANIMATION_TIMER_ID, CLOSE_TIMER_ID, EXPAND_TIMER_ID, HOVER_WATCH_TIMER_ID, Notch, RAISE_TIMER_ID, REVEAL_TIMER_ID,
-    STAGE_TIMER_ID, SWIPE_END_TIMER_ID,
 };
 use windows::Win32::UI::WindowsAndMessaging::{KillTimer, SetTimer};
 
@@ -28,15 +27,6 @@ impl Notch {
                     self.paint();
                 }
             }
-            SWIPE_END_TIMER_ID => {
-                if self.swipe.as_ref().is_some_and(|swipe| !swipe.quiet_remaining().is_zero()) {
-                    // A WM_TIMER may already be queued when fresh scroll input resets its deadline.
-                    self.arm_swipe_end();
-                } else {
-                    self.end_swipe();
-                    self.flush();
-                }
-            }
             REVEAL_TIMER_ID => {
                 unsafe {
                     let _ = KillTimer(Some(self.window), REVEAL_TIMER_ID);
@@ -56,13 +46,6 @@ impl Notch {
                     self.start_animation();
                     self.flush();
                 }
-            }
-            STAGE_TIMER_ID => {
-                unsafe {
-                    let _ = KillTimer(Some(self.window), STAGE_TIMER_ID);
-                }
-                self.springs.expansion.target = if self.hover.is_hovering { 1.0 } else { 0.0 };
-                self.start_animation();
             }
             HOVER_WATCH_TIMER_ID => {
                 if !self.hover.is_captured
@@ -123,6 +106,45 @@ impl Notch {
                     self.flush();
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::{tests::rig, *};
+    use crate::pages::SampleOptions;
+    use windows::Win32::UI::WindowsAndMessaging::KillTimer;
+
+    fn armed_host_timers(notch: &Notch) -> Vec<usize> {
+        [ANIMATION_TIMER_ID, HOVER_WATCH_TIMER_ID, REVEAL_TIMER_ID, EXPAND_TIMER_ID, CLOSE_TIMER_ID, RAISE_TIMER_ID]
+            .into_iter()
+            .filter(|&timer_key| unsafe { KillTimer(Some(notch.window), timer_key) }.is_ok())
+            .collect()
+    }
+
+    fn run_animation_to_rest(notch: &mut Notch) {
+        for _ in 0..600 {
+            if !notch.is_animating {
+                return;
+            }
+            notch.advance_by(1.0 / 60.0);
+        }
+    }
+
+    #[test]
+    fn no_host_timer_stays_armed_once_a_hover_open_and_close_have_settled() {
+        let mut notch = rig(SampleOptions::default());
+        crate::host::notch::tests::settle(&mut notch);
+        for _ in 0..3 {
+            notch.set_hovering(true);
+            notch.timer_fired(EXPAND_TIMER_ID);
+            run_animation_to_rest(&mut notch);
+            assert!(notch.springs.expansion.position > 0.99, "the notch opened");
+            notch.set_hovering(false);
+            run_animation_to_rest(&mut notch);
+            assert_eq!(notch.springs.expansion.position, 0.0, "the notch closed");
+            assert_eq!(armed_host_timers(&notch), Vec::<usize>::new());
         }
     }
 }

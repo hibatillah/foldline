@@ -150,7 +150,7 @@ impl Notch {
             Point::new((bounds.left + bounds.right - badge_room) / 2.0, bounds.top + RESTING_HEIGHT * scale / 2.0);
         let time_width = clock::text_width(canvas) * scale;
         let header = chrome::header_rect(bounds, scale);
-        let open = Point::new(header.right - chrome::SETTINGS_SLOT * scale - time_width / 2.0, header.center_y());
+        let open = Point::new(header.right - time_width / 2.0, header.center_y());
         let center = clock::center(collapsed, open, (frame.expansion / HEADER_STAGE).clamp(0.0, 1.0));
         let area = Rect::around(center, clock::HALF_WIDTH * scale, RESTING_HEIGHT * scale / 2.0);
         // The settings panel's tabs take over the header, so the clock stays out of it.
@@ -218,7 +218,6 @@ impl Notch {
             let dots = chrome::dot_rects(self.navigable.len(), self.track.position, frame.bounds, self.scale);
             chrome::draw_dots(canvas, &dots, self.track.position, opacity);
         }
-        chrome::draw_settings(canvas, frame.bounds, self.scale, self.hover.is_settings_hovered, opacity);
     }
 
     pub(super) fn draw_transients(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {

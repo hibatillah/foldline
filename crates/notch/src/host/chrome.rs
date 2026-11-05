@@ -1,9 +1,6 @@
 //! Shared header and padding; sizes are device-independent pixels.
 
-use crate::{
-    gfx::{Canvas, Color, Point, Rect},
-    ui::Icon,
-};
+use crate::gfx::{Canvas, Color, Point, Rect};
 
 pub const PADDING_TOP: f32 = 10.0;
 pub const PADDING_SIDE: f32 = 16.0;
@@ -17,14 +14,8 @@ const DOT_SIZE: f32 = 6.0;
 const ACTIVE_DOT_WIDTH: f32 = 16.0;
 const DOT_GAP: f32 = 4.0;
 const DOT_HIT_SLACK: f32 = 5.0;
-const SETTINGS_BUTTON: f32 = 20.0;
-/// The header's right end holds the gear; the clock and the statuses sit to its left.
-pub const SETTINGS_SLOT: f32 = SETTINGS_BUTTON + 6.0;
-const SETTINGS_SIZE: f32 = 14.0;
 const DOT_INACTIVE: Color = Color::rgb(0.227, 0.227, 0.267);
 const DOT_ACTIVE: Color = Color::rgb(0.9, 0.9, 0.92);
-const SETTINGS: Color = Color::rgb(0.43, 0.43, 0.48);
-const SETTINGS_HOVERED: Color = Color::rgb(0.8, 0.8, 0.84);
 
 pub fn content_rect(pill: Rect, scale: f32) -> Rect {
     let left = pill.left + PADDING_SIDE * scale;
@@ -87,23 +78,6 @@ pub fn dot_at(dots: &[Rect], point: Point, scale: f32) -> Option<usize> {
     })
 }
 
-pub fn settings_button(pill: Rect, scale: f32) -> Rect {
-    let right = pill.right - PADDING_SIDE * scale;
-    let center_y = header_center_y(pill, scale);
-    Rect::new(
-        right - SETTINGS_BUTTON * scale,
-        center_y - SETTINGS_BUTTON * scale / 2.0,
-        right,
-        center_y + SETTINGS_BUTTON * scale / 2.0,
-    )
-}
-
-pub fn draw_settings(canvas: &Canvas, pill: Rect, scale: f32, is_hovered: bool, opacity: f32) {
-    let button = settings_button(pill, scale);
-    let color = if is_hovered { SETTINGS_HOVERED } else { SETTINGS };
-    Icon::Sliders.draw(canvas, Point::new(button.center_x(), button.center_y()), SETTINGS_SIZE * scale, color, opacity);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -155,15 +129,6 @@ mod tests {
         assert_eq!(dot_at(&dots, Point::new(dots[2].center_x() + 6.0, dots[2].center_y()), 1.0), Some(2));
         assert_eq!(dot_at(&dots, Point::new(300.0, 22.0), 1.0), None);
         assert_eq!(dot_at(&dots, Point::new(dots[0].center_x(), 60.0), 1.0), None);
-    }
-
-    #[test]
-    fn the_settings_button_sits_at_the_right_end_of_the_header() {
-        let button = settings_button(PILL, 1.0);
-        assert_eq!(button.right, PILL.right - PADDING_SIDE);
-        assert!(header_rect(PILL, 1.0).right - SETTINGS_SLOT >= button.left - 6.0);
-        assert_eq!(button.center_y(), PADDING_TOP + HEADER_HEIGHT / 2.0);
-        assert!(button.contains(Point::new(button.center_x(), button.center_y())));
     }
 
     #[test]

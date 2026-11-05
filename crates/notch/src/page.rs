@@ -174,14 +174,6 @@ pub trait Page {
     /// All pages receive hover changes, including those not currently selected.
     fn on_hover_changed(&mut self, _is_hovering: bool, _context: &mut Context) {}
 
-    /// Labels the page adds to the tray menu.
-    fn menu_items(&self) -> Vec<String> {
-        Vec::new()
-    }
-
-    /// A tray item of this page was chosen; `index` is its position in `menu_items`.
-    fn on_menu_item(&mut self, _index: usize, _context: &mut Context) {}
-
     /// True for a page that takes files dropped on the notch; the first such page that is switched on gets them.
     fn accepts_drops(&self) -> bool {
         false

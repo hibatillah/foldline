@@ -159,10 +159,6 @@ impl Activity for VolumeActivity {
         "volume"
     }
 
-    fn label(&self) -> &'static str {
-        "Volume"
-    }
-
     fn presence(&self) -> Option<Presence> {
         let width = if self.is_muted { self.muted_width } else { ui::LEVEL_WIDTH };
         self.flash.is_visible().then_some(Presence::Transient { width })

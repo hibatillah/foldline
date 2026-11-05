@@ -223,6 +223,19 @@ mod tests {
         assert!(forecast.days.len() >= 2, "{:?}", forecast.days);
     }
 
+    /// A real `complete` response for Pekanbaru, cut to its first three steps and the last one.
+    #[test]
+    fn a_saved_real_response_parses() {
+        let sample = include_str!("sample_response.json");
+        let fetched_at = DateTime::parse_from_rfc3339("2026-11-05T17:05:00Z").unwrap().with_timezone(&Utc);
+        let forecast = Forecast::parse(sample, fetched_at).expect("the real response parses");
+        assert_eq!(forecast.hours.len(), 3);
+        assert_eq!(forecast.hours[0].symbol, Symbol::Rain);
+        assert_eq!(forecast.hours[0].rain_millimeters, 1.4);
+        assert_eq!(forecast.feels_like, 23.7);
+        assert!(!forecast.days.is_empty());
+    }
+
     #[test]
     fn a_response_that_is_not_a_forecast_gives_nothing() {
         assert!(Forecast::parse("not json", at(0)).is_none());

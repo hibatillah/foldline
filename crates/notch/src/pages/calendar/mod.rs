@@ -439,11 +439,10 @@ mod tests {
     }
 
     #[test]
-    fn the_calendar_is_a_page_to_open_with_no_tray_items_and_no_collapsed_state() {
+    fn the_calendar_is_a_page_to_open_with_no_collapsed_state() {
         let page = CalendarPage::new();
         assert_eq!(page.priority(Mode::Resting), None);
         assert!(page.priority(Mode::Expanded).is_some());
-        assert!(page.menu_items().is_empty());
         assert_eq!(page.presence(), None);
     }
 }

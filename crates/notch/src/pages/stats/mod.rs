@@ -1,4 +1,4 @@
-//! Opt-in system stats; sample every two seconds only while visible.
+//! Opt-in system stats; sample and redraw once a second only while visible.
 
 mod charts;
 mod format;
@@ -48,7 +48,7 @@ const LIST_GAP: f32 = 4.0;
 
 const SAMPLE_TIMER: TimerId = TimerId(0);
 const FIRST_SAMPLE_MILLISECONDS: u32 = 600;
-const SAMPLE_INTERVAL_MILLISECONDS: u32 = 2000;
+const SAMPLE_INTERVAL_MILLISECONDS: u32 = 1000;
 
 const MONO: &str = "Consolas";
 const LABEL: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Leading);
@@ -495,6 +495,11 @@ impl Page for StatsPage {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_page_samples_once_a_second() {
+        assert_eq!(SAMPLE_INTERVAL_MILLISECONDS, 1000);
+    }
 
     #[test]
     fn the_stats_page_is_opt_in_and_has_no_collapsed_state() {

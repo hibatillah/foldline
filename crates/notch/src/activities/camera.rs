@@ -156,10 +156,6 @@ impl Activity for CameraActivity {
         "camera"
     }
 
-    fn label(&self) -> &'static str {
-        "Camera in use"
-    }
-
     fn presence(&self) -> Option<Presence> {
         self.privacy.presence()
     }

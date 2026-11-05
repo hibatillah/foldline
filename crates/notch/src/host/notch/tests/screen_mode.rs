@@ -50,7 +50,6 @@ fn session_recovery_clears_stale_hover_and_allows_a_hidden_notch_to_open_again()
     notch.timer_fired(REVEAL_TIMER_ID);
     assert!(notch.hiding.is_revealed);
     notch.timer_fired(EXPAND_TIMER_ID);
-    notch.timer_fired(STAGE_TIMER_ID);
     assert_eq!(notch.springs.expansion.target, 1.0);
 }
 

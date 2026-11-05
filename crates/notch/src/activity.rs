@@ -36,9 +36,7 @@ pub trait Activity {
     /// Stable name used in logs and settings keys (`activity.<id>`).
     fn id(&self) -> &'static str;
 
-    fn label(&self) -> &'static str;
-
-    /// Optional activities expose a tray toggle; required activities ignore saved disable settings.
+    /// Optional activities expose a settings toggle; required activities ignore saved disable settings.
     fn is_optional(&self) -> bool {
         false
     }

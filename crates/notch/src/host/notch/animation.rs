@@ -1,6 +1,6 @@
 use super::{
-    ANIMATION_TIMER_ID, HEADER_STAGE, Notch, OPEN_RESPONSE, RESTING_FLARE, RESTING_PILL_HEIGHT, SHADOW_LAYERS,
-    SHADOW_OFFSET, SHADOW_STEP, Spring, WINDOW_WIDTH,
+    ANIMATION_TIMER_ID, Notch, RESTING_FLARE, RESTING_PILL_HEIGHT, SHADOW_LAYERS, SHADOW_OFFSET, SHADOW_STEP, Spring,
+    WINDOW_WIDTH,
 };
 use windows::Win32::{
     Foundation::RECT,
@@ -9,9 +9,10 @@ use windows::Win32::{
     UI::WindowsAndMessaging::{KillTimer, SetTimer},
 };
 
-use crate::host::chrome;
+use crate::host::{chrome, motion};
 use crate::{
     gfx::{Rect, Size, lerp},
+    log,
     page::Frame,
 };
 
@@ -29,28 +30,32 @@ pub(super) struct Springs {
 impl Springs {
     pub(super) fn new() -> Self {
         Self {
-            expansion: Spring::new(0.0, OPEN_RESPONSE.0, OPEN_RESPONSE.1).with_rebound_damping(1.4),
-            resting_width: Spring::new(0.0, 220.0, 26.0),
-            resting_height: Spring::new(RESTING_PILL_HEIGHT, 260.0, 26.0),
-            expanded_width: Spring::new(0.0, 200.0, 26.0),
-            expanded_height: Spring::new(0.0, 220.0, 26.0),
+            expansion: size_spring(0.0),
+            resting_width: size_spring(0.0),
+            resting_height: size_spring(RESTING_PILL_HEIGHT),
+            expanded_width: size_spring(0.0),
+            expanded_height: size_spring(0.0),
             activity_blend: Spring::new(0.0, 300.0, 28.0),
-            badge_width: Spring::new(0.0, 220.0, 26.0),
+            badge_width: size_spring(0.0),
         }
     }
 }
 
-const EXPANDED_FLARE: f32 = 12.0;
-const HEADER_STAGE_WIDTH: f32 = 240.0;
-const HEADER_STAGE_HEIGHT: f32 = 52.0;
+/// Every size spring shares one response and lead-in, so width and height of a move start and settle together.
+fn size_spring(position: f32) -> Spring {
+    Spring::new(position, motion::SIZE_RESPONSE.0, motion::SIZE_RESPONSE.1).with_lead_in(motion::SIZE_LEAD_IN)
+}
 
-/// Interpolate through the header stage and extrapolate past the endpoints for spring overshoot.
-pub(super) fn staged(resting: f32, header: f32, full: f32, expansion: f32) -> f32 {
-    if expansion <= HEADER_STAGE {
-        lerp(resting, header, expansion / HEADER_STAGE)
-    } else {
-        lerp(header, full, (expansion - HEADER_STAGE) / (1.0 - HEADER_STAGE))
-    }
+const EXPANDED_FLARE: f32 = 12.0;
+
+/// Width and height go through the same open amount; it extrapolates past 0 and 1 while the spring overshoots.
+pub(super) fn sized(resting: f32, full: f32, expansion: f32) -> f32 {
+    lerp(resting, full, expansion)
+}
+
+/// Keeps an overshooting size inside the window (`room`) and above a fraction of the collapsed size.
+pub(super) fn bounded(size: f32, resting: f32, room: f32) -> f32 {
+    size.min(room).max((resting * motion::MIN_SIZE_FRACTION).min(room))
 }
 
 pub(super) fn ramp(expansion: f32, range: (f32, f32)) -> f32 {
@@ -63,6 +68,7 @@ impl Notch {
             return;
         }
         self.is_animating = true;
+        log::debug("frame timer started");
         unsafe {
             timeBeginPeriod(1);
             let _ = QueryPerformanceCounter(&mut self.last_tick);
@@ -72,6 +78,7 @@ impl Notch {
 
     pub(super) fn stop_animation(&mut self) {
         self.is_animating = false;
+        log::debug("frame timer stopped");
         unsafe {
             let _ = KillTimer(Some(self.window), ANIMATION_TIMER_ID);
             timeEndPeriod(1);
@@ -85,14 +92,14 @@ impl Notch {
         }
         let elapsed_seconds = ((now - self.last_tick) as f32 / self.ticks_per_second as f32).clamp(0.0, 0.05);
         self.last_tick = now;
+        self.advance_by(elapsed_seconds);
+    }
 
-        let follows_page_width = self.holds_page_position || !self.track.is_settled();
+    /// One frame of `elapsed_seconds`; stops the frame timer when everything has settled.
+    pub(super) fn advance_by(&mut self, elapsed_seconds: f32) {
         self.springs.expansion.step(elapsed_seconds);
         for spring in self.layout_springs() {
             spring.step(elapsed_seconds);
-        }
-        if follows_page_width {
-            self.follow_page_width();
         }
         let is_settled =
             self.springs.expansion.is_settled() && self.layout_springs().iter().all(|spring| spring.is_settled());
@@ -106,23 +113,22 @@ impl Notch {
             for spring in self.layout_springs() {
                 spring.snap_to_target();
             }
-            if follows_page_width {
-                self.follow_page_width();
-            }
             self.stop_animation();
         }
         self.paint();
     }
 
     pub(super) fn frame(&self) -> Frame {
-        let amount = self.springs.expansion.position.clamp(-0.08, 1.1);
+        let (lowest, highest) = motion::EXPANSION_OVERSHOOT_LIMIT;
+        let amount = self.springs.expansion.position.clamp(lowest, highest);
         let (resting_width, full_width) = (self.springs.resting_width.position, self.springs.expanded_width.position);
         let (resting_height, full_height) =
             (self.springs.resting_height.position, self.springs.expanded_height.position);
-        let header_width = HEADER_STAGE_WIDTH.min(full_width).max(resting_width);
-        let header_height = HEADER_STAGE_HEIGHT.min(full_height).max(resting_height);
-        let width = staged(resting_width, header_width, full_width, amount) * self.scale;
-        let height = staged(resting_height, header_height, full_height, amount) * self.scale;
+        let (room_width, room_height) = self.size_room();
+        let width =
+            bounded(sized(resting_width, full_width, amount) * self.scale, resting_width * self.scale, room_width);
+        let height =
+            bounded(sized(resting_height, full_height, amount) * self.scale, resting_height * self.scale, room_height);
         let left = (WINDOW_WIDTH * self.scale - width) / 2.0;
         Frame {
             scale: self.scale,
@@ -133,6 +139,13 @@ impl Notch {
                 self.springs.expanded_height.position - chrome::HEIGHT_EXTRA,
             ),
         }
+    }
+
+    /// The widest and tallest the pill may be, keeping its flares and shadow on the surface.
+    fn size_room(&self) -> (f32, f32) {
+        let side = (EXPANDED_FLARE + SHADOW_LAYERS as f32 * SHADOW_STEP) * self.scale;
+        let below = (SHADOW_LAYERS as f32 * SHADOW_STEP + SHADOW_OFFSET) * self.scale;
+        (self.surface.width as f32 - 2.0 * side, self.surface.height as f32 - below)
     }
 
     pub(super) fn flare_size(&self, frame: &Frame) -> f32 {
@@ -164,17 +177,164 @@ mod tests {
     use super::{super::*, *};
 
     #[test]
-    pub(super) fn a_staged_size_passes_through_the_header_pill_on_the_way_to_the_open_notch() {
-        assert_eq!(staged(96.0, 240.0, 280.0, 0.0), 96.0);
-        assert_eq!(staged(96.0, 240.0, 280.0, HEADER_STAGE), 240.0);
-        assert_eq!(staged(96.0, 240.0, 280.0, 1.0), 280.0);
-        assert_eq!(staged(96.0, 240.0, 280.0, 0.25), 168.0);
-        assert_eq!(staged(96.0, 240.0, 280.0, 0.75), 260.0);
+    pub(super) fn width_and_height_share_one_open_amount_so_they_arrive_together() {
+        for amount in [0.0, 0.3, 0.5, 1.0, 1.1] {
+            let width_progress = (sized(100.0, 500.0, amount) - 100.0) / 400.0;
+            let height_progress = (sized(30.0, 210.0, amount) - 30.0) / 180.0;
+            assert!((width_progress - height_progress).abs() < 1e-5, "amount {amount}");
+        }
     }
     #[test]
-    pub(super) fn a_staged_size_goes_past_both_ends_when_the_spring_overshoots() {
-        assert!(staged(96.0, 240.0, 280.0, 1.05) > 280.0);
-        assert!(staged(96.0, 240.0, 280.0, -0.05) < 96.0);
+    pub(super) fn a_size_goes_past_both_ends_when_the_spring_overshoots() {
+        assert!(sized(96.0, 280.0, 1.05) > 280.0);
+        assert!(sized(96.0, 280.0, -0.05) < 96.0);
+    }
+    #[test]
+    pub(super) fn an_overshooting_size_stays_inside_the_window_and_above_the_collapsed_floor() {
+        assert_eq!(bounded(900.0, 100.0, 800.0), 800.0);
+        assert_eq!(bounded(10.0, 100.0, 800.0), 75.0);
+        assert_eq!(bounded(300.0, 100.0, 800.0), 300.0);
+    }
+    #[test]
+    pub(super) fn the_tallest_open_page_overshoots_without_leaving_the_window() {
+        let notch = crate::host::notch::tests::rig(crate::pages::SampleOptions::default());
+        let (room_width, room_height) = notch.size_room();
+        assert!(room_width < notch.surface.width as f32 && room_height < notch.surface.height as f32);
+        let tallest = (crate::page::MAX_CONTENT_HEIGHT + chrome::HEIGHT_EXTRA) * notch.scale;
+        let overshot = sized(RESTING_PILL_HEIGHT * notch.scale, tallest, motion::EXPANSION_OVERSHOOT_LIMIT.1);
+        assert!(bounded(overshot, RESTING_PILL_HEIGHT * notch.scale, room_height) <= room_height);
+    }
+    /// Peak overshoot (fraction of the move) and seconds until settled for a unit move at 240 steps per second.
+    fn measure(mut spring: Spring) -> (f32, f32) {
+        spring.target = 1.0;
+        let (mut highest, mut settled_at) = (0.0_f32, None);
+        for step in 0..960 {
+            spring.step(1.0 / 240.0);
+            highest = highest.max(spring.position);
+            if settled_at.is_none() && spring.is_settled() {
+                settled_at = Some(step as f32 / 240.0);
+            }
+        }
+        (highest - 1.0, settled_at.expect("the spring settles"))
+    }
+    #[test]
+    pub(super) fn the_size_spring_overshoots_about_ten_percent_and_settles_so_the_frame_timer_can_stop() {
+        let (overshoot, seconds_to_settle) = measure(size_spring(0.0));
+        assert!((0.08..0.12).contains(&overshoot), "overshoot {overshoot}");
+        assert!(seconds_to_settle < 1.6, "settled after {seconds_to_settle}");
+    }
+    #[test]
+    pub(super) fn the_size_spring_settles_one_and_a_third_to_one_and_a_half_times_slower_than_the_old_one() {
+        let (_, old_seconds) = measure(Spring::new(0.0, 420.0, 21.0));
+        let (_, new_seconds) = measure(size_spring(0.0));
+        let ratio = new_seconds / old_seconds;
+        assert!((1.3..1.5).contains(&ratio), "ratio {ratio} ({old_seconds} -> {new_seconds})");
+    }
+    #[test]
+    pub(super) fn a_size_move_starts_gently_instead_of_at_full_speed() {
+        let (mut eased, mut plain) =
+            (size_spring(0.0), Spring::new(0.0, motion::SIZE_RESPONSE.0, motion::SIZE_RESPONSE.1));
+        (eased.target, plain.target) = (1.0, 1.0);
+        for _ in 0..4 {
+            eased.step(1.0 / 240.0);
+            plain.step(1.0 / 240.0);
+        }
+        assert!(eased.position < plain.position * 0.1);
+        for _ in 0..20 {
+            eased.step(1.0 / 60.0);
+        }
+        assert!(eased.position > 0.5, "the move is under way after a third of a second");
+    }
+    #[test]
+    pub(super) fn width_and_height_springs_of_different_distances_reach_their_targets_on_the_same_frame() {
+        let (mut width, mut height) = (size_spring(300.0), size_spring(100.0));
+        (width.target, height.target) = (500.0, 180.0);
+        let mut arrival_frames = (None, None);
+        for frame in 0..600 {
+            width.step(1.0 / 120.0);
+            height.step(1.0 / 120.0);
+            if arrival_frames.0.is_none() && (500.0 - width.position).abs() / 200.0 < 0.01 {
+                arrival_frames.0 = Some(frame);
+            }
+            if arrival_frames.1.is_none() && (180.0 - height.position).abs() / 80.0 < 0.01 {
+                arrival_frames.1 = Some(frame);
+            }
+        }
+        assert_eq!(arrival_frames.0, arrival_frames.1);
+        assert!(width.is_settled() && height.is_settled());
+    }
+    /// Frames until the frame timer stops, or `None` when it still runs after `limit_seconds`.
+    fn frames_until_the_timer_stops(notch: &mut Notch, frame_seconds: f32, limit_seconds: f32) -> Option<usize> {
+        notch.start_animation();
+        for frame in 0..(limit_seconds / frame_seconds) as usize {
+            notch.advance_by(frame_seconds);
+            if !notch.is_animating {
+                return Some(frame + 1);
+            }
+        }
+        None
+    }
+    #[test]
+    pub(super) fn the_frame_timer_stops_after_every_open_and_close_at_any_frame_rate() {
+        for frame_seconds in [1.0 / 60.0, 1.0 / 144.0] {
+            let mut notch = crate::host::notch::tests::rig(crate::pages::SampleOptions::default());
+            crate::host::notch::tests::settle(&mut notch);
+            for cycle in 0..3 {
+                notch.begin_opening();
+                notch.refresh_layout();
+                let opened = frames_until_the_timer_stops(&mut notch, frame_seconds, 4.0);
+                assert!(opened.is_some(), "open {cycle} at {frame_seconds}: {}", describe_springs(&mut notch));
+                assert_eq!(notch.springs.expansion.position, 1.0);
+                notch.begin_closing();
+                notch.refresh_layout();
+                let closed = frames_until_the_timer_stops(&mut notch, frame_seconds, 4.0);
+                assert!(closed.is_some(), "close {cycle} at {frame_seconds}: {}", describe_springs(&mut notch));
+                assert_eq!(notch.springs.expansion.position, 0.0);
+            }
+        }
+    }
+    #[test]
+    pub(super) fn the_frame_timer_stops_after_hover_cycles_that_reverse_a_move_before_it_settles() {
+        let mut notch = crate::host::notch::tests::rig(crate::pages::SampleOptions::default());
+        crate::host::notch::tests::settle(&mut notch);
+        let mut jitter = 0x2545_f491_u32;
+        let mut next_frame_seconds = || {
+            jitter ^= jitter << 13;
+            jitter ^= jitter >> 17;
+            jitter ^= jitter << 5;
+            (8 + jitter % 14) as f32 / 1000.0
+        };
+        notch.start_animation();
+        for cycle in 0..10 {
+            for (opening, hold_seconds) in [(true, 0.15 + 0.1 * cycle as f32), (false, 0.4 + 0.05 * cycle as f32)] {
+                if opening {
+                    notch.begin_opening();
+                } else {
+                    notch.begin_closing();
+                }
+                notch.refresh_layout();
+                notch.start_animation();
+                let mut held = 0.0;
+                while held < hold_seconds && notch.is_animating {
+                    let frame_seconds = next_frame_seconds();
+                    notch.advance_by(frame_seconds);
+                    held += frame_seconds;
+                }
+            }
+        }
+        let mut waited = 0.0;
+        while notch.is_animating && waited < 4.0 {
+            let frame_seconds = next_frame_seconds();
+            notch.advance_by(frame_seconds);
+            waited += frame_seconds;
+        }
+        assert!(!notch.is_animating, "still running after {waited} s: {}", describe_springs(&mut notch));
+    }
+    fn describe_springs(notch: &mut Notch) -> String {
+        let expansion = (notch.springs.expansion.position, notch.springs.expansion.target);
+        let layout: Vec<(f32, f32, bool)> =
+            notch.layout_springs().iter().map(|spring| (spring.position, spring.target, spring.is_settled())).collect();
+        format!("expansion {expansion:?}, layout {layout:?}")
     }
     #[test]
     pub(super) fn the_header_shows_before_the_page_content_and_the_collapsed_content_is_gone_first() {

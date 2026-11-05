@@ -33,44 +33,6 @@ impl Notch {
         self.flush();
     }
 
-    pub fn activity_menu(&self) -> Vec<(usize, &'static str, bool)> {
-        self.activities
-            .iter()
-            .enumerate()
-            .filter(|(_, slot)| slot.activity.is_optional())
-            .map(|(index, slot)| (index, slot.activity.label(), slot.is_enabled))
-            .collect()
-    }
-
-    pub fn page_menu(&self) -> Vec<(usize, usize, String)> {
-        let mut items = Vec::new();
-        for (page, entry) in self.pages.iter().enumerate().filter(|(index, _)| self.page_list.is_enabled(*index)) {
-            items.extend(entry.menu_items().into_iter().enumerate().map(|(item, label)| (page, item, label)));
-        }
-        items
-    }
-
-    pub fn page_menu_item_chosen(&mut self, page: usize, item: usize) {
-        if page < self.pages.len() {
-            self.with_page(page, |entry, context| entry.on_menu_item(item, context));
-            self.flush();
-        }
-    }
-
-    pub fn toggle_activity(&mut self, index: usize) {
-        let Some(slot) = self.activities.get_mut(index) else { return };
-        if !slot.activity.is_optional() {
-            return;
-        }
-        slot.is_enabled = !slot.is_enabled;
-        let (key, is_enabled) = (activity_setting_key(slot.activity.id()), slot.is_enabled);
-        self.settings.set_bool(&key, is_enabled);
-        if is_enabled {
-            self.start_activity(index);
-        }
-        self.flush();
-    }
-
     pub(super) fn start_activity(&mut self, index: usize) {
         if self.activities[index].is_started {
             return;
@@ -102,17 +64,18 @@ impl Notch {
         hook(self.pages[index].as_mut(), &mut context)
     }
 
+    /// Moves one page forward or back and loops from the last page to the first and the other way round.
     pub(super) fn navigate(&mut self, step: i32) {
         if self.navigable.len() < 2 {
             return;
         }
         self.wrap_track();
-        self.holds_page_position = false;
-        self.track.set_response(navigation::PAGE_SNAP_RESPONSE.0, navigation::PAGE_SNAP_RESPONSE.1);
-        let target =
-            navigation::limit_wheel_travel(self.track.position.round(), self.track.target.round() + step as f32);
-        self.track.target = target;
-        self.select_page(self.page_at(target));
+        let count = self.navigable.len() as i64;
+        let origin = self.track.target.round();
+        let current = (origin as i64).rem_euclid(count);
+        let next = (current + i64::from(step)).rem_euclid(count);
+        self.track.target = origin + step as f32;
+        self.select_page(self.navigable[next as usize]);
         self.start_animation();
     }
 
@@ -122,16 +85,13 @@ impl Notch {
 
     pub(super) fn wrap_track(&mut self) {
         let count = self.navigable.len() as f32;
-        if self.swipe.is_none() && self.track.is_settled() && count > 0.0 {
+        if self.track.is_settled() && count > 0.0 {
             self.track.jump_to(self.track.target.rem_euclid(count));
         }
     }
 
     pub(super) fn go_to_page(&mut self, target: usize) {
-        if Some(target) != self.expanded_index || self.holds_page_position {
-            self.end_swipe();
-            self.holds_page_position = false;
-            self.track.set_response(navigation::PAGE_SNAP_RESPONSE.0, navigation::PAGE_SNAP_RESPONSE.1);
+        if Some(target) != self.expanded_index {
             self.select_page(target);
             self.start_animation();
         }
@@ -150,12 +110,7 @@ impl Notch {
         }
         let dots = chrome::dot_rects(self.navigable.len(), self.track.position, frame.bounds, self.scale);
         if let Some(position) = chrome::dot_at(&dots, point, self.scale) {
-            self.end_swipe();
             self.go_to_page(self.navigable[position]);
-            return true;
-        }
-        if chrome::settings_button(frame.bounds, self.scale).contains(point) {
-            self.open_panel();
             return true;
         }
         false
@@ -211,7 +166,7 @@ impl Notch {
     /// A reordered or switched page list moves the open page to another row; jump there instead of scrolling.
     pub(super) fn keep_shown_page_in_place(&mut self, navigable_before: &[usize]) {
         self.refresh_layout();
-        if self.navigable == navigable_before || self.swipe.is_some() || self.holds_page_position {
+        if self.navigable == navigable_before {
             return;
         }
         if let Some(position) = self.navigable.iter().position(|&index| Some(index) == self.expanded_index) {

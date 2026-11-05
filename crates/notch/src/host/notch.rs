@@ -6,6 +6,7 @@ use super::{
     display, navigation,
     navigation::PageList,
     page_editor::PageEditor,
+    scroll_gate::ScrollGate,
     settings::Settings,
     visibility::{self},
 };
@@ -55,16 +56,13 @@ const EXPAND_TIMER_ID: usize = 4;
 const HIDDEN_WIDTH: f32 = 240.0;
 const HIDDEN_HEIGHT: f32 = 6.0;
 const HIDE_WHEN_IDLE_SETTING: &str = "notch.hide_when_idle";
-/// Expansion stages: 0 collapsed, HEADER_STAGE header-only, 1 fully open.
+/// The open amount at which the header content is fully shown and the page content has not started; 1 is fully open.
 const HEADER_STAGE: f32 = 0.5;
 const RESTING_FADE_END: f32 = 0.25;
 const HEADER_FADE: (f32, f32) = (0.2, 0.45);
 const CONTENT_FADE: (f32, f32) = (0.62, 0.9);
-const STAGE_TIMER_ID: usize = 7;
 const CLOSE_TIMER_ID: usize = 8;
 const RAISE_TIMER_ID: usize = 9;
-const OPEN_RESPONSE: (f32, f32) = (480.0, 29.0);
-const SWIPE_END_TIMER_ID: usize = 5;
 const PAGE_GAP: f32 = 24.0;
 const LAST_PAGE_SETTING: &str = "navigation.page";
 const PAGE_ORDER_SETTING: &str = "navigation.order";
@@ -109,9 +107,7 @@ pub struct Notch {
     editor: Option<PageEditor>,
     navigable: Vec<usize>,
     track: Spring,
-    swipe: Option<navigation::Swipe>,
-    /// Finger input owns the fractional row position until its quiet period ends.
-    holds_page_position: bool,
+    scroll_gate: ScrollGate,
     pending: Requests,
     springs: Springs,
     hiding: HidingState,
@@ -184,8 +180,7 @@ impl Notch {
             editor: None,
             navigable: Vec::new(),
             track: navigation::page_transition(0.0),
-            swipe: None,
-            holds_page_position: false,
+            scroll_gate: ScrollGate::default(),
             pending: Requests::default(),
             springs: Springs::new(),
             hiding,

@@ -27,7 +27,9 @@ const LYRIC_GAP: f32 = 8.0;
 pub const LYRIC_MAX_LINES: usize = 2;
 const BADGE_SIZE: f32 = 19.0;
 const BADGE_RADIUS: f32 = 5.0;
-const BADGE_OVERHANG: f32 = 4.0;
+/// How far the icon's right and bottom edges hang past the artwork's: 2 of its 19 px (about a tenth), so the corner
+/// is mostly covered and the black rim, 3 px wider, is what reaches beyond the artwork.
+const BADGE_OVERHANG: f32 = 2.0;
 const BADGE_RING: f32 = 3.0;
 
 pub fn lyric_panel_width() -> f32 {
@@ -162,11 +164,14 @@ mod tests {
     }
 
     #[test]
-    fn the_app_icon_overlaps_the_artwork_corner_and_sticks_out_of_it() {
+    fn the_app_icon_hangs_slightly_past_the_artwork_bottom_right_corner() {
         let layout = plain(2);
         let (artwork, badge) = (layout.artwork(), layout.app_badge());
-        assert!(badge.right > artwork.right && badge.bottom > artwork.bottom);
-        assert!(badge.left < artwork.right && badge.top < artwork.bottom);
+        let overhang = BADGE_OVERHANG * 2.0;
+        assert_eq!(badge.right - artwork.right, overhang);
+        assert_eq!(badge.bottom - artwork.bottom, overhang);
+        assert!(overhang < badge.width() / 2.0, "most of the icon stays over the artwork");
+        assert!(badge.left > artwork.left && badge.top > artwork.top);
         let (ring, _) = layout.app_badge_ring();
         assert!(ring.left < badge.left && ring.bottom > badge.bottom);
     }

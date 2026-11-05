@@ -89,15 +89,6 @@ impl Notch {
         ])
     }
 
-    pub(super) fn follow_page_width(&mut self) {
-        if self.editor.is_none()
-            && let Some(layout) = self.blended_page_layout()
-        {
-            let growth = if self.hover.is_dragging_files { DRAG_GROWTH.width } else { 0.0 };
-            self.springs.expanded_width.jump_to(layout.viewport_width + chrome::WIDTH_EXTRA + growth);
-        }
-    }
-
     pub(super) fn sync_shown_page(&mut self) -> bool {
         let shown = ((self.hover.is_hovering || self.keyboard.owner.is_some()) && self.editor.is_none())
             .then_some(self.expanded_index)
@@ -130,11 +121,6 @@ impl Notch {
 
         let resting_width = resting_index.map_or(clock::RESTING_WIDTH, |index| self.pages[index].sizes().resting_width);
         let mut expanded = expanded_index.map_or(EMPTY_PAGE_SIZE, |index| self.pages[index].sizes().expanded);
-        if (self.holds_page_position || !self.track.is_settled())
-            && let Some(layout) = self.blended_page_layout()
-        {
-            expanded.width = layout.viewport_width;
-        }
         if self.editor.is_some() {
             expanded = self.editor_size();
         }
@@ -177,17 +163,8 @@ impl Notch {
         selection_changed
     }
 
-    /// Follow selection only when finger input does not own the row; jump while closed.
+    /// Slides the page row to the selected page; jumps while closed.
     pub(super) fn follow_open_page(&mut self) {
-        if self.swipe.is_some() {
-            return;
-        }
-        if self.holds_page_position {
-            if self.expanded_index == self.selected_page && self.navigable.len() > 1 {
-                return;
-            }
-            self.holds_page_position = false;
-        }
         let Some(position) = self.navigable.iter().position(|&index| Some(index) == self.expanded_index) else {
             return;
         };

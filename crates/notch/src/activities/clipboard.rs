@@ -46,10 +46,6 @@ impl Activity for ClipboardActivity {
         "clipboard"
     }
 
-    fn label(&self) -> &'static str {
-        "Copied"
-    }
-
     fn presence(&self) -> Option<Presence> {
         self.flash.is_visible().then_some(Presence::Transient { width: self.width })
     }

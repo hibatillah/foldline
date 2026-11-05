@@ -26,6 +26,11 @@ pub(super) fn history_at(history: &VecDeque<f32>, position: f32) -> Option<f32> 
     Some(history[lower] + (history[upper] - history[lower]) * blend)
 }
 
+/// Slots before the first reading count as zero, so an empty chart is a flat line at the baseline.
+pub(super) fn column_value(history: &VecDeque<f32>, position: f32) -> f32 {
+    history_at(history, position).unwrap_or(0.0)
+}
+
 /// How far the card's rounded bottom corner pulls the chart up at `distance` from the card's side edge.
 pub(super) fn corner_inset(distance: f32, radius: f32) -> f32 {
     if distance >= radius {
@@ -46,7 +51,7 @@ pub(super) fn draw_area(canvas: &Canvas, tile: Rect, scale: f32, history: &VecDe
         let left = tile.left + column as f32 * step;
         let right = (left + step).min(tile.right);
         let middle = (left + right) / 2.0;
-        let Some(value) = history_at(history, (middle - tile.left) / tile.width()) else { continue };
+        let value = column_value(history, (middle - tile.left) / tile.width());
         let bottom = tile.bottom - corner_inset((middle - tile.left).min(tile.right - middle), radius);
         let top = (tile.bottom - (value.clamp(0.0, 1.0) * height).max(LINE_HEIGHT * scale)).min(bottom);
         if bottom - top <= 0.0 {
@@ -100,8 +105,18 @@ mod tests {
     }
 
     #[test]
-    fn no_readings_draw_nothing() {
+    fn no_readings_have_no_history_value_but_draw_as_zero() {
         assert_eq!(history_at(&VecDeque::new(), 0.5), None);
+        assert_eq!(column_value(&VecDeque::new(), 0.0), 0.0);
+        assert_eq!(column_value(&VecDeque::new(), 1.0), 0.0);
+    }
+
+    #[test]
+    fn a_short_history_is_zero_on_the_left_and_grows_in_from_the_right() {
+        let readings = history(&[0.5, 0.8]);
+        assert_eq!(column_value(&readings, 0.0), 0.0);
+        assert_eq!(column_value(&readings, 0.5), 0.0);
+        assert_eq!(column_value(&readings, 1.0), 0.8);
     }
 
     #[test]

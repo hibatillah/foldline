@@ -1,7 +1,4 @@
-use super::{
-    CLOSE_TIMER_ID, EXPAND_TIMER_ID, HEADER_STAGE, HOVER_WATCH_TIMER_ID, Notch, OPEN_RESPONSE, REVEAL_TIMER_ID,
-    STAGE_TIMER_ID,
-};
+use super::{CLOSE_TIMER_ID, EXPAND_TIMER_ID, HOVER_WATCH_TIMER_ID, Notch, REVEAL_TIMER_ID};
 use windows::Win32::UI::WindowsAndMessaging::{KillTimer, SetTimer};
 
 use crate::{log, page::PointerEvent};
@@ -13,15 +10,11 @@ pub(super) struct HoverState {
     pub(super) is_close_pending: bool,
     pub(super) is_captured: bool,
     pub(super) is_dragging_files: bool,
-    pub(super) is_settings_hovered: bool,
 }
 
 const HOVER_WATCH_INTERVAL_MILLISECONDS: u32 = 120;
 const CLOSE_DELAY_MILLISECONDS: u32 = 200;
 const HOVER_OPEN_DELAY_MILLISECONDS: u32 = 100;
-const OPEN_STAGE_MILLISECONDS: u32 = 165;
-const CLOSE_STAGE_MILLISECONDS: u32 = 110;
-const CLOSE_RESPONSE: (f32, f32) = (330.0, 22.0);
 
 impl Notch {
     /// The notch lost activation to another window while a page was typing.
@@ -46,10 +39,6 @@ impl Notch {
             return;
         }
         self.route_pointer(PointerEvent::Left);
-        if self.hover.is_settings_hovered {
-            self.hover.is_settings_hovered = false;
-            self.pending.repaint = true;
-        }
         self.hover.is_close_pending = true;
         unsafe {
             SetTimer(Some(self.window), CLOSE_TIMER_ID, CLOSE_DELAY_MILLISECONDS, None);
@@ -66,33 +55,11 @@ impl Notch {
     }
 
     pub(super) fn begin_opening(&mut self) {
-        self.springs.expansion.set_response(OPEN_RESPONSE.0, OPEN_RESPONSE.1);
-        if self.springs.expansion.position < HEADER_STAGE - 0.05 {
-            self.springs.expansion.target = HEADER_STAGE;
-            unsafe {
-                SetTimer(Some(self.window), STAGE_TIMER_ID, OPEN_STAGE_MILLISECONDS, None);
-            }
-        } else {
-            self.springs.expansion.target = 1.0;
-            unsafe {
-                let _ = KillTimer(Some(self.window), STAGE_TIMER_ID);
-            }
-        }
+        self.springs.expansion.target = 1.0;
     }
 
     pub(super) fn begin_closing(&mut self) {
-        self.springs.expansion.set_response(CLOSE_RESPONSE.0, CLOSE_RESPONSE.1);
-        if self.springs.expansion.position > HEADER_STAGE + 0.05 {
-            self.springs.expansion.target = HEADER_STAGE;
-            unsafe {
-                SetTimer(Some(self.window), STAGE_TIMER_ID, CLOSE_STAGE_MILLISECONDS, None);
-            }
-        } else {
-            self.springs.expansion.target = 0.0;
-            unsafe {
-                let _ = KillTimer(Some(self.window), STAGE_TIMER_ID);
-            }
-        }
+        self.springs.expansion.target = 0.0;
     }
 
     pub(super) fn set_hovering(&mut self, is_hovering: bool) {
@@ -106,7 +73,6 @@ impl Notch {
         if !is_hovering {
             self.editor = None;
             self.menu = None;
-            self.hover.is_settings_hovered = false;
             self.cancel_close();
         }
         log::debug(&format!("hovering={is_hovering}"));

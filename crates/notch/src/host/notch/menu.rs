@@ -1,11 +1,11 @@
-//! The right-click menu: Settings, Edit pages, Start with Windows and Quit, drawn inside the open notch.
+//! The right-click menu: Start with Windows, Settings and Quit, drawn inside the open notch.
 
 use windows::Win32::UI::WindowsAndMessaging::PostQuitMessage;
 
 use super::Notch;
 use crate::{
     gfx::{Align, Canvas, Color, FontStyle, Point, Rect, UI_FONT, Weight},
-    host::{settings_panel::Tab, startup},
+    host::startup,
 };
 
 const MENU_WIDTH: f32 = 188.0;
@@ -27,9 +27,8 @@ const QUIT_RED: Color = Color::rgb(1.0, 0.27, 0.23);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum MenuAction {
-    Settings,
-    EditPages,
     StartWithWindows,
+    Settings,
     Quit,
 }
 
@@ -52,9 +51,8 @@ pub(super) struct ContextMenu {
 fn items(starts_with_windows: bool) -> Vec<MenuItem> {
     let item = |label, action, is_checked, has_separator| MenuItem { label, action, is_checked, has_separator };
     vec![
-        item("Settings\u{2026}", MenuAction::Settings, false, false),
-        item("Edit pages", MenuAction::EditPages, false, false),
         item("Start with Windows", MenuAction::StartWithWindows, starts_with_windows, false),
+        item("Settings", MenuAction::Settings, false, false),
         item("Quit Notch", MenuAction::Quit, false, true),
     ]
 }
@@ -155,10 +153,6 @@ impl Notch {
         self.close_menu();
         match action {
             MenuAction::Settings => self.open_panel(),
-            MenuAction::EditPages => {
-                self.open_panel();
-                self.panel.tab = Tab::Pages;
-            }
             MenuAction::StartWithWindows => startup::set_enabled(!startup::is_enabled()),
             MenuAction::Quit => unsafe { PostQuitMessage(0) },
         }
@@ -172,13 +166,11 @@ mod tests {
     const BOUNDS: Rect = Rect::new(100.0, 0.0, 700.0, 150.0);
 
     #[test]
-    fn the_menu_lists_settings_pages_startup_and_quit_with_the_check_on_startup() {
+    fn the_menu_lists_startup_settings_and_quit_with_the_check_on_startup() {
         let labels: Vec<_> = items(true).iter().map(|item| (item.label, item.is_checked)).collect();
-        assert_eq!(
-            labels,
-            [("Settings\u{2026}", false), ("Edit pages", false), ("Start with Windows", true), ("Quit Notch", false)]
-        );
+        assert_eq!(labels, [("Start with Windows", true), ("Settings", false), ("Quit Notch", false)]);
         assert!(items(false).iter().all(|item| !item.is_checked));
+        assert_eq!(items(false).iter().map(|item| item.has_separator).collect::<Vec<_>>(), [false, false, true]);
     }
 
     #[test]
@@ -200,15 +192,13 @@ mod tests {
     fn a_press_finds_the_item_under_it_and_nothing_between_or_outside() {
         let menu = ContextMenu::open(Point::new(200.0, 20.0), BOUNDS, 1.0, false);
         for (position, expected) in
-            [MenuAction::Settings, MenuAction::EditPages, MenuAction::StartWithWindows, MenuAction::Quit]
-                .into_iter()
-                .enumerate()
+            [MenuAction::StartWithWindows, MenuAction::Settings, MenuAction::Quit].into_iter().enumerate()
         {
             let rect = menu.item_rect(position, 1.0);
             assert_eq!(menu.action_at(Point::new(rect.center_x(), rect.center_y()), 1.0), Some(expected));
         }
         assert_eq!(menu.action_at(Point::new(10.0, 10.0), 1.0), None);
-        let gap = menu.item_rect(3, 1.0).top - 1.0;
+        let gap = menu.item_rect(2, 1.0).top - 1.0;
         assert_eq!(menu.action_at(Point::new(menu.area.left + 20.0, gap), 1.0), None, "the separator is not an item");
     }
 
