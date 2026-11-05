@@ -3,14 +3,24 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use gpui::{AnyElement, App, SharedString, Window, div, prelude::*};
+use gpui::{AnyElement, App, SharedString, Window, div, prelude::*, px};
 use gpui_component::{ActiveTheme as _, accordion::Accordion, h_flex, v_flex};
+
+/// From a card's bottom to the next section's title.
+const SECTION_GAP: f32 = 26.0;
+/// From a section title to its card.
+const SECTION_TITLE_GAP: f32 = 9.0;
+
+/// A section title above its card, in full foreground and regular weight.
+fn heading(title: &'static str, cx: &App) -> gpui::Div {
+    div().text_base().font_weight(gpui::FontWeight::NORMAL).text_color(crate::section_title(cx)).child(title)
+}
 
 pub type Render = Rc<dyn Fn(&mut Window, &mut App) -> AnyElement>;
 
 enum Body {
     /// A title and description on the left, a control on the right.
-    Control { title: SharedString, description: Option<SharedString>, control: Render },
+    Control { title: SharedString, description: Option<SharedString>, control: Render, top_aligned: bool },
     /// A row that draws itself across the whole width.
     Custom(Render),
 }
@@ -19,7 +29,15 @@ pub struct Item(Body);
 
 impl Item {
     pub fn new(title: &'static str, control: Render) -> Self {
-        Self(Body::Control { title: title.into(), description: None, control })
+        Self(Body::Control { title: title.into(), description: None, control, top_aligned: false })
+    }
+
+    /// Aligns the text with the top of a control that grows downward, like a search field with its results.
+    pub fn top_aligned(mut self) -> Self {
+        if let Body::Control { top_aligned, .. } = &mut self.0 {
+            *top_aligned = true;
+        }
+        self
     }
 
     pub fn custom(render: impl Fn(&mut Window, &mut App) -> AnyElement + 'static) -> Self {
@@ -36,8 +54,9 @@ impl Item {
     fn render(&self, window: &mut Window, cx: &mut App) -> AnyElement {
         match &self.0 {
             Body::Custom(render) => render(window, cx),
-            Body::Control { title, description, control } => h_flex()
-                .items_center()
+            Body::Control { title, description, control, top_aligned } => h_flex()
+                .when(*top_aligned, |row| row.items_start())
+                .when(!*top_aligned, |row| row.items_center())
                 .justify_between()
                 .gap_4()
                 .child(v_flex().flex_1().min_w_0().gap_0p5().child(div().text_sm().child(title.clone())).children(
@@ -65,24 +84,20 @@ impl Group {
         Self { title: None, items, boxed: false }
     }
 
-    pub fn loose_titled(title: &'static str, items: Vec<Item>) -> Self {
-        Self { title: Some(title), items, boxed: false }
-    }
-
     pub fn titled(title: &'static str, items: Vec<Item>) -> Self {
         Self { title: Some(title), items, boxed: true }
     }
 
     fn render(&self, window: &mut Window, cx: &mut App) -> AnyElement {
         if !self.boxed {
-            let heading = self.title.map(|title| div().text_color(cx.theme().muted_foreground).child(title));
+            let heading = self.title.map(|title| heading(title, cx));
             return v_flex()
-                .gap_2()
+                .gap(px(SECTION_TITLE_GAP))
                 .children(heading)
                 .children(self.items.iter().map(|item| item.render(window, cx)))
                 .into_any_element();
         }
-        let divider = cx.theme().border;
+        let divider = crate::row_divider(cx);
         let rows: Vec<AnyElement> = self
             .items
             .iter()
@@ -96,16 +111,16 @@ impl Group {
                     .into_any_element()
             })
             .collect();
-        let heading = self.title.map(|title| div().text_color(cx.theme().muted_foreground).child(title));
+        let heading = self.title.map(|title| heading(title, cx));
         let card = v_flex()
             .w_full()
             .rounded(cx.theme().radius)
             .border_1()
-            .border_color(divider)
+            .border_color(cx.theme().border)
             .bg(cx.theme().group_box)
             .overflow_hidden()
             .children(rows);
-        v_flex().w_full().gap_3().children(heading).child(card).into_any_element()
+        v_flex().w_full().gap(px(SECTION_TITLE_GAP)).children(heading).child(card).into_any_element()
     }
 }
 
@@ -150,7 +165,7 @@ impl Page {
     pub fn render(&self, window: &mut Window, cx: &mut App) -> AnyElement {
         v_flex()
             .w_full()
-            .gap_6()
+            .gap(px(SECTION_GAP))
             .child(
                 v_flex()
                     .gap_1()

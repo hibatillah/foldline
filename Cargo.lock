@@ -5285,6 +5285,8 @@ dependencies = [
  "gpui",
  "gpui-component",
  "gpui-component-assets",
+ "places",
+ "salah",
  "store",
  "windows 0.62.2",
 ]

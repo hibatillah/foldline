@@ -1,10 +1,11 @@
-use gpui::{SharedString, div, prelude::*};
-use gpui_component::ActiveTheme as _;
+use gpui::{App, SharedString, div, prelude::*, px};
+use gpui_component::{ActiveTheme as _, v_flex};
 use store::Settings;
 
 use crate::{
-    field, layout,
+    card, field,
     layout::{Group, Item, Page},
+    picture::{Backdrop, picture, pill_for},
 };
 
 pub struct Choice {
@@ -53,25 +54,68 @@ pub fn shown_word(settings: &Settings, key: &str, default: &'static str) -> &'st
         .map_or(default, |choice| choice.word)
 }
 
-fn choice_item(title: &'static str, description: &'static str, key: &'static str, default: &'static str) -> Item {
-    let choices =
-        CHOICES.iter().map(|choice| (SharedString::from(choice.word), SharedString::from(choice.label))).collect();
-    let control = field::dropdown(key, choices, move |settings| SharedString::from(shown_word(settings, key, default)));
-    Item::new(title, control).description(description)
+/// One picture card; a click saves the choice, and the selected card gets a filled radio, a lighter fill and an outline.
+fn choice_card(
+    key: &'static str,
+    backdrop: Backdrop,
+    choice: &'static Choice,
+    selected: bool,
+    cx: &App,
+) -> impl IntoElement {
+    let word = choice.word;
+    card::frame(SharedString::from(format!("{key}-{word}")), selected, 10.0, 10.0, cx)
+        .cursor_pointer()
+        .on_click(move |_event, _window, cx| field::write(key, word, cx))
+        .child(card::header(choice.label, None, selected, cx))
+        .child(picture(backdrop, pill_for(word)))
 }
 
-fn meanings() -> Item {
-    Item::custom(|window, cx| {
-        let value_color = cx.theme().foreground;
-        let entries = CHOICES
+/// The label, the four picture cards two by two and the sentence of the selected choice.
+fn choice_item(
+    title: &'static str,
+    description: &'static str,
+    key: &'static str,
+    default: &'static str,
+    backdrop: Backdrop,
+) -> Item {
+    Item::custom(move |_window, cx| {
+        let shown = shown_word(&Settings::load(), key, default);
+        let cards: Vec<_> = CHOICES
             .iter()
-            .map(|choice| {
-                let description = div().text_sm().text_color(value_color).child(choice.description).into_any_element();
-                (SharedString::from(choice.label), description)
-            })
+            .map(|choice| choice_card(key, backdrop, choice, choice.word == shown, cx).into_any_element())
             .collect();
-        layout::accordion("behavior-choices", true, entries, window, cx)
+        let sentence = CHOICES.iter().find(|choice| choice.word == shown).map_or("", |choice| choice.description);
+        v_flex()
+            .gap_3()
+            .child(
+                v_flex()
+                    .gap_0p5()
+                    .child(div().text_sm().child(title))
+                    .child(div().text_sm().text_color(cx.theme().muted_foreground).child(description)),
+            )
+            .child(v_flex().gap(px(10.0)).child(card::grid(2, cards)).child(
+                div().text_size(px(12.0)).line_height(px(16.0)).text_color(cx.theme().muted_foreground).child(sentence),
+            ))
+            .into_any_element()
     })
+}
+
+fn situation(
+    heading: &'static str,
+    description: &'static str,
+    key: &'static str,
+    default: &'static str,
+    backdrop: Backdrop,
+    hover_key: &'static str,
+    hover_description: &'static str,
+) -> Group {
+    Group::titled(
+        heading,
+        vec![
+            choice_item("What the notch shows", description, key, default, backdrop),
+            Item::new("Open on hover", field::toggle(hover_key, true)).description(hover_description),
+        ],
+    )
 }
 
 pub fn page() -> Page {
@@ -79,35 +123,24 @@ pub fn page() -> Page {
         "Behavior",
         "Choose what the notch shows while another window is in front.",
         vec![
-            Group::titled(
-                "Over other windows",
-                vec![
-                    choice_item(
-                        "Over a maximized window",
-                        "Applies while a maximized window is in front.",
-                        MAXIMIZED_KEY,
-                        DEFAULT_MAXIMIZED,
-                    ),
-                    choice_item(
-                        "Over a full-screen app",
-                        "Applies while a full-screen app is in front.",
-                        FULLSCREEN_KEY,
-                        DEFAULT_FULLSCREEN,
-                    ),
-                ],
+            situation(
+                "Over a maximized window",
+                "Applies while a maximized window is in front.",
+                MAXIMIZED_KEY,
+                DEFAULT_MAXIMIZED,
+                Backdrop::MaximizedWindow,
+                HOVER_MAXIMIZED_KEY,
+                "Pointing at the top edge opens the notch. Off: it never opens over a maximized window.",
             ),
-            Group::titled(
-                "Opening on hover",
-                vec![
-                    Item::new("Open on hover over a maximized window", field::toggle(HOVER_MAXIMIZED_KEY, true))
-                        .description(
-                            "Off: pointing at the top edge never opens the notch while a maximized window is in front. Short messages still follow the choice above.",
-                        ),
-                    Item::new("Open on hover over a full-screen app", field::toggle(HOVER_FULLSCREEN_KEY, true))
-                        .description("Off: the pointer never opens the notch during full-screen apps and games."),
-                ],
+            situation(
+                "Over a full-screen app",
+                "Applies while a full-screen app or game is in front.",
+                FULLSCREEN_KEY,
+                DEFAULT_FULLSCREEN,
+                Backdrop::FullScreenApp,
+                HOVER_FULLSCREEN_KEY,
+                "Pointing at the top edge opens the notch. Off: it never opens over a full-screen app.",
             ),
-            Group::loose_titled("What each choice does", vec![meanings()]),
         ],
     )
 }

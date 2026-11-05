@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 use crate::{
     field::{self, Kind},
     layout::{Group, Item, Page},
-    startup,
+    location, startup,
 };
 
 fn minutes(
@@ -33,6 +33,14 @@ pub fn page() -> Page {
                     Item::new("Hide when idle", field::toggle("notch.hide_when_idle", false)).description(
                         "Hides the notch when nothing is happening. Point at the top edge to bring it back.",
                     ),
+                ],
+            ),
+            Group::titled(
+                "Location",
+                vec![
+                    Item::new("City", location::city_search("general-city"))
+                        .description("The one place for the prayer times and the weather.")
+                        .top_aligned(),
                 ],
             ),
             Group::titled(

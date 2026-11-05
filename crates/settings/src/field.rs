@@ -1,14 +1,12 @@
 use std::{ops::RangeInclusive, rc::Rc};
 
 use gpui::{
-    AnyElement, App, AppContext as _, Corner, ElementId, Entity, Focusable as _, SharedString, Subscription, Window,
-    div, prelude::*, px,
+    AnyElement, App, AppContext as _, ElementId, Entity, Focusable as _, SharedString, Subscription, Window, div,
+    prelude::*, px,
 };
 use gpui_component::{
     ActiveTheme as _,
-    button::Button,
     input::{Input, InputEvent, InputState},
-    menu::{DropdownMenu as _, PopupMenuItem},
     switch::Switch,
 };
 use store::Settings;
@@ -49,38 +47,6 @@ pub fn switch(id: &'static str, is_on: impl Fn() -> bool + 'static, set: impl Fn
 
 pub fn toggle(key: &'static str, default: bool) -> Render {
     switch(key, move || Settings::load().get_bool(key, default), move |enabled, cx| write(key, on_off(enabled), cx))
-}
-
-/// A dropdown of `(word, label)` choices bound to a settings key; `shown` picks the word to display.
-pub fn dropdown(
-    key: &'static str,
-    choices: Vec<(SharedString, SharedString)>,
-    shown: impl Fn(&Settings) -> SharedString + 'static,
-) -> Render {
-    Rc::new(move |_window, cx| {
-        let current = shown(&Settings::load());
-        let label =
-            choices.iter().find(|(word, _)| *word == current).map_or(current.clone(), |(_, label)| label.clone());
-        let choices = choices.clone();
-        Button::new(key)
-            .label(label)
-            .dropdown_caret(true)
-            .outline()
-            .bg(crate::input_background(cx))
-            .border_color(cx.theme().input)
-            .dropdown_menu_with_anchor(Corner::TopRight, move |menu, _window, _cx| {
-                choices.iter().fold(menu, |menu, (word, label)| {
-                    let word = word.clone();
-                    let checked = word == current;
-                    menu.item(
-                        PopupMenuItem::new(label.clone())
-                            .checked(checked)
-                            .on_click(move |_event, _window, cx| write(key, &word, cx)),
-                    )
-                })
-            })
-            .into_any_element()
-    })
 }
 
 #[derive(Clone)]
@@ -162,17 +128,26 @@ fn input_element(
     if !input.focus_handle(cx).is_focused(window) && input.read(cx).value() != stored {
         input.update(cx, |input, cx| input.set_value(stored, window, cx));
     }
+    framed(
+        kind.width(),
+        match kind {
+            Kind::Secret { .. } => Input::new(&input).appearance(false).mask_toggle(),
+            _ => Input::new(&input).appearance(false),
+        },
+        cx,
+    )
+    .into_any_element()
+}
+
+/// The box around a text input: a border and a field background a step lighter than the group.
+pub fn framed(width: f32, input: Input, cx: &App) -> gpui::Div {
     div()
-        .w(px(kind.width()))
+        .w(px(width))
         .rounded(cx.theme().radius)
         .border_1()
         .border_color(cx.theme().input)
         .bg(crate::input_background(cx))
-        .child(match kind {
-            Kind::Secret { .. } => Input::new(&input).appearance(false).mask_toggle(),
-            _ => Input::new(&input).appearance(false),
-        })
-        .into_any_element()
+        .child(input)
 }
 
 fn commit(key: &'static str, kind: &Kind, input: &Entity<InputState>, window: &mut Window, cx: &mut App) {
