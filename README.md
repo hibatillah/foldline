@@ -27,6 +27,7 @@ Pages are what you see when you open the notch; the time sits in the header of e
 - **Shalat** (off until you add it): prayer times for any city, worked out on your PC with no internet. It shows the next prayer and today's times, puts a mark in the collapsed pill 30 minutes before, and shows a short message when a prayer starts. You choose the city, the calculation method and a few minutes of adjustment per time.
 - **Todo:** type a task into the notch, tick it off or delete it. The list is the file `%APPDATA%\notch\todo.txt`.
 - **System stats** (off until you add it): CPU, memory, up to 2 GPUs, up to 3 disks and the network.
+- **Weather** (off until you add it): the temperature now and the next hours for your location, or the next days (click the left side to switch), and an optional message 30 minutes before rain. The location is the one you pick in the notch's settings panel (the gear, General tab), shared with the prayer times.
 
 Activities are what the collapsed pill shows while something happens: volume, brightness, charger and battery, Bluetooth devices, microphone in use, camera in use, copied to the clipboard, Caps Lock, and Windows notifications. A notification opens the pill into a banner with the app's logo for a few seconds; point at it to keep it on screen. A message that was cut short grows taller to show all its text.
 
@@ -39,6 +40,7 @@ While the notch is open, small marks beside the time show what is going on: a wa
 - **Media.** Click the buttons. The speech-bubble button turns lyrics on and off.
 - **Shelf.** Drag files onto the notch; it turns blue when it is ready. It shows six places, and the last one shows the overflow count. Double-click a file to open it, drag it out to copy it into another app, and right-click it or press the cross on its corner to remove it from the shelf.
 - **Calendar.** Click a day of the week to list its events. Paste your calendar's iCal address into **Settings… > Calendar**, which lists the Google Calendar steps for finding it. Treat the address like a password.
+- **Right-click menu.** Right-click anywhere on the open notch for **Settings…**, **Edit pages**, **Start with Windows** and **Quit Notch**. On the shelf, right-clicking a file still removes it.
 - **Tray menu.** Right-click the tray icon (on Windows 11 it may sit under the `^` menu): **Notifications**, **Hide when idle**, **Start with Windows**, **Settings…**, **Quit**.
 - **Settings in the notch.** While the notch is open, the gear in its header opens a panel. Its first tab holds the open page's own settings, followed by General, Behavior and Pages. On Pages, drag a page by its dotted handle to reorder it, double-click it to remove it, click a dashed one to add it. **Done** closes the panel.
 - **Settings window.** **Settings…** in the tray menu opens General, Pages, Behavior, Calendar and Advanced. Toggles apply at once; type a value and press Enter, or click away, to save it.
@@ -104,7 +106,7 @@ Notch runs on your computer, with no account and no analytics. Everything below 
 - Which window is in front, only to tell whether it is maximized or full screen.
 - Caps Lock, through a keyboard hook that looks at that one key and keeps nothing it sees.
 - CPU, memory, GPU, disk and network readings for the stats page.
-- The city you pick for prayer times. The city list ships with the app and the times are calculated on your PC; no location is sent anywhere.
+- The location you pick (a city). The city list ships with the app and prayer times are calculated on your PC from it; only the Weather page sends the place's coordinates anywhere (see below).
 
 Settings are in `%APPDATA%\notch\settings.txt`. The installer adds a "Start with Windows" entry under your user's `Run` key unless you untick it.
 
@@ -113,7 +115,7 @@ Settings are in `%APPDATA%\notch\settings.txt`. The installer adds a "Start with
 - **Lyrics.** When a track starts, Notch asks [LRCLIB](https://lrclib.net) for synced lyrics and sends the artist, title, album and length. The player itself (Spotify, a browser) is only read through Windows, never contacted. Set `NOTCH_LYRICS=off` to stop lookups; the lyrics button only hides them.
 - **Calendar.** If you set a calendar link, Notch downloads that file every 15 minutes. The link sits in the settings file, so treat that file like a password.
 
-**Planned.** A weather page is planned. It will need to ask a weather service for conditions at a place you choose. This section will name the service and what it receives before that feature ships.
+- **Weather.** Only if you add the Weather page and choose a location: Notch asks the [MET Norway Weather API](https://api.met.no) for the forecast at the coordinates of that place, at start and every half hour, and sends the name "Notch" with its version. Your IP address reaches MET Norway as with any web request; no account and no other data is sent.
 
 ## For developers
 
@@ -133,6 +135,7 @@ It builds on public APIs and resources:
 - **Windows APIs** for media controls, notifications, window events and the tray, through the [`windows`](https://crates.io/crates/windows) crate.
 - **[LRCLIB](https://lrclib.net)** for synced lyrics.
 - **[GeoNames](https://www.geonames.org)** for the prayer-time city list: cities of 15,000 people or more, reduced to names, countries and coordinates (`scripts/build-cities.sh`), under [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **[MET Norway](https://api.met.no)** (CC BY 4.0) for the weather forecast: data from the Norwegian Meteorological Institute.
 - **[salah](https://crates.io/crates/salah)** (MIT) for the prayer-time calculation, kept in `vendor/salah` with one crash fix (see `vendor/salah/VENDORED.md`). A Jakarta check against Aladhan's Kemenag method was 0 to 2 minutes later.
 - **[Geist](https://vercel.com/font)** for the font and **[Lucide](https://lucide.dev)** (ISC) for some icons.
 - **[GPUI](https://www.gpui.rs)** and gpui-component for the settings window.

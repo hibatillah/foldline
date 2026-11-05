@@ -93,7 +93,7 @@ When you touched `crates/settings/` or `crates/store/`, run the first three as `
 | `perf-auditor` | read-only check of the performance budget |
 | `docs-writer` | `docs/**` and `README.md`, in the Diátaxis structure |
 
-The agent does not commit unless you ask. `/release <version|major|minor|patch|alpha|beta|rc|stable>` prepares a release locally and asks before it pushes; [docs/how-to/cut-a-release.md](docs/how-to/cut-a-release.md) describes the flow.
+The agent does not commit unless you ask. `/group-commit` commits the working tree grouped by scope (one commit for one scope), with `type(scope): message` subjects. The agent uses it for every commit, whether or not you name it. `/release <version|major|minor|patch|alpha|beta|rc|stable>` prepares a release locally and asks before it pushes; [docs/how-to/cut-a-release.md](docs/how-to/cut-a-release.md) describes the flow.
 
 ## Where to read next
 

@@ -26,8 +26,10 @@ crates/
         calendar/     calendar: dates, the iCal reader, the day's agenda, the download
         timer/        focus timer: the rules, what is said in each state, the layout
         stats/        system stats: the readings (GPU load in gpu.rs) and how they are written
-        shalat/       prayer times: the calculation (times.rs), the city list for the search (cities.rs), the page
+        shalat/       prayer times: the calculation (times.rs), settings (config.rs), the page
+        weather/      weather: the MET Norway request (fetch.rs), the forecast (forecast.rs), the pictures (picture.rs)
         todo/         todo list: the list and its todo.txt file (list.rs), the page and its add field
+  places/                the city list and the shared `location.*` keys, used by the notch (and the settings window later)
   store/                 the settings file code shared by the notch and the settings window (per-key atomic writes)
   settings/              the settings window, a separate GPUI executable named notch-settings.exe (needs the MSVC host
                          toolchain); src/sections/ holds one file per section

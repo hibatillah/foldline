@@ -68,6 +68,15 @@ narrower than ring and clock (150). The order is fixed and never re-sorts by tim
 - The collapsed pill is all Geist, clock and countdown numbers included; it is a label, not a readout.
 - Geist Mono is for numbers in page content, where digits align or tick in large type. The header clock stays Geist.
 
+## Right-click menu
+
+- A right-click on the open notch opens a small menu under the pointer, kept inside the notch: Settings…, Edit pages,
+  Start with Windows (with a check) and, below a line, Quit Notch in red. It closes on a click elsewhere, a scroll, or
+  when the pointer leaves the notch.
+- A page that uses right-click for its own content (a file on the shelf) keeps it; the menu opens everywhere else.
+- The menu is the shortcut. The decision for a visible settings button is open (see the "Where the settings button goes"
+  board).
+
 ## Open
 
 - The reminder windows are fixed: 30 min for the prayer (`BADGE_MINUTES`), 15 min for an event

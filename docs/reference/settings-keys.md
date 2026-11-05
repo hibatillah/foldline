@@ -29,11 +29,12 @@ next start, or at once if something posts that message.
 | `advanced.debug_log` | a file path | the file the notch appends its timestamped log to; empty means no log. Read once at start, and `NOTCH_DEBUG` overrides it |
 | `notch.top` | pixels, 0 to 2000 | how far the notch sits below the top edge of the screen (default 0). Read once at start, and `NOTCH_TOP` overrides it |
 | `calendar.refresh_minutes` | minutes | how often the calendar is downloaded again (default 15) |
-| `shalat.city`, `shalat.lat`, `shalat.lon`, `shalat.country` | text, degrees, degrees, a two-letter country code | the chosen city's name, position and country; the shalat settings' city search writes all four. Without a position the page asks for a city |
+| `location.city`, `location.lat`, `location.lon`, `location.country` | text, degrees, degrees, a two-letter country code | the one place the prayer times and the weather are for, chosen with the location search in the panel's General tab or the Shalat page's settings. Older versions saved these as `shalat.city`, `shalat.lat`, `shalat.lon` and `shalat.country`; those are read until the shared keys are saved. |
 | `shalat.method` | `auto`, `singapore` (Kemenag), `mwl`, `northamerica`, `karachi`, `ummalqura`, `egyptian` | the calculation method; `auto` (default) picks one from `shalat.country` |
 | `shalat.hanafi` | `on`, `off` | off by default (Shafi'i, Maliki and Hanbali Asr); on uses the Hanafi Asr |
 | `shalat.offset_fajr`, `_sunrise`, `_dhuhr`, `_asr`, `_maghrib`, `_isha` | minutes, -30 to 30 | added to that time (default 0) |
 | `shalat.message`, `shalat.badge` | `on`, `off` | on by default: a message when a prayer starts, and the next prayer in the collapsed pill for the last 30 minutes |
+| `weather.rain_alert` | `on`, `off` (default `on`) | a message in the collapsed pill 30 minutes before the next rain; the weather page itself is off until you add it. The place is the shared `location.*` |
 | `stats.disks`, `stats.gpus` | names, comma-separated | the disks (`C:`) and GPUs the stats page shows, in that order: up to 3 disks and 2 GPUs. Written by the stats settings in the notch's panel; without the key the page shows the first ones |
 | `notch.hide_when_idle` | `on`, `off` | off by default: hide the notch when there is nothing to show until you point at the top of the screen |
 | `notch.maximized`, `notch.fullscreen` | `hidden`, `activities`, `lyrics`, `music` | what the notch shows over a maximized window (default `lyrics`) and over a full-screen app (default `hidden`); the words are in [the next table](#what-the-notch-shows-over-another-window). A missing or unknown word uses the default |
