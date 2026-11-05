@@ -57,7 +57,7 @@ target\x86_64-pc-windows-msvc\release\notch.exe
 ```
 
 The notch has no window to close. It adds a tray icon (on Windows 11 it may be under the `^` overflow menu).
-Right-click the tray icon and choose **Quit**.
+Right-click the tray icon and choose **Quit Notch**.
 
 ## Development loop
 
@@ -69,7 +69,7 @@ scripts/reload.sh
 ```
 
 It builds the notch and the settings program, copies the notch build to `run/notch-<time>.exe` and the settings program
-to `run/notch-settings.exe` (the name the tray's **Settings…** item looks for beside the running notch), starts the
+to `run/notch-settings.exe` (the name the tray's **Settings** item looks for beside the running notch), starts the
 notch copy, and asks the previous instance to close once the new one is showing. The notch never disappears between
 versions. `run/` is git-ignored. A settings window that is still open keeps the old `notch-settings.exe` until you close
 it and reload.

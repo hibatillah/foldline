@@ -29,7 +29,7 @@ next start, or at once if something posts that message.
 | `advanced.debug_log` | a file path | the file the notch appends its timestamped log to; empty means no log. Read once at start, and `NOTCH_DEBUG` overrides it |
 | `notch.top` | pixels, 0 to 2000 | how far the notch sits below the top edge of the screen (default 0). Read once at start, and `NOTCH_TOP` overrides it |
 | `calendar.refresh_minutes` | minutes | how often the calendar is downloaded again (default 15) |
-| `location.city`, `location.lat`, `location.lon`, `location.country` | text, degrees, degrees, a two-letter country code | the one place the prayer times and the weather are for, chosen with the location search in the panel's General tab or the Shalat page's settings. Older versions saved these as `shalat.city`, `shalat.lat`, `shalat.lon` and `shalat.country`; those are read until the shared keys are saved. |
+| `location.city`, `location.lat`, `location.lon`, `location.country` | text, degrees, degrees, a two-letter country code | the one place the prayer times and the weather are for, chosen with the location search in the panel's General tab, the Shalat page's settings or the settings window's General section. Older versions saved these as `shalat.city`, `shalat.lat`, `shalat.lon` and `shalat.country`; those are read until the shared keys are saved. |
 | `shalat.method` | `auto`, `singapore` (Kemenag), `mwl`, `northamerica`, `karachi`, `ummalqura`, `egyptian` | the calculation method; `auto` (default) picks one from `shalat.country` |
 | `shalat.hanafi` | `on`, `off` | off by default (Shafi'i, Maliki and Hanbali Asr); on uses the Hanafi Asr |
 | `shalat.offset_fajr`, `_sunrise`, `_dhuhr`, `_asr`, `_maghrib`, `_isha` | minutes, -30 to 30 | added to that time (default 0) |
@@ -85,7 +85,7 @@ Things a developer tunes by editing source:
 | What | Where |
 | --- | --- |
 | which pages exist and their order (the order breaks priority ties) | `crates/notch/src/pages/mod.rs` |
-| which activities exist and their order (optional tray entries, badges) | `crates/notch/src/activities/mod.rs` |
+| which activities exist and their order (badges) | `crates/notch/src/activities/mod.rs` |
 | when a page is shown | the page's `priority()` |
 | how big a page is | the page's `sizes()` |
 | corner radius, spring stiffness, window size | `crates/notch/src/host/notch.rs` and `crates/notch/src/host/notch/` |
@@ -94,7 +94,7 @@ Things a developer tunes by editing source:
 
 ## Start with Windows
 
-The installer starts the notch at sign-in unless that is unticked in its options. The tray menu's **Start with
+The installer starts the notch at sign-in unless that is unticked in its options. The right-click and tray menus' **Start with
 Windows** item and the settings window's General section show whether it does, and switch it: each adds or removes a
 `Notch` value under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` that points at the copy of `notch.exe` that is
 running. The settings window points it at the `notch.exe` beside `notch-settings.exe`.

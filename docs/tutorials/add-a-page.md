@@ -133,7 +133,7 @@ What each part does:
   changes nothing. Never write settings from it.
 - `on_timer` runs when a timer from `context.set_timer` fires. Request a repaint when something visible changed.
 - `on_pointer` receives pointer events while your page is visible, including beside another page during a swipe.
-- A right-click on the open notch opens the host's menu (Settings, Edit pages, Start with Windows, Quit). A page that uses right-click itself answers `uses_right_click` for those points and then gets `PointerEvent::SecondaryReleased`; the shelf does this for its files.
+- A right-click on the open notch opens the host's menu (Start with Windows, Settings, Quit Notch). A page that uses right-click itself answers `uses_right_click` for those points and then gets `PointerEvent::SecondaryReleased`; the shelf does this for its files.
   Positions are in the same space as its own shifted `frame.bounds`.
 - A page that takes typing (the todo page's add field) calls `context.take_keyboard()` from a click, never on hover,
   and gets `on_key` with a `KeyInput` until it calls `context.release_keyboard()`. The notch stays open meanwhile. When

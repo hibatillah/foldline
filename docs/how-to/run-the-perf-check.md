@@ -47,6 +47,13 @@ opens before reporting active-lyrics results; missing lyrics or stopped playback
 These extra scenarios are informational, and CPU is reported as a percentage of one core. RAM means private working
 set; the reported swipe peak is sampled at each end of a swipe, not a continuously traced maximum.
 
+### When a check fails
+
+A single failed idle-CPU check can be noise: rerun on a quiet machine, see the variation table in
+[performance baseline](../reference/performance-baseline.md#run-to-run-variation-2026-11-06).
+`perf.rs` deletes `run/perf.log` when it ends, so read the log through a hand run with `NOTCH_DEBUG=<file>` instead.
+The script stops the notch it started and leaves none running; start yours with `scripts/reload.sh`.
+
 ### The two files
 
 - `scripts/perf.sh` is only a runner: it parses the options, builds, copies the executable to `run/` and starts the

@@ -32,8 +32,7 @@ are in device-independent pixels (multiply by the display scale when drawing). T
 ```
 
 - The header belongs to the host, on every page: the page dots (the long one is the open page) on the left, and at the
-  right the status marks (the music wave, the timer ring, muted speakers, Caps Lock) and the time. The settings button
-  that opens "Edit pages" is switched off (`chrome::SETTINGS_BUTTON_SHOWN`).
+  right the status marks (the music wave, the timer ring, muted speakers, Caps Lock) and the time. The header has no settings button; Settings is in the right-click menu.
 - Every page has the same 86 px of content height, whatever it asks for. Content that is taller is clipped, so lay a
   page out for 86 px (the stats tiles and the calendar do).
 - A page cannot draw into the header or the padding.

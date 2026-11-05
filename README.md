@@ -10,7 +10,7 @@ It is written in Rust and draws straight to the screen with Direct2D: no UI fram
 
 ## Install
 
-Run `notch-<version>-windows-x64-setup.exe`. The installer is not code-signed, so Windows may show a SmartScreen warning. Notch starts with Windows unless you untick that in the installer or in the tray menu (**Start with Windows**).
+Run `notch-<version>-windows-x64-setup.exe`. The installer is not code-signed, so Windows may show a SmartScreen warning. Notch starts with Windows unless you untick that in the installer or in the right-click or tray menu (**Start with Windows**).
 
 Requirements: Windows 10 or 11, 64-bit (tested on Windows 11). The media page needs a player that appears in the Windows media controls.
 
@@ -27,7 +27,7 @@ Pages are what you see when you open the notch; the time sits in the header of e
 - **Shalat** (off until you add it): prayer times for any city, worked out on your PC with no internet. It shows the next prayer and today's times, puts a mark in the collapsed pill 30 minutes before, and shows a short message when a prayer starts. You choose the city, the calculation method and a few minutes of adjustment per time.
 - **Todo:** type a task into the notch, tick it off or delete it. The list is the file `%APPDATA%\notch\todo.txt`.
 - **System stats** (off until you add it): CPU, memory, up to 2 GPUs, up to 3 disks and the network.
-- **Weather** (off until you add it): the temperature now and the next hours for your location, or the next days (click the left side to switch), and an optional message 30 minutes before rain. The location is the one you pick in the notch's settings panel (the gear, General tab), shared with the prayer times.
+- **Weather** (off until you add it): the temperature now and the next hours for your location, or the next days (click the left side to switch), and an optional message 30 minutes before rain. The location is the one you pick in the notch's settings panel (**Settings** in the right-click menu, General tab), shared with the prayer times.
 
 Activities are what the collapsed pill shows while something happens: volume, brightness, charger and battery, Bluetooth devices, microphone in use, camera in use, copied to the clipboard, Caps Lock, and Windows notifications. A notification opens the pill into a banner with the app's logo for a few seconds; point at it to keep it on screen. A message that was cut short grows taller to show all its text.
 
@@ -36,14 +36,14 @@ While the notch is open, small marks beside the time show what is going on: a wa
 ## Use it
 
 - **Open and close.** Hover over the pill to open it. Move away to close it.
-- **Switch pages.** Scroll the wheel, swipe two fingers on a touchpad, or click a dot. A touchpad swipe follows your fingers and centers the nearest page when you stop. Pages loop, and the notch opens on the page you left.
+- **Switch pages.** Scroll the wheel, swipe two fingers on a touchpad, or click a dot. One wheel notch or one swipe moves one page, and scrolling loops from the last page to the first. The notch opens on the page you left.
 - **Media.** Click the buttons. The speech-bubble button turns lyrics on and off.
 - **Shelf.** Drag files onto the notch; it turns blue when it is ready. It shows six places, and the last one shows the overflow count. Double-click a file to open it, drag it out to copy it into another app, and right-click it or press the cross on its corner to remove it from the shelf.
-- **Calendar.** Click a day of the week to list its events. Paste your calendar's iCal address into **Settings… > Calendar**, which lists the Google Calendar steps for finding it. Treat the address like a password.
-- **Right-click menu.** Right-click anywhere on the open notch for **Settings…**, **Edit pages**, **Start with Windows** and **Quit Notch**. On the shelf, right-clicking a file still removes it.
-- **Tray menu.** Right-click the tray icon (on Windows 11 it may sit under the `^` menu): **Notifications**, **Hide when idle**, **Start with Windows**, **Settings…**, **Quit**.
-- **Settings in the notch.** While the notch is open, the gear in its header opens a panel. Its first tab holds the open page's own settings, followed by General, Behavior and Pages. On Pages, drag a page by its dotted handle to reorder it, double-click it to remove it, click a dashed one to add it. **Done** closes the panel.
-- **Settings window.** **Settings…** in the tray menu opens General, Pages, Behavior, Calendar and Advanced. Toggles apply at once; type a value and press Enter, or click away, to save it.
+- **Calendar.** Click a day of the week to list its events. Paste your calendar's iCal address into **Settings > Calendar**, which lists the Google Calendar steps for finding it. Treat the address like a password.
+- **Right-click menu.** Right-click anywhere on the open notch for **Start with Windows**, **Settings** and **Quit Notch**. On the shelf, right-clicking a file still removes it.
+- **Tray menu.** Right-click the tray icon (on Windows 11 it may sit under the `^` menu): **Start with Windows**, **Settings** and **Quit Notch**, the same items as the right-click menu.
+- **Settings in the notch.** **Settings** in the right-click menu opens a panel inside the open notch. Its first tab holds the open page's own settings, followed by General, Behavior and Pages. On Pages, drag a page by its dotted handle to reorder it, double-click it to remove it, click a dashed one to add it. **Done** closes the panel.
+- **Settings window.** **Settings** in the tray menu opens General, Pages, Behavior, Calendar, Shalat and Advanced. General and Shalat both hold the city search for the prayer times and the weather. Toggles apply at once; type a value and press Enter, or click away, to save it.
 
 [docs/reference/settings-keys.md](docs/reference/settings-keys.md) lists every setting and its key.
 
@@ -61,7 +61,7 @@ Defaults apply when no choice has been saved. Choices saved with older versions 
 
 ### Over maximized and full-screen windows
 
-Over a **maximized** window and over a **full-screen** app (a game, a video, an F11 window), the notch follows its own choice for each, from hiding to keeping music visible. Set them in **Settings… > Behavior**. They take precedence over **Hide when idle**. The same section can stop the pointer from opening the notch over either kind of window.
+Over a **maximized** window and over a **full-screen** app (a game, a video, an F11 window), the notch follows its own choice for each, from hiding to keeping music visible. Set them in **Settings > Behavior**. They take precedence over **Hide when idle**. The same section can stop the pointer from opening the notch over either kind of window.
 
 After you unlock Windows or resume from sleep, Notch moves back above app windows and resets hover so the hidden strip can open again. It does not take focus from the app you are using.
 

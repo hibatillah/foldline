@@ -31,6 +31,31 @@ The run used `scripts/perf.sh` (release build) and passed every baseline gate.
 Notch settled after startup and after the animations. Normal pages were restored after the test.
 This baseline did not measure music playback, live lyrics, held hover or swiping.
 
+## Run-to-run variation (2026-11-06)
+
+Six runs of `scripts/perf.sh` on the same PC with other apps open: three on commit `cda8691` and three on the working tree
+after the November 2026 UI work (animation, menus, settings window, weather fix). Limits: idle CPU 0.1 %, CPU per
+open/close cycle 400 ms.
+
+| Run | Build | Idle collapsed CPU | Idle CPU after 10 cycles | CPU per cycle |
+| --- | --- | ---: | ---: | ---: |
+| 1 | `cda8691` | 0 % pass | 0 % pass | 102 ms |
+| 2 | `cda8691` | 0.156 % fail | 0.234 % fail | 198 ms |
+| 3 | `cda8691` | 0.078 % pass | 0.234 % fail | 161 ms |
+| 4 | working tree | 0 % pass | 0.469 % fail | 142 ms |
+| 5 | working tree | 0.078 % pass | 1.719 % fail | 192 ms |
+| 6 | working tree | 0.859 % fail | 0 % pass | 159 ms |
+
+In every run, private working set was 25 to 28 MB (limit 30 MB), memory growth over the cycles -0.1 to 0.6 MB (limit
+3 MB) and handle growth -21 to -26 (limit 20; negative means the count shrank).
+
+- CPU comes from `GetProcessTimes`, which ticks in about 15.6 ms steps; 0.078 % over the 20 s window is one tick.
+- The same build passes and fails the idle-CPU checks between runs, so one failed idle check does not show a stuck timer.
+- A hand run (hover the notch 3 times with `NOTCH_DEBUG`, then 20 s idle) logged `frame timer stopped` after every hover and
+  0 ms CPU over the idle window.
+- Not established: the cause of the intermittent ticks (probably load from other processes).
+- To judge a change, close other apps, stop other `notch.exe` copies and rerun `scripts/perf.sh` several times; the limits stay.
+
 ## Settings window
 
 The 0 % idle and 50 MB budget applies to `notch.exe` and is what the baseline above measures. The settings window is a

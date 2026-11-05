@@ -58,6 +58,20 @@ narrower than ring and clock (150). The order is fixed and never re-sorts by tim
 - Open focuses the sending app and removes the notification, as a click on the native banner does; Dismiss only
   removes it. With the text hidden (privacy mode) Open still names the app.
 
+## Settings window
+
+- **Three layers, dark theme:** the content is near black (`#0e0e0e`); the sidebar and the cards in the content share one
+  lighter gray (`#1c1c1c`); an input and a selected option sit one step above the card (`#262626`, `#2a2a2a`). Card
+  borders (`#2c2c2c`) and row dividers (`#262626`) are one step from their surface. The light theme keeps the order:
+  content `#e8e8e8`, sidebar and cards white. The colors live in `Palette` in `crates/settings/src/main.rs`.
+- **Section titles** are the full foreground (`#ffffff` dark, `#0a0a0a` light), regular weight, above the card; muted gray is for
+  descriptions only. A card's bottom to the next title is 26 px, a title to its card 9 px.
+- **Option cards follow shadcn's radio card:** the radio ring sits inside the card at the top left, left of the title
+  (semibold, full foreground) with the muted description under it; the picture follows. Selected: lighter fill, bright
+  border, white ring with a white dot. Unselected: darker fill, quiet border, empty ring. A multi-select option uses a
+  checkbox in the same place. Cards sit in equal-width columns (`card::grid`): four for the calculation methods, two for
+  the rest; a partial last row keeps the cell width and starts at the left.
+
 ## Color and type
 
 - An activity's icon and text share one color: timer `#ff9e0a`, prayer `#63e6be`, event `#4dabf7`. Static icons are white.
@@ -70,8 +84,8 @@ narrower than ring and clock (150). The order is fixed and never re-sorts by tim
 
 ## Right-click menu
 
-- A right-click on the open notch opens a small menu under the pointer, kept inside the notch: Settings…, Edit pages,
-  Start with Windows (with a check) and, below a line, Quit Notch in red. It closes on a click elsewhere, a scroll, or
+- A right-click on the open notch opens a small menu under the pointer, kept inside the notch: Start with Windows (with a check), Settings and,
+  below a line, Quit Notch in red. It closes on a click elsewhere, a scroll, or
   when the pointer leaves the notch.
 - A page that uses right-click for its own content (a file on the shelf) keeps it; the menu opens everywhere else.
 - The menu is the shortcut. The decision for a visible settings button is open (see the "Where the settings button goes"

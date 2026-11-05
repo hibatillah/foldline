@@ -12,7 +12,7 @@ spread over many files:
 | --- | --- |
 | page contract | `crates/notch/src/page.rs` |
 | activity contract | `crates/notch/src/activity.rs` (change detection) |
-| host | `crates/notch/src/host/notch/` (`layout.rs` page choice and badge room, `animation.rs` staging, `keyboard.rs` text keys, `pages.rs`; `tests/` the hiding rules, screen modes, settings reload and page navigation on an off-screen notch), `navigation.rs` (page steps, wheel, swipe limit, dots), `activity_layout.rs`, `registry.rs`, `settings.rs`, `tray.rs` (menu commands), `screen_mode.rs` (maximized or full screen), `startup.rs` |
+| host | `crates/notch/src/host/notch/` (`layout.rs` page choice and badge room, `animation.rs` size springs and bounds, `keyboard.rs` text keys, `pages.rs`; `tests/` the hiding rules, screen modes, settings reload and page navigation on an off-screen notch), `navigation.rs` (page order, page layout), `scroll_gate.rs` (wheel cooldown, swipe accumulation), `motion.rs` (spring damping ratio), `activity_layout.rs`, `registry.rs`, `settings.rs`, `tray.rs` (menu commands), `screen_mode.rs` (maximized or full screen), `startup.rs` |
 | drawing toolkit | `crates/notch/src/gfx/color.rs`, `geometry.rs`, `spring.rs`, `image.rs`, `path.rs`, `raster.rs`, `canvas.rs` (flare shape) |
 | widgets | `crates/notch/src/ui/icon_button.rs`, `icons.rs`, `outline.rs`, `ring.rs`, `hud.rs`, `text_field.rs` (editing keys) |
 | shalat page | `crates/notch/src/pages/shalat/times.rs` (the calculation, checked against Aladhan's Kemenag times for Jakarta), `cities.rs` (search order, accents), `config.rs`, `schedule.rs` and `text.rs` (settings, the minute-by-minute waiting rules, wording), `tests.rs` |

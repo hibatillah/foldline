@@ -27,13 +27,12 @@ To change which pages are *compiled in*, edit `crates/notch/src/pages/mod.rs`; s
 ## Switch an activity off
 
 Volume, brightness, charger and battery, Bluetooth, microphone, camera, copied and Caps Lock are always enabled.
-Old `activity.<id>=off` entries for these activities are ignored. Only **Notifications** has a toggle (in the tray menu
-and the settings window), on by default. Its choice is remembered as `activity.notifications`; when off at startup, its
+Old `activity.<id>=off` entries for these activities are ignored. Only **Notifications** has a toggle (in the settings window), on by default. Its choice is remembered as `activity.notifications`; when off at startup, its
 listener is not started.
 
 ### How an optional activity switches off
 
-Only **Notifications** is optional among the built-in activities. Right-click the tray icon to switch it on or off.
+Only **Notifications** is optional among the built-in activities. Switch it on or off in the settings window.
 The choice is stored as `activity.notifications=off` or `on` in `%APPDATA%\notch\settings.txt`, defaulting to on.
 An optional activity that is off at start is never started; switching it off while running hides it but retains its
 listeners until exit. The same happens when another program changes `activity.<id>` in the file and posts

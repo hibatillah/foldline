@@ -20,6 +20,7 @@ New to the team? Start with [ONBOARDING.md](../ONBOARDING.md) at the repository 
 | [Switch off or remove](how-to/switch-off-or-remove.md) | fewer pages or activities, temporarily or for good |
 | [Test and snapshot](how-to/test-and-snapshot.md) | writing a test, rendering page pictures, the manual checklist |
 | [Run the performance check](how-to/run-the-perf-check.md) | after host, animation, timer or drawing changes, and before a release |
+| [Work with branches](how-to/work-with-branches.md) | starting a change, opening or merging a pull request, or before you push |
 | [Cut a release](how-to/cut-a-release.md) | publishing a version, the installer, license list, how users update |
 
 ## Reference: look something up

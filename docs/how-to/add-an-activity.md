@@ -23,8 +23,7 @@ listens to one Windows power setting and flashes a level bar when it changes.
 | Method | Job |
 | --- | --- |
 | `id()` | stable name; the settings key is `activity.<id>` |
-| `label()` | the name in the tray menu for an optional activity |
-| `is_optional()` | false by default: required activities are always enabled; return true to expose a saved tray toggle |
+| `is_optional()` | false by default: required activities are always enabled; return true to expose a saved settings toggle |
 | `presence()` | what to show right now |
 | `draw()` | draw into the area the host gives |
 | `header_status_width()`, `draw_header_status()` | optional: a small mark kept in the open notch's header beside the time while something lasts (muted speakers, Caps Lock on); `None` for no mark |
@@ -57,5 +56,4 @@ The notch must use no CPU while nothing happens, so an activity never polls. Pic
 
 ### 4. Register it
 
-Add the module and an entry to `all()` in `crates/notch/src/activities/mod.rs`. Registration order controls badges and optional
-tray entries; filtering the tray must preserve the registered activity indices.
+Add the module and an entry to `all()` in `crates/notch/src/activities/mod.rs`. Registration order controls badges.

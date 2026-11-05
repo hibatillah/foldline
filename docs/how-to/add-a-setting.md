@@ -37,5 +37,5 @@ comma list). A page with more settings than one tab holds (220 px) returns sever
 panel shows them under the page's name, saves each through the same settings file and re-reads it, so the page's
 `on_settings_changed` runs as usual. Global switches and choices are listed in `crates/notch/src/host/settings_panel/controls.rs`.
 
-A tray toggle follows [the same rules](../../.claude/rules/settings-and-tray.md): one key, read at start, re-read on
+A tray or menu toggle follows [the same rules](../../.claude/rules/settings-and-tray.md): one key, read at start, re-read on
 `WM_SETTINGS_CHANGED`.

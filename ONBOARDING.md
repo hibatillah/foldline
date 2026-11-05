@@ -7,7 +7,7 @@ This is the guide for people joining the Notch team. Notch is closed-source and 
 Notch is a Windows "dynamic island" written in Rust: a black pill at the top of the screen, drawn with Direct2D and no UI framework. Two programs ship together:
 
 - `notch.exe` (`crates/notch/`) is the pill. It idles at 0 % CPU and stays under 50 MB of memory. Every change to it is held to that budget.
-- `notch-settings.exe` (`crates/settings/`, built with GPUI) is the settings window that the tray's **Settings…** item starts. `crates/store/` holds the settings-file code both programs share.
+- `notch-settings.exe` (`crates/settings/`, built with GPUI) is the settings window that the tray's **Settings** item starts. `crates/store/` holds the settings-file code both programs share.
 
 ## Set up your machine
 
@@ -68,6 +68,11 @@ The layout rules (one job per file, about 400 lines, state in a small struct bes
 - **Style.** Names are written in full (`present_track_ids`, not `ptids`). Comments say only what the code cannot: a reason, a unit, a Windows workaround. Sizes are in device-independent pixels.
 - **Tests.** Logic that takes and returns plain values gets a unit test named as a sentence about behavior. Tests sit with the code they check. Drawing is checked with `cargo test snapshots -- --ignored`, then by looking at `target/snapshots`.
 - **Docs.** When behavior a user can see changes, update `README.md` and the doc that covers it in the same change.
+
+## Branches and pull requests
+
+Until `v0.5.0` is released, changes may go straight to `master`. From that release on, everything goes through a pull
+request that passes the **CI** check, yours included; see [docs/how-to/work-with-branches.md](docs/how-to/work-with-branches.md).
 
 ## Before you finish a change
 

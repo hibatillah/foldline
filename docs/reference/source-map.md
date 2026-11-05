@@ -32,7 +32,8 @@ crates/
   places/                the city list and the shared `location.*` keys, used by the notch (and the settings window later)
   store/                 the settings file code shared by the notch and the settings window (per-key atomic writes)
   settings/              the settings window, a separate GPUI executable named notch-settings.exe (needs the MSVC host
-                         toolchain); src/sections/ holds one file per section
+                         toolchain); src/sections/ holds one file per section (shalat/ one file per card group);
+                         location.rs is the city search, card.rs the picture card
 vendor/salah/     the prayer-time crate with one crash fix (see docs/reference/dependencies-and-licenses.md)
 installer/        the Inno Setup script the release workflow builds the installer from
 assets/fonts/     Geist, the bundled font, and its license
@@ -48,7 +49,9 @@ assets/fonts/     Geist, the bundled font, and its license
 | `window.rs` | creates the window, runs the message loop, turns Windows messages into calls on the notch |
 | `notch.rs` + `notch/` | the `Notch`; `notch.rs` holds the struct and the timer ids, one file per job in `notch/` (see [The notch's files](#the-notchs-files)) |
 | `registry.rs` | decides which registered pages are switched on (`NOTCH_PAGES`, the `pages` setting) |
-| `navigation.rs` | the user's page order and which pages are on, which page opens, wheel and swipe rules (pure) |
+| `navigation.rs` | the user's page order and which pages are on, which page opens, the page row's spring (pure) |
+| `scroll_gate.rs` | when scrolling switches a page: one per wheel notch or gesture, with a cooldown (pure) |
+| `motion.rs` | every tuning number of the size springs and of scroll switching |
 | `drop_target.rs` | a second thread with an almost invisible window that takes dragged files (OLE needs a single-threaded apartment) and tells the notch to open |
 | `chrome.rs` | the padding and the header (page dots, status marks and the time) around every open page |
 | `clock.rs` | the time: in the header of the open notch, and in the collapsed pill while no page or activity has anything to show |
@@ -59,7 +62,7 @@ assets/fonts/     Geist, the bundled font, and its license
 | `settings_panel.rs` + `settings_panel/` | the settings panel inside the notch: tabs and their controls (`controls.rs`), where they sit (`layout.rs`), the value a press saves (`values.rs`), drawing (`draw.rs`), sizes and colors (`style.rs`) |
 | `activity_layout.rs` | which transient activities show and where each one starts (pure functions) |
 | `settings.rs` | re-exports `Settings` from the `store` crate, the persistent key-value store pages and activities share |
-| `tray.rs` | the tray icon and its menu: a checkable item per activity, the pages' items, the notch's own options, Settings…, Quit |
+| `tray.rs` | the tray icon and its menu: Start with Windows (checked when on), Settings, Quit Notch |
 | `settings_launcher.rs` | starts `notch-settings.exe` from the folder of the running `notch.exe`, without waiting |
 | `display.rs` | display scale and refresh rate |
 
@@ -72,9 +75,9 @@ owns a small struct for it, defined beside its logic and held by `Notch` (`sprin
 | File | Job | State it owns |
 | --- | --- | --- |
 | `notch.rs` | the `Notch` struct, `new`, `start`, the timer ids and the constants several files share | |
-| `input.rs` | pointer, wheel, swipe, right click and drag-and-drop input | |
+| `input.rs` | pointer, wheel and touchpad scroll, right click and drag-and-drop input | |
 | `timers.rs` | what each timer does when it fires | |
-| `pages.rs` | page and activity lifecycle, the tray menus, choosing and moving between pages | |
+| `pages.rs` | page and activity lifecycle, choosing and moving between pages | |
 | `layout.rs` | page frames, blending between two pages, refreshing sizes and which page shows | |
 | `hover.rs` | opening and closing, the delays, the hover watch | `HoverState` |
 | `hiding.rs` | what shows over a maximized or full-screen window, suppression, hide when idle | `HidingState` |

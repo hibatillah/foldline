@@ -50,17 +50,28 @@ header holds the page dots on the left, and at the right the status marks and th
 `Frame::bounds`, which is the content area, and cannot draw into the header or the padding. The layout with its
 numbers is in [development.md](../reference/layout.md#the-notch-layout).
 
-The header's settings button, which opens the "Edit pages" view (drag a chip to reorder, double-click to remove, click
-an available one to add; saved as `navigation.order` and `navigation.disabled`), is kept in the code and switched off
-by `chrome::SETTINGS_BUTTON_SHOWN`. A page can be opt-in (`Page::is_opt_in`), which starts it switched off.
+The Pages tab of the settings panel (drag a chip to reorder, double-click to remove, click an available one to add;
+saved as `navigation.order` and `navigation.disabled`) lists the pages. A page can be opt-in (`Page::is_opt_in`), which starts it switched off.
 
 ### Opening and closing
 
-Pointing at the notch starts a timer; if the pointer stays, the notch opens in two legs, a header-only pill first and
-then the whole page, and it closes in two legs the other way, after a short delay once the pointer leaves. One spring,
-`expansion`, goes from 0 (collapsed) through `HEADER_STAGE` (the header-only pill) to 1 (open), and the sizes, the
-fades and the time's glide all follow it. The springs, delays and fades are constants in `notch.rs` and the file that uses them (`notch/animation.rs`, `notch/hover.rs`, `notch/hiding.rs`).
-The closing spring uses stiffness 330 and damping 22 for a small bounce into idle; the opening response is separate.
+Pointing at the notch starts a timer; if the pointer stays, the notch opens in one move, and it closes in one move
+after a short delay once the pointer leaves. One spring, `expansion`, goes from 0 (collapsed) to 1 (open); width and
+height both interpolate from the collapsed to the open size through that one value, so they grow in parallel and arrive
+together, and the fades and the time's glide follow it too (`HEADER_STAGE` is only the point where the header content
+is fully shown and the page content has not started). Delays and fades are constants in the file that uses them
+(`notch/hover.rs`, `notch/hiding.rs`, `notch/layout.rs`).
+
+Every size spring (`expansion`, the collapsed and open width and height, the badge room) uses the one response
+`SIZE_RESPONSE` in `host/motion.rs`: stiffness 215, damping 16.7, a damping ratio of 0.57 and an overshoot of about 10 %
+of a move (it was 420 and 21, 15 %, and about 1.45 times faster to settle: 0.68 s against 0.98 s), for open, close, page switches and the media page's lyrics width. Every size spring also has a lead-in (`SIZE_LEAD_IN`, 90 ms): when a move starts at rest, the pull toward the
+target grows along a smoothstep from nothing, so the move begins gently (an ease-in) and the bounce stays at the end;
+a retarget while moving keeps the pull it had. Springs with the same response and lead-in settle in the same time
+whatever the distance, so width and height start and stop together; the frame timer still stops once they settle. `frame()` clamps the overshooting size to the
+window (`size_room`) and keeps it above 75 % of the collapsed size, and the pill's radius never exceeds half its height,
+so the shape stays a pill while it over- or undershoots. The page row's own spring (`PAGE_SLIDE_RESPONSE`) stays
+critically damped, because an overshoot would blend the wrong pages. All the tuning numbers of this and of page
+switching input are in `host/motion.rs`.
 While files are dragged over the notch it opens at once on the page that takes drops and grows a little, as if ready.
 
 ### Hiding
@@ -68,7 +79,7 @@ While files are dragged over the notch it opens at once on the page that takes d
 The notch can step out of the way in two ways, both in `notch/hiding.rs` (`is_hidden`, `is_suppressed`), with the rules in
 `visibility.rs`:
 
-- **Hide when idle** (a tray option, over regular windows): with nothing to show it shrinks to a nearly invisible
+- **Hide when idle** (a setting, over regular windows): with nothing to show it shrinks to a nearly invisible
   240 x 6 px strip that still receives the pointer, shows the small pill after the pointer rests on it for 150 ms, and
   opens if the pointer stays.
 - **Over a maximized or full-screen window** one `Showing` each (`notch.maximized`, default `lyrics`;
@@ -98,10 +109,10 @@ the error is logged and foreground recovery remains available. Leave tracking is
 
 With two or more pages that answer `Some` for `Mode::Expanded`, the page dots in the header show where the user is.
 The user moves between pages by scrolling the mouse wheel, swiping two fingers on a touchpad (sent as scrolling), or
-clicking a dot. Touchpad scrolling moves continuously through the row with a fast smoothing spring. After a 200 ms
-quiet interval, a softer, critically damped spring centers the nearest page, preserving the visible position and
-velocity at release. New input can interrupt it immediately. Layout updates do not center the row while fingers
-are scrolling. The nearest page is remembered as the logical selection.
+clicking a dot. A wheel notch moves one page; touchpad and precision-wheel input accumulates until 120 units cross
+the threshold, moves one page and is then ignored until the gesture ends (150 ms without an event). After any
+switch, scroll input is ignored for 300 ms (`PAGE_SWITCH_COOLDOWN`), so one scroll never runs through the row. The
+row slides with a critically damped spring and the selected page is remembered as the logical selection.
 
 Each visible page gets its own requested content width for drawing and pointer input. Their center spacing is half
 of each width plus the page gap. The notch's width interpolates between these natural widths using the rendered
@@ -109,11 +120,10 @@ scroll progress, so it progressively shrinks or grows instead of stretching the 
 No per-frame allocations are needed for this pair of page frames, and the animation timer stops once motion settles.
 
 Windows input-source metadata identifies touchpads; drivers without it fall back to small deltas and the active
-gesture. Large deltas stay in touchpad mode once a swipe starts. Input-end timers ignore stale queued messages.
-Smooth scroll sensitivity is 400 units per page. Wheel input still moves one page per notch and can queue up to two
-pages ahead; wheel and dot navigation use a critically damped transition to a page center.
-The pages form a loop (past the last comes the first), and the page left open is remembered as `navigation.page` in
-the settings. `host/navigation.rs` holds the rules as pure functions; `notch/pages.rs` and `notch/layout.rs` apply them.
+gesture, so a large delta inside a gesture stays part of it. `host/scroll_gate.rs` holds that logic as a pure type
+(`ScrollGate`). Scrolling loops: next from the last page goes to the first and previous from the first goes to the last, one page per
+step; a dot click still jumps to any page, taking the shorter way round the row. The page left open is remembered as `navigation.page` in
+the settings. `host/navigation.rs` holds the page rules as pure functions; `notch/pages.rs` and `notch/layout.rs` apply them.
 
 ### Sizes
 
@@ -133,8 +143,8 @@ outside the pill is never covered and never blocks clicks.
 ### Input and timers
 
 Windows messages reach `window.rs`, which calls the notch. The notch converts positions to a common space and routes
-pointer events to the page chosen for the open mode. A right click on the notch outside the open page does nothing: the
-menu is the tray icon's. A page's timers (`Context::set_timer`) are Windows timers whose ids encode the page and the
+pointer events to the page chosen for the open mode. A right click on the open notch opens the host's menu (`host/notch/menu.rs`); the tray icon has the same three items
+(`host/tray.rs`). A page's timers (`Context::set_timer`) are Windows timers whose ids encode the page and the
 timer number, so each page has its own.
 
 ### Activities
@@ -149,7 +159,7 @@ The host asks every running activity for its `presence()` after each event.
   (`Activity::on_hover_changed`).
 
 Required activities always start and ignore saved disable settings. Only optional activities expose a saved
-`activity.<id>` tray toggle; Notifications is the only optional built-in and defaults to on. The host registers the
+`activity.<id>` settings toggle; Notifications is the only optional built-in and defaults to on. The host registers the
 window for Windows power-setting and clipboard messages on their behalf (`Context::listen_to_power_setting`,
 `listen_to_clipboard`) and hands them to every running activity as a `SystemMessage`. Activity timers use ids from
 1000 up and their wake-ups use their own window message, so they never clash with a page's. See

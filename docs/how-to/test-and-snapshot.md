@@ -56,10 +56,10 @@ For a change that affects drawing or input, run `scripts/reload.sh` and check:
 - play, pause, previous, next, shuffle and repeat work, and the hovered button gets a faint wash
 - clicking and dragging the progress bar jumps to that point
 - the lyric button hides and shows lyrics, and the choice is remembered after restarting
-- the tray icon's Quit closes the notch and removes the icon
+- the tray icon's Quit Notch closes the notch and removes the icon
 
-For a change to the notch's frame or hiding: open the notch and check the dots, the status marks and the time, tick "Hide when idle" in the tray menu and check that the notch
-disappears, shows its small pill when you rest the pointer on the top of the screen, and opens if you stay. To check the "Edit pages" view, set `SETTINGS_BUTTON_SHOWN` to true in `chrome.rs` and
+For a change to the notch's frame or hiding: open the notch and check the dots, the status marks and the time, tick "Hide when idle" in the settings window and check that the notch
+disappears, shows its small pill when you rest the pointer on the top of the screen, and opens if you stay. To check the Pages tab, choose Settings in the right-click menu, open the Pages tab and
 add, drag, double-click and remove a page. The mouse-driven checks need an unlocked screen.
 
 For lock/unlock recovery, enable Hide when idle, focus a maximized app, lock Windows, then unlock. Rest the pointer
@@ -74,8 +74,8 @@ and the time show in the collapsed pill, the alert and sound arrive at the end, 
 pause, +5 min and stop work.
 
 For a change to navigation, play something so the media page appears, then check: scrolling the wheel (and swiping a
-touchpad, and scrolling sideways) moves one page per notch (several quick notches go several pages) and loops from the last page to the first, a
-touchpad swipe drags the pages along and settles on the nearest one, clicking a dot opens that page, and the notch opens on the page you left.
+touchpad, and scrolling sideways) moves one page per notch or gesture (quick extra notches inside 300 ms are ignored) and loops from the last page to the first and back, a
+touchpad swipe moves one page and nothing more until you lift off, clicking a dot opens that page, and the notch opens on the page you left. Also check that opening, closing, switching to a page of another width and toggling lyrics all start gently, overshoot a little and settle, with width and height arriving together.
 
 For a change to the shelf: drop files on the notch (it turns blue and the files drop in), check the pictures match Explorer, double-click one to open it, drag one into a folder (it is copied, and leaves the shelf), right-click one and press its cross to remove it, and check the original files are untouched.
 
@@ -99,4 +99,4 @@ For a change to activities, also check (each one is a real event, so run them on
 - `notch.maximized=lyrics` (the default) keeps only active lyrics and activities; `activities` keeps only activities; `hidden` takes the notch off the screen
 - `notch.fullscreen=activities` shows a notification banner over a full-screen video but hides the idle clock to the strip; `hidden` (the default) shows nothing
 - a settings file with only the old keys (`notch.show_over_maximized=on`) behaves as before and gains the matching new key at start
-- open the tray menu with Windows in dark mode: the menu is dark; tick "Start with Windows" and check the entry under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
+- open the tray menu with Windows in dark mode: the menu is dark and lists Start with Windows, Settings and Quit Notch (a line above Quit); tick "Start with Windows" and check the entry under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`

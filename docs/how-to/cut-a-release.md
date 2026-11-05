@@ -2,16 +2,34 @@
 
 > **How-to.** Read when: you publish a version, regenerate the license list, or explain how users update. Skip if: you only build locally; see [build, run and debug](build-run-and-debug.md).
 
-One GitHub Actions workflow, `.github/workflows/release.yml`, does all of it. Nothing runs on pushes or pull requests, so
-run the checks yourself before you tag.
+Two GitHub Actions workflows exist. `release.yml` does the release. `ci.yml` only checks pull requests into `master`
+(see [work with branches](work-with-branches.md)); nothing runs on a push to `master`, so run the checks yourself before
+you tag a commit that did not come through a pull request.
 
 | Workflow | Starts when | Does |
 | --- | --- | --- |
+| `ci.yml` | a pull request into `master` | `cargo fmt --all --check`, `cargo clippy --workspace -D warnings`, `cargo test --workspace`; the **Check** job is what a pull request must pass to merge |
 | `release.yml` | a push of a tag that starts with `v` | `cargo fmt --all --check`, `cargo clippy --workspace -D warnings`, `cargo test --workspace`, then builds and publishes a GitHub release (a pre-release when the tag has a suffix, such as `v0.5.0-alpha.1`; see [share a pre-release](#share-a-pre-release)) |
 
 It installs the MSVC toolchain, because the settings crate (GPUI) does not build with the GNU one. Locally use `cargo +stable-x86_64-pc-windows-msvc` for the settings crate.
 
 `scripts/perf.sh` is not in the workflow: it moves the mouse and needs a real, unlocked desktop. Run it yourself before a release.
+
+## Release notes
+
+The release notes are written for you when the tag is pushed (`scripts/release-notes.sh`, called by `release.yml`):
+
+- They list the pull requests merged since the previous release, grouped by `type:` label as `.github/release.yml` says
+  (Breaking changes, Features, Fixes, Performance and refactors, Other changes; chore, docs, test, style, ci and build
+  are left out). Each line is the pull request's title, credited to its **assignee**, or to its author when nobody is
+  assigned, with a link to the pull request.
+- The `type:` label comes from the pull request's title: the CI workflow sets it from the `type(scope):` prefix.
+- A stable tag covers everything since the last stable tag, so `v0.5.0` collects the changes of its pre-releases; a
+  pre-release covers what came after the tag before it (`scripts/previous-tag.sh`).
+- Changes pushed straight to `master` are not pull requests, so a release made only of them lists commit titles instead.
+- To see the notes before you push: `bash scripts/release-notes.sh v0.5.0 master` (it reads what is on `origin`).
+
+Assign each pull request to the person who should be credited when you open it.
 
 ## Publish a release
 
@@ -82,7 +100,8 @@ as a number, so write `alpha.2`, not `alpha2`. The crate version stays `0.5.0` f
 
 `release.yml` checks only the part of the tag before the first `-` against the crate version, builds the same installer
 and publishes the release as a pre-release, so it is not shown as the latest one. The installer carries the whole tag
-version (`0.5.0-alpha.1`), which the update prompt and Add or remove programs show. Inno Setup cannot compare a suffixed
+version (`0.5.0-alpha.1`), which the update prompt and Add or remove programs show. The settings window's sidebar shows it
+too: the Build step passes it as `NOTCH_RELEASE_VERSION` (the tag without the `v`), and a local build without it shows the latest pre-release tag of the current version series (`crates/settings/build.rs` reads it from `git describe`), or the plain crate version when there is none. Inno Setup cannot compare a suffixed
 version, so over an installed copy the prompt reads "Replace it with version 0.5.0-alpha.1?" and the user confirms; a
 plain version still gets "Update it to…". Delete the pre-release and its tag when it is no longer needed.
 
