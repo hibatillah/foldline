@@ -1,6 +1,20 @@
 ---
 name: notch-host
-description: Owns the notch's window and host: crates/notch/src/host/** (the Notch and its jobs in host/notch/, window, hover, tray, screen mode, settings panel) and crates/notch/src/platform/**. Use proactively for any change to Win32 behavior, hover or mouse tracking, timers, threads, opening and closing, hiding over maximized or full-screen windows, or the in-notch settings panel.
+description: "MUST be used for ANY change under crates/notch/src/host or crates/notch/src/platform — the Notch and its jobs in host/notch (input, timers, pages, layout, hover, hiding, animation, keyboard, settings_ui, paint, menu), the window and its message loop, hover and mouse tracking, topmost and screen-mode handling, the tray, startup, the drop target, the right-click menu and the in-notch settings panel (host/settings_panel). Owns the place, not a topic: timers, threads, DPI and Win32 calls are rules this agent applies, not separate agents. Keyword triggers: Win32, window, message loop, hover, mouse, WM_, timer id, topmost, tray, screen mode, full screen, maximized, suppress, hide when idle, panel, right-click, menu, startup, drop target, session lock, resume from sleep, Notch struct. Dispatch after `notch-render` when a drawing helper changes and before `notch-pages` when the Page trait changes. Not for pages and activities (`notch-pages`), crates/notch/src/gfx or ui (`notch-render`), or the settings window (`settings-gpui`).
+
+<example>
+Context: A hover bug.
+user: \"The notch does not open again after I unlock Windows\"
+assistant: \"I'll use `notch-host` — it knows the three hover safeguards and the session-recovery path.\"
+<commentary>Hover, topmost and session handling live in host/notch: this agent's.</commentary>
+</example>
+
+<example>
+Context: A new entry in the right-click menu.
+user: \"Add a Pause notifications item to the right-click menu\"
+assistant: \"I'll use `notch-host` for the menu and its action, then `notch-pages` only if a page needs a hook.\"
+<commentary>The menu is host/notch/menu.rs.</commentary>
+</example>"
 model: opus
 effort: medium
 color: blue

@@ -11,6 +11,7 @@ paths:
 
 `docs/how-to/cut-a-release.md` describes the release workflow.
 
+- `ci.yml` runs on pull requests into `master` only, with one job named `Check` (the required status check of branch protection); it never releases and has `contents: read`.
 - `release.yml` runs on `v*` tag pushes only, and fails unless the tag, without any `-suffix` (a pre-release such as `v0.5.0-alpha.1`), equals `v` plus the workspace version in `Cargo.toml`, which every crate inherits.
 - The workflow uses the MSVC toolchain (`stable-x86_64-pc-windows-msvc`) and the `--workspace` flag; the settings crate (GPUI) does not build with the GNU toolchain.
 - Read the executable names from `crates/notch/Cargo.toml` and the `[[bin]]` of `crates/settings/Cargo.toml` in workflows; never write `notch` into them.

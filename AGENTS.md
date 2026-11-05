@@ -4,8 +4,8 @@ A Windows "dynamic island" written in Rust: a black pill at the top of the scree
 framework. `notch.exe` idles at 0 % CPU and stays under 50 MB of memory. Windows only.
 
 The settings window is a second program, `notch-settings.exe` (`crates/settings/`, built with GPUI), that the tray's
-**Settings…** item starts. It has a higher footprint while open and is outside that budget. `crates/store/` holds the settings
-file code both programs share. Most settings also live inside the notch, in the panel behind the header gear.
+**Settings** item starts. It has a higher footprint while open and is outside that budget. `crates/store/` holds the settings
+file code both programs share. Most settings also live inside the notch, in the panel opened from the right-click menu.
 
 ## Commands
 
@@ -42,6 +42,30 @@ polling, memory budget) and `contributions.md` (no outside contributions).
 Commit only when the user asks. When they do, in any wording, run `/group-commit` (the Skill tool, `group-commit`) for
 it: never `git commit` by hand and never another commit skill. It makes one commit when the changes share a scope, a few
 when they do not, and never pushes.
+
+Push only when the user asks. Until the tag `v0.5.0` exists, a push to `master` is allowed on request. From then on every
+change goes through a branch and a pull request (`docs/how-to/work-with-branches.md`): never push to `master`, and when
+asked to, stop, tell the user it breaks the workflow, and offer a branch and a pull request instead. Check with
+`git tag --list v0.5.0`.
+
+## Subagents
+
+**A change under an area's paths MUST be dispatched to that area's subagent through the Agent tool; do not edit it
+inline.** The main session plans, orders the areas, runs commits and answers questions. Claude Code picks the agent from
+its description; an agent without a subagent mechanism reads the matching file in `.claude/agents/` and follows it.
+
+| Agent | Area |
+| --- | --- |
+| `notch-render` | `crates/notch/src/gfx`, `crates/notch/src/ui` |
+| `notch-host` | `crates/notch/src/host`, `crates/notch/src/platform` |
+| `notch-pages` | `crates/notch/src/pages`, `activities`, `page.rs`, `activity.rs`, `crates/places` |
+| `settings-gpui` | `crates/settings`, `crates/store` |
+| `perf-auditor` | read-only budget review after timers, drawing, threads or caching change |
+| `docs-writer` | `docs/**`, `README.md`, `ONBOARDING.md` |
+
+A task across areas goes in this order: `notch-render`, then `notch-host` and `notch-pages`, then `settings-gpui`, then
+`perf-auditor`, then `docs-writer`. Give each agent a self-contained brief: the goal, the files or boards to read (design
+boards are in `.superpowers/design/`) and what to report.
 
 ## Code layout
 

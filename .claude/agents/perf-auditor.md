@@ -1,6 +1,20 @@
 ---
 name: perf-auditor
-description: Read-only reviewer of the notch's performance budget (0 % CPU idle, under 50 MB). Use proactively after a change to timers, animation, drawing, threads, hooks or caching, to check the latest perf numbers against the limits and the diff for polling, uncancelled timers and new allocations. It does not run scripts/perf.sh.
+description: "MUST be used after ANY change to timers, animation, drawing, threads, event hooks, caching or memory in the notch, before the change is reported done — a read-only reviewer of the budget (0 % CPU idle, under 50 MB). It reads the latest numbers in docs/reference/performance-baseline.md against the limits and the diff for polling, timers that never stop, hooks on every window's events, Direct2D geometry and per-frame allocations. It never runs scripts/perf.sh (that moves the mouse and replaces the running notch; the user runs it). Keyword triggers: performance, CPU, memory, idle, polling, timer, leak, handles, 'is this expensive', perf.sh, budget. Dispatch last, after the area agents finish. Not for fixing: it reports findings and the area agent fixes them.
+
+<example>
+Context: A new timer.
+user: \"The weather page now refreshes every 30 minutes\"
+assistant: \"I'll use `perf-auditor` to check that the timer is armed only when needed and never polls.\"
+<commentary>Timer changes always get the budget review.</commentary>
+</example>
+
+<example>
+Context: A drawing change.
+user: \"Stats cards now draw area charts\"
+assistant: \"I'll use `perf-auditor` after `notch-render` and `notch-pages` are done.\"
+<commentary>Drawing cost is the budget's first risk.</commentary>
+</example>"
 model: haiku
 effort: low
 color: orange

@@ -1,6 +1,20 @@
 ---
 name: settings-gpui
-description: Owns the settings window and the shared settings file: crates/settings/** (the notch-settings.exe program, built with GPUI) and crates/store/** (the shared store crate). Use proactively for any change to the settings window's sections, fields or look, or to how settings are read and written by both programs.
+description: "MUST be used for ANY change under crates/settings or crates/store — the settings window (notch-settings.exe, built with GPUI and gpui-component: sections, fields, layout, the Behavior, Calendar, Pages, General and Advanced pages and the picture cards) and the settings file code both programs share (per-key atomic writes, Settings). Keyword triggers: settings window, GPUI, gpui-component, section, field, dropdown, toggle, accordion, card, Behavior page, Shalat settings, settings.txt, store, atomic write, notch-settings. Build and test with the MSVC toolchain (`cargo +stable-x86_64-pc-windows-msvc ... --workspace`). Dispatch after `notch-pages` when a new key or the location changes what the window must offer. Not for the in-notch settings panel (`notch-host`), pages (`notch-pages`), or drawing code in the notch (`notch-render`).
+
+<example>
+Context: A settings page redesign.
+user: \"Make the Behavior choices picture cards in the settings window\"
+assistant: \"I'll use `settings-gpui` — it reads the Behavior board and the GPUI coding guides first.\"
+<commentary>The window's pages are this agent's; the key words stay in sync with the notch through the existing tests.</commentary>
+</example>
+
+<example>
+Context: A shared file bug.
+user: \"Two programs saved settings at once and one key was lost\"
+assistant: \"I'll use `settings-gpui` — the store's per-key atomic write is in its area.\"
+<commentary>crates/store belongs to the same agent.</commentary>
+</example>"
 model: sonnet
 effort: medium
 color: purple

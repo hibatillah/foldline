@@ -1,6 +1,20 @@
 ---
 name: notch-pages
-description: Owns the notch's pages and activities: crates/notch/src/pages/** (media, shelf, calendar, timer, stats, shalat, todo), crates/notch/src/page.rs, crates/notch/src/activity.rs and crates/notch/src/activities/**. Use proactively when adding, changing or removing a page or an activity, its settings keys, its drawing or its tests.
+description: "MUST be used for ANY change under crates/notch/src/pages, crates/notch/src/activities, crates/notch/src/page.rs, crates/notch/src/activity.rs or crates/places — pages (media, shelf, calendar, timer, stats, shalat, todo, weather), activities (volume, battery, notifications, Caps Lock and the rest), their settings keys, drawing, state and tests, the Page and Activity traits, and the shared location (city list and location.* keys). Keyword triggers: page, activity, shelf, todo, stats, weather, forecast, shalat, prayer times, calendar, timer, media, lyrics, notification banner, pill message, Presence, Flash, location, city search, 'add a page', 'new activity', settings key. Dispatch after `notch-render` when a widget or drawing helper is new, and after `notch-host` when host input or layout changes what a page receives. Not for the window, hover, tray or in-notch panel (`notch-host`), gfx or ui (`notch-render`), or the settings window (`settings-gpui`).
+
+<example>
+Context: A page limit.
+user: \"Let the shelf hold 12 files in two rows\"
+assistant: \"I'll use `notch-pages` — it owns the shelf's layout, items and tests.\"
+<commentary>Everything under pages/shelf is this agent's.</commentary>
+</example>
+
+<example>
+Context: A new page.
+user: \"Add a weather page that uses the saved location\"
+assistant: \"I'll use `notch-pages` for the page and the forecast client, and `notch-render` first if it needs a new picture helper.\"
+<commentary>A page and its data client are one area; shared drawing helpers go to notch-render first.</commentary>
+</example>"
 model: sonnet
 effort: medium
 color: green

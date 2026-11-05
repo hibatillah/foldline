@@ -21,7 +21,7 @@ paths:
   time and skipped when missing, so a Windows version without it keeps working.
 - `track_mouse_leave` re-arms only while the pointer is over the notch window; re-arming under another window posts an
   endless stream of `WM_MOUSELEAVE`.
-- Session lock, unlock and resume from sleep clear hover and swipe state (`reset_session_interaction`) and refresh the
+- Session lock, unlock and resume from sleep clear hover and scroll-gesture state (`reset_session_interaction`) and refresh the
   foreground window mode; the window registers for `WM_WTSSESSION_CHANGE` for that.
 - `restore_topmost` re-asserts `WS_EX_TOPMOST` before the notch takes hover or drop input, because a hidden-over-
   maximized notch drops it.

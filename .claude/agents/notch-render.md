@@ -1,6 +1,20 @@
 ---
 name: notch-render
-description: Owns the drawing toolkit and widgets: crates/notch/src/gfx/** (Canvas, fonts, colors, images, springs, paths) and crates/notch/src/ui/** (rings, buttons, text field, icons, HUD layouts). Use proactively for Direct2D or DirectWrite work, a new icon or widget, text measuring and clamping, or any change to how shapes are rasterized and cached.
+description: "MUST be used for ANY change under crates/notch/src/gfx or crates/notch/src/ui — Canvas, fonts and text measuring, colors, images, springs, paths and rasterizing, and the widgets built on them (rings, buttons, the text field, icons, the dashed outline, HUD layouts). Direct2D and DirectWrite through the windows crate. Keyword triggers: Direct2D, DirectWrite, Canvas, font, text measure, clamp lines, spring, animation curve, icon, ring, image brush, cached image, Mask, Path, raster, widget, 'new icon', 'draw a chart', 'rounded corners', 'memory of drawing'. Dispatch first in a cross-area task, before `notch-host` and `notch-pages` use what it adds. Not for pages or activities (`notch-pages`), the window, hover or panel (`notch-host`), or the settings window (`settings-gpui`).
+
+<example>
+Context: A new icon.
+user: \"Add a cloud icon for the weather page\"
+assistant: \"I'll use `notch-render` — icons are drawn from points, not geometry, and have a test that keeps them in their square.\"
+<commentary>Icons live in ui/icons.rs.</commentary>
+</example>
+
+<example>
+Context: A drawing cost.
+user: \"Drawing the chart makes the notch use more memory\"
+assistant: \"I'll use `notch-render` and then `perf-auditor` to check the budget.\"
+<commentary>Geometry cost and caching are rules this agent applies.</commentary>
+</example>"
 model: sonnet
 effort: high
 color: pink

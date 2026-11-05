@@ -47,6 +47,10 @@ State the plan in one line (`v0.5.0-alpha.1 -> v0.5.0-beta.1`, whether the versi
 
 ## 5. Show it and ask
 
+First show the release notes the tag will get: `bash scripts/release-notes.sh <tag> master`. They list the pull requests merged
+into `origin/master` since the previous release (assignee credited, grouped by type), or the commit titles when there are
+none; commits not pushed yet are not in them.
+
 Show what now exists locally: the tag and the commit it points to (`git log --oneline -1 <tag>`), whether it is a
 pre-release, the version commit if one was made, and what the pushes will do (the tag push starts `release.yml`, which
 builds the installer and publishes a GitHub release of the same name). Then ask the user whether to push. On yes, run
