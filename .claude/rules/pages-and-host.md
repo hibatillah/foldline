@@ -1,12 +1,12 @@
 ---
 paths:
-  - "src/pages/**"
-  - "src/host/**"
-  - "src/page.rs"
-  - "src/activity.rs"
-  - "src/activities/**"
-  - "src/gfx/**"
-  - "src/ui/**"
+  - "crates/notch/src/pages/**"
+  - "crates/notch/src/host/**"
+  - "crates/notch/src/page.rs"
+  - "crates/notch/src/activity.rs"
+  - "crates/notch/src/activities/**"
+  - "crates/notch/src/gfx/**"
+  - "crates/notch/src/ui/**"
 ---
 
 # Pages and host boundaries
@@ -14,13 +14,13 @@ paths:
 Read `docs/tutorials/add-a-page.md` before writing a page, `docs/how-to/add-an-activity.md` before writing an activity and
 `docs/explanation/architecture.md` before restructuring.
 
-- A page lives in `src/pages/<name>/` and is listed only in `src/pages/mod.rs`; adding or removing one touches no
+- A page lives in `crates/notch/src/pages/<name>/` and is listed only in `crates/notch/src/pages/mod.rs`; adding or removing one touches no
   other file.
 - A page depends on `page`, `activity` (for `Presence` and `Flash`), `gfx`, `ui` and `platform` only.
 - `host`, `gfx`, `ui`, `page` and `activity` stay ignorant of any particular page or activity.
 - Page timer ids are `100 + page_index * 16 + n`, with `n` below 16; activity timer ids are
   `1000 + activity_index * 16 + n`.
-- An activity lives in `src/activities/` and is listed only in `src/activities/mod.rs`. It depends on `activity`, `page`
+- An activity lives in `crates/notch/src/activities/` and is listed only in `crates/notch/src/activities/mod.rs`. It depends on `activity`, `page`
   (for `Context`), `gfx`, `ui` and `platform`, never on a page or another activity, and never polls: it listens to a Windows
   callback, message or blocking wait and wakes the UI thread through its `Notifier`.
 - Activity settings keys are `activity.<id>`.

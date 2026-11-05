@@ -1,7 +1,7 @@
 # Performance
 
 Budget for `notch.exe` (not the settings window; see `AGENTS.md`): 0 % CPU while idle, under 50 MB of memory. The limits
-`scripts/perf.sh` enforces are in `scripts/perf.rs`.
+`scripts/perf.sh` enforces are in `crates/notch/examples/perf.rs`.
 
 - Stop every timer and animation as soon as its output stops changing; the frame timer ends when the springs settle
   and no page reports `animate` as moving.

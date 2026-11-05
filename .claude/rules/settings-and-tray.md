@@ -1,9 +1,9 @@
 ---
 paths:
-  - "src/host/settings.rs"
-  - "src/host/tray.rs"
-  - "src/host/window.rs"
-  - "settings/src/**"
+  - "crates/notch/src/host/settings.rs"
+  - "crates/notch/src/host/tray.rs"
+  - "crates/notch/src/host/window.rs"
+  - "crates/settings/src/**"
 ---
 
 # Settings and tray

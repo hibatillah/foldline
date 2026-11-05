@@ -1,8 +1,8 @@
 ---
 paths:
-  - "src/**/*.rs"
+  - "crates/notch/src/**/*.rs"
   - "scripts/**"
-  - "build.rs"
+  - "crates/notch/build.rs"
 ---
 
 # Code style

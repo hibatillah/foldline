@@ -1,11 +1,11 @@
 ---
 paths:
-  - "build.rs"
-  - "settings/build.rs"
+  - "crates/notch/build.rs"
+  - "crates/settings/build.rs"
   - "scripts/icon_resource.rs"
   - "assets/**"
   - "installer/**"
-  - "src/host/icon.rs"
+  - "crates/notch/src/host/icon.rs"
 ---
 
 # Branding and build script
@@ -14,7 +14,7 @@ paths:
 
 - `assets/branding/logo.png` is the master; `scripts/export-icon.sh` regenerates `logo.ico` from it and the result is
   committed.
-- `build.rs` embeds `assets/branding/logo.rc`, and `settings/build.rs` embeds `assets/branding/settings.rc` (icon id 1,
+- `crates/notch/build.rs` embeds `assets/branding/logo.rc`, and `crates/settings/build.rs` embeds `assets/branding/settings.rc` (icon id 1,
   the one GPUI loads for the window and taskbar). Both call `scripts/icon_resource.rs`, which runs the Windows
   SDK's `rc.exe` (found on `PATH` or under `Windows Kits/10`). Keep it dependency-free and have it fail with a message
   that names the missing tool.

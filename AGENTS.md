@@ -3,14 +3,14 @@
 A Windows "dynamic island" written in Rust: a black pill at the top of the screen, drawn with Direct2D, no UI
 framework. `notch.exe` idles at 0 % CPU and stays under 50 MB of memory. Windows only.
 
-The settings window is a second program, `notch-settings.exe` (`settings/`, built with GPUI), that the tray's
-**Settings…** item starts. It has a higher footprint while open and is outside that budget. `store/` holds the settings
+The settings window is a second program, `notch-settings.exe` (`crates/settings/`, built with GPUI), that the tray's
+**Settings…** item starts. It has a higher footprint while open and is outside that budget. `crates/store/` holds the settings
 file code both programs share. Most settings also live inside the notch, in the panel behind the header gear.
 
 ## Commands
 
 Root commands cover only the notch (the workspace's default member). GPUI builds only with the MSVC host toolchain, so
-run `settings/` and `store/` commands as `cargo +stable-x86_64-pc-windows-msvc ... -p notch-settings` (or `--workspace`).
+run `crates/settings/` and `crates/store/` commands as `cargo +stable-x86_64-pc-windows-msvc ... -p settings` (or `--workspace`).
 
 ```
 cargo build --release                     # target\x86_64-pc-windows-msvc\release\notch.exe
@@ -35,6 +35,14 @@ runs; `codegraph sync` catches up after changes made outside a session.
 `.claude/rules/` holds the constraints, loaded by the paths they cover. Three always apply: `workflow.md` (checks before
 done, no commits unless asked, never kill the notch, specs and plans go to `.superpowers/`), `performance.md` (no
 polling, memory budget) and `contributions.md` (no outside contributions).
+`module-layout.md` sets how Rust files are cut (one job per file, about 400 lines) and applies to every source file.
+
+## Code layout
+
+The repository is a Cargo workspace: `crates/notch` (the pill), `crates/settings` (the settings window, built as
+`notch-settings.exe`) and `crates/store` (the shared settings file code), with the patched `salah` crate in
+`vendor/salah`. The layout of the code is defined in `docs/explanation/architecture.md` (the reasons) and
+`docs/reference/source-map.md` (where each module lives, and how a module is laid out); keep new code to it.
 
 ## Docs
 

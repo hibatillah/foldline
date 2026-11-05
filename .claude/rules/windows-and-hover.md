@@ -1,7 +1,7 @@
 ---
 paths:
-  - "src/host/**"
-  - "src/gfx/**"
+  - "crates/notch/src/host/**"
+  - "crates/notch/src/gfx/**"
   - "Cargo.toml"
 ---
 

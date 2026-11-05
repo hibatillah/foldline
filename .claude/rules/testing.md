@@ -1,6 +1,6 @@
 ---
 paths:
-  - "src/**/*.rs"
+  - "crates/notch/src/**/*.rs"
   - "scripts/**"
 ---
 
@@ -16,7 +16,7 @@ paths:
   `%APPDATA%\notch\settings.txt` stays untouched.
 - Create `Fonts::new(1.0)` in a test that measures text; DirectWrite works without a window.
 - Add or update unit tests for every piece of logic you add or change.
-- The memory and CPU check is `scripts/perf.rs`, started by `scripts/perf.sh`.
-- Add a gate or flag to `scripts/perf.rs` together with its line in the `scripts/perf.sh` header and its row in
+- The memory and CPU check is `crates/notch/examples/perf.rs`, started by `scripts/perf.sh`.
+- Add a gate or flag to `crates/notch/examples/perf.rs` together with its line in the `scripts/perf.sh` header and its row in
   `docs/how-to/run-the-perf-check.md`.
 - Name a regression test after the behavior that broke, as a sentence a user would recognize (`session_recovery_clears_stale_hover_and_allows_a_hidden_notch_to_open_again`).
