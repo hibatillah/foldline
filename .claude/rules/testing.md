@@ -2,11 +2,13 @@
 paths:
   - "crates/notch/src/**/*.rs"
   - "scripts/**"
+  - "crates/settings/src/**/*.rs"
+  - "crates/store/src/**/*.rs"
 ---
 
 # Testing
 
-- Put tests in a `#[cfg(test)] mod tests` at the bottom of the file they test; this binary crate has no `tests/`
+- Put tests in a `#[cfg(test)] mod tests` at the bottom of the file they test, or in `tests.rs` or `tests/` beside a module that has many; this binary crate has no crate-level `tests/`
   folder.
 - Name a test as a sentence about behavior: `a_paused_track_keeps_its_line_but_arms_no_timer`.
 - Keep logic in functions that take and return plain values so a test needs no window.
@@ -20,3 +22,7 @@ paths:
 - Add a gate or flag to `crates/notch/examples/perf.rs` together with its line in the `scripts/perf.sh` header and its row in
   `docs/how-to/run-the-perf-check.md`.
 - Name a regression test after the behavior that broke, as a sentence a user would recognize (`session_recovery_clears_stale_hover_and_allows_a_hidden_notch_to_open_again`).
+- A test never asserts on a constant or on a value the compiler already knows (clippy `assertions_on_constants`); assert on what a function returns.
+- A page's snapshot scenarios come from `SampleOptions` in `pages/mod.rs` (the devices and clipboard pages keep theirs in `sample.rs`); add a scenario there when a page gets a new visible state.
+- The settings crate's tests cannot pass while a `notch-settings.exe` window is open (the `single_instance` test); close it before running them. Run them, and the store's, with the MSVC toolchain: `cargo +stable-x86_64-pc-windows-msvc test --workspace`.
+- An incomplete `tree-sitter` build in a stale target directory: `cargo clean -p tree-sitter` there, then build again.

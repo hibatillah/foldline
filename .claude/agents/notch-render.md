@@ -1,20 +1,6 @@
 ---
 name: notch-render
-description: "MUST be used for ANY change under crates/notch/src/gfx or crates/notch/src/ui — Canvas, fonts and text measuring, colors, images, springs, paths and rasterizing, and the widgets built on them (rings, buttons, the text field, icons, the dashed outline, HUD layouts). Direct2D and DirectWrite through the windows crate. Keyword triggers: Direct2D, DirectWrite, Canvas, font, text measure, clamp lines, spring, animation curve, icon, ring, image brush, cached image, Mask, Path, raster, widget, 'new icon', 'draw a chart', 'rounded corners', 'memory of drawing'. Dispatch first in a cross-area task, before `notch-host` and `notch-pages` use what it adds. Not for pages or activities (`notch-pages`), the window, hover or panel (`notch-host`), or the settings window (`settings-gpui`).
-
-<example>
-Context: A new icon.
-user: \"Add a cloud icon for the weather page\"
-assistant: \"I'll use `notch-render` — icons are drawn from points, not geometry, and have a test that keeps them in their square.\"
-<commentary>Icons live in ui/icons.rs.</commentary>
-</example>
-
-<example>
-Context: A drawing cost.
-user: \"Drawing the chart makes the notch use more memory\"
-assistant: \"I'll use `notch-render` and then `perf-auditor` to check the budget.\"
-<commentary>Geometry cost and caching are rules this agent applies.</commentary>
-</example>"
+description: 'MUST be used for ANY change under crates/notch/src/gfx or crates/notch/src/ui — Canvas, fonts, text measuring and the text cache, colors, images, springs, paths, SVG path data (gfx/svg_path.rs) and rasterizing (gfx/raster.rs), and the widgets built on them (rings, buttons, icon buttons, banner buttons, the text field, icons and SVG icons, the dashed outline, HUD layouts). Direct2D and DirectWrite through the windows crate. Keyword triggers: Direct2D, DirectWrite, Canvas, font, text measure, text cache, clamp lines, spring, animation curve, icon, svg icon, ring, image brush, cached image, Mask, Path, raster, widget, new icon, draw a chart, rounded corners, memory of drawing. Dispatch first in a cross-area task, before notch-host and notch-pages use what it adds. Not for pages or activities (notch-pages), the window or hover (notch-host), or the settings window (settings-gpui).'
 model: sonnet
 effort: high
 color: pink
@@ -31,13 +17,29 @@ Before you change anything, read:
 
 When invoked:
 1. Find the code with `codegraph_explore` before grepping.
-2. Describe shapes with `Path`, rasterize with `Mask`, and reuse them through `Canvas::cached_image`; do not use `ID2D1PathGeometry`, `FillGeometry` or `DrawGeometry`.
+2. Describe shapes with `Path` (SVG path data goes through `gfx::svg_path`), rasterize with `Mask`, and reuse them through `Canvas::cached_image`; do not use `ID2D1PathGeometry`, `FillGeometry` or `DrawGeometry`. Text that changes rarely is built once, not on every paint.
 3. Write sizes in device-independent pixels and multiply by the scale when drawing.
 4. Look up `windows` crate Direct2D and DirectWrite signatures with the Context7 MCP rather than guessing.
 5. `gfx` and `ui` stay ignorant of any particular page or activity.
 6. Add or update a unit test for each piece of logic (text measuring needs `Fonts::new(1.0)`); check drawing with `cargo test snapshots -- --ignored` and look at the pictures.
-7. Run `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test`. Tell the caller when memory or CPU could change so they can run `scripts/perf.sh`; do not run it yourself.
+7. Run `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` with your own `CARGO_TARGET_DIR`; a test never asserts on a constant. Tell the caller when memory or CPU could change so they can run `scripts/perf.sh`; do not run it yourself.
 
 Never commit.
 
 Report: what you changed, the snapshot pictures you looked at and what they showed, the check results.
+
+## When to use (examples)
+
+<example>
+Context: A new icon.
+user: "Add a cloud icon for the weather page"
+assistant: "I'll use `notch-render` — icons are drawn from points, not geometry, and have a test that keeps them in their square."
+<commentary>Icons live in ui/icons.rs; Lucide-style line icons come from SVG path data in ui/svg_icon.rs.</commentary>
+</example>
+
+<example>
+Context: A drawing cost.
+user: "Drawing the chart makes the notch use more memory"
+assistant: "I'll use `notch-render` and then `perf-auditor` to check the budget."
+<commentary>Geometry cost and caching are rules this agent applies.</commentary>
+</example>

@@ -19,3 +19,5 @@ paths:
 - Keep the `AppId` in `installer/notch.iss` fixed; changing it hides earlier installs from the installer.
 - Use the preinstalled `gh` CLI for releases rather than a third-party action.
 - Give a workflow the least permission it needs (`contents: read`; `contents: write` only for releases).
+- The release workflow's **Check the icons** step runs `scripts/check-icon.sh` on both executables: a tag with a suffix must carry the orange `tile-dev`, any other the blue `tile-stable`.
+- `scripts/test-build.sh` is the local counterpart for a teammate's installer (`dist/`); it is not part of CI.

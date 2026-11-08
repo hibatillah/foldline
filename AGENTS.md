@@ -3,9 +3,9 @@
 A Windows "dynamic island" written in Rust: a black pill at the top of the screen, drawn with Direct2D, no UI
 framework. `notch.exe` idles at 0 % CPU and stays under 50 MB of memory. Windows only.
 
-The settings window is a second program, `notch-settings.exe` (`crates/settings/`, built with GPUI), that the tray's
-**Settings** item starts. It has a higher footprint while open and is outside that budget. `crates/store/` holds the settings
-file code both programs share. Most settings also live inside the notch, in the panel opened from the right-click menu.
+The settings window is a second program, `notch-settings.exe` (`crates/settings/`, built with GPUI), that the gear in the open notch and the tray's
+**Settings** item start. It has a higher footprint while open and is outside that budget. `crates/store/` holds the settings
+file code both programs share. Settings are edited only in the settings window; the notch has no settings panel.
 
 ## Commands
 
@@ -21,8 +21,20 @@ cargo clippy --all-targets -- -D warnings
 scripts/reload.sh [--debug]               # build, start the new build, close the old one (Git Bash)
 scripts/watch.sh                          # debug build of the notch, relaunched on every saved source file (Git Bash)
 scripts/test-build.sh                     # installer (zip without Inno Setup) of the current code in dist/ for a teammate (Git Bash)
-scripts/perf.sh [--no-build]              # memory and CPU checks; moves the mouse for about two minutes
+scripts/perf.sh [--no-build]              # memory and CPU checks; moves the mouse for about three minutes
 ```
+
+Builds and checks:
+
+- Each agent or session that builds sets its own `CARGO_TARGET_DIR`, so a build never overwrites the `notch.exe` that
+  runs (a Windows file lock) or another agent's artifacts. A target directory takes about 3 to 9 GB: delete the stale
+  ones when the disk fills.
+- A `tree-sitter` build that ends incomplete in a stale target directory is fixed by `cargo clean -p tree-sitter` in
+  that directory and a new build.
+- `cargo test snapshots -- --ignored` writes the pictures of the notch's pages; the settings window has no snapshots.
+- The settings tests cannot pass while a `notch-settings.exe` window is open: its single-instance mutex makes the
+  `single_instance` test fail. Close the window first.
+- `scripts/test-build.sh` builds the current tree into `dist/` (git ignores it) as an installer, or a zip without Inno Setup.
 
 ## Find code
 
@@ -33,9 +45,15 @@ runs; `codegraph sync` catches up after changes made outside a session.
 ## Rules
 
 `.claude/rules/` holds the constraints, loaded by the paths they cover. Three always apply: `workflow.md` (checks before
-done, no commits unless asked, never kill the notch, specs and plans go to `.superpowers/`), `performance.md` (no
-polling, memory budget) and `contributions.md` (no outside contributions).
-`module-layout.md` sets how Rust files are cut (one job per file, about 400 lines) and applies to every source file.
+done, no commits unless asked, never replace the running notch except through the scripts, specs and plans go to
+`.superpowers/`), `performance.md` (no polling, memory budget) and `contributions.md` (closed source, no outside
+contributions). `module-layout.md` sets how Rust files are cut (one job per file, about 400 lines) and applies to every
+source file; `code-style.md` and `testing.md` cover the notch's Rust code and scripts.
+
+Privacy: the clipboard page, when the user switches it on, keeps the last seven copies in memory only. Nothing is
+written to disk or sent anywhere, and the history is dropped when the page is switched off or the notch quits. The
+clipboard activity ("Copied") never reads what was copied. Keep both as they are, and keep every statement about them in
+the docs true.
 
 ## Commits
 
@@ -65,7 +83,12 @@ its description; an agent without a subagent mechanism reads the matching file i
 
 A task across areas goes in this order: `notch-render`, then `notch-host` and `notch-pages`, then `settings-gpui`, then
 `perf-auditor`, then `docs-writer`. Give each agent a self-contained brief: the goal, the files or boards to read (design
-boards are in `.superpowers/design/`) and what to report.
+boards are in `.superpowers/design/`) and what to report. Agents that build run one at a time per source tree, each with
+its own `CARGO_TARGET_DIR`.
+
+The agent files, `.claude/rules/` and this file belong to the main session; `docs-writer` does not edit them. After
+editing an agent file run `claude plugin validate .claude/agents`: one unescaped `'` in a description (write `''` inside
+a single-quoted one) stops that agent from loading.
 
 ## Code layout
 
@@ -83,16 +106,33 @@ location), with the patched `salah` crate in
 | --- | --- |
 | a page: first one, or looking up a hook or rule | `docs/tutorials/add-a-page.md`, `docs/reference/page-api.md` |
 | an activity (volume, Caps Lock, notification banner) | `docs/how-to/add-an-activity.md`, `docs/reference/activities.md` |
-| a setting, a key, a control in the panel or the window | `docs/how-to/add-a-setting.md`, `docs/reference/settings-keys.md` |
+| a setting, a key, a control in the settings window | `docs/how-to/add-a-setting.md`, `docs/reference/settings-keys.md`, `docs/reference/settings-window.md` |
+| hiding Windows' own volume flyout or notification banners | `docs/how-to/hide-windows-popups.md` |
 | switching pages or activities off, or removing them | `docs/how-to/switch-off-or-remove.md` |
 | build, run, debug, a page that does not show | `docs/how-to/build-run-and-debug.md` |
 | a test, a snapshot, the manual checklist | `docs/how-to/test-and-snapshot.md`, `docs/reference/test-map.md` |
-| `perf.sh`, a CPU or memory number | `docs/how-to/run-the-perf-check.md`, `docs/reference/performance-baseline.md` |
+| `perf.sh`, a CPU or memory number | `docs/how-to/run-the-perf-check.md`, `docs/reference/performance-baseline.md`, `docs/explanation/performance-budget.md` |
 | padding, the header, the open and collapsed shapes | `docs/reference/layout.md` |
 | order, spacing, color or font of anything visible, or a new visual decision | `docs/reference/design-rules.md` |
 | restructuring, or where something lives | `docs/explanation/architecture.md`, `docs/reference/source-map.md` |
 | a dependency, a license | `docs/reference/dependencies-and-licenses.md` |
 | the installer, a release, updating | `docs/how-to/cut-a-release.md` |
+
+## Logo
+
+Two forms: a **mark** is the logo without a square, a **tile** is the logo inside the rounded square. `assets/branding/`
+holds the logo files and nothing else of the logo:
+
+| File | What it is | Used for |
+| --- | --- | --- |
+| `tile-stable.svg` / `.png` (256 px) / `.ico` | blue tile | executables, taskbar, installer and shortcuts of a stable build; the settings sidebar and About card of a stable build |
+| `tile-dev.svg` / `.png` / `.ico` | orange tile | the same for a pre-release build (alpha, beta, rc) |
+| `mark-cream.png`, `mark-charcoal.png`, `mark-orange.png` | marks without a square | archive only; nothing uses them |
+
+The settings sidebar and the About card show the tile of the build's channel (`crates/settings/src/brand.rs`), in both themes.
+The channel comes from the version (a suffix such as `-alpha.1` means dev), chosen at build time by
+`scripts/release_version.rs`. There is no nightly channel. The SVG files are the masters; the PNG and `.ico` files come from the
+designer's logo set and are committed as supplied. No script exports them.
 
 ## Design rules
 
@@ -103,5 +143,6 @@ one, say so and propose a rule with its reason for that doc; write it in the sam
 ## Debugging
 
 `NOTCH_DEBUG=<file>` writes a timestamped log (Unix milliseconds). `NOTCH_PAGES=shelf,media` picks pages,
-`NOTCH_LYRICS=off` stops lyric lookups, `NOTCH_TOP=<px>` moves the pill down. Settings are in
+`NOTCH_LYRICS=off` stops lyric lookups, `NOTCH_TOP=<px>` moves the pill down, and `NOTCH_SETTINGS_SOLID=1` gives the
+settings window an opaque frame instead of the blurred translucent one. Settings are in
 `%APPDATA%\notch\settings.txt`; every key is in `docs/reference/settings-keys.md`.
