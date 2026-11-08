@@ -15,15 +15,33 @@
   #error Pass the built settings executable with /DSourceSettingsExe=path
 #endif
 
-; Keep this ID stable so upgrades find the existing installation.
+; A version with a suffix (0.5.0-alpha.1) is a dev build: it gets the dev tile, as the executables do, and installs beside
+; every other copy instead of replacing one. A stable version replaces the stable copy that is installed.
+#if Pos("-", AppVersion) > 0
+  #define IsDevBuild
+  #define TileName "tile-dev"
+  #define AppDisplayName "Notch " + AppVersion
+#else
+  #define TileName "tile-stable"
+  #define AppDisplayName "Notch"
+#endif
+
+; Keep this ID stable so upgrades find the existing stable installation.
 #define AppGuid "{B4D1E7A2-5C3F-4F68-9A0E-2D7C61B8E4F3}"
 
 [Setup]
+#ifdef IsDevBuild
+; One identity per dev version: its own folder, Start menu entry and uninstall entry.
+AppId=B4D1E7A2-5C3F-4F68-9A0E-2D7C61B8E4F3-dev-{#AppVersion}
+AppVerName={#AppDisplayName}
+DefaultDirName={localappdata}\Programs\{#AppDisplayName}
+#else
 AppId={{B4D1E7A2-5C3F-4F68-9A0E-2D7C61B8E4F3}
-AppName=Notch
+DefaultDirName={localappdata}\Programs\Notch
+#endif
+AppName={#AppDisplayName}
 AppVersion={#AppVersion}
 AppPublisher=hibatillah
-DefaultDirName={localappdata}\Programs\Notch
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
@@ -32,14 +50,16 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 LicenseFile=..\LICENSE
-SetupIconFile=..\assets\branding\logo.ico
-WizardSmallImageFile=..\assets\branding\logo.png
+SetupIconFile=..\assets\branding\{#TileName}.ico
+WizardSmallImageFile=..\assets\branding\{#TileName}.png
 UninstallDisplayIcon={app}\{#ExeName}
 CloseApplications=force
 RestartApplications=no
 
+#ifndef IsDevBuild
 [Tasks]
 Name: "startup"; Description: "Start Notch when Windows starts"; GroupDescription: "Options:"
+#endif
 
 [Files]
 Source: "{#SourceExe}"; DestDir: "{app}"; DestName: "{#ExeName}"; Flags: ignoreversion
@@ -50,20 +70,23 @@ Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreve
 Source: "..\assets\fonts\Geist-LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\Notch"; Filename: "{app}\{#ExeName}"; IconFilename: "{app}\{#ExeName}"; IconIndex: 0
+Name: "{autoprograms}\{#AppDisplayName}"; Filename: "{app}\{#ExeName}"; IconFilename: "{app}\{#ExeName}"; IconIndex: 0
 
+#ifndef IsDevBuild
 [Registry]
-; The same entry the "Start with Windows" item in the notch's tray menu switches.
+; The same entry the "Start with Windows" item in the notch's tray menu switches; a dev build never writes it.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Notch"; ValueData: """{app}\{#ExeName}"""; Flags: uninsdeletevalue; Tasks: startup
+#endif
 
 [Run]
-Filename: "{app}\{#ExeName}"; Description: "Start Notch"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#ExeName}"; Description: "Start {#AppDisplayName}"; Flags: nowait postinstall skipifsilent
 
+#ifndef IsDevBuild
 [Code]
 const
   UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#AppGuid}_is1';
 
-{ Asks before replacing a copy that is already installed, saying which versions are involved. }
+{ Asks before replacing the stable copy that is already installed, saying which versions are involved. A dev build never asks: it installs beside the others. }
 function InitializeSetup(): Boolean;
 var
   Installed: String;
@@ -86,3 +109,4 @@ begin
     Question := 'Notch ' + Installed + ' is already installed.' + #13#10 + 'Replace it with version {#AppVersion}?';
   Result := SuppressibleMsgBox(Question, mbConfirmation, MB_YESNO, IDYES) = IDYES;
 end;
+#endif

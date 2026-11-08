@@ -3,7 +3,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-watched=(crates Cargo.toml Cargo.lock scripts/icon_resource.rs assets/branding/logo.ico assets/branding/logo.rc assets/branding/settings.rc)
+watched=(crates Cargo.toml Cargo.lock scripts/icon_resource.rs assets/branding scripts/release_version.rs)
 stamp="$(mktemp)"
 trap 'rm -f "$stamp"' EXIT
 

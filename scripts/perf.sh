@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 # Measures memory and CPU; moves the pointer while checking the limits in crates/notch/examples/perf.rs.
 #
-#   scripts/perf.sh                 build and check (about two minutes)
+#   scripts/perf.sh                 build and check (about three minutes): shelf, then devices, then stats
+#     devices: CPU per open+close cycle 400 ms, idle after cycles 0.1 %, handle growth 20
+#     stats: CPU idle after closing the page 0.1 % (its 1 Hz timer and counters stop), handle growth 20
 #   scripts/perf.sh --no-build      reuse the release build
 #   scripts/perf.sh --with-media    also sample normal pages with music playing
 #   scripts/perf.sh --extended      also sample hover, swipes and recovery
 #   scripts/perf.sh --lyrics-only   compare live synced lyrics on/off
+#   scripts/perf.sh --screen-mode   also maximize and restore a test window it opens: CPU per toggle 100 ms,
+#                                   idle after 0.1 %, handle growth 20
 #
+# An idle sample disturbed by an outside event in the debug log (Windows wrote its notification database, or an
+# activity changed the pill) is taken again, three samples at most.
 # Hands off the mouse while it runs: it moves the pointer to open and close the notch.
 # The test starts its own notch, which asks a running notch to close; start yours again with scripts/reload.sh.
 set -euo pipefail
@@ -20,7 +26,8 @@ for argument in "$@"; do
         --with-media) extra_arguments+=(--with-media) ;;
         --extended) extra_arguments+=(--extended) ;;
         --lyrics-only) extra_arguments+=(--lyrics-only) ;;
-        -h | --help) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --screen-mode) extra_arguments+=(--screen-mode) ;;
+        -h | --help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "unknown option: $argument" >&2; exit 2 ;;
     esac
 done

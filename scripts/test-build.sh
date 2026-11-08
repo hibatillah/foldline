@@ -6,6 +6,9 @@ cd "$(dirname "$0")/.."
 name=$(grep -m1 '^name' crates/notch/Cargo.toml | cut -d'"' -f2)
 settings_name=$(grep -A3 '^\[\[bin\]\]' crates/settings/Cargo.toml | grep -m1 '^name' | cut -d'"' -f2)
 version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+# A pre-release tag of this series makes the build a dev build (build.rs does the same), so the installer must use its version.
+latest_tag=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)
+case "$latest_tag" in "v$version"-?*) version="${latest_tag#v}" ;; esac
 commit=$(git rev-parse --short HEAD 2>/dev/null || echo nogit)
 git diff --quiet HEAD 2>/dev/null || commit="$commit-dirty"
 package="$name-$version-test-$commit-windows-x64"

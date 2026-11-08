@@ -1,4 +1,4 @@
-// Shared by the build scripts of the notch and settings crates (`include!`): compiles one icon resource file.
+// Shared by the build scripts of the notch and settings crates (`include!`): embeds one icon as a resource.
 use std::{env, error::Error, fs, io, path::PathBuf, process::Command};
 
 fn resource_compiler() -> io::Result<PathBuf> {
@@ -33,22 +33,34 @@ fn resource_compiler() -> io::Result<PathBuf> {
     ))
 }
 
-/// Compiles `rc_file` in `branding_directory` (relative to the package) and links the result into the executable.
-fn compile_icon_resource(branding_directory: &str, rc_file: &str) -> Result<(), Box<dyn Error>> {
-    println!("cargo:rerun-if-changed={branding_directory}/{rc_file}");
-    println!("cargo:rerun-if-changed={branding_directory}/logo.ico");
+/// Embeds `icon_file` of `branding_directory` (relative to the package) as the icon resource `resource_name`.
+///
+/// The resource script is written to `OUT_DIR`, so the icon of a build can differ (see `scripts/release_version.rs`).
+fn compile_icon_resource(
+    branding_directory: &str,
+    resource_name: &str,
+    icon_file: &str,
+) -> Result<(), Box<dyn Error>> {
+    println!("cargo:rerun-if-changed={branding_directory}/{icon_file}");
     println!("cargo:rerun-if-env-changed=WindowsSdkDir");
     if env::var("CARGO_CFG_TARGET_OS")? != "windows" {
         return Ok(());
     }
 
-    let resources = PathBuf::from(env::var_os("OUT_DIR").ok_or("OUT_DIR is missing")?).join("logo.res");
+    let output_directory = PathBuf::from(env::var_os("OUT_DIR").ok_or("OUT_DIR is missing")?);
+    let icon_path = fs::canonicalize(PathBuf::from(branding_directory).join(icon_file))?;
+    // `rc.exe` reads backslashes in a string as escapes, and canonicalize adds the `\\?\` prefix.
+    let icon_path = icon_path.to_string_lossy().trim_start_matches(r"\\?\").replace('\\', "/");
+    let resource_script = output_directory.join("icon.rc");
+    fs::write(&resource_script, format!("{resource_name} ICON \"{icon_path}\"\n"))?;
+
+    let resources = output_directory.join("icon.res");
     let status = Command::new(resource_compiler()?)
-        .current_dir(branding_directory)
+        .current_dir(&output_directory)
         .arg("/nologo")
         .arg("/fo")
         .arg(&resources)
-        .arg(rc_file)
+        .arg(&resource_script)
         .status()?;
     if !status.success() {
         return Err(format!("Windows icon resource compilation failed: {status}").into());
