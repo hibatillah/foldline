@@ -2,6 +2,7 @@
 
 mod activity_layout;
 mod chrome;
+mod claimed_row;
 mod clock;
 mod display;
 mod drop_target;
@@ -9,16 +10,17 @@ mod icon;
 mod motion;
 mod navigation;
 mod notch;
-mod page_editor;
+mod notification_banners;
+mod pill_row;
 mod registry;
 mod screen_mode;
 mod scroll_gate;
 mod settings;
 mod settings_launcher;
-mod settings_panel;
 mod startup;
 mod tray;
 mod visibility;
+mod volume_flyout;
 mod window;
 
 pub use settings::Settings;

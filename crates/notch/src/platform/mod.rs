@@ -31,6 +31,16 @@ use windows::{
 };
 
 pub mod app_icon;
+pub mod bluetooth_devices;
+pub mod clipboard;
+pub mod dongle_devices;
+pub mod notification_settings;
+mod paste;
+mod power;
+pub mod toast_activation;
+
+pub use paste::{paste_target, send_paste};
+pub use power::has_system_battery;
 
 use crate::gfx::ImageData;
 

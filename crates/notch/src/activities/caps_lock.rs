@@ -91,10 +91,22 @@ impl Activity for CapsLockActivity {
     }
 
     fn presence(&self) -> Option<Presence> {
-        self.flash.is_visible().then_some(Presence::Transient { width: self.width })
+        if self.flash.is_visible() {
+            Some(Presence::Transient { width: self.width })
+        } else {
+            self.is_on.then_some(Presence::Badge { width: Icon::CapsLock.size() })
+        }
     }
 
-    fn draw(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn header_status_rank(&self) -> u8 {
+        1
+    }
+
+    fn draw(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+        if !self.flash.is_visible() {
+            self.draw_header_status(canvas, area, scale, opacity);
+            return;
+        }
         let tint = if self.is_on { Color::WHITE } else { Color::gray(0.6) };
         ui::draw_message(canvas, area, opacity, Icon::CapsLock, tint, message(self.is_on), None);
     }
@@ -160,7 +172,32 @@ mod tests {
     }
 
     #[test]
-    fn nothing_shows_in_the_pill_until_the_lock_changes() {
+    fn nothing_shows_in_the_pill_while_the_lock_is_off_and_quiet() {
         assert_eq!(CapsLockActivity::new().presence(), None);
+    }
+
+    #[test]
+    fn a_lock_that_is_on_stays_as_an_icon_badge_without_a_message() {
+        let mut activity = CapsLockActivity::new();
+        activity.is_on = true;
+        assert_eq!(activity.presence(), Some(Presence::Badge { width: Icon::CapsLock.size() }));
+    }
+
+    #[test]
+    fn the_message_takes_over_while_it_shows_and_the_badge_returns_after() {
+        let mut activity = CapsLockActivity::new();
+        activity.width = 90.0;
+        activity.flash = Flash::visible();
+        assert_eq!(activity.presence(), Some(Presence::Transient { width: 90.0 }));
+        activity.is_on = true;
+        assert_eq!(activity.presence(), Some(Presence::Transient { width: 90.0 }));
+        activity.flash = Flash::default();
+        assert_eq!(activity.presence(), Some(Presence::Badge { width: Icon::CapsLock.size() }));
+    }
+
+    #[test]
+    fn caps_lock_ranks_right_after_the_wave() {
+        assert_eq!(CapsLockActivity::new().header_status_rank(), 1);
+        assert_eq!(CapsLockActivity::new().header_status_page(), None);
     }
 }

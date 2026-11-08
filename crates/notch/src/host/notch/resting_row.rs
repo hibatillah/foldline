@@ -1,0 +1,270 @@
+//! The idle pill's row (clock, group, battery ring, dots) and the claimed pill's row; the open header's is in
+//! `header_row.rs`.
+
+use std::cmp::Reverse;
+
+use super::{HEADER_STAGE, Notch, Source, row_motion::RowItem};
+use crate::host::{
+    chrome,
+    claimed_row::ClaimedRow,
+    clock,
+    pill_row::{self, Row, RowInput},
+};
+use crate::{
+    gfx::{Canvas, Point, Rect, lerp},
+    page::{Frame, RESTING_HEIGHT, RESTING_MIN_WIDTH},
+};
+
+/// Companions and badges of the collapsed pill and the rows they give, rebuilt after every activity event.
+#[derive(Default)]
+pub(super) struct RestingRow {
+    /// The battery ring; empty on a PC.
+    pub(super) ring: Vec<(Source, f32)>,
+    pub(super) dots: Vec<(Source, f32)>,
+    pub(super) layout: Row,
+    pub(super) claim: ClaimedRow,
+    /// What the claimed pill shows between the line and the dot column: the statics, highest rank first, then one
+    /// countdown.
+    pub(super) claimed_group: Vec<(Source, f32)>,
+    /// Several badges with text share the idle pill, so each draws its short form.
+    pub(super) uses_short_badges: bool,
+}
+
+pub(super) struct RowOpacity {
+    pub(super) clock: f32,
+    pub(super) dots: f32,
+    pub(super) header: f32,
+}
+
+impl RestingRow {
+    /// Zero while no dot shows: the column reserves no room.
+    pub(super) fn dots_width(&self) -> f32 {
+        self.dots.iter().map(|&(_, width)| width).fold(0.0, f32::max)
+    }
+
+    /// The battery ring and the dot column, the fixed right end of the idle and header groups.
+    pub(super) fn right_end(&self) -> Vec<(RowItem, f32)> {
+        let ring = self.ring.iter().map(|&(source, width)| (RowItem::Source(source), width));
+        let dots = (!self.dots.is_empty()).then(|| (RowItem::Dots, self.dots_width()));
+        ring.chain(dots).collect()
+    }
+}
+
+/// The claimed pill's group: the statics (badges without a countdown, the music wave left out) highest rank first,
+/// then the one countdown with the least time left. `countdown` gives a badge's seconds left, `None` for a static.
+pub(super) fn claimed_group(
+    badges: &[(Source, f32)],
+    rank: impl Fn(Source) -> u8,
+    countdown: impl Fn(Source) -> Option<u64>,
+    is_music: impl Fn(Source) -> bool,
+) -> Vec<(Source, f32)> {
+    let mut statics: Vec<(Source, f32)> =
+        badges.iter().copied().filter(|&(source, _)| !is_music(source) && countdown(source).is_none()).collect();
+    statics.sort_by_key(|&(source, _)| Reverse(rank(source)));
+    let nearest = badges
+        .iter()
+        .copied()
+        .filter_map(|(source, width)| countdown(source).map(|seconds| (seconds, source, width)))
+        .min_by_key(|&(seconds, _, _)| seconds);
+    statics.extend(nearest.map(|(_, source, width)| (source, width)));
+    statics
+}
+
+impl Notch {
+    /// Header status and pill badge share one order: lower ranks sit nearer the time.
+    pub(super) fn rank_of(&self, source: Source) -> u8 {
+        match source {
+            Source::Page(index) => self.pages[index].header_status_rank(),
+            Source::Activity(index) => self.activities[index].activity.header_status_rank(),
+        }
+    }
+
+    /// The music wave is the badge of a page with a lead (artwork) width; it is not an activity.
+    pub(super) fn is_music_badge(&self, source: Source) -> bool {
+        matches!(source, Source::Page(index) if self.pages[index].resting_lead_width() > 0.0)
+    }
+
+    pub(super) fn has_music_badge(&self) -> bool {
+        self.shown_badges.iter().any(|&(source, _)| self.is_music_badge(source))
+    }
+
+    pub(super) fn countdown_of(&self, source: Source) -> Option<u64> {
+        match source {
+            Source::Page(index) => self.pages[index].countdown_seconds(),
+            Source::Activity(_) => None,
+        }
+    }
+
+    /// With two or more badges that have a short form, every such badge takes it; true when that happened.
+    pub(super) fn shortens_badges(&self, badges: &mut [(Source, f32)]) -> bool {
+        let short_width = |source: Source| match source {
+            Source::Page(index) => self.pages[index].short_presence_width(),
+            Source::Activity(_) => None,
+        };
+        if badges.iter().filter(|&&(source, _)| short_width(source).is_some()).count() < 2 {
+            return false;
+        }
+        for (source, width) in badges.iter_mut() {
+            if let Some(short) = short_width(*source) {
+                *width = short;
+            }
+        }
+        true
+    }
+
+    /// The idle group left to right: badges by rank, the battery ring, the dot column.
+    pub(super) fn idle_items(&self) -> Vec<(RowItem, f32)> {
+        let badges = self.shown_badges.iter().map(|&(source, width)| (RowItem::Source(source), width));
+        badges.chain(self.resting_row.right_end()).collect()
+    }
+
+    pub(super) fn claimed_items(&self) -> Vec<(RowItem, f32)> {
+        self.resting_row.claimed_group.iter().map(|&(source, width)| (RowItem::Source(source), width)).collect()
+    }
+
+    pub(super) fn claimed_pill_width(&self, index: usize) -> f32 {
+        self.resting_row.claim.pill_width(self.pages[index].sizes().resting_width).max(RESTING_MIN_WIDTH)
+    }
+
+    pub(super) fn refresh_resting_row(&mut self) {
+        let group_widths: Vec<f32> = self.idle_items().iter().map(|&(_, width)| width).collect();
+        self.resting_row.layout = pill_row::idle_row(&RowInput {
+            clock_width: clock::layout_width(&self.fonts),
+            group_widths: &group_widths,
+            minimum_width: clock::RESTING_WIDTH,
+        });
+        let lead_width = self.resting_index.map_or(0.0, |index| self.pages[index].resting_lead_width());
+        let claimed_widths: Vec<f32> = self.resting_row.claimed_group.iter().map(|&(_, width)| width).collect();
+        self.resting_row.claim = ClaimedRow::new(lead_width, self.resting_row.dots_width(), &claimed_widths);
+    }
+
+    /// Draws `badges` at the places their springs hold, measured from the pill's right edge.
+    fn draw_badges_at_springs(
+        &self,
+        canvas: &Canvas,
+        frame: &Frame,
+        badges: &[(Source, f32)],
+        short: bool,
+        opacity: f32,
+    ) {
+        let (bounds, scale) = (frame.bounds, self.scale);
+        let (top, bottom) = (bounds.top, bounds.top + RESTING_HEIGHT * scale);
+        for &(source, width) in badges {
+            let Some(inset) = self.row_motion.resting.position(RowItem::Source(source)) else { continue };
+            let left = bounds.right - inset * scale;
+            self.draw_badge(source, canvas, Rect::new(left, top, left + width * scale, bottom), short, opacity);
+        }
+    }
+
+    /// The idle group's badges; the ring and the dots travel to the header, so `draw_row` draws them.
+    pub(super) fn draw_group(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
+        self.draw_badges_at_springs(canvas, frame, &self.shown_badges, self.resting_row.uses_short_badges, opacity);
+    }
+
+    /// The claimed pill's group, each badge in its long form.
+    pub(super) fn draw_claimed_group(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
+        self.draw_badges_at_springs(canvas, frame, &self.resting_row.claimed_group, false, opacity);
+    }
+
+    /// The x of an item's left edge in device pixels: its collapsed place moving to its header place as the notch
+    /// opens. An item missing from one row stays at its place in the other.
+    fn traveling_left(&self, item: RowItem, collapsed: Option<f32>, bounds: Rect, amount: f32) -> Option<f32> {
+        let header = chrome::header_rect(bounds, self.scale);
+        let open = self.row_motion.header.position(item).map(|inset| header.right - inset * self.scale);
+        match (collapsed, open) {
+            (Some(collapsed), Some(open)) => Some(lerp(collapsed, open, amount)),
+            (place, None) | (None, place) => place,
+        }
+    }
+
+    pub(super) fn draw_row(&self, canvas: &Canvas, frame: &Frame, opacity: &RowOpacity) {
+        let (bounds, scale) = (frame.bounds, self.scale);
+        let amount = (frame.expansion / HEADER_STAGE).clamp(0.0, 1.0);
+        let header = chrome::header_rect(bounds, scale);
+        let collapsed_y = bounds.top + RESTING_HEIGHT * scale / 2.0;
+        let center_y = lerp(collapsed_y, header.center_y(), amount);
+        let half_height = RESTING_HEIGHT * scale / 2.0;
+        let collapsed_inset = |item| self.row_motion.resting.position(item).map(|inset| bounds.right - inset * scale);
+
+        if opacity.clock > 0.01 {
+            let collapsed = Point::new(bounds.left + self.idle_clock_center() * scale, collapsed_y);
+            let open = Point::new(header.center_x(), header.center_y());
+            let center = clock::center(collapsed, open, amount);
+            clock::draw_time(canvas, Rect::around(center, clock::HALF_WIDTH * scale, half_height), opacity.clock);
+            for &(source, width) in &self.resting_row.ring {
+                let item = RowItem::Source(source);
+                let collapsed = if self.resting_index.is_none() { collapsed_inset(item) } else { None };
+                let Some(left) = self.traveling_left(item, collapsed, bounds, amount) else { continue };
+                let area = Rect::new(left, center_y - half_height, left + width * scale, center_y + half_height);
+                self.draw_source(source, canvas, area, opacity.clock);
+            }
+        }
+        if opacity.dots > 0.01 && !self.resting_row.dots.is_empty() {
+            let width = self.resting_row.dots_width();
+            if let Some(left) = self.traveling_left(RowItem::Dots, collapsed_inset(RowItem::Dots), bounds, amount) {
+                let area = Rect::new(left, center_y - half_height, left + width * scale, center_y + half_height);
+                for &(source, _) in &self.resting_row.dots {
+                    self.draw_source(source, canvas, area, opacity.dots);
+                }
+            }
+        }
+        if opacity.header > 0.01 {
+            self.draw_header_marks(canvas, bounds, opacity.header);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const WAVE: Source = Source::Page(0);
+    const CAPS: Source = Source::Activity(1);
+    const MUTED: Source = Source::Activity(2);
+    const TIMER: Source = Source::Page(3);
+    const EVENT: Source = Source::Page(4);
+    const PRAYER: Source = Source::Page(5);
+
+    fn rank(source: Source) -> u8 {
+        match source {
+            WAVE => 0,
+            CAPS => 1,
+            MUTED => 2,
+            TIMER => 3,
+            EVENT => 4,
+            _ => 5,
+        }
+    }
+
+    fn group(badges: &[Source], seconds: impl Fn(Source) -> Option<u64>) -> Vec<Source> {
+        let badges: Vec<(Source, f32)> = badges.iter().map(|&source| (source, 10.0)).collect();
+        claimed_group(&badges, rank, seconds, |source| source == WAVE).into_iter().map(|(source, _)| source).collect()
+    }
+
+    fn countdowns(source: Source) -> Option<u64> {
+        match source {
+            TIMER => Some(600),
+            EVENT => Some(300),
+            PRAYER => Some(1500),
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn the_lyric_pill_shows_muted_then_caps_lock_then_the_countdown_with_the_least_time_left() {
+        let all = [WAVE, CAPS, MUTED, TIMER, EVENT, PRAYER];
+        assert_eq!(group(&all, countdowns), [MUTED, CAPS, EVENT]);
+    }
+
+    #[test]
+    fn the_lyric_pill_never_shows_the_wave_and_keeps_a_lone_countdown() {
+        assert_eq!(group(&[WAVE, PRAYER], countdowns), [PRAYER]);
+        assert_eq!(group(&[WAVE], countdowns), Vec::<Source>::new());
+    }
+
+    #[test]
+    fn a_countdown_that_runs_out_sooner_takes_the_place_of_the_other() {
+        let timer_first = |source| if source == TIMER { Some(30) } else { countdowns(source) };
+        assert_eq!(group(&[CAPS, TIMER, EVENT], timer_first), [CAPS, TIMER]);
+    }
+}

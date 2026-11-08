@@ -1,6 +1,7 @@
 //! What the notch shows over maximized and full-screen windows and while idle.
 
 use super::*;
+use crate::{gfx::Point, page::PointerEvent};
 
 #[test]
 fn a_notch_with_nothing_to_do_hides_over_a_maximized_window_and_shows_otherwise() {
@@ -84,6 +85,7 @@ fn leaving_full_screen_with_default_settings_keeps_the_pill_at_full_size_without
     assert!(!notch.is_hidden(), "a suppressed notch keeps its full-size layout");
     assert_eq!(notch.springs.resting_height.target, RESTING_PILL_HEIGHT);
     notch.set_screen_mode(ScreenMode::Normal);
+    notch.timer_fired(WINDOW_REVEAL_TIMER_ID);
     assert_eq!(notch.springs.resting_height.target, RESTING_PILL_HEIGHT);
     assert!(!notch.is_animating);
 }
@@ -108,10 +110,29 @@ fn fullscreen_hidden_suppresses_the_window() {
     notch.shown_banner = Some((Source::Activity(0), 330.0, 70.0));
     assert!(notch.is_suppressed(), "hidden hides even an activity");
     notch.set_screen_mode(ScreenMode::Normal);
+    notch.timer_fired(WINDOW_REVEAL_TIMER_ID);
     assert!(!notch.is_suppressed());
     notch.hiding.maximized_showing = Showing::Hidden;
     notch.set_screen_mode(ScreenMode::Maximized);
     assert!(notch.is_suppressed(), "hidden over a maximized window suppresses too");
+}
+
+#[test]
+fn a_screenshot_overlay_hides_everything_and_hover_never_opens_the_notch() {
+    let mut notch = rig(SampleOptions::default());
+    notch.hiding.maximized_showing = Showing::Music;
+    notch.hiding.fullscreen_showing = Showing::Music;
+    notch.hiding.opens_on_hover_over_maximized = true;
+    notch.hiding.opens_on_hover_over_fullscreen = true;
+    notch.set_screen_mode(ScreenMode::Capture);
+    assert!(notch.is_suppressed());
+    notch.shown_banner = Some((Source::Activity(0), 330.0, 70.0));
+    assert!(notch.is_suppressed(), "a banner stays hidden over the overlay");
+    assert!(!notch.opens_on_hover());
+    notch.set_hovering(true);
+    notch.timer_fired(REVEAL_TIMER_ID);
+    notch.timer_fired(EXPAND_TIMER_ID);
+    assert_eq!(notch.springs.expansion.target, 0.0, "pointing at the top edge does not open the notch");
 }
 
 #[test]
@@ -160,7 +181,7 @@ fn maximized_music_keeps_music_visible_regardless_of_lyrics_and_idle_settings() 
 }
 
 #[test]
-fn hovering_a_cut_banner_makes_the_pill_taller_and_keeps_its_width() {
+fn pointing_at_a_collapsed_banner_reaches_its_activity_and_makes_room_for_the_buttons() {
     let fonts = Fonts::new(SCALE).unwrap();
     let body = "Deploy is green. Can you check the hover state on the 1440p monitor before we tag it? ".repeat(3);
     let activity = crate::activities::notifications::NotificationsActivity::sample_with_body(&fonts, &body);
@@ -168,7 +189,9 @@ fn hovering_a_cut_banner_makes_the_pill_taller_and_keeps_its_width() {
     notch.activities[0].is_started = true;
     settle(&mut notch);
     let (calm_width, calm_height) = (notch.springs.resting_width.target, notch.springs.resting_height.target);
+    let (_, area) = notch.banner_area(&notch.frame()).expect("the banner shows");
     notch.set_hovering(true);
+    notch.route_pointer(PointerEvent::Moved(Point::new(area.center_x(), area.center_y())));
     notch.flush();
     assert_eq!(notch.springs.resting_width.target, calm_width);
     assert!(

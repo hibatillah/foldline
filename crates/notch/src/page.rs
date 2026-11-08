@@ -10,10 +10,9 @@ use windows::{
 };
 
 use crate::{
-    activity::Presence,
+    activity::{Presence, SystemMessage},
     gfx::{Canvas, Fonts, ImageBrush, ImageData, Point, Rect, Size, Surface},
     host::Settings,
-    ui::Icon,
 };
 
 /// Device-independent pixels; resting content is centered within this height.
@@ -66,6 +65,8 @@ pub struct Frame {
     pub expansion: f32,
     /// The content size in device-independent pixels; visible pages retain their own width during navigation.
     pub expanded: Size,
+    /// Width in DIP the host keeps free after `Page::resting_lead_width` while the page claims the pill (the dot column).
+    pub lead_gap: f32,
 }
 
 impl Frame {
@@ -83,6 +84,10 @@ pub enum PointerEvent {
     Left,
     CaptureLost,
     SecondaryReleased(Point),
+    /// The wheel or a touchpad swipe over a page that `Page::claims_scroll`: positive moves toward later content.
+    Scrolled {
+        notches: f32,
+    },
 }
 
 /// Typing delivered to the page that holds the keyboard (`Context::take_keyboard`).
@@ -98,54 +103,6 @@ pub enum KeyInput {
     End,
     Enter,
     Escape,
-}
-
-/// One setting the notch draws in its settings panel, saved under one settings key.
-#[derive(Clone, Debug, PartialEq)]
-pub enum Control {
-    /// Saved as `on` or `off`.
-    Switch { key: &'static str, label: &'static str, hint: &'static str, default: bool },
-    /// A whole number changed by - and + in steps, saved as digits (with a minus sign when negative).
-    Stepper { key: &'static str, label: &'static str, unit: &'static str, default: i32, min: i32, max: i32, step: i32 },
-    /// One word out of `options` (saved word, shown label).
-    Choice {
-        key: &'static str,
-        label: &'static str,
-        options: &'static [(&'static str, &'static str)],
-        default: &'static str,
-    },
-    /// Typed in the notch; a secret shows dots.
-    Text { key: &'static str, label: &'static str, placeholder: &'static str, is_secret: bool },
-    /// Typed in the notch; `Page::search` lists matches and picking one saves its values. `key` holds the shown name.
-    Search { key: &'static str, label: &'static str, placeholder: &'static str },
-    /// Up to `max` of `options`, saved as a comma list in the order picked; no saved list means the first ones.
-    Picks { key: &'static str, label: &'static str, options: Vec<String>, max: usize },
-}
-
-impl Control {
-    pub fn key(&self) -> &'static str {
-        match self {
-            Control::Switch { key, .. }
-            | Control::Stepper { key, .. }
-            | Control::Choice { key, .. }
-            | Control::Text { key, .. }
-            | Control::Search { key, .. }
-            | Control::Picks { key, .. } => key,
-        }
-    }
-}
-
-/// One match of a `Control::Search`: what it shows, and the settings keys picking it writes.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SearchHit {
-    pub label: String,
-    pub values: Vec<(&'static str, String)>,
-}
-
-/// A tab of a page's settings in the notch's panel.
-pub struct SettingsGroup {
-    pub title: &'static str,
-    pub controls: Vec<Control>,
 }
 
 /// Identifies one of a page's timers. Must be below `TIMERS_PER_PAGE` (16).
@@ -190,8 +147,13 @@ pub trait Page {
     fn on_pointer(&mut self, _event: PointerEvent, _frame: &Frame, _context: &mut Context) {}
 
     /// Whether a right-click at `point` means something on this page. When it does the page gets
-    /// `PointerEvent::SecondaryReleased`; otherwise the host opens its own menu.
+    /// `PointerEvent::SecondaryReleased`; otherwise the right-click does nothing.
     fn uses_right_click(&self, _point: Point, _frame: &Frame) -> bool {
+        false
+    }
+
+    /// Whether the vertical wheel at `point` scrolls something on this page instead of switching pages.
+    fn claims_scroll(&self, _point: Point, _frame: &Frame) -> bool {
         false
     }
 
@@ -206,21 +168,13 @@ pub trait Page {
     /// A background thread called this page's `Notifier`: read the shared state and request a repaint.
     fn on_notify(&mut self, _context: &mut Context) {}
 
-    /// The page's own settings, shown in the first tab of the notch's settings panel; empty means none.
-    fn settings(&self) -> Vec<Control> {
-        Vec::new()
-    }
+    /// A Windows message a page asked to hear about (`Context::listen_to_clipboard`); only pages that are switched on
+    /// receive it, so a page that is off never sees what the user copies.
+    fn on_system_message(&mut self, _message: &SystemMessage, _context: &mut Context) {}
 
-    /// The page's settings as tabs; a page with more settings than one tab holds overrides this.
-    fn settings_groups(&self) -> Vec<SettingsGroup> {
-        let controls = self.settings();
-        if controls.is_empty() { Vec::new() } else { vec![SettingsGroup { title: self.name(), controls }] }
-    }
-
-    /// Matches for what was typed into a `Control::Search`, best first; at most a handful.
-    fn search(&self, _key: &str, _query: &str) -> Vec<SearchHit> {
-        Vec::new()
-    }
+    /// The user switched this page on or off in the settings window; also called once at start with the current state.
+    /// A page that holds personal data drops it when `is_enabled` is false.
+    fn on_enabled_changed(&mut self, _is_enabled: bool, _context: &mut Context) {}
 
     /// Called after another program changed settings.txt and the host re-read it: re-read this page's keys here.
     fn on_settings_changed(&mut self, _context: &mut Context) {}
@@ -230,8 +184,37 @@ pub trait Page {
         None
     }
 
+    /// Width in DIP of what the claimed pill draws at its left end; the host leaves the dot column after it.
+    fn resting_lead_width(&self) -> f32 {
+        0.0
+    }
+
     /// Draws what `presence` asked for into `area` (device pixels), faded by `opacity`.
     fn draw_presence(&self, _canvas: &Canvas, _area: Rect, _scale: f32, _opacity: f32) {}
+
+    /// Pointer input over this page's banner while the notch is collapsed; `area` and `scale` are what `draw_presence`
+    /// got. `PointerEvent::Left` means the pointer left the banner.
+    fn on_presence_pointer(&mut self, _event: PointerEvent, _area: Rect, _scale: f32, _context: &mut Context) {}
+
+    /// Width in DIP of the badge in its short form, used when several badges share the pill; `None` has no short form.
+    fn short_presence_width(&self) -> Option<f32> {
+        None
+    }
+
+    /// Draws the badge in its short form into `area`; the long form when the page has no short one.
+    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+        self.draw_presence(canvas, area, scale, opacity);
+    }
+
+    /// The id of the page a click on this page's header status opens; `None` when it opens nothing.
+    fn header_status_page(&self) -> Option<&'static str> {
+        None
+    }
+
+    /// Seconds left on the countdown this page shows as a badge or header mark; `None` when it shows no countdown.
+    fn countdown_seconds(&self) -> Option<u64> {
+        None
+    }
 
     /// Draws behind the header and content; pill is the whole notch, frame is this page's content.
     /// Bounds and radius are device pixels.
@@ -255,13 +238,9 @@ pub trait Page {
     /// Draws the status mark into `area` (device pixels, as high as the header), faded by `opacity`.
     fn draw_header_status(&self, _canvas: &Canvas, _area: Rect, _scale: f32, _opacity: f32) {}
 
-    /// What the Pages tab and the settings panel call the page.
+    /// What the settings window's page list calls the page.
     fn name(&self) -> &'static str {
         self.id()
-    }
-
-    fn icon(&self) -> Icon {
-        Icon::Clock
     }
 
     /// True for a page that starts switched off until the user adds it.
@@ -281,6 +260,10 @@ pub(crate) struct Requests {
     pub animate: bool,
     /// The page that asked for the keyboard (`true`) or gave it back (`false`).
     pub keyboard: Option<(usize, bool)>,
+    /// A page asked the notch to close, for example after it pasted into another window.
+    pub close: bool,
+    /// A page asked the notch to open on it, for example from a button on its banner.
+    pub open_page: Option<usize>,
 }
 
 pub struct Context<'a> {
@@ -371,6 +354,23 @@ impl<'a> Context<'a> {
         self.requests.keyboard = Some((self.owner_index, false));
     }
 
+    /// Closes the open notch as if the pointer had left it.
+    pub fn request_close(&mut self) {
+        self.requests.close = true;
+    }
+
+    /// Opens the notch on this page; an activity calling it changes nothing, since it has no page to open.
+    pub fn request_open(&mut self) {
+        if self.timer_base == PAGE_TIMER_BASE {
+            self.requests.open_page = Some(self.owner_index);
+        }
+    }
+
+    /// The notch window, for the few Windows calls that need an owner (writing the clipboard).
+    pub(crate) fn window(&self) -> HWND {
+        self.window
+    }
+
     pub fn notifier(&self) -> Notifier {
         Notifier { window_address: self.window.0 as isize, owner_index: self.owner_index, message: self.notify_message }
     }
@@ -446,7 +446,13 @@ mod tests {
 
     #[test]
     fn the_notch_counts_as_open_from_80_percent() {
-        let frame = |expansion| Frame { scale: 1.0, bounds: Rect::default(), expansion, expanded: Size::new(0.0, 0.0) };
+        let frame = |expansion| Frame {
+            scale: 1.0,
+            bounds: Rect::default(),
+            expansion,
+            expanded: Size::new(0.0, 0.0),
+            lead_gap: 0.0,
+        };
         assert!(!frame(0.79).is_open());
         assert!(frame(0.8).is_open());
         assert!(frame(1.05).is_open());

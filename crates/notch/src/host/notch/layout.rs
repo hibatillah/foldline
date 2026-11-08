@@ -1,25 +1,21 @@
-use super::{HIDDEN_WIDTH, Notch, PAGE_GAP, RESTING_BOTTOM_PADDING, RESTING_PILL_HEIGHT, Source};
-use crate::host::{
-    activity_layout::{self, BADGE_EDGE_PADDING},
-    chrome, clock, navigation,
-};
+use super::{HIDDEN_WIDTH, Notch, PAGE_GAP, RESTING_BOTTOM_PADDING, RESTING_PILL_HEIGHT, Source, resting_row};
+use crate::host::{activity_layout, chrome, navigation};
 use crate::{
-    activity::Presence,
+    activity::{Presence, Slot},
     gfx::{Point, Size, Spring},
-    page::{Frame, Mode, Priority},
+    log,
+    page::{Frame, Mode, Priority, RESTING_MIN_WIDTH},
 };
 
 const DRAG_GROWTH: Size = Size::new(28.0, 14.0);
 /// The page area of the open notch while no page has anything to show: only the header remains.
 const EMPTY_PAGE_SIZE: Size = Size::new(220.0, 0.0);
+/// The page whose open width every page opens at least as wide as, while it is switched on.
+pub(super) const WIDTH_FLOOR_PAGE_ID: &str = "timer";
 
 /// A page's own content height, capped to what the window holds; nothing reported means the shared default.
 pub(super) fn content_height(reported: f32) -> f32 {
     if reported > 0.0 { reported.min(crate::page::MAX_CONTENT_HEIGHT) } else { crate::page::DEFAULT_CONTENT_HEIGHT }
-}
-
-pub(super) fn badge_space(badges: &[(Source, f32)]) -> f32 {
-    if badges.is_empty() { 0.0 } else { badges.iter().map(|&(_, width)| width).sum::<f32>() + BADGE_EDGE_PADDING }
 }
 
 pub(super) fn highest_priority(priorities: impl IntoIterator<Item = Option<Priority>>) -> Option<usize> {
@@ -45,6 +41,18 @@ impl Notch {
         let index = if self.navigable.len() < 2 { index } else { self.page_at(self.track.position) };
         let frame = self.natural_page_frame(index, &viewport, 0.0);
         self.pages[index].uses_right_click(point, &frame)
+    }
+
+    /// Whether the open page scrolls something at `point` with the vertical wheel.
+    pub(super) fn page_claims_scroll(&self, point: Point) -> bool {
+        let Some(index) = self.expanded_index else { return false };
+        let viewport = self.frame();
+        if !viewport.is_open() || !crate::host::chrome::content_rect(viewport.bounds, self.scale).contains(point) {
+            return false;
+        }
+        let index = if self.navigable.len() < 2 { index } else { self.page_at(self.track.position) };
+        let frame = self.natural_page_frame(index, &viewport, 0.0);
+        self.pages[index].claims_scroll(point, &frame)
     }
 
     pub(super) fn natural_page_frame(&self, index: usize, viewport: &Frame, center_offset: f32) -> Frame {
@@ -90,9 +98,7 @@ impl Notch {
     }
 
     pub(super) fn sync_shown_page(&mut self) -> bool {
-        let shown = ((self.hover.is_hovering || self.keyboard.owner.is_some()) && self.editor.is_none())
-            .then_some(self.expanded_index)
-            .flatten();
+        let shown = (self.hover.is_hovering || self.keyboard.owner.is_some()).then_some(self.expanded_index).flatten();
         if shown == self.shown_page {
             return false;
         }
@@ -119,48 +125,62 @@ impl Notch {
         self.expanded_index = expanded_index;
         self.follow_open_page();
 
-        let resting_width = resting_index.map_or(clock::RESTING_WIDTH, |index| self.pages[index].sizes().resting_width);
-        let mut expanded = expanded_index.map_or(EMPTY_PAGE_SIZE, |index| self.pages[index].sizes().expanded);
-        if self.editor.is_some() {
-            expanded = self.editor_size();
-        }
+        self.refresh_header_marks();
+        self.refresh_resting_row();
+        let expanded = expanded_index.map_or(EMPTY_PAGE_SIZE, |index| self.pages[index].sizes().expanded);
+        let expanded_width = (expanded.width + chrome::WIDTH_EXTRA).max(self.open_min_width());
         let transient_widths: Vec<f32> = self.shown_transients.iter().map(|&(_, width)| width).collect();
-        let badge_space = badge_space(&self.shown_badges);
+        let is_claimed = resting_index.is_some();
+        let claim_right_inset = if is_claimed { self.resting_row.claim.right_inset() } else { 0.0 };
+        let claim_lead_gap = self.resting_row.claim.lead_gap();
         let banner = self.shown_banner;
+        // Only the empty idle pill may be narrower than the minimum: it hugs its centered clock.
         let resting_target = if let Some((_, width, _)) = banner {
-            width
-        } else if transient_widths.is_empty() {
-            resting_width + badge_space
+            width.max(RESTING_MIN_WIDTH)
+        } else if !transient_widths.is_empty() {
+            activity_layout::total_width(&transient_widths).max(RESTING_MIN_WIDTH)
+        } else if let Some(index) = resting_index {
+            self.claimed_pill_width(index)
         } else {
-            activity_layout::total_width(&transient_widths)
+            self.resting_row.layout.width
         };
-        self.has_resting_content = resting_index.is_some();
+        self.has_resting_content = resting_index.is_some() || self.has_music_badge();
         let is_hidden = self.is_hidden();
         let banner_height = banner.map_or(RESTING_PILL_HEIGHT, |(_, _, height)| height + RESTING_BOTTOM_PADDING);
-        let (resting_target, resting_height_target) = if is_hidden {
-            (HIDDEN_WIDTH, self.hidden_height())
-        } else {
-            (resting_target.max(crate::page::RESTING_MIN_WIDTH), banner_height)
-        };
+        let (resting_target, resting_height_target) =
+            if is_hidden { (HIDDEN_WIDTH, self.hidden_height()) } else { (resting_target, banner_height) };
         let growth = if self.hover.is_dragging_files { DRAG_GROWTH } else { Size::new(0.0, 0.0) };
         let mut targets_changed = false;
         for (spring, target) in [
             (&mut self.springs.resting_width, resting_target),
             (&mut self.springs.resting_height, resting_height_target),
-            (&mut self.springs.expanded_width, expanded.width + chrome::WIDTH_EXTRA + growth.width),
+            (&mut self.springs.expanded_width, expanded_width + growth.width),
             (&mut self.springs.expanded_height, content_height(expanded.height) + chrome::HEIGHT_EXTRA + growth.height),
             (&mut self.springs.activity_blend, if transient_widths.is_empty() && banner.is_none() { 0.0 } else { 1.0 }),
-            (&mut self.springs.badge_width, badge_space),
+            (&mut self.springs.claim_right_inset, claim_right_inset),
+            (&mut self.springs.claim_lead_gap, claim_lead_gap),
         ] {
             if (spring.target - target).abs() > f32::EPSILON {
                 spring.target = target;
                 targets_changed = true;
             }
         }
+        targets_changed |= self.retarget_rows(expanded_width);
         if targets_changed {
             self.start_animation();
         }
         selection_changed
+    }
+
+    /// The least width of the open notch: the timer page's open width, or the header's content when that is wider.
+    pub(super) fn open_min_width(&self) -> f32 {
+        let floor_page_width = self
+            .pages
+            .iter()
+            .enumerate()
+            .find(|&(index, page)| page.id() == WIDTH_FLOOR_PAGE_ID && self.page_list.is_enabled(index))
+            .map_or(0.0, |(_, page)| page.sizes().expanded.width + chrome::WIDTH_EXTRA);
+        floor_page_width.max(self.header_min_width())
     }
 
     /// Slides the page row to the selected page; jumps while closed.
@@ -176,7 +196,7 @@ impl Notch {
         if gap.abs() < 0.01 {
             return;
         }
-        if self.hover.is_hovering && self.editor.is_none() {
+        if self.hover.is_hovering {
             self.track.target += gap;
             self.start_animation();
         } else {
@@ -188,6 +208,8 @@ impl Notch {
         let mut transients = Vec::new();
         let mut badges = Vec::new();
         let mut banners = Vec::new();
+        let mut before = Vec::new();
+        let mut after = Vec::new();
         let activity_presences = self
             .activities
             .iter()
@@ -205,6 +227,14 @@ impl Notch {
                 Some(Presence::Transient { width }) => transients.push((source, width)),
                 Some(Presence::Badge { width }) => badges.push((source, width)),
                 Some(Presence::Banner { width, height }) => banners.push((source, width, height)),
+                Some(Presence::Companion { slot, width }) => {
+                    if let Source::Activity(_) = source {
+                        match slot {
+                            Slot::Ring => before.push((source, width)),
+                            Slot::Dots => after.push((source, width)),
+                        }
+                    }
+                }
                 None => {}
             }
         }
@@ -219,23 +249,59 @@ impl Notch {
                 .filter_map(|&source| transients.iter().copied().find(|&(candidate, _)| candidate == source))
                 .collect()
         };
-        let changed = shown != self.shown_transients || badges != self.shown_badges || banner != self.shown_banner;
+        badges.sort_by_key(|&(source, _)| self.rank_of(source));
+        let claimed = resting_row::claimed_group(
+            &badges,
+            |source| self.rank_of(source),
+            |source| self.countdown_of(source),
+            |source| self.is_music_badge(source),
+        );
+        let uses_short_badges = self.shortens_badges(&mut badges);
+        let changed = shown != self.shown_transients
+            || badges != self.shown_badges
+            || banner != self.shown_banner
+            || before != self.resting_row.ring
+            || after != self.resting_row.dots
+            || claimed != self.resting_row.claimed_group
+            || uses_short_badges != self.resting_row.uses_short_badges;
+        if shown != self.shown_transients || badges != self.shown_badges || banner != self.shown_banner {
+            let ids = |sources: &[(Source, f32)]| sources.iter().map(|&(source, _)| self.source_id(source)).collect();
+            let (transient_ids, badge_ids): (Vec<_>, Vec<_>) = (ids(&shown), ids(&badges));
+            let banner_id = banner.map(|(source, _, _)| self.source_id(source));
+            log::debug(&activity_layout::presence_summary(&transient_ids, &badge_ids, banner_id));
+        }
+        self.resting_row.ring = before;
+        self.resting_row.claimed_group = claimed;
+        self.resting_row.uses_short_badges = uses_short_badges;
+        self.resting_row.dots = after;
         self.shown_banner = banner;
         self.shown_transients = shown;
         self.shown_badges = badges;
         changed
     }
 
-    pub(super) fn layout_springs(&mut self) -> [&mut Spring; 7] {
+    fn source_id(&self, source: Source) -> &'static str {
+        match source {
+            Source::Activity(index) => self.activities[index].activity.id(),
+            Source::Page(index) => self.pages[index].id(),
+        }
+    }
+
+    /// Every spring of the layout but the open amount; the frame timer runs until all of them settle.
+    pub(super) fn layout_springs(&mut self) -> impl Iterator<Item = &mut Spring> {
+        let springs = &mut self.springs;
         [
-            &mut self.springs.resting_width,
-            &mut self.springs.resting_height,
-            &mut self.springs.expanded_width,
-            &mut self.springs.expanded_height,
-            &mut self.springs.activity_blend,
-            &mut self.springs.badge_width,
+            &mut springs.resting_width,
+            &mut springs.resting_height,
+            &mut springs.expanded_width,
+            &mut springs.expanded_height,
+            &mut springs.activity_blend,
+            &mut springs.claim_right_inset,
+            &mut springs.claim_lead_gap,
             &mut self.track,
         ]
+        .into_iter()
+        .chain(self.row_motion.springs_mut())
     }
 
     pub(super) fn best_page(&self, mode: Mode) -> Option<usize> {
@@ -245,7 +311,7 @@ impl Notch {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::*, *};
+    use super::*;
 
     #[test]
     pub(super) fn a_page_sets_its_own_open_height_up_to_what_the_window_holds() {
@@ -276,10 +342,5 @@ mod tests {
     #[test]
     pub(super) fn pages_with_nothing_to_show_are_skipped() {
         assert_eq!(highest_priority([None, Some(LOW), None]), Some(1));
-    }
-    #[test]
-    pub(super) fn badges_reserve_their_widths_plus_the_edge_padding() {
-        assert_eq!(badge_space(&[]), 0.0);
-        assert_eq!(badge_space(&[(Source::Activity(0), 14.0), (Source::Page(3), 14.0)]), 28.0 + BADGE_EDGE_PADDING);
     }
 }

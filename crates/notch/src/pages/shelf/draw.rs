@@ -1,23 +1,28 @@
 //! Drawing the places of the shelf.
 
-use super::items::tile_label;
+use super::document::draw_document;
 use super::{
     GRAY, NAME, NAME_COLOR, NAME_LINE_HEIGHT, NAME_TOP, ShelfPage, Target, fitted, preview_rect, remove_center,
     slot_rect,
 };
 use crate::{
-    gfx::{Align, Canvas, Color, FontStyle, Point, Rect, Weight},
-    ui::Icon,
+    gfx::{Canvas, Color, Point, Rect},
+    ui::{Icon, Stroke, draw_strokes},
 };
 use std::path::Path;
 
 pub(super) const PREVIEW_RADIUS: f32 = 6.0;
 pub(super) const WASH_REACH: f32 = 3.0;
-pub(super) const REMOVE_RADIUS: f32 = 7.0;
-pub(super) const REMOVE_RING: f32 = 1.5;
+pub(super) const REMOVE_RADIUS: f32 = 8.0;
+pub(super) const REMOVE_RING: f32 = 2.0;
+const REMOVE_CROSS_SIZE: f32 = 8.0;
+const REMOVE_CROSS_WIDTH: f32 = 3.5;
+const REMOVE_CROSS: &str = "M6 6l12 12M18 6 6 18";
+const REMOVE_FILL: Color = Color::rgb(0.165, 0.165, 0.188);
+const REMOVE_FILL_PRESSED: Color = Color::rgb(0.3, 0.3, 0.34);
+const REMOVE_CROSS_COLOR: Color = Color::rgb(0.769, 0.769, 0.8);
 pub(super) const ARRIVAL_SCALE: f32 = 0.7;
 pub(super) const ARRIVAL_FALL: f32 = 12.0;
-pub(super) const TILE_LABEL: FontStyle = FontStyle::new("Consolas", 10.0, Weight::Medium, Align::Center);
 pub(super) const WASH: Color = Color::rgb(1.0, 1.0, 1.0);
 
 impl ShelfPage {
@@ -34,21 +39,22 @@ impl ShelfPage {
                 return;
             }
         }
-        canvas.fill_rounded_rect(area, PREVIEW_RADIUS * scale, Color::gray(0.16).faded(opacity));
         if path.is_dir() {
+            canvas.fill_rounded_rect(area, PREVIEW_RADIUS * scale, Color::gray(0.16).faded(opacity));
             Icon::Folder.draw(canvas, Point::new(area.center_x(), area.center_y()), 22.0 * scale, GRAY, opacity);
         } else {
-            canvas.text(&TILE_LABEL, &tile_label(path, false), area, GRAY.faded(opacity));
+            draw_document(canvas, path, area, opacity);
         }
     }
 
     pub(super) fn draw_remove_button(&self, canvas: &Canvas, preview: Rect, is_pressed_target: bool, opacity: f32) {
         let scale = canvas.scale();
         let center = remove_center(preview, scale);
-        let fill = if is_pressed_target { Color::gray(0.42) } else { Color::gray(0.26) };
+        let fill = if is_pressed_target { REMOVE_FILL_PRESSED } else { REMOVE_FILL };
         canvas.fill_circle(center, (REMOVE_RADIUS + REMOVE_RING) * scale, Color::BLACK.faded(opacity));
         canvas.fill_circle(center, REMOVE_RADIUS * scale, fill.faded(opacity));
-        Icon::Close.draw(canvas, center, 10.0 * scale, Color::WHITE, opacity);
+        let cross = [Stroke::new(REMOVE_CROSS, REMOVE_CROSS_COLOR)];
+        draw_strokes(canvas, &cross, center, REMOVE_CROSS_SIZE * scale, REMOVE_CROSS_WIDTH, opacity);
     }
 
     pub(super) fn draw_slot(&self, canvas: &Canvas, position: usize, bounds: Rect, opacity: f32) {

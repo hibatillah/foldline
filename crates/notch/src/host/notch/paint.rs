@@ -1,12 +1,12 @@
 use windows::Win32::Foundation::RECT;
 
-use super::{animation::ramp, *};
+use super::{animation::ramp, resting_row::RowOpacity, *};
 use crate::host::{
-    activity_layout::{self, BADGE_EDGE_PADDING, DIVIDER_WIDTH},
+    activity_layout::{self, DIVIDER_WIDTH},
     chrome, clock,
 };
 use crate::{
-    gfx::{Canvas, Color, Point, Rect, lerp},
+    gfx::{Canvas, Color, Rect, lerp},
     log,
     page::{Frame, RESTING_HEIGHT},
 };
@@ -17,7 +17,6 @@ const BANNER_RADIUS_RANGE: f32 = 20.0;
 const EXPANDED_RADIUS: f32 = 22.0;
 const SHADOW_LAYER_ALPHA: f32 = 0.028;
 const HIDDEN_ALPHA: f32 = 0.006;
-const STATUS_GAP: f32 = 8.0;
 const PAGE_FADE_PER_PAGE: f32 = 0.5;
 
 impl Notch {
@@ -70,21 +69,36 @@ impl Notch {
                     canvas.fill_top_flares(bounds, self.flare_size(&frame), Color::BLACK);
                 }
                 canvas.clipped(bounds, || {
-                    if expanded_opacity > 0.01 && self.editor.is_none() {
+                    if expanded_opacity > 0.01 {
                         self.draw_backdrops(canvas, &frame, radius, expanded_opacity);
                     }
                     if page_opacity > 0.01 {
-                        let badge_room = self.springs.badge_width.position.max(0.0) * self.scale;
-                        let page_frame = Frame { bounds: Rect { right: bounds.right - badge_room, ..bounds }, ..frame };
                         if let Some(index) = self.resting_index {
+                            let claim = &self.resting_row.claim;
+                            let right_inset = self.springs.claim_right_inset.position.max(0.0) * self.scale;
+                            let page_frame = Frame {
+                                bounds: Rect {
+                                    left: bounds.left + claim.left_inset() * self.scale,
+                                    right: bounds.right - right_inset,
+                                    ..bounds
+                                },
+                                lead_gap: self.springs.claim_lead_gap.position.max(0.0),
+                                ..frame
+                            };
                             self.pages[index].draw_resting(canvas, &page_frame, page_opacity);
+                            self.draw_claimed_group(canvas, &frame, page_opacity);
+                        } else {
+                            self.draw_group(canvas, &frame, page_opacity);
                         }
-                        self.draw_badges(canvas, &frame, page_opacity);
                     }
-                    let clock_opacity =
-                        clock::opacity(self.resting_index.is_none(), visibility * (1.0 - blend), header_opacity);
-                    if clock_opacity > 0.01 {
-                        self.draw_clock(canvas, &frame, clock_opacity, header_opacity);
+                    let collapsed_visibility = visibility * (1.0 - blend);
+                    let opacity = RowOpacity {
+                        clock: clock::opacity(self.resting_index.is_none(), collapsed_visibility, header_opacity),
+                        dots: clock::opacity(true, collapsed_visibility, header_opacity),
+                        header: header_opacity,
+                    };
+                    if opacity.clock > 0.01 || opacity.dots > 0.01 || opacity.header > 0.01 {
+                        self.draw_row(canvas, &frame, &opacity);
                     }
                     if activity_opacity > 0.01 {
                         if self.shown_banner.is_some() {
@@ -93,18 +107,11 @@ impl Notch {
                             self.draw_transients(canvas, &frame, activity_opacity);
                         }
                     }
-                    if header_opacity > 0.01 && self.editor.is_none() {
+                    if header_opacity > 0.01 {
                         self.draw_header(canvas, &frame, header_opacity);
                     }
                     if expanded_opacity > 0.01 {
-                        if self.editor.is_some() {
-                            self.draw_editor(canvas, &frame, expanded_opacity);
-                        } else {
-                            self.draw_open_pages(canvas, &frame, expanded_opacity);
-                        }
-                    }
-                    if let Some(menu) = &self.menu {
-                        menu.draw(canvas, expanded_opacity);
+                        self.draw_open_pages(canvas, &frame, expanded_opacity);
                     }
                 });
             },
@@ -141,59 +148,6 @@ impl Notch {
         let index = if self.navigable.len() < 2 { expanded_index } else { self.page_at(self.track.position) };
         let page_frame = self.natural_page_frame(index, frame, 0.0);
         self.pages[index].draw_expanded(canvas, &page_frame, opacity);
-    }
-
-    pub(super) fn draw_clock(&self, canvas: &Canvas, frame: &Frame, opacity: f32, header_opacity: f32) {
-        let (bounds, scale) = (frame.bounds, self.scale);
-        let badge_room = self.springs.badge_width.position.max(0.0) * scale;
-        let collapsed =
-            Point::new((bounds.left + bounds.right - badge_room) / 2.0, bounds.top + RESTING_HEIGHT * scale / 2.0);
-        let time_width = clock::text_width(canvas) * scale;
-        let header = chrome::header_rect(bounds, scale);
-        let open = Point::new(header.right - time_width / 2.0, header.center_y());
-        let center = clock::center(collapsed, open, (frame.expansion / HEADER_STAGE).clamp(0.0, 1.0));
-        let area = Rect::around(center, clock::HALF_WIDTH * scale, RESTING_HEIGHT * scale / 2.0);
-        // The settings panel's tabs take over the header, so the clock stays out of it.
-        if self.editor.is_none() {
-            clock::draw_time(canvas, area, opacity);
-        }
-        if header_opacity > 0.01 && self.editor.is_none() {
-            self.draw_header_statuses(canvas, center.x - time_width / 2.0, center.y, header_opacity);
-        }
-    }
-
-    pub(super) fn draw_header_statuses(&self, canvas: &Canvas, right: f32, center_y: f32, opacity: f32) {
-        let scale = self.scale;
-        let mut entries: Vec<(u8, f32, HeaderMark)> = Vec::new();
-        for (index, page) in self.pages.iter().enumerate() {
-            if !self.page_list.is_enabled(index) {
-                continue;
-            }
-            if let Some(width) = page.header_status_width() {
-                entries.push((page.header_status_rank(), width, HeaderMark::Page(index)));
-            }
-        }
-        for (index, slot) in self.activities.iter().enumerate() {
-            if !slot.is_enabled || !slot.is_started {
-                continue;
-            }
-            if let Some(width) = slot.activity.header_status_width() {
-                entries.push((0, width, HeaderMark::Activity(index)));
-            }
-        }
-        entries.sort_by_key(|&(rank, _, _)| rank);
-        let half_height = chrome::HEADER_HEIGHT * scale / 2.0;
-        let mut right = right - STATUS_GAP * scale;
-        for (_, width, mark) in entries {
-            let area = Rect::new(right - width * scale, center_y - half_height, right, center_y + half_height);
-            match mark {
-                HeaderMark::Page(index) => self.pages[index].draw_header_status(canvas, area, scale, opacity),
-                HeaderMark::Activity(index) => {
-                    self.activities[index].activity.draw_header_status(canvas, area, scale, opacity)
-                }
-            }
-            right = area.left - STATUS_GAP * scale;
-        }
     }
 
     pub(super) fn draw_shadow(&self, canvas: &Canvas, bounds: Rect, radius: f32, strength: f32) {
@@ -239,21 +193,22 @@ impl Notch {
     }
 
     pub(super) fn draw_banner(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
-        let Some((source, _, _)) = self.shown_banner else { return };
-        let bounds = frame.bounds;
-        let area =
-            Rect::new(bounds.left, bounds.top, bounds.right, bounds.bottom - RESTING_BOTTOM_PADDING * self.scale);
+        let Some((source, area)) = self.banner_area(frame) else { return };
         self.draw_source(source, canvas, area, opacity);
     }
 
-    pub(super) fn draw_badges(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
-        let scale = self.scale;
-        let (top, bottom) = (frame.bounds.top, frame.bounds.top + RESTING_HEIGHT * scale);
-        let mut right = frame.bounds.right - BADGE_EDGE_PADDING * scale;
-        for &(source, width) in &self.shown_badges {
-            let area = Rect::new(right - width * scale, top, right, bottom);
-            self.draw_source(source, canvas, area, opacity);
-            right = area.left;
+    /// The banner's owner and the rect it draws into, which is also where its pointer input is measured.
+    pub(super) fn banner_area(&self, frame: &Frame) -> Option<(Source, Rect)> {
+        let (source, _, _) = self.shown_banner?;
+        let bounds = frame.bounds;
+        Some((source, Rect { bottom: bounds.bottom - RESTING_BOTTOM_PADDING * self.scale, ..bounds }))
+    }
+
+    /// A badge of a page draws its short form when `short` is set: several badges with text share the pill.
+    pub(super) fn draw_badge(&self, source: Source, canvas: &Canvas, area: Rect, short: bool, opacity: f32) {
+        match source {
+            Source::Page(index) if short => self.pages[index].draw_short_presence(canvas, area, self.scale, opacity),
+            _ => self.draw_source(source, canvas, area, opacity),
         }
     }
 

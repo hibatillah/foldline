@@ -10,27 +10,28 @@ use windows::{
     core::w,
 };
 
-use std::cell::Cell;
+use std::{cell::Cell, rc::Rc};
 
 use windows::Win32::Foundation::{HWND, POINT};
 
 use super::*;
 use crate::{
-    activity::{Activity, Presence},
+    activity::{Activity, Presence, Slot},
     gfx::{Canvas, Color, Fonts, Rect, Surface},
-    host::{
-        chrome, navigation::PageList, page_editor::PageEditor, screen_mode::ScreenMode, settings::Settings,
-        settings_panel::Tab, visibility::Showing,
-    },
+    host::{chrome, navigation::PageList, screen_mode::ScreenMode, settings::Settings, visibility::Showing},
     page::{Context, RESTING_HEIGHT},
     pages::{SampleOptions, samples},
     ui::{self, Icon},
 };
 
-mod context_menu;
+mod clipboard_states;
+mod header_row;
 mod hiding_rules;
 mod images;
 mod page_navigation;
+mod page_states;
+mod resting_row;
+mod row_motion;
 mod screen_mode;
 mod settings_reload;
 
@@ -130,5 +131,66 @@ impl Drop for SettingsFile {
 }
 
 pub(super) fn playing(lyrics_on: bool) -> Notch {
-    rig(SampleOptions { media: Some((lyrics_on, false)), ..SampleOptions::default() })
+    rig(SampleOptions { media: Some(lyrics_on), ..SampleOptions::default() })
+}
+
+/// A stand-in activity whose pill presence and header mark a test sets; it draws a white disc.
+pub(super) struct Mark {
+    pub(super) presence: Rc<Cell<Option<Presence>>>,
+    pub(super) rank: u8,
+    pub(super) header_width: Option<f32>,
+}
+
+pub(super) const RING: Presence = Presence::Companion { slot: Slot::Ring, width: 14.0 };
+pub(super) const DOT: Presence = Presence::Companion { slot: Slot::Dots, width: 6.0 };
+
+impl Mark {
+    pub(super) fn showing(presence: Option<Presence>) -> (Self, Rc<Cell<Option<Presence>>>) {
+        let shared = Rc::new(Cell::new(presence));
+        (Self { presence: shared.clone(), rank: 0, header_width: None }, shared)
+    }
+}
+
+fn draw_disc(canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+    let size = area.width().min(14.0 * scale);
+    let disc = Rect::around(crate::gfx::Point::new(area.center_x(), area.center_y()), size / 2.0, size / 2.0);
+    canvas.fill_rounded_rect(disc, size / 2.0, Color::WHITE.faded(opacity));
+}
+
+impl Activity for Mark {
+    fn id(&self) -> &'static str {
+        "mark"
+    }
+
+    fn presence(&self) -> Option<Presence> {
+        self.presence.get()
+    }
+
+    fn header_status_rank(&self) -> u8 {
+        self.rank
+    }
+
+    fn header_status_width(&self) -> Option<f32> {
+        self.header_width
+    }
+
+    fn draw(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+        draw_disc(canvas, area, scale, opacity);
+    }
+
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+        draw_disc(canvas, area, scale, opacity);
+    }
+}
+
+/// A settled rig whose activities are `marks`, all started.
+pub(super) fn marked_rig(options: SampleOptions, marks: Vec<Mark>) -> Notch {
+    let activities: Vec<Box<dyn Activity>> =
+        marks.into_iter().map(|mark| Box::new(mark) as Box<dyn Activity>).collect();
+    let mut notch = configured_rig(options, Settings::at(None), activities);
+    for slot in &mut notch.activities {
+        slot.is_started = true;
+    }
+    settle(&mut notch);
+    notch
 }

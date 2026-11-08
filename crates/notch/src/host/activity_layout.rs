@@ -3,7 +3,6 @@
 /// Transients on screen at once; older ones wait until a newer one ends.
 pub const MAX_TRANSIENTS: usize = 2;
 pub const DIVIDER_WIDTH: f32 = 1.0;
-pub const BADGE_EDGE_PADDING: f32 = 10.0;
 
 /// Keeps `order` as the activation order of the activities in `active`: ended ones leave, new ones join at the end.
 pub fn track_order<T: Copy + PartialEq>(order: &mut Vec<T>, active: &[T]) {
@@ -36,9 +35,32 @@ pub fn offsets(widths: &[f32]) -> Vec<f32> {
         .collect()
 }
 
+/// The debug-log line naming what the collapsed pill shows, so a wake nobody asked for can be traced to its source.
+pub fn presence_summary(transients: &[&str], badges: &[&str], banner: Option<&str>) -> String {
+    format!(
+        "pill shows transients=[{}] badges=[{}] banner={}",
+        transients.join(","),
+        badges.join(","),
+        banner.unwrap_or("none")
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_pill_summary_names_every_source_by_its_id() {
+        assert_eq!(
+            presence_summary(&["bluetooth", "volume"], &["battery"], Some("notifications")),
+            "pill shows transients=[bluetooth,volume] badges=[battery] banner=notifications"
+        );
+    }
+
+    #[test]
+    fn an_empty_pill_summary_says_there_is_no_banner() {
+        assert_eq!(presence_summary(&[], &[], None), "pill shows transients=[] badges=[] banner=none");
+    }
 
     #[test]
     fn a_new_activity_joins_the_end_and_an_ended_one_leaves() {

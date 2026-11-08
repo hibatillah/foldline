@@ -2,7 +2,7 @@
 
 use super::controls::Control;
 use super::session::LyricsStatus;
-use super::{LYRIC_TIMER, MediaPage, SETTING_LYRICS, TITLE_TIMER, WAVE_TIMER, layout, lyrics, styles, theme};
+use super::{LYRIC_TIMER, MediaPage, SETTING_LYRICS, WAVE_TIMER, layout, lyrics, styles, theme};
 use crate::{
     gfx::{Fonts, balance_lines, clamp_lines},
     log,
@@ -10,7 +10,6 @@ use crate::{
 };
 
 pub(super) const WAVE_FRAME_MILLISECONDS: u32 = 100;
-pub(super) const TITLE_SHOWN_MILLISECONDS: u32 = 3000;
 /// Title lines are fitted a little narrower than their rectangle, so rounding never trims a line that fits.
 pub(super) const TITLE_FIT_MARGIN: f32 = 1.0;
 pub(super) const LYRIC_FIT_MARGIN: f32 = 2.0;
@@ -33,7 +32,6 @@ impl MediaPage {
     }
 
     pub(super) fn apply_snapshot(&mut self, context: &mut Context) {
-        let previous_title = std::mem::take(&mut self.measured_title);
         if let Some(watcher) = &self.watcher {
             self.info = watcher.snapshot();
         }
@@ -44,14 +42,9 @@ impl MediaPage {
             self.theme_version = cover_version;
             self.theme_color = self.info.artwork.as_deref().and_then(theme::color_of);
         }
-        self.measure_text(context);
         self.refresh_title_lines(context.fonts());
         self.sync_wave_timer(context);
         self.sync_backdrop(context);
-        if self.measured_title != previous_title && !self.measured_title.is_empty() && self.info.is_playing {
-            self.is_title_shown = true;
-            context.set_timer(TITLE_TIMER, TITLE_SHOWN_MILLISECONDS);
-        }
         self.update_lyrics(context);
         context.request_repaint();
     }
@@ -96,17 +89,6 @@ impl MediaPage {
             })
             .collect();
         self.lyric_wraps_source = source;
-    }
-
-    pub(super) fn measure_text(&mut self, context: &Context) {
-        if self.info.title != self.measured_title {
-            self.measured_title = self.info.title.clone();
-            self.title_width = context.fonts().measure(&styles::COMPACT_TITLE, &self.measured_title);
-        }
-        if self.info.artist != self.measured_artist {
-            self.measured_artist = self.info.artist.clone();
-            self.artist_width = context.fonts().measure(&styles::COMPACT_ARTIST, &self.measured_artist);
-        }
     }
 
     pub(super) fn update_lyrics(&mut self, context: &mut Context) {

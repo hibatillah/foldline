@@ -24,7 +24,10 @@ pub(super) struct Springs {
     pub(super) expanded_width: Spring,
     pub(super) expanded_height: Spring,
     pub(super) activity_blend: Spring,
-    pub(super) badge_width: Spring,
+    /// Distance of a claimed page's content from the pill's right edge: the group, the dot column and the edge.
+    pub(super) claim_right_inset: Spring,
+    /// Room a claimed page keeps between its lead and its line, so the line slides when a dot joins the lead.
+    pub(super) claim_lead_gap: Spring,
 }
 
 impl Springs {
@@ -36,13 +39,14 @@ impl Springs {
             expanded_width: size_spring(0.0),
             expanded_height: size_spring(0.0),
             activity_blend: Spring::new(0.0, 300.0, 28.0),
-            badge_width: size_spring(0.0),
+            claim_right_inset: size_spring(0.0),
+            claim_lead_gap: size_spring(0.0),
         }
     }
 }
 
 /// Every size spring shares one response and lead-in, so width and height of a move start and settle together.
-fn size_spring(position: f32) -> Spring {
+pub(super) fn size_spring(position: f32) -> Spring {
     Spring::new(position, motion::SIZE_RESPONSE.0, motion::SIZE_RESPONSE.1).with_lead_in(motion::SIZE_LEAD_IN)
 }
 
@@ -101,8 +105,7 @@ impl Notch {
         for spring in self.layout_springs() {
             spring.step(elapsed_seconds);
         }
-        let is_settled =
-            self.springs.expansion.is_settled() && self.layout_springs().iter().all(|spring| spring.is_settled());
+        let is_settled = self.springs.expansion.is_settled() && self.layout_springs().all(|spring| spring.is_settled());
         let mut pages_busy = false;
         for page in &mut self.pages {
             pages_busy |= page.animate(elapsed_seconds);
@@ -138,6 +141,7 @@ impl Notch {
                 self.springs.expanded_width.position - chrome::WIDTH_EXTRA,
                 self.springs.expanded_height.position - chrome::HEIGHT_EXTRA,
             ),
+            lead_gap: 0.0,
         }
     }
 
@@ -333,7 +337,7 @@ mod tests {
     fn describe_springs(notch: &mut Notch) -> String {
         let expansion = (notch.springs.expansion.position, notch.springs.expansion.target);
         let layout: Vec<(f32, f32, bool)> =
-            notch.layout_springs().iter().map(|spring| (spring.position, spring.target, spring.is_settled())).collect();
+            notch.layout_springs().map(|spring| (spring.position, spring.target, spring.is_settled())).collect();
         format!("expansion {expansion:?}, layout {layout:?}")
     }
     #[test]

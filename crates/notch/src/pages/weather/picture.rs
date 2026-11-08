@@ -1,83 +1,90 @@
-//! The little pictures of the sky, built from circles and rounded rectangles so they need no path geometry.
+//! The little pictures of the sky: Lucide-style line icons in a few colors, drawn from path data and cached.
 
 use super::symbol::Symbol;
-use crate::gfx::{Canvas, Color, Point, Rect};
+use crate::{
+    gfx::{Canvas, Color, Point},
+    ui::{Stroke, draw_strokes},
+};
 
-const SUN: Color = Color::rgb(1.0, 0.8, 0.25);
-const MOON: Color = Color::rgb(0.92, 0.92, 1.0);
-const CLOUD: Color = Color::rgb(0.78, 0.8, 0.86);
-const DROP: Color = Color::rgb(0.3, 0.67, 0.97);
-const SNOW: Color = Color::rgb(0.9, 0.93, 1.0);
-const BOLT: Color = Color::rgb(1.0, 0.82, 0.2);
-const MIST: Color = Color::rgb(0.6, 0.62, 0.68);
-const RAY_COUNT: usize = 8;
+const LINE_WIDTH: f32 = 2.0;
 
-/// Draws `symbol` in a square of `size` device pixels around `center`; `backdrop` is the color behind it, which the
-/// moon's bite is cut with.
-pub(super) fn draw_symbol(canvas: &Canvas, symbol: Symbol, center: Point, size: f32, backdrop: Color, opacity: f32) {
-    let circle = |x: f32, y: f32, radius: f32, color: Color| {
-        canvas.fill_circle(Point::new(center.x + x * size, center.y + y * size), radius * size, color.faded(opacity));
-    };
-    let bar = |left: f32, top: f32, right: f32, bottom: f32, color: Color| {
-        let rect =
-            Rect::new(center.x + left * size, center.y + top * size, center.x + right * size, center.y + bottom * size);
-        canvas.fill_rounded_rect(rect, rect.width().min(rect.height()) / 2.0, color.faded(opacity));
-    };
-    let sun = |x: f32, y: f32, scale: f32| {
-        circle(x, y, 0.2 * scale, SUN);
-        for ray in 0..RAY_COUNT {
-            let angle = ray as f32 / RAY_COUNT as f32 * std::f32::consts::TAU;
-            circle(x + 0.34 * scale * angle.cos(), y + 0.34 * scale * angle.sin(), 0.04 * scale, SUN);
-        }
-    };
-    let cloud = |x: f32, y: f32, scale: f32| {
-        bar(x - 0.34 * scale, y - 0.04 * scale, x + 0.34 * scale, y + 0.2 * scale, CLOUD);
-        circle(x - 0.12 * scale, y - 0.02 * scale, 0.16 * scale, CLOUD);
-        circle(x + 0.1 * scale, y - 0.08 * scale, 0.2 * scale, CLOUD);
-    };
+const SUN: Color = Color::rgb(1.0, 0.753, 0.471);
+const CLOUD: Color = Color::rgb(0.769, 0.769, 0.8);
+const CLOUD_NOW: Color = Color::rgb(0.902, 0.902, 0.922);
+const DROP: Color = Color::rgb(0.455, 0.753, 0.988);
+const BOLT: Color = Color::rgb(1.0, 0.831, 0.231);
+const SNOW: Color = Color::rgb(0.906, 0.941, 1.0);
+const MIST: Color = Color::rgb(0.549, 0.549, 0.58);
+
+const SUN_RAYS: &str =
+    "M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4";
+const SUN_DISC: &str = "M8 12a4 4 0 1 0 8 0a4 4 0 1 0-8 0";
+const PARTIAL_SUN_RAYS: &str = "M8 2.5v1.5M3.2 4.7l1 1M1.5 9.5H3M12.8 4.7l-1 1";
+const PARTIAL_SUN_DISC: &str = "M5 12.6A4 4 0 1 1 11.8 8.4";
+const LOW_CLOUD: &str = "M9 20h8a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.4 1.8A3.1 3.1 0 0 0 9 20z";
+const MID_CLOUD: &str = "M7 19h10a4.5 4.5 0 0 0 .5-9A6 6 0 0 0 6 11.5 3.75 3.75 0 0 0 7 19z";
+const HIGH_CLOUD: &str = "M7 15h10a4.5 4.5 0 0 0 .5-9A6 6 0 0 0 6 7.5 3.75 3.75 0 0 0 7 15z";
+const MOON: &str = "M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z";
+const PARTIAL_MOON: &str = "M5.2 11.4A4.6 4.6 0 0 1 8.6 3.4a3.6 3.6 0 0 0 4.7 4.7";
+const RAIN_DROPS: &str = "M8 18l-1 3M12 18l-1 3M16 18l-1 3";
+const DRIZZLE_DROPS: &str = "M9 18l-1 3M14 18l-1 3";
+const BOLT_SHAPE: &str = "M13 15.5l-2.5 3.5h3.5l-2.5 3.5";
+const SNOW_FLAKES: &str = "M8 19h.01M12 19h.01M16 19h.01M10 22h.01M14 22h.01";
+const MIST_LINES: &str = "M6 19h12M9 22h6";
+
+/// The layers of `symbol`, drawn in order; `is_now` brightens the cloud for the highlighted cell.
+fn layers(symbol: Symbol, is_now: bool) -> Vec<Stroke> {
+    let cloud = if is_now { CLOUD_NOW } else { CLOUD };
+    let stroke = Stroke::new;
     match symbol {
-        Symbol::Clear => sun(0.0, 0.0, 1.0),
-        Symbol::ClearNight => {
-            circle(0.0, 0.0, 0.27, MOON);
-            circle(0.13, -0.1, 0.23, backdrop);
-        }
+        Symbol::Clear => vec![stroke(SUN_DISC, SUN), stroke(SUN_RAYS, SUN)],
+        Symbol::ClearNight => vec![stroke(MOON, cloud)],
         Symbol::PartlyCloudy => {
-            sun(-0.14, -0.14, 0.72);
-            cloud(0.06, 0.1, 0.85);
+            vec![stroke(PARTIAL_SUN_RAYS, SUN), stroke(PARTIAL_SUN_DISC, SUN), stroke(LOW_CLOUD, cloud)]
         }
-        Symbol::PartlyCloudyNight => {
-            circle(-0.14, -0.14, 0.17, MOON);
-            circle(-0.06, -0.2, 0.15, backdrop);
-            cloud(0.06, 0.1, 0.85);
+        Symbol::PartlyCloudyNight => vec![stroke(PARTIAL_MOON, SUN), stroke(LOW_CLOUD, cloud)],
+        Symbol::Cloudy => vec![stroke(MID_CLOUD, cloud)],
+        Symbol::Fog => vec![stroke(HIGH_CLOUD, cloud), stroke(MIST_LINES, MIST)],
+        Symbol::Drizzle => vec![stroke(HIGH_CLOUD, cloud), stroke(DRIZZLE_DROPS, DROP)],
+        Symbol::Rain => vec![stroke(HIGH_CLOUD, cloud), stroke(RAIN_DROPS, DROP)],
+        Symbol::Thunderstorm => vec![stroke(HIGH_CLOUD, cloud), stroke(BOLT_SHAPE, BOLT)],
+        Symbol::Snow => vec![stroke(HIGH_CLOUD, cloud), stroke(SNOW_FLAKES, SNOW)],
+    }
+}
+
+/// Draws `symbol` in a square of `size` device pixels around `center`.
+pub(super) fn draw_symbol(canvas: &Canvas, symbol: Symbol, center: Point, size: f32, is_now: bool, opacity: f32) {
+    draw_strokes(canvas, &layers(symbol, is_now), center, size, LINE_WIDTH, opacity);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_sky_has_a_picture_and_wet_ones_have_a_cloud_and_water() {
+        for symbol in [
+            Symbol::Clear,
+            Symbol::ClearNight,
+            Symbol::PartlyCloudy,
+            Symbol::PartlyCloudyNight,
+            Symbol::Cloudy,
+            Symbol::Fog,
+            Symbol::Drizzle,
+            Symbol::Rain,
+            Symbol::Thunderstorm,
+            Symbol::Snow,
+        ] {
+            let count = layers(symbol, false).len();
+            assert!(count >= 1, "{symbol:?}");
+            assert!(!symbol.is_wet() || count == 2, "{symbol:?} needs its cloud and its water");
         }
-        Symbol::Cloudy => cloud(0.0, 0.0, 1.0),
-        Symbol::Fog => {
-            cloud(0.0, -0.14, 0.85);
-            bar(-0.3, 0.2, 0.3, 0.25, MIST);
-            bar(-0.2, 0.32, 0.4, 0.37, MIST);
-        }
-        Symbol::Drizzle => {
-            cloud(0.0, -0.14, 0.85);
-            for x in [-0.12, 0.1] {
-                bar(x - 0.025, 0.2, x + 0.025, 0.3, DROP);
-            }
-        }
-        Symbol::Rain => {
-            cloud(0.0, -0.14, 0.85);
-            for x in [-0.2, 0.0, 0.2] {
-                bar(x - 0.03, 0.2, x + 0.03, 0.36, DROP);
-            }
-        }
-        Symbol::Thunderstorm => {
-            cloud(0.0, -0.16, 0.85);
-            bar(-0.02, 0.14, 0.06, 0.28, BOLT);
-            bar(-0.08, 0.26, 0.0, 0.38, BOLT);
-        }
-        Symbol::Snow => {
-            cloud(0.0, -0.14, 0.85);
-            for x in [-0.2, 0.0, 0.2] {
-                circle(x, 0.28, 0.04, SNOW);
-            }
-        }
+    }
+
+    #[test]
+    fn the_highlighted_cell_gets_a_brighter_cloud() {
+        let plain = layers(Symbol::Cloudy, false)[0].color;
+        let now = layers(Symbol::Cloudy, true)[0].color;
+        assert!(now.r > plain.r);
     }
 }

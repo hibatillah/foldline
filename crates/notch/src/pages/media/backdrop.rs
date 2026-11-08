@@ -2,14 +2,21 @@
 
 use crate::gfx::{Canvas, Color, Rect};
 
-const BOTTOM_ALPHA: f32 = 0.55;
-const FALLOFF: f32 = 1.6;
+const BOTTOM_ALPHA: f32 = 0.45;
+/// The glow has reached `MIDDLE_ALPHA` at this fraction of the height from the top.
+const MIDDLE_AT: f32 = 0.35;
+const MIDDLE_ALPHA: f32 = 0.11;
 const STRIP: f32 = 2.0;
 /// Keeps the glow off the antialiased edge of the notch.
 const EDGE_INSET: f32 = 0.25;
 
 fn alpha_at(from_top: f32) -> f32 {
-    BOTTOM_ALPHA * from_top.clamp(0.0, 1.0).powf(FALLOFF)
+    let from_top = from_top.clamp(0.0, 1.0);
+    if from_top <= MIDDLE_AT {
+        MIDDLE_ALPHA * from_top / MIDDLE_AT
+    } else {
+        MIDDLE_ALPHA + (BOTTOM_ALPHA - MIDDLE_ALPHA) * (from_top - MIDDLE_AT) / (1.0 - MIDDLE_AT)
+    }
 }
 
 fn corner_inset(y: f32, bottom: f32, radius: f32) -> f32 {

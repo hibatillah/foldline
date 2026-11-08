@@ -1,6 +1,9 @@
 //! What the media page shows collapsed and open.
 
-use crate::page::{Mode, Page, Priority};
+use crate::{
+    activity::Presence,
+    page::{Mode, Page, Priority},
+};
 use lyrics::LyricLine;
 use session::LyricsStatus;
 
@@ -43,10 +46,17 @@ fn with_nothing_playing_the_open_player_asks_for_a_song() {
 }
 
 #[test]
-fn playing_music_is_shown_collapsed_and_open() {
+fn playing_music_without_a_lyric_line_leaves_the_collapsed_pill_alone_but_is_open_content() {
     let page = playing_page();
-    assert_eq!(page.priority(Mode::Resting), Some(Priority::NORMAL));
+    assert_eq!(page.priority(Mode::Resting), None);
     assert_eq!(page.priority(Mode::Expanded), Some(Priority::NORMAL));
+}
+
+#[test]
+fn playing_music_with_a_lyric_line_claims_the_collapsed_pill() {
+    let page = with_lyrics(playing_page());
+    assert_eq!(page.priority(Mode::Resting), Some(Priority::NORMAL));
+    assert_eq!(page.resting_lead_width(), resting::ARTWORK_SIZE);
 }
 
 #[test]
@@ -88,15 +98,6 @@ fn the_collapsed_pill_shows_lyrics_only_while_playing() {
 }
 
 #[test]
-fn the_collapsed_pill_shows_still_bars_by_default_and_the_title_after_a_track_change() {
-    let mut page = playing_page();
-    assert_eq!(page.resting_view(), resting::View::Wave);
-    page.is_title_shown = true;
-    assert_eq!(page.resting_view(), resting::View::TrackChange);
-    assert!(page.sizes().resting_width >= 150.0);
-}
-
-#[test]
 fn the_header_has_the_wave_whenever_music_plays_whatever_the_lyrics_do() {
     let mut page = playing_page();
     assert_eq!(page.header_status_width(), Some(wave::WIDTH));
@@ -111,23 +112,41 @@ fn the_header_has_the_wave_whenever_music_plays_whatever_the_lyrics_do() {
 }
 
 #[test]
-fn the_collapsed_pill_has_the_wave_only_while_the_lyrics_are_off() {
+fn music_without_a_lyric_line_is_a_wave_badge_in_the_pill() {
     let mut page = playing_page();
+    assert_eq!(page.presence(), Some(Presence::Badge { width: wave::WIDTH }));
     assert!(page.is_wave_visible());
-    page = with_lyrics(page);
-    assert!(!page.is_wave_visible(), "lyric mode shows the lyrics in the pill");
+    page.info.is_playing = false;
+    assert_eq!(page.presence(), None, "paused music has no wave");
+    assert!(!page.is_wave_visible());
+}
+
+#[test]
+fn lyric_mode_has_no_wave_in_the_pill_until_the_notch_opens() {
+    let mut page = with_lyrics(playing_page());
+    assert_eq!(page.presence(), None);
+    assert!(!page.is_wave_visible());
     page.is_hovered = true;
     assert!(page.is_wave_visible(), "the open notch has the wave in its header");
+}
+
+#[test]
+fn turning_lyrics_off_hands_the_pill_back_to_the_wave_badge() {
+    let mut page = with_lyrics(playing_page());
+    page.lyrics_enabled = false;
+    assert_eq!(page.priority(Mode::Resting), None);
+    assert_eq!(page.presence(), Some(Presence::Badge { width: wave::WIDTH }));
+}
+
+#[test]
+fn the_wave_ranks_nearest_the_clock() {
+    assert_eq!(playing_page().header_status_rank(), 0);
+    assert_eq!(playing_page().header_status_page(), Some("media"));
 }
 
 #[test]
 fn a_rest_in_the_lyrics_keeps_the_collapsed_pill_in_lyric_mode() {
     let page = with_lyrics(playing_page());
     assert!(page.follower.current().is_empty());
-    assert_eq!(page.resting_view(), resting::View::Lyrics);
-}
-
-#[test]
-fn the_collapsed_pill_with_a_short_title_is_small() {
-    assert_eq!(playing_page().sizes().resting_width, crate::page::RESTING_MIN_WIDTH);
+    assert!(page.claims_pill());
 }

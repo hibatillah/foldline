@@ -51,6 +51,10 @@ impl TodoList {
         self.items.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
     pub fn is_full(&self) -> bool {
         self.items.len() >= MAX_TASKS
     }
@@ -98,6 +102,14 @@ impl TodoList {
     pub fn remove(&mut self, index: usize) {
         if index < self.items.len() {
             self.items.remove(index);
+            self.save();
+        }
+    }
+
+    /// Removes every task, done or not.
+    pub fn clear(&mut self) {
+        if !self.items.is_empty() {
+            self.items.clear();
             self.save();
         }
     }
@@ -188,6 +200,15 @@ mod tests {
         list.remove(5);
         list.toggle(5);
         assert_eq!(list.open_count() + list.done_count(), 1);
+    }
+
+    #[test]
+    fn clearing_removes_every_task_done_or_not() {
+        let mut list = TodoList::with_items(vec![item("a", false), item("b", true)]);
+        list.clear();
+        assert!(list.is_empty());
+        list.clear();
+        assert_eq!((list.open_count(), list.done_count()), (0, 0));
     }
 
     #[test]

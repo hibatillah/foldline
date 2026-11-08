@@ -3,10 +3,10 @@
 use windows::core::GUID;
 
 use crate::{
-    activity::{Activity, Flash, Presence, SystemMessage},
-    gfx::{Canvas, Color, Rect},
+    activity::{Activity, Flash, Presence, Slot, SystemMessage},
+    gfx::{Canvas, Color, Point, Rect},
     page::{Context, TimerId},
-    ui::{self, Icon},
+    ui::{self, Icon, Ring},
 };
 
 /// GUID_ACDC_POWER_SOURCE: 0 is the mains, 1 the battery, 2 a short-term source such as a UPS.
@@ -18,6 +18,9 @@ const LOW_LEVELS: [u32; 2] = [10, 20];
 const SHOW_MILLISECONDS: u32 = 3000;
 const CHARGING_GREEN: Color = Color::rgb(0.19, 0.82, 0.35);
 const LOW_RED: Color = Color::rgb(1.0, 0.27, 0.23);
+const IDLE_GREEN: Color = Color::rgb(0.18, 0.62, 0.27);
+/// Diameter of the ring beside the clock, which is also the width it asks for.
+const RING_DIAMETER: f32 = 14.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Event {
@@ -53,16 +56,36 @@ impl Tracker {
     }
 }
 
+/// Charging wins over low; the low color needs the battery to be the source.
+fn ring_color(percent: u32, is_on_battery: Option<bool>) -> Color {
+    match is_on_battery {
+        Some(false) => CHARGING_GREEN,
+        Some(true) if percent <= LOW_LEVELS[LOW_LEVELS.len() - 1] => LOW_RED,
+        _ => IDLE_GREEN,
+    }
+}
+
+fn ring_fraction(percent: u32) -> f32 {
+    percent.min(100) as f32 / 100.0
+}
+
 pub struct BatteryActivity {
     tracker: Tracker,
     event: Event,
     flash: Flash,
     width: f32,
+    has_battery: bool,
 }
 
 impl BatteryActivity {
     pub fn new() -> Self {
-        Self { tracker: Tracker::default(), event: Event::Unplugged, flash: Flash::default(), width: 0.0 }
+        Self {
+            tracker: Tracker::default(),
+            event: Event::Unplugged,
+            flash: Flash::default(),
+            width: 0.0,
+            has_battery: crate::platform::has_system_battery(),
+        }
     }
 
     fn percent_text(&self) -> Option<String> {
@@ -90,10 +113,23 @@ impl Activity for BatteryActivity {
     }
 
     fn presence(&self) -> Option<Presence> {
-        self.flash.is_visible().then_some(Presence::Transient { width: self.width })
+        if self.flash.is_visible() {
+            return Some(Presence::Transient { width: self.width });
+        }
+        self.tracker
+            .percent
+            .filter(|_| self.has_battery)
+            .map(|_| Presence::Companion { slot: Slot::Ring, width: RING_DIAMETER })
     }
 
-    fn draw(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+        if !self.flash.is_visible() {
+            let Some(percent) = self.tracker.percent else { return };
+            let center = Point::new(area.center_x(), area.center_y());
+            let color = ring_color(percent, self.tracker.is_on_battery);
+            Ring { center, diameter: RING_DIAMETER * scale }.draw(canvas, ring_fraction(percent), color, opacity);
+            return;
+        }
         let (icon, tint) = match self.event {
             Event::PluggedIn => (Icon::Bolt, CHARGING_GREEN),
             Event::Unplugged => (Icon::Battery, Color::WHITE),
@@ -122,6 +158,8 @@ impl Activity for BatteryActivity {
         };
         if let Some(event) = event {
             self.announce(event, context);
+        } else {
+            context.request_repaint();
         }
     }
 }
@@ -135,6 +173,53 @@ mod tests {
         tracker.power_source(ON_BATTERY);
         tracker.percentage(percent);
         tracker
+    }
+
+    #[test]
+    fn the_ring_is_green_while_idle_and_bright_green_while_charging() {
+        assert_eq!(ring_color(80, None), IDLE_GREEN);
+        assert_eq!(ring_color(80, Some(true)), IDLE_GREEN);
+        assert_eq!(ring_color(80, Some(false)), CHARGING_GREEN);
+    }
+
+    #[test]
+    fn the_ring_turns_red_at_the_low_threshold_only_on_battery() {
+        assert_eq!(ring_color(20, Some(true)), LOW_RED);
+        assert_eq!(ring_color(21, Some(true)), IDLE_GREEN);
+        assert_eq!(ring_color(10, Some(false)), CHARGING_GREEN);
+    }
+
+    #[test]
+    fn the_ring_arc_is_the_charge_fraction() {
+        assert_eq!(ring_fraction(0), 0.0);
+        assert_eq!(ring_fraction(50), 0.5);
+        assert_eq!(ring_fraction(120), 1.0);
+    }
+
+    #[test]
+    fn a_known_battery_percent_shows_a_ring_before_the_clock() {
+        let mut activity = BatteryActivity::new();
+        activity.has_battery = true;
+        assert_eq!(activity.presence(), None);
+        activity.tracker.percentage(64);
+        assert_eq!(activity.presence(), Some(Presence::Companion { slot: Slot::Ring, width: RING_DIAMETER }));
+    }
+
+    #[test]
+    fn a_pc_without_a_battery_shows_no_ring() {
+        let mut activity = BatteryActivity::new();
+        activity.has_battery = false;
+        activity.tracker.percentage(100);
+        assert_eq!(activity.presence(), None);
+    }
+
+    #[test]
+    fn a_visible_message_keeps_priority_over_the_ring() {
+        let mut activity = BatteryActivity::new();
+        activity.tracker.percentage(64);
+        activity.flash = Flash::visible();
+        activity.width = 120.0;
+        assert_eq!(activity.presence(), Some(Presence::Transient { width: 120.0 }));
     }
 
     #[test]

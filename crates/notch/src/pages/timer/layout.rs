@@ -4,15 +4,27 @@ use crate::gfx::{Point, Rect, Size};
 
 pub const EXPANDED_SIZE: Size = Size::new(290.0, 86.0);
 const _: () = assert!(EXPANDED_SIZE.height <= 190.0);
-const TOP_ROW_HEIGHT: f32 = 52.0;
-const WORDS_BOTTOM: f32 = 44.0;
-const TITLE_HEIGHT: f32 = 18.0;
-const DETAIL_HEIGHT: f32 = 16.0;
-const TIME_WIDTH: f32 = 116.0;
+const TIME_TOP: f32 = 2.0;
+const TIME_HEIGHT: f32 = 42.0;
+/// Width of the widest time ("00:00" at 38 px with tabular digits), so the words never move while it counts.
+pub const TIME_WIDTH: f32 = 105.0;
 const WORDS_GAP: f32 = 12.0;
-const BUTTON_TOP: f32 = 56.0;
+/// Next to the time the words sit on the row's bottom edge (flex-end): a 13 px label line over an 11 px detail line.
+const LABEL_HEIGHT: f32 = 16.0;
+const LABEL_DETAIL_GAP: f32 = 1.0;
+const LABEL_DETAIL_HEIGHT: f32 = 14.0;
+/// Without a time the 17 px headline and its detail start at the top of the row.
+const HEADLINE_HEIGHT: f32 = 21.0;
+const HEADLINE_DETAIL_GAP: f32 = 2.0;
+const HEADLINE_DETAIL_HEIGHT: f32 = 15.0;
+/// Clear space between the time row and the buttons.
+const WORDS_BUTTONS_GAP: f32 = 12.0;
+const ROW_BOTTOM: f32 = TIME_TOP + TIME_HEIGHT;
+const BUTTON_TOP: f32 = ROW_BOTTOM + WORDS_BUTTONS_GAP;
 const BUTTON_HEIGHT: f32 = 30.0;
-const BUTTON_GAP: f32 = 8.0;
+const BUTTON_GAP: f32 = 9.0;
+/// The time fills the room above the buttons; a headline without a time is centered there.
+const TEXT_ZONE_HEIGHT: f32 = TIME_HEIGHT;
 
 pub struct Layout {
     pub scale: f32,
@@ -33,17 +45,43 @@ impl Layout {
         if has_time { TIME_WIDTH + WORDS_GAP } else { 0.0 }
     }
 
+    /// How far a block of `content_height` moves down to sit in the middle of the text zone.
+    fn centered_shift(content_height: f32) -> f32 {
+        ((TEXT_ZONE_HEIGHT - content_height) / 2.0).floor()
+    }
+
+    /// Shift of everything above the buttons: none with a time and a detail line (the idle page), centered otherwise.
+    fn shift(has_time: bool, has_detail: bool) -> f32 {
+        match (has_time, has_detail) {
+            (true, true) => 0.0,
+            (true, false) => Self::centered_shift(TIME_HEIGHT),
+            (false, _) => Self::centered_shift(HEADLINE_HEIGHT + HEADLINE_DETAIL_GAP + HEADLINE_DETAIL_HEIGHT),
+        }
+    }
+
     pub fn title(&self, has_time: bool, has_detail: bool) -> Rect {
-        let bottom = if has_detail { WORDS_BOTTOM - DETAIL_HEIGHT } else { WORDS_BOTTOM };
-        self.rect(self.words_left(has_time), bottom - TITLE_HEIGHT, self.width(), bottom)
+        let top = if has_time {
+            let block = if has_detail { LABEL_HEIGHT + LABEL_DETAIL_GAP + LABEL_DETAIL_HEIGHT } else { LABEL_HEIGHT };
+            ROW_BOTTOM - block
+        } else {
+            TIME_TOP + Self::shift(false, has_detail)
+        };
+        let height = if has_time { LABEL_HEIGHT } else { HEADLINE_HEIGHT };
+        self.rect(self.words_left(has_time), top, self.width(), top + height)
     }
 
-    pub fn detail(&self, has_time: bool) -> Rect {
-        self.rect(self.words_left(has_time), WORDS_BOTTOM - DETAIL_HEIGHT, self.width(), WORDS_BOTTOM)
+    pub fn detail(&self, has_time: bool, has_detail: bool) -> Rect {
+        let (top, height) = if has_time {
+            (ROW_BOTTOM - LABEL_DETAIL_HEIGHT, LABEL_DETAIL_HEIGHT)
+        } else {
+            (TIME_TOP + HEADLINE_HEIGHT + HEADLINE_DETAIL_GAP + Self::shift(false, has_detail), HEADLINE_DETAIL_HEIGHT)
+        };
+        self.rect(self.words_left(has_time), top, self.width(), top + height)
     }
 
-    pub fn time(&self) -> Rect {
-        self.rect(0.0, 0.0, TIME_WIDTH, TOP_ROW_HEIGHT)
+    pub fn time(&self, has_detail: bool) -> Rect {
+        let top = TIME_TOP + Self::shift(true, has_detail);
+        self.rect(0.0, top, TIME_WIDTH, top + TIME_HEIGHT)
     }
 
     pub fn buttons(&self, count: usize) -> Vec<Rect> {
@@ -106,18 +144,52 @@ mod tests {
     #[test]
     fn the_words_sit_right_of_the_time_only_when_there_is_one() {
         let layout = layout(1.0);
-        assert!(layout.title(true, true).left >= layout.time().right);
-        assert!(layout.detail(true).left >= layout.time().right);
-        assert_eq!(layout.title(false, false).left, layout.bounds.left);
+        assert!(layout.title(true, true).left >= layout.time(true).right);
+        assert!(layout.detail(true, true).left >= layout.time(true).right);
+        assert_eq!(layout.title(false, true).left, layout.bounds.left);
     }
 
     #[test]
-    fn the_words_end_on_one_bottom_line_above_the_buttons() {
+    fn the_words_stack_above_the_buttons_in_every_state() {
         let layout = layout(1.0);
-        assert_eq!(layout.title(true, false).bottom, layout.detail(true).bottom);
-        assert!(layout.title(true, true).bottom <= layout.detail(true).top);
-        assert!(layout.detail(true).bottom <= layout.buttons(3)[0].top);
-        assert!(layout.title(true, true).top >= layout.bounds.top);
+        for (has_time, has_detail) in [(true, true), (true, false), (false, true)] {
+            if has_detail {
+                assert!(layout.title(has_time, has_detail).bottom <= layout.detail(has_time, has_detail).top);
+            }
+            assert!(layout.title(has_time, has_detail).top >= layout.bounds.top);
+            assert!(layout.time(has_detail).bottom <= layout.buttons(3)[0].top);
+        }
+        assert!(layout.detail(true, true).bottom <= layout.buttons(3)[0].top);
+        assert!(layout.detail(false, true).bottom <= layout.buttons(3)[0].top);
+    }
+
+    #[test]
+    fn the_detail_line_keeps_at_least_ten_px_clear_of_the_buttons() {
+        let layout = layout(1.0);
+        let buttons_top = layout.buttons(3)[0].top;
+        assert!(buttons_top - layout.detail(true, true).bottom >= 10.0);
+        assert!(buttons_top - layout.detail(false, true).bottom >= 10.0);
+        assert!(buttons_top - layout.time(false).bottom >= 10.0);
+    }
+
+    #[test]
+    fn the_time_fills_its_row_and_a_headline_is_centered_in_it() {
+        let layout = layout(1.0);
+        assert_eq!(layout.time(true).top, layout.time(false).top);
+        assert_eq!(layout.time(true).height(), TIME_HEIGHT);
+        assert!(layout.title(false, true).top > TIME_TOP);
+        assert!(layout.detail(false, true).bottom <= layout.time(true).bottom);
+    }
+
+    #[test]
+    fn the_words_next_to_the_time_end_on_its_bottom_edge_with_a_12_px_gap() {
+        let layout = layout(1.0);
+        assert!(layout.title(true, true).top > layout.title(false, true).top);
+        assert_eq!(layout.title(true, true).left - layout.time(true).right, WORDS_GAP);
+        assert_eq!(layout.detail(true, true).bottom, layout.time(true).bottom);
+        assert_eq!(layout.title(true, false).bottom, layout.time(true).bottom, "a lone label sits on the same edge");
+        assert_eq!(layout.buttons(3)[0].top - layout.time(true).bottom, 12.0);
+        assert_eq!(EXPANDED_SIZE.height, 86.0);
     }
 
     #[test]

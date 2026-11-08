@@ -110,20 +110,31 @@ impl<'a> Canvas<'a> {
         if color.a <= MIN_VISIBLE_ALPHA || text.is_empty() {
             return;
         }
-        let Some(format) = self.fonts.format(style) else { return };
-        let wide_text: Vec<u16> = text.encode_utf16().collect();
         self.use_color(color);
+        if style.tabular {
+            let Some(layout) = self.fonts.layout(style, text, rect.width(), rect.height()) else { return };
+            unsafe {
+                self.target.DrawTextLayout(
+                    Vector2 { X: rect.left, Y: rect.top },
+                    &layout,
+                    self.brush,
+                    D2D1_DRAW_TEXT_OPTIONS_CLIP,
+                );
+            }
+            return;
+        }
+        let Some(format) = self.fonts.format(style) else { return };
         let bounds: D2D_RECT_F = rect.into();
-        unsafe {
+        self.fonts.with_wide_text(text, |wide_text| unsafe {
             self.target.DrawText(
-                &wide_text,
+                wide_text,
                 &format,
                 &bounds,
                 self.brush,
                 D2D1_DRAW_TEXT_OPTIONS_CLIP,
                 DWRITE_MEASURING_MODE_NATURAL,
             );
-        }
+        });
     }
 
     pub fn image(&self, image: &ImageBrush, rect: Rect, radius: f32, opacity: f32) {

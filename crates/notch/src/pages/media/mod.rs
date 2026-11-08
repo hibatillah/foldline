@@ -1,10 +1,10 @@
 //! Media state comes from session; no progress bar means no per-second redraw while open.
 
 use crate::{
-    gfx::{Canvas, Color, ImageSlot, Rect, Size, Spring},
+    activity::Presence,
+    gfx::{Canvas, Color, ImageSlot, Point, Rect, Size, Spring},
     log,
-    page::{Context, Control as SettingControl, Frame, Mode, Page, PageSizes, PointerEvent, Priority, TimerId},
-    ui::Icon,
+    page::{Context, Frame, Mode, Page, PageSizes, PointerEvent, Priority, TimerId},
 };
 use controls::Control;
 use layout::Layout;
@@ -46,8 +46,6 @@ const SETTING_LYRICS: &str = "media.lyrics";
 
 const LYRIC_TIMER: TimerId = TimerId(1);
 
-const TITLE_TIMER: TimerId = TimerId(2);
-
 const WAVE_TIMER: TimerId = TimerId(3);
 
 const UNKNOWN_TITLE: &str = "Unknown title";
@@ -63,16 +61,11 @@ pub struct MediaPage {
     app_icon: ImageSlot,
     follower: LyricFollower,
     lyrics_enabled: bool,
-    measured_title: String,
-    title_width: f32,
-    measured_artist: String,
-    artist_width: f32,
     hovered_control: Option<Control>,
     is_hovered: bool,
     theme_color: Option<Color>,
     theme_version: u64,
     backdrop: Spring,
-    is_title_shown: bool,
     /// Rebuild title lines only when the title, artist, or text-column width changes.
     title_lines: Vec<String>,
     title_lines_source: (String, String, bool),
@@ -90,16 +83,11 @@ impl MediaPage {
             app_icon: ImageSlot::default(),
             follower: LyricFollower::new(),
             lyrics_enabled: true,
-            measured_title: String::new(),
-            title_width: 0.0,
-            measured_artist: String::new(),
-            artist_width: 0.0,
             hovered_control: None,
             is_hovered: false,
             theme_color: None,
             theme_version: 0,
             backdrop: Spring::new(0.0, 180.0, 26.0),
-            is_title_shown: false,
             title_lines: Vec::new(),
             title_lines_source: (String::new(), String::new(), false),
             lyric_wraps: Vec::new(),
@@ -116,7 +104,7 @@ impl MediaPage {
     }
 
     #[cfg(test)]
-    pub fn sample(fonts: &crate::gfx::Fonts, lyrics_on: bool, show_title: bool) -> Self {
+    pub fn sample(fonts: &crate::gfx::Fonts, lyrics_on: bool) -> Self {
         use {lyrics::LyricLine, session::LyricsStatus};
         let mut page = Self::new();
         page.info.available = true;
@@ -144,15 +132,10 @@ impl MediaPage {
             page.theme_color = Some(Color::rgb(0.2, 0.65, 0.75));
             page.backdrop.jump_to(1.0);
         }
-        page.measured_title = page.info.title.clone();
-        page.title_width = fonts.measure(&styles::COMPACT_TITLE, &page.info.title);
-        page.measured_artist = page.info.artist.clone();
-        page.artist_width = fonts.measure(&styles::COMPACT_ARTIST, &page.info.artist);
         if lyrics_on {
             page.follower.update(Some(&lyrics), 2 * 50_000_000 + 10_000_000, true, fonts);
             page.follower.animate(5.0);
         }
-        page.is_title_shown = show_title;
         page.refresh_title_lines(fonts);
         page
     }
@@ -167,23 +150,10 @@ impl Page for MediaPage {
         "Media"
     }
 
-    fn icon(&self) -> Icon {
-        Icon::Music
-    }
-
-    fn settings(&self) -> Vec<SettingControl> {
-        vec![SettingControl::Switch {
-            key: SETTING_LYRICS,
-            label: "Show lyrics",
-            hint: "beside the player and in the pill",
-            default: true,
-        }]
-    }
-
     fn priority(&self, mode: Mode) -> Option<Priority> {
         // Collapsed requires playback; expanded remains available while paused or empty.
         match mode {
-            Mode::Resting => self.is_track_playing().then_some(Priority::NORMAL),
+            Mode::Resting => self.claims_pill().then_some(Priority::NORMAL),
             Mode::Expanded if self.info.available => Some(Priority::NORMAL),
             Mode::Expanded => Some(Priority::BACKGROUND),
         }
@@ -193,18 +163,27 @@ impl Page for MediaPage {
         let width =
             if self.is_lyric_panel_visible() { layout::LYRICS_WIDTH } else { layout::plain_width(self.text_width) };
         PageSizes {
-            resting_width: resting::width(
-                self.resting_view(),
-                self.title_width,
-                self.artist_width,
-                self.follower.width(),
-            ),
+            resting_width: resting::width(self.follower.width()),
             expanded: Size::new(width, layout::PLAIN_HEIGHT),
         }
     }
 
     fn shows_live_text(&self) -> bool {
-        matches!(self.resting_view(), resting::View::Lyrics)
+        self.claims_pill()
+    }
+
+    fn resting_lead_width(&self) -> f32 {
+        resting::ARTWORK_SIZE
+    }
+
+    fn presence(&self) -> Option<Presence> {
+        self.is_wave_in_pill().then_some(Presence::Badge { width: wave::WIDTH })
+    }
+
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+        let center = Point::new(area.center_x(), area.center_y());
+        let wave_area = Rect::around(center, wave::WIDTH * scale / 2.0, wave::HEIGHT * scale / 2.0);
+        wave::draw(canvas, wave_area, scale, wave::now_seconds(), opacity);
     }
 
     fn header_status_width(&self) -> Option<f32> {
@@ -213,6 +192,14 @@ impl Page for MediaPage {
 
     fn draw_header_status(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
         wave::draw(canvas, area, scale, wave::now_seconds(), opacity);
+    }
+
+    fn header_status_rank(&self) -> u8 {
+        0
+    }
+
+    fn header_status_page(&self) -> Option<&'static str> {
+        Some("media")
     }
 
     fn draw_resting(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
@@ -279,12 +266,6 @@ impl Page for MediaPage {
                 context.request_repaint();
             }
             WAVE_TIMER => context.request_repaint(),
-            TITLE_TIMER => {
-                self.is_title_shown = false;
-                self.sync_wave_timer(context);
-                context.kill_timer(TITLE_TIMER);
-                context.request_repaint();
-            }
             _ => {}
         }
     }

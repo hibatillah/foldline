@@ -1,11 +1,12 @@
 //! What the shalat page reads, computes and shows.
 
-use self::times::{PRAYERS, Place, Prayer};
-use crate::page::{Control, Page};
-use places::{COUNTRY_KEY, LATITUDE_KEY, LONGITUDE_KEY};
+use self::config::HANAFI_KEY;
+use self::times::{Place, Prayer};
+use crate::page::Page;
+use places::{CITY_KEY, COUNTRY_KEY, LATITUDE_KEY, LONGITUDE_KEY};
 use salah::{Local, Madhab, Utc};
 
-use super::{schedule::wait_milliseconds, *};
+use super::{schedule::wait_milliseconds, text::remaining_text, *};
 
 use salah::Datelike;
 
@@ -67,25 +68,78 @@ fn the_page_waits_only_as_long_as_it_has_something_to_show() {
 }
 
 #[test]
-fn typing_a_city_gives_hits_that_save_its_place() {
-    let page = ShalatPage::new();
-    let hits = page.search(CITY_KEY, "pekanbaru");
-    assert_eq!(hits[0].label, "Pekanbaru, ID");
-    let keys: Vec<&str> = hits[0].values.iter().map(|(key, _)| *key).collect();
-    assert_eq!(keys, [CITY_KEY, LATITUDE_KEY, LONGITUDE_KEY, COUNTRY_KEY]);
-    assert!(page.search("shalat.other", "pekanbaru").is_empty());
-}
-
-#[test]
-fn the_adjust_tab_has_a_stepper_for_every_time_and_the_first_tab_fits_a_page() {
-    let groups = ShalatPage::new().settings_groups();
-    assert_eq!(groups.len(), 2);
-    let steppers = groups[1].controls.iter().filter(|control| matches!(control, Control::Stepper { .. })).count();
-    assert_eq!(steppers, PRAYERS.len());
-}
-
-#[test]
 fn dates_in_the_page_come_from_this_pcs_clock() {
     let today = Utc::now().with_timezone(&Local).date_naive();
     assert!(today.year() >= 2026);
+}
+
+#[test]
+fn the_short_badge_drops_the_word_in() {
+    assert_eq!(short_badge_text(Prayer::Asr, 24 * 60), Some("Asr 24m".to_owned()));
+    assert_eq!(short_badge_text(Prayer::Asr, 31 * 60), None);
+}
+
+#[test]
+fn the_prayer_ranks_last_and_its_header_icon_opens_the_shalat_page() {
+    let page = ShalatPage::new();
+    assert_eq!(page.header_status_rank(), 5);
+    assert_eq!(page.header_status_page(), Some("shalat"));
+}
+
+#[test]
+fn the_prayer_header_icon_shows_only_while_the_badge_does() {
+    let fonts = crate::gfx::Fonts::new(1.0).unwrap();
+    assert_eq!(ShalatPage::sample().header_status_width(), None);
+    let page = ShalatPage::sample_badge(&fonts);
+    assert_eq!(page.header_status_width(), Some(Icon::Moon.size()));
+    let Some(Presence::Badge { width }) = page.presence() else { panic!("the sample has a badge") };
+    assert!(page.short_presence_width().unwrap() < width);
+    assert!(width > Icon::Moon.size() + BADGE_ICON_GAP, "the badge holds the icon and the text");
+}
+
+#[test]
+fn the_prayer_badge_is_exactly_the_moon_a_gap_and_the_current_text() {
+    let fonts = crate::gfx::Fonts::new(1.0).unwrap();
+    let mut page = ShalatPage::sample();
+    for (prayer, minutes) in [(Prayer::Isha, 22), (Prayer::Isha, 9), (Prayer::Maghrib, 59 - 30)] {
+        page.set_badge(&fonts, prayer, minutes * 60);
+        let Some(Presence::Badge { width }) = page.presence() else { panic!("the page has a badge") };
+        let text = badge_text(prayer, minutes * 60).unwrap();
+        assert_eq!(width, BADGE_ICON_SIZE + 4.0 + fonts.measure(&BADGE, &text).ceil());
+        let short = short_badge_text(prayer, minutes * 60).unwrap();
+        assert_eq!(page.short_presence_width(), Some(BADGE_ICON_SIZE + 4.0 + fonts.measure(&BADGE, &short).ceil()));
+    }
+}
+
+#[test]
+fn the_prayer_badge_width_follows_the_text_when_the_minutes_lose_a_digit() {
+    let fonts = crate::gfx::Fonts::new(1.0).unwrap();
+    let mut page = ShalatPage::sample();
+    page.set_badge(&fonts, Prayer::Isha, 22 * 60);
+    let two_digits = page.presence();
+    page.set_badge(&fonts, Prayer::Isha, 9 * 60);
+    let (Some(Presence::Badge { width: before }), Some(Presence::Badge { width: after })) =
+        (two_digits, page.presence())
+    else {
+        panic!("the page has a badge")
+    };
+    assert!(after < before);
+}
+
+#[test]
+fn the_prayer_badge_text_ends_where_the_badge_does() {
+    let fonts = crate::gfx::Fonts::new(1.0).unwrap();
+    let mut page = ShalatPage::sample();
+    page.set_badge(&fonts, Prayer::Isha, 22 * 60);
+    let Some(Presence::Badge { width }) = page.presence() else { panic!("the page has a badge") };
+    let text_left = BADGE_ICON_SIZE + BADGE_ICON_GAP;
+    assert_eq!(text_left + fonts.measure(&BADGE, "Isha in 22m").ceil(), width);
+}
+
+#[test]
+fn the_prayer_counts_down_to_the_next_prayer_only_while_the_badge_shows() {
+    let fonts = crate::gfx::Fonts::new(1.0).unwrap();
+    assert_eq!(ShalatPage::sample().countdown_seconds(), None);
+    let seconds = ShalatPage::sample_badge(&fonts).countdown_seconds().expect("the sample has a badge");
+    assert!(seconds > 0, "Asr is still ahead of the sample's moment");
 }

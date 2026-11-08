@@ -5,16 +5,11 @@ use windows::Win32::Foundation::HWND;
 /// The page typing goes to, the window that had the keyboard before it, and half-received characters.
 #[derive(Default)]
 pub(super) struct KeyboardState {
-    pub(super) owner: Option<KeyboardOwner>,
+    /// Index of the page that holds the keyboard.
+    pub(super) owner: Option<usize>,
     pub(super) previous: Option<HWND>,
     /// The first half of a character outside the basic plane, waiting for its second `WM_CHAR`.
     pub(super) pending_high_surrogate: Option<u16>,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum KeyboardOwner {
-    Page(usize),
-    Panel,
 }
 
 /// The keys a text field uses; Ctrl+V pastes the clipboard's text on one line.
@@ -50,13 +45,13 @@ pub(super) fn single_line(text: &str) -> String {
 impl Notch {
     pub(super) fn set_keyboard(&mut self, index: usize, wants_keyboard: bool) {
         if wants_keyboard {
-            self.take_keyboard_for(KeyboardOwner::Page(index));
-        } else if self.keyboard.owner == Some(KeyboardOwner::Page(index)) {
+            self.take_keyboard_for(index);
+        } else if self.keyboard.owner == Some(index) {
             self.give_keyboard_back();
         }
     }
 
-    pub(super) fn take_keyboard_for(&mut self, owner: KeyboardOwner) {
+    pub(super) fn take_keyboard_for(&mut self, owner: usize) {
         if self.keyboard.owner == Some(owner) {
             return;
         }
@@ -64,25 +59,19 @@ impl Notch {
             Some(previous_owner) => self.keyboard_lost_by(previous_owner),
             None => self.keyboard.previous = crate::host::window::take_keyboard(self.window),
         }
-        log::debug(&format!("keyboard taken by {owner:?}"));
+        log::debug(&format!("keyboard taken by page {owner}"));
     }
 
     pub(super) fn give_keyboard_back(&mut self) {
         let Some(owner) = self.keyboard.owner.take() else { return };
         self.keyboard.pending_high_surrogate = None;
         crate::host::window::give_back_keyboard(self.keyboard.previous.take());
-        log::debug(&format!("keyboard given back by {owner:?}"));
+        log::debug(&format!("keyboard given back by page {owner}"));
         self.close_if_pointer_is_away();
     }
 
-    pub(super) fn keyboard_lost_by(&mut self, owner: KeyboardOwner) {
-        match owner {
-            KeyboardOwner::Page(index) => self.with_page(index, |page, context| page.on_keyboard_lost(context)),
-            KeyboardOwner::Panel => {
-                self.panel.editing = None;
-                self.pending.repaint = true;
-            }
-        }
+    pub(super) fn keyboard_lost_by(&mut self, owner: usize) {
+        self.with_page(owner, |page, context| page.on_keyboard_lost(context));
     }
 
     /// Handles `WM_KEYDOWN`; returns false for keys no page wants, so Windows handles them.
@@ -114,11 +103,8 @@ impl Notch {
         self.flush();
     }
 
-    pub(super) fn deliver_key(&mut self, owner: KeyboardOwner, key: KeyInput) {
-        match owner {
-            KeyboardOwner::Page(index) => self.with_page(index, |page, context| page.on_key(key, context)),
-            KeyboardOwner::Panel => self.panel_key(&key),
-        }
+    pub(super) fn deliver_key(&mut self, owner: usize, key: KeyInput) {
+        self.with_page(owner, |page, context| page.on_key(key, context));
     }
 }
 

@@ -5,10 +5,11 @@ use windows::Win32::Foundation::{HWND, POINT};
 use super::{
     display, navigation,
     navigation::PageList,
-    page_editor::PageEditor,
+    notification_banners,
     scroll_gate::ScrollGate,
     settings::Settings,
     visibility::{self},
+    volume_flyout,
 };
 use crate::{
     activity::Activity,
@@ -17,23 +18,26 @@ use crate::{
     page::{Page, RESTING_HEIGHT, Requests},
 };
 use animation::Springs;
+use header_row::HeaderMarks;
 use hiding::{HidingState, read_showing};
 use hover::HoverState;
-use keyboard::{KeyboardOwner, KeyboardState};
-use menu::ContextMenu;
+use keyboard::KeyboardState;
 use pages::activity_setting_key;
-use settings_ui::PanelState;
+use resting_row::RestingRow;
+use row_motion::RowMotion;
 
 mod animation;
+mod header_row;
 mod hiding;
 mod hover;
 mod input;
 mod keyboard;
 mod layout;
-mod menu;
 mod pages;
 mod paint;
-mod settings_ui;
+mod resting_row;
+mod row_motion;
+mod settings_reload;
 mod timers;
 
 #[cfg(test)]
@@ -63,6 +67,8 @@ const HEADER_FADE: (f32, f32) = (0.2, 0.45);
 const CONTENT_FADE: (f32, f32) = (0.62, 0.9);
 const CLOSE_TIMER_ID: usize = 8;
 const RAISE_TIMER_ID: usize = 9;
+/// One-shot: a window that stopped covering the screen must stay so for a moment before the notch comes back.
+const WINDOW_REVEAL_TIMER_ID: usize = 10;
 const PAGE_GAP: f32 = 24.0;
 const LAST_PAGE_SETTING: &str = "navigation.page";
 const PAGE_ORDER_SETTING: &str = "navigation.order";
@@ -72,12 +78,6 @@ const PAGES_OFF_SETTING: &str = "navigation.disabled";
 enum Source {
     Activity(usize),
     Page(usize),
-}
-
-#[derive(Clone, Copy)]
-enum HeaderMark {
-    Page(usize),
-    Activity(usize),
 }
 
 struct ActivitySlot {
@@ -99,25 +99,24 @@ pub struct Notch {
     shown_transients: Vec<(Source, f32)>,
     shown_banner: Option<(Source, f32, f32)>,
     shown_badges: Vec<(Source, f32)>,
+    resting_row: RestingRow,
+    header_marks: HeaderMarks,
     resting_index: Option<usize>,
     expanded_index: Option<usize>,
     selected_page: Option<usize>,
     shown_page: Option<usize>,
     page_list: PageList,
-    editor: Option<PageEditor>,
     navigable: Vec<usize>,
     track: Spring,
     scroll_gate: ScrollGate,
     pending: Requests,
     springs: Springs,
+    row_motion: RowMotion,
     hiding: HidingState,
     has_resting_content: bool,
     hover: HoverState,
-    /// The right-click menu while it is open.
-    menu: Option<ContextMenu>,
     is_animating: bool,
     keyboard: KeyboardState,
-    panel: PanelState,
     last_tick: i64,
     ticks_per_second: i64,
     frame_interval_milliseconds: u32,
@@ -172,24 +171,24 @@ impl Notch {
             shown_transients: Vec::new(),
             shown_banner: None,
             shown_badges: Vec::new(),
+            resting_row: RestingRow::default(),
+            header_marks: HeaderMarks::default(),
             resting_index: None,
             expanded_index: None,
             selected_page: None,
             shown_page: None,
             page_list: PageList::new(0),
-            editor: None,
             navigable: Vec::new(),
             track: navigation::page_transition(0.0),
             scroll_gate: ScrollGate::default(),
             pending: Requests::default(),
             springs: Springs::new(),
+            row_motion: RowMotion::new(),
             hiding,
             has_resting_content: false,
             hover: HoverState::default(),
-            menu: None,
             is_animating: false,
             keyboard: KeyboardState::default(),
-            panel: PanelState::default(),
             last_tick: 0,
             ticks_per_second,
             frame_interval_milliseconds: display::frame_interval_milliseconds(),
@@ -216,12 +215,16 @@ impl Notch {
         );
         for index in 0..self.pages.len() {
             self.with_page(index, |page, context| page.on_start(context));
+            let is_enabled = self.page_list.is_enabled(index);
+            self.with_page(index, |page, context| page.on_enabled_changed(is_enabled, context));
         }
         for index in 0..self.activities.len() {
             if self.activities[index].is_enabled {
                 self.start_activity(index);
             }
         }
+        volume_flyout::set_hidden(self.settings.get_bool(volume_flyout::SETTING_KEY, false));
+        notification_banners::set_hidden(self.settings.get_bool(notification_banners::SETTING_KEY, false));
         self.arm_clock_timer();
         self.refresh_layout();
         for spring in self.layout_springs() {

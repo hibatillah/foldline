@@ -4,7 +4,7 @@ use windows::{Win32::UI::WindowsAndMessaging::WM_APP, core::GUID};
 
 use crate::{
     gfx::{Canvas, Rect},
-    page::{Context, PAGE_TIMER_LIMIT, TimerId},
+    page::{Context, PAGE_TIMER_LIMIT, PointerEvent, TimerId},
 };
 
 pub(crate) const WM_ACTIVITY_NOTIFY: u32 = WM_APP + 3;
@@ -16,10 +16,21 @@ pub(crate) const ACTIVITY_TIMER_BASE: usize = PAGE_TIMER_LIMIT;
 pub enum Presence {
     /// Takes over the pill for a moment, like a volume change. Several at once share the pill, side by side.
     Transient { width: f32 },
-    /// A small mark kept at the right end of the pill while something lasts, like the microphone being in use.
+    /// A small mark kept at the right end of the pill while something lasts, like a timer running.
     Badge { width: f32 },
-    /// Banners preempt transients and block hover expansion; on_hover_changed can extend their lifetime.
+    /// Banners preempt transients and block hover expansion; pointer input over them arrives in `on_pointer`.
     Banner { width: f32, height: f32 },
+    /// A mark right of the clock, kept while something lasts, like the battery ring or a camera dot.
+    Companion { slot: Slot, width: f32 },
+}
+
+/// Where a companion sits right of the clock.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Slot {
+    /// Right after the clock; holds one item.
+    Ring,
+    /// After the ring; every companion here draws into the same rect, each in its own row.
+    Dots,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -52,8 +63,18 @@ pub trait Activity {
         None
     }
 
+    /// Lower ranks sit nearer the clock, in the pill group and in the header; equal ranks keep list order.
+    fn header_status_rank(&self) -> u8 {
+        0
+    }
+
     /// Draws the mark into `area` (device pixels, as high as the header), faded by `opacity`.
     fn draw_header_status(&self, _canvas: &Canvas, _area: Rect, _scale: f32, _opacity: f32) {}
+
+    /// The id of the page a click on this activity's header status opens; `None` when it opens nothing.
+    fn header_status_page(&self) -> Option<&'static str> {
+        None
+    }
 
     /// Called once after the window exists, only when the activity is switched on: start listening here.
     fn on_start(&mut self, _context: &mut Context) {}
@@ -61,6 +82,10 @@ pub trait Activity {
     fn on_timer(&mut self, _timer: TimerId, _context: &mut Context) {}
 
     fn on_hover_changed(&mut self, _is_hovering: bool, _context: &mut Context) {}
+
+    /// Pointer input over this activity's banner while the notch is collapsed; `area` and `scale` are what `draw` got.
+    /// `PointerEvent::Left` means the pointer left the banner.
+    fn on_pointer(&mut self, _event: PointerEvent, _area: Rect, _scale: f32, _context: &mut Context) {}
 
     fn on_notify(&mut self, _context: &mut Context) {}
 

@@ -1,19 +1,12 @@
-use super::{MediaPage, styles, wave};
+use super::{MediaPage, styles};
 use crate::{
     gfx::{Canvas, Color, Rect},
     page::{Frame, RESTING_HEIGHT},
 };
 
-const PADDING: f32 = 8.0;
-const ICON_SIZE: f32 = 18.0;
-const ICON_RADIUS: f32 = 4.0;
-const GAP: f32 = 8.0;
-const WAVE_VIEW_GAP: f32 = 12.0;
-const WAVE_VIEW_MIN_WIDTH: f32 = crate::page::RESTING_MIN_WIDTH;
-const WAVE_VIEW_MAX_WIDTH: f32 = 400.0;
-const TITLE_WIDTH_SLACK: f32 = 2.0;
-const TITLE_LIMIT: f32 = 140.0;
-const ARTIST_LIMIT: f32 = 80.0;
+/// Width in DIP of the artwork at the left end of the claimed pill.
+pub const ARTWORK_SIZE: f32 = 20.0;
+const ARTWORK_RADIUS: f32 = 5.0;
 const LYRIC_SLACK: f32 = 8.0;
 /// Smallest collapsed pill while lyrics are on, so a short line or a rest in the music does not shrink it.
 const MIN_LYRIC_WIDTH: f32 = 240.0;
@@ -21,39 +14,21 @@ const NOTE: &str = "\u{266A}";
 const MAX_LYRIC_WIDTH: f32 = 520.0;
 const LYRIC_TRAVEL: f32 = 6.0;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum View {
-    Wave,
-    TrackChange,
-    Lyrics,
+/// Content width of the claimed pill: the artwork and the line; the host adds its own gaps and edges.
+pub fn width(lyric_width: f32) -> f32 {
+    (ARTWORK_SIZE + lyric_width + LYRIC_SLACK).clamp(MIN_LYRIC_WIDTH, MAX_LYRIC_WIDTH)
 }
 
-pub fn width(view: View, title_width: f32, artist_width: f32, lyric_width: f32) -> f32 {
-    match view {
-        View::Wave => (PADDING
-            + ICON_SIZE
-            + WAVE_VIEW_GAP
-            + title_width
-            + TITLE_WIDTH_SLACK
-            + WAVE_VIEW_GAP
-            + wave::WIDTH
-            + PADDING)
-            .clamp(WAVE_VIEW_MIN_WIDTH, WAVE_VIEW_MAX_WIDTH),
-        View::TrackChange => {
-            let artist = if artist_width > 0.0 { GAP + artist_width.min(ARTIST_LIMIT) } else { 0.0 };
-            (PADDING + ICON_SIZE + GAP + title_width.min(TITLE_LIMIT) + artist + PADDING).max(150.0)
-        }
-        View::Lyrics => {
-            (PADDING + ICON_SIZE + GAP + lyric_width + LYRIC_SLACK + PADDING).clamp(MIN_LYRIC_WIDTH, MAX_LYRIC_WIDTH)
-        }
-    }
+/// Where the lyric line starts, in device pixels: after the artwork and the gap the host reserved.
+fn lyric_left(frame: &Frame) -> f32 {
+    frame.bounds.left + (ARTWORK_SIZE + frame.lead_gap) * frame.scale
 }
 
 fn draw_art(page: &MediaPage, canvas: &Canvas, area: Rect, opacity: f32) {
-    let radius = ICON_RADIUS * canvas.scale();
+    let radius = ARTWORK_RADIUS * canvas.scale();
     match page.artwork.brush().or(page.app_icon.brush()) {
         Some(image) => canvas.image(image, area, radius, opacity),
-        None => canvas.text(&styles::RESTING_LABEL, "\u{266A}", area, Color::WHITE.faded(opacity)),
+        None => canvas.text(&styles::RESTING_LABEL, NOTE, area, Color::WHITE.faded(opacity)),
     }
 }
 
@@ -63,92 +38,43 @@ pub fn draw(page: &MediaPage, canvas: &Canvas, frame: &Frame, opacity: f32) {
     let row_top = bounds.top;
     let row_bottom = bounds.top + RESTING_HEIGHT * scale;
     let center_y = (row_top + row_bottom) / 2.0;
-    let icon_size = ICON_SIZE * scale;
-    let left = bounds.left + PADDING * scale;
-    let icon_area = Rect::new(left, center_y - icon_size / 2.0, left + icon_size, center_y + icon_size / 2.0);
-    let view = page.resting_view();
-    let info = &page.info;
+    let art_size = ARTWORK_SIZE * scale;
+    let art_area = Rect::new(bounds.left, center_y - art_size / 2.0, bounds.left + art_size, center_y + art_size / 2.0);
+    draw_art(page, canvas, art_area, opacity);
 
-    draw_art(page, canvas, icon_area, opacity);
-    match view {
-        View::Wave => {
-            let right = bounds.right - PADDING * scale;
-            let half_height = wave::HEIGHT * scale / 2.0;
-            let area = Rect::new(right - wave::WIDTH * scale, center_y - half_height, right, center_y + half_height);
-            wave::draw(canvas, area, scale, wave::now_seconds(), opacity);
-            let title_left = icon_area.right + WAVE_VIEW_GAP * scale;
-            let title_area = Rect::new(title_left, row_top, area.left - WAVE_VIEW_GAP * scale, row_bottom);
-            canvas.text(&styles::COMPACT_TITLE, &info.title, title_area, Color::WHITE.faded(opacity));
-        }
-        View::TrackChange => {
-            let title_width = page.title_width.min(TITLE_LIMIT) * scale;
-            let title_left = icon_area.right + GAP * scale;
-            let title_area = Rect::new(title_left, row_top, title_left + title_width + 2.0 * scale, row_bottom);
-            canvas.text(&styles::COMPACT_TITLE, &info.title, title_area, Color::WHITE.faded(opacity));
-            if !info.artist.is_empty() {
-                let artist_left = title_area.right + GAP * scale;
-                let artist_width = page.artist_width.min(ARTIST_LIMIT) * scale;
-                let artist_area = Rect::new(artist_left, row_top, artist_left + artist_width + 2.0 * scale, row_bottom);
-                canvas.text(&styles::COMPACT_ARTIST, &info.artist, artist_area, Color::gray(0.6).faded(opacity));
-            }
-        }
-        View::Lyrics => {
-            let lyric_left = icon_area.right + GAP * scale;
-            let lyric_right = bounds.right - PADDING * scale;
-            let transition = page.follower.transition().clamp(0.0, 1.0);
-            let travel = LYRIC_TRAVEL * scale;
-            let band = |offset: f32| Rect::new(lyric_left, row_top + offset, lyric_right, row_bottom + offset);
-            let previous = Color::WHITE.faded(opacity * (1.0 - transition));
-            let current = Color::WHITE.faded(opacity * transition);
-            let shown = |text: &str| if text.is_empty() { NOTE.to_owned() } else { text.to_owned() };
-            canvas.text(&styles::RESTING_LYRIC, &shown(page.follower.previous()), band(-transition * travel), previous);
-            canvas.text(
-                &styles::RESTING_LYRIC,
-                &shown(page.follower.current()),
-                band((1.0 - transition) * travel),
-                current,
-            );
-        }
-    }
+    let (left, right) = (lyric_left(frame), bounds.right);
+    let transition = page.follower.transition().clamp(0.0, 1.0);
+    let travel = LYRIC_TRAVEL * scale;
+    let band = |offset: f32| Rect::new(left, row_top + offset, right, row_bottom + offset);
+    let previous = Color::WHITE.faded(opacity * (1.0 - transition));
+    let current = Color::WHITE.faded(opacity * transition);
+    let shown = |text: &str| if text.is_empty() { NOTE.to_owned() } else { text.to_owned() };
+    canvas.text(&styles::RESTING_LYRIC, &shown(page.follower.previous()), band(-transition * travel), previous);
+    canvas.text(&styles::RESTING_LYRIC, &shown(page.follower.current()), band((1.0 - transition) * travel), current);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn the_wave_pill_grows_with_the_title_up_to_a_limit_and_is_never_tiny() {
-        assert_eq!(width(View::Wave, 0.0, 0.0, 0.0), WAVE_VIEW_MIN_WIDTH);
-        assert!(width(View::Wave, 100.0, 0.0, 0.0) > width(View::Wave, 60.0, 0.0, 0.0));
-        assert_eq!(width(View::Wave, 5000.0, 0.0, 0.0), 400.0);
-    }
-
-    #[test]
-    fn the_idle_player_fits_a_long_song_title_without_trimming_it() {
-        let fonts = crate::gfx::Fonts::new(1.0).unwrap();
-        let title_width = fonts.measure(&styles::COMPACT_TITLE, "Somewhere Only We Know - Live at the O2 Arena");
-        assert!(title_width > TITLE_LIMIT);
-        let pill_width = width(View::Wave, title_width, 0.0, 0.0);
-        let title_space = pill_width - 2.0 * PADDING - ICON_SIZE - 2.0 * WAVE_VIEW_GAP - wave::WIDTH;
-        assert!(title_space >= title_width + 1.0, "title needs {title_width} DIP, available {title_space}");
-    }
-
-    #[test]
-    fn a_track_change_pill_grows_with_the_title_and_the_artist() {
-        assert!(width(View::TrackChange, 100.0, 60.0, 0.0) > width(View::TrackChange, 100.0, 0.0, 0.0));
-        assert!(width(View::TrackChange, 120.0, 0.0, 0.0) > width(View::TrackChange, 60.0, 0.0, 0.0));
-    }
-
-    #[test]
-    fn a_track_change_pill_stays_within_its_limits() {
-        assert_eq!(width(View::TrackChange, 0.0, 0.0, 0.0), 150.0);
-        assert_eq!(width(View::TrackChange, 5000.0, 5000.0, 0.0), 270.0);
-    }
+    use crate::gfx::Size;
 
     #[test]
     fn the_lyrics_pill_grows_with_the_line_up_to_a_maximum() {
-        assert!(width(View::Lyrics, 0.0, 0.0, 300.0) > width(View::Lyrics, 0.0, 0.0, 150.0));
-        assert_eq!(width(View::Lyrics, 0.0, 0.0, 5000.0), MAX_LYRIC_WIDTH);
-        assert_eq!(width(View::Lyrics, 0.0, 0.0, 1.0), MIN_LYRIC_WIDTH);
+        assert!(width(300.0) > width(150.0));
+        assert_eq!(width(5000.0), MAX_LYRIC_WIDTH);
+        assert_eq!(width(1.0), MIN_LYRIC_WIDTH);
+    }
+
+    #[test]
+    fn the_line_starts_after_the_artwork_and_the_gap_the_host_reserved() {
+        let frame = |lead_gap| Frame {
+            scale: 2.0,
+            bounds: Rect::new(100.0, 0.0, 600.0, 74.0),
+            expansion: 0.0,
+            expanded: Size::new(0.0, 0.0),
+            lead_gap,
+        };
+        assert_eq!(lyric_left(&frame(0.0)), 100.0 + ARTWORK_SIZE * 2.0);
+        assert_eq!(lyric_left(&frame(26.0)), 100.0 + (ARTWORK_SIZE + 26.0) * 2.0);
     }
 }

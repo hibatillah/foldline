@@ -1,6 +1,6 @@
 //! Notification text and privacy-mode presentation.
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use crate::gfx::{Color, ImageData};
 
@@ -14,6 +14,8 @@ pub struct Item {
     pub icon: Option<Arc<ImageData>>,
     pub title: String,
     pub body: String,
+    /// When the listener read it, so the debug log can tell how long the banner took after that.
+    pub read_at: Instant,
 }
 
 const PALETTE: [Color; 8] = [
@@ -39,12 +41,30 @@ pub fn app_letter(app: &str) -> String {
         .unwrap_or_else(|| "?".to_owned())
 }
 
-pub fn heading(item: &Item) -> String {
-    if item.title.is_empty() { item.app.clone() } else { format!("{} \u{00b7} {}", item.title, item.app) }
+/// The heading: the sender in white, then the app name in grey. A sender that is empty or only whitespace is missing,
+/// and the app name takes its place in white with nothing after it.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Heading {
+    pub lead: String,
+    pub app: Option<String>,
+}
+
+pub fn heading(item: &Item) -> Heading {
+    let sender = item.title.trim();
+    if sender.is_empty() {
+        Heading { lead: item.app.clone(), app: None }
+    } else {
+        Heading { lead: sender.to_owned(), app: Some(item.app.clone()) }
+    }
 }
 
 pub fn body_text(item: &Item, shows_text: bool) -> String {
     if !shows_text { PRIVATE_TEXT.to_owned() } else { item.body.split_whitespace().collect::<Vec<_>>().join(" ") }
+}
+
+/// What the primary button says; it names the app even in privacy mode.
+pub fn open_label(item: &Item) -> String {
+    format!("Open {}", item.app)
 }
 
 #[cfg(test)]
@@ -59,6 +79,7 @@ mod tests {
             icon: None,
             title: title.to_owned(),
             body: body.to_owned(),
+            read_at: Instant::now(),
         }
     }
 
@@ -71,9 +92,18 @@ mod tests {
     }
 
     #[test]
-    fn the_heading_names_the_sender_and_the_app() {
-        assert_eq!(heading(&item(1, "Rafi", "hi")), "Rafi \u{00b7} Discord");
-        assert_eq!(heading(&item(1, "", "hi")), "Discord");
+    fn the_heading_names_the_sender_then_the_app() {
+        assert_eq!(
+            heading(&item(1, "Rafi", "hi")),
+            Heading { lead: "Rafi".to_owned(), app: Some("Discord".to_owned()) }
+        );
+    }
+
+    #[test]
+    fn a_missing_sender_leaves_the_app_name_alone_in_the_lead() {
+        let expected = Heading { lead: "Discord".to_owned(), app: None };
+        assert_eq!(heading(&item(1, "", "hi")), expected);
+        assert_eq!(heading(&item(1, "  \n ", "hi")), expected);
     }
 
     #[test]
@@ -86,5 +116,10 @@ mod tests {
     #[test]
     fn a_long_message_is_written_on_one_line_with_single_spaces() {
         assert_eq!(body_text(&item(1, "a", "one   two\nthree"), true), "one two three");
+    }
+
+    #[test]
+    fn the_open_button_names_the_app() {
+        assert_eq!(open_label(&item(1, "Rafi", "hi")), "Open Discord");
     }
 }

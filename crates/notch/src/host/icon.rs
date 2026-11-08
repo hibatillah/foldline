@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn the_embedded_logo_loads_at_windows_icon_sizes() {
         for size in [16, 20, 24, 32, 40, 48, 64, 96, 128, 256] {
-            let icon = Icon::load(size).expect("embedded orange logo");
+            let icon = Icon::load(size).expect("embedded tile icon");
             let mut info = ICONINFO::default();
             unsafe { GetIconInfo(icon.handle(), &mut info) }.expect("icon bitmaps");
             let mut bitmap = BITMAP::default();

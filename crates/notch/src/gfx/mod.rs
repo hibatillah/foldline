@@ -10,6 +10,8 @@ mod path;
 mod raster;
 mod spring;
 mod surface;
+mod svg_path;
+mod text_cache;
 
 pub use canvas::Canvas;
 pub use color::Color;

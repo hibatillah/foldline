@@ -1,6 +1,6 @@
 //! What the shelf does with its files: save, preview, remove, drag out.
 
-use super::items::{count_text, file_name, removed_text};
+use super::items::{count_text, file_name, has_thumbnail, removed_text};
 use super::{MAX_FILES, PREVIEW_PIXELS, ShelfPage, name_lines};
 use crate::{
     gfx::Fonts,
@@ -37,7 +37,7 @@ impl ShelfPage {
         self.previews.get_mut().retain(|path, _| items.contains(path));
         let notifier = context.notifier();
         for path in items.iter().take(MAX_FILES) {
-            if !self.requested.insert(path.clone()) {
+            if !has_thumbnail(path) || !self.requested.insert(path.clone()) {
                 continue;
             }
             let (path, inbox) = (path.clone(), Arc::clone(&self.inbox));

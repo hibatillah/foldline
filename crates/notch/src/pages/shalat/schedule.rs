@@ -1,8 +1,11 @@
 //! Today's prayer times, when the page announces one and when it next wakes.
 
 use super::times::Prayer;
-use super::{BADGE, BADGE_MINUTES, BADGE_TRAILING, Config, REFRESH_TIMER, ShalatPage, badge_text, clock_text, times};
+use super::{
+    BADGE_MINUTES, Config, REFRESH_TIMER, ShalatPage, badge_text, badge_width, clock_text, short_badge_text, times,
+};
 use crate::{
+    gfx::Fonts,
     page::Context,
     ui::{self},
 };
@@ -54,18 +57,27 @@ impl ShalatPage {
         let date = now.with_timezone(&Local).date_naive();
         self.schedule = compute(&self.config, now, date);
         self.badge = None;
+        self.badge_short = None;
         if let Some(schedule) = &self.schedule {
             let seconds = (schedule.next.1 - now).num_seconds();
-            if self.config.shows_badge
-                && let Some(text) = badge_text(schedule.next.0, seconds)
-            {
-                self.badge_width = context.fonts().measure(&BADGE, "Maghrib in 59m").ceil() + BADGE_TRAILING;
-                self.badge = Some(text);
+            if self.config.shows_badge {
+                self.set_badge(context.fonts(), schedule.next.0, seconds);
             }
             self.announce_if_due(now, date, context);
         }
         self.arm_timer(context, now);
         context.request_repaint();
+    }
+
+    /// Shows the badge as wide as the text it shows now; the host re-lays out when the width changes.
+    pub(super) fn set_badge(&mut self, fonts: &Fonts, prayer: Prayer, seconds: i64) {
+        let Some(text) = badge_text(prayer, seconds) else { return };
+        self.badge_width = badge_width(fonts, &text);
+        self.badge = Some(text);
+        self.badge_short = short_badge_text(prayer, seconds);
+        if let Some(short) = &self.badge_short {
+            self.badge_short_width = badge_width(fonts, short);
+        }
     }
 
     pub(super) fn announce_if_due(&mut self, now: DateTime<Utc>, date: NaiveDate, context: &mut Context) {

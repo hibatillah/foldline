@@ -31,6 +31,9 @@ use windows::{
     core::w,
 };
 
+#[path = "perf/scenarios.rs"]
+mod scenarios;
+
 fn media_is_playing() -> windows::core::Result<bool> {
     let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()?.join()?;
     if manager.GetSessions()?.Size()? == 0 {
@@ -52,6 +55,21 @@ const PARKED_POINTER: (i32, i32) = (50, 600);
 const PAGE_SIZE_BYTES: usize = 4096;
 const BYTES_PER_MEGABYTE: f64 = 1024.0 * 1024.0;
 const HOVER_Y: i32 = 1;
+/// A maximized or full-screen window in front leaves the pill up, so app switches by others do not animate it.
+const ISOLATED_SETTINGS: &str = "notch.hide_when_idle=off\nnotch.fullscreen=music\nnotch.maximized=music\n";
+/// Idle samples taken at most when outside events keep disturbing them.
+const IDLE_ATTEMPTS: u32 = 3;
+/// What the notch logs when something outside it made it work: Windows wrote its notification database (the listener
+/// read it, or found or showed a toast), or an activity or page changed what the pill shows (`host/notch/layout.rs`).
+const OUTSIDE_EVENT_LOGS: [&str; 4] = ["notifications: read ", "notifications: card for", " new by id ", "pill shows "];
+
+/// The first line of this part of the notch's debug log that tells of an outside event, without its timestamp.
+fn outside_event(log_text: &str) -> Option<&str> {
+    log_text
+        .lines()
+        .find(|line| OUTSIDE_EVENT_LOGS.iter().any(|marker| line.contains(marker)))
+        .map(|line| line.split_once(" ms  ").map_or(line, |(_, message)| message))
+}
 
 struct Measurement {
     private_working_set_mb: f64,
@@ -59,17 +77,25 @@ struct Measurement {
     cpu_ms: f64,
 }
 
-/// The notch process; it is stopped when this goes out of scope, even after a failed check.
-struct RunningNotch(Child);
+/// The notch process and its debug log; the process is stopped when this goes out of scope, even after a failed check.
+struct RunningNotch {
+    process: Child,
+    log: PathBuf,
+}
 
 impl RunningNotch {
-    /// Runs on its own settings so a full-screen window in front cannot hide the notch mid-check.
+    /// Runs on its own settings so a maximized or full-screen window in front cannot hide the notch mid-check.
     fn start(executable: &Path, log: &Path, pages: Option<&str>) -> Self {
+        Self::start_with_settings(executable, log, pages, "")
+    }
+
+    /// Like `start`, with `extra_settings` (whole `key=value` lines) appended to the isolated settings file.
+    fn start_with_settings(executable: &Path, log: &Path, pages: Option<&str>, extra_settings: &str) -> Self {
         let profile = log.parent().expect("log directory").join("perf-default");
         let settings = profile.join("notch");
         fs::create_dir_all(&settings).expect("create isolated test profile");
-        fs::write(settings.join("settings.txt"), "notch.hide_when_idle=off\nnotch.fullscreen=music\n")
-            .expect("write isolated test settings");
+        let contents = format!("{ISOLATED_SETTINGS}{extra_settings}");
+        fs::write(settings.join("settings.txt"), contents).expect("write isolated test settings");
         Self::start_with_profile(executable, log, pages, Some(&profile))
     }
 
@@ -85,13 +111,14 @@ impl RunningNotch {
             Some(pages) => command.env("NOTCH_PAGES", pages),
             None => command.env_remove("NOTCH_PAGES"),
         };
-        let notch = Self(command.spawn().expect("the notch executable should start"));
+        let process = command.spawn().expect("the notch executable should start");
+        let notch = Self { process, log: log.to_path_buf() };
         sleep(Duration::from_secs(3));
         notch
     }
 
     fn measure(&self) -> Measurement {
-        let process = HANDLE(self.0.as_raw_handle());
+        let process = HANDLE(self.process.as_raw_handle());
         let (mut creation, mut exit, mut kernel, mut user) =
             (FILETIME::default(), FILETIME::default(), FILETIME::default(), FILETIME::default());
         let mut handles = 0;
@@ -118,13 +145,32 @@ impl RunningNotch {
         false
     }
 
-    /// CPU use, as a percentage of one core, while the pointer is away and nothing should be moving.
+    /// CPU use, as a percentage of one core, while the pointer is away and nothing should be moving. A sample during
+    /// which an outside event made the notch work (`outside_event`) is taken again; the last one counts.
     fn idle_cpu_percent(&self) -> f64 {
-        park_pointer();
-        let before = self.measure().cpu_ms;
-        sleep(Duration::from_secs(IDLE_SECONDS));
-        let used = self.measure().cpu_ms - before;
-        (100.0 * used / (IDLE_SECONDS as f64 * 1000.0) * 1000.0).round() / 1000.0
+        let mut attempt = 1;
+        loop {
+            park_pointer();
+            let log_length_before = self.log_text().len();
+            let before = self.measure().cpu_ms;
+            sleep(Duration::from_secs(IDLE_SECONDS));
+            let used = self.measure().cpu_ms - before;
+            let percent = (100.0 * used / (IDLE_SECONDS as f64 * 1000.0) * 1000.0).round() / 1000.0;
+            let log_text = self.log_text();
+            let Some(event) = outside_event(log_text.get(log_length_before..).unwrap_or_default()) else {
+                return percent;
+            };
+            if attempt == IDLE_ATTEMPTS {
+                println!("    still disturbed after {IDLE_ATTEMPTS} samples: {event}");
+                return percent;
+            }
+            println!("    disturbed ({percent} %) by: {event}; measuring again");
+            attempt += 1;
+        }
+    }
+
+    fn log_text(&self) -> String {
+        fs::read_to_string(&self.log).unwrap_or_default()
     }
 
     fn observe(&self, label: &str) -> Measurement {
@@ -144,7 +190,7 @@ impl RunningNotch {
         let window = unsafe { FindWindowW(w!("NotchWindow"), None) }.expect("test Notch window");
         let mut process_id = 0;
         unsafe { GetWindowThreadProcessId(window, Some(&mut process_id)) };
-        assert_eq!(process_id, self.0.id(), "refuse to drive a window owned by another process");
+        assert_eq!(process_id, self.process.id(), "refuse to drive a window owned by another process");
         window
     }
 
@@ -251,7 +297,7 @@ fn lyrics_comparison(executable: &Path, log: &Path, center_x: i32) -> bool {
 impl Drop for RunningNotch {
     fn drop(&mut self) {
         park_pointer();
-        let _ = self.0.kill();
+        let _ = self.process.kill();
     }
 }
 
@@ -331,12 +377,15 @@ fn main() -> ExitCode {
     let value_of =
         |flag: &str| arguments.iter().position(|argument| argument == flag).and_then(|index| arguments.get(index + 1));
     let (Some(executable), Some(log)) = (value_of("--exe"), value_of("--log")) else {
-        eprintln!("usage: perf --exe <notch.exe> --log <log file> [--with-media] [--extended] [--lyrics-only]");
+        eprintln!(
+            "usage: perf --exe <notch.exe> --log <log file> [--with-media] [--extended] [--lyrics-only] [--screen-mode]"
+        );
         return ExitCode::from(2);
     };
     let (executable, log) = (PathBuf::from(executable), PathBuf::from(log));
     let with_media = arguments.iter().any(|argument| argument == "--with-media");
     let extended = arguments.iter().any(|argument| argument == "--extended");
+    let with_screen_mode = arguments.iter().any(|argument| argument == "--screen-mode");
 
     unsafe {
         let _ = SetProcessDPIAware();
@@ -396,6 +445,12 @@ fn main() -> ExitCode {
         report.check("CPU while idle after cycles", notch.idle_cpu_percent(), MAX_IDLE_CPU_PERCENT, "%");
     }
 
+    scenarios::devices_page(&executable, &log, center_x, &mut report);
+    scenarios::stats_page(&executable, &log, center_x, &mut report);
+    if with_screen_mode {
+        scenarios::screen_mode(&executable, &log, &mut report);
+    }
+
     if with_media || extended {
         println!("All pages on (informational; play music first):");
         let notch = RunningNotch::start(&executable, &log, None);
@@ -430,4 +485,29 @@ fn main() -> ExitCode {
 
 fn round(value: f64) -> f64 {
     (value * 10.0).round() / 10.0
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_notification_database_write_during_an_idle_sample_is_an_outside_event() {
+        let log = "1 ms  foreground class=Chrome_WidgetWin_1 process=msedge.exe mode=Maximized\n\
+                   2 ms  notifications: read 49 listed in 2478 ms, 0 new\n";
+        assert_eq!(outside_event(log), Some("notifications: read 49 listed in 2478 ms, 0 new"));
+    }
+
+    #[test]
+    fn an_activity_appearing_in_the_pill_during_an_idle_sample_is_an_outside_event() {
+        let log = "1 ms  pill shows transients=[bluetooth] badges=[volume] banner=none\n";
+        assert_eq!(outside_event(log), Some("pill shows transients=[bluetooth] badges=[volume] banner=none"));
+    }
+
+    #[test]
+    fn an_idle_sample_with_only_the_notchs_own_lines_is_not_taken_again() {
+        let log = "1 ms  notifications: listening, 50 waiting, newest id 165394, first read took 2222 ms\n\
+                   2 ms  frame timer started\n3 ms  frame timer stopped\n";
+        assert_eq!(outside_event(log), None);
+    }
 }

@@ -51,6 +51,7 @@ impl PageList {
         Self { order, enabled }
     }
 
+    #[cfg(test)]
     pub fn order(&self) -> &[usize] {
         &self.order
     }
@@ -59,16 +60,11 @@ impl PageList {
         self.enabled.get(page).copied().unwrap_or(false)
     }
 
+    #[cfg(test)]
     pub fn set_enabled(&mut self, page: usize, is_enabled: bool) {
         if let Some(slot) = self.enabled.get_mut(page) {
             *slot = is_enabled;
         }
-    }
-
-    pub fn move_to(&mut self, page: usize, position: usize) {
-        let Some(from) = self.order.iter().position(|&index| index == page) else { return };
-        self.order.remove(from);
-        self.order.insert(position.min(self.order.len()), page);
     }
 
     pub fn order_text(&self, ids: &[&str]) -> String {
@@ -150,8 +146,7 @@ mod tests {
 
     #[test]
     fn pages_are_reached_in_the_users_order_and_switched_off_ones_are_skipped() {
-        let mut list = PageList::new(3);
-        list.move_to(2, 0);
+        let mut list = PageList::load(&IDS[..3], &[false; 3], Some("timer"), None);
         assert_eq!(list.navigable(&[LOW, LOW, LOW]), vec![2, 0, 1]);
         list.set_enabled(0, false);
         assert_eq!(list.navigable(&[LOW, LOW, LOW]), vec![2, 1]);
@@ -159,20 +154,8 @@ mod tests {
     }
 
     #[test]
-    fn moving_a_page_shifts_the_ones_in_between() {
-        let mut list = PageList::new(4);
-        list.move_to(0, 2);
-        assert_eq!(list.order(), &[1, 2, 0, 3]);
-        list.move_to(3, 0);
-        assert_eq!(list.order(), &[3, 1, 2, 0]);
-        list.move_to(1, 99);
-        assert_eq!(list.order(), &[3, 2, 0, 1]);
-    }
-
-    #[test]
     fn the_saved_order_and_choices_come_back_by_id() {
-        let mut list = PageList::new(4);
-        list.move_to(3, 1);
+        let mut list = PageList::load(&IDS, &[false; 4], Some("clock,stats"), None);
         list.set_enabled(2, false);
         let (order, disabled) = (list.order_text(&IDS), list.disabled_text(&IDS));
         assert_eq!(order, "clock,stats,media,timer");

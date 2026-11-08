@@ -1,9 +1,9 @@
 use std::time::Instant;
 
-use super::Notch;
+use super::{Notch, Source};
 use windows::Win32::{
     Foundation::{POINT, RECT},
-    UI::{Input::KeyboardAndMouse::ReleaseCapture, WindowsAndMessaging::GetCursorPos},
+    UI::WindowsAndMessaging::GetCursorPos,
 };
 
 use crate::host::motion::WHEEL_NOTCH;
@@ -16,7 +16,7 @@ impl Notch {
             log::debug(&format!("enter move window=({window_x},{window_y}) surface=({:.0},{:.0})", point.x, point.y));
         }
         // The shadow remains during closing but must never count as hovering the pill.
-        if !self.hover.is_captured && !self.hover.is_dragging_files && !self.pointer_is_over_window() {
+        if !self.hover.is_dragging_files && !self.pointer_is_over_window() {
             if self.hover.is_hovering {
                 self.pointer_left();
                 self.flush();
@@ -25,36 +25,12 @@ impl Notch {
         }
         self.cancel_close();
         self.set_hovering(true);
-        if let Some(menu) = self.menu.as_mut() {
-            if menu.moved(point, self.scale) {
-                self.pending.repaint = true;
-            }
-        } else if let Some(editor) = self.editor.as_mut() {
-            if editor.moved(point) {
-                self.pending.repaint = true;
-            }
-        } else {
-            self.route_pointer(PointerEvent::Moved(point));
-        }
+        self.route_pointer(PointerEvent::Moved(point));
         self.flush();
     }
 
     pub fn pointer_pressed(&mut self, window_x: i32, window_y: i32) {
         let point = self.to_surface_space(window_x, window_y);
-        if let Some(menu) = &self.menu {
-            match menu.action_at(point, self.scale) {
-                Some(action) => self.run_menu_action(action),
-                None if menu.contains(point) => {}
-                None => self.close_menu(),
-            }
-            self.flush();
-            return;
-        }
-        if self.editor.is_some() {
-            self.press_editor(point);
-            self.flush();
-            return;
-        }
         if self.press_header(point) {
             self.flush();
             return;
@@ -68,7 +44,7 @@ impl Notch {
     }
 
     pub(super) fn show_drop_page(&mut self, index: usize) {
-        if self.hover.is_hovering && self.editor.is_none() {
+        if self.hover.is_hovering {
             self.go_to_page(index);
         }
     }
@@ -110,23 +86,16 @@ impl Notch {
         self.flush();
     }
 
-    /// A right-click anywhere on the open notch opens the menu, except where the page uses it itself (a file on the shelf).
+    /// A right-click reaches only a page that uses it itself (a file on the shelf).
     pub fn right_clicked(&mut self, window_x: i32, window_y: i32) {
         let point = self.to_surface_space(window_x, window_y);
         let frame = self.frame();
-        if self.menu.is_some() {
-            self.close_menu();
-            self.flush();
-            return;
-        }
-        if self.editor.is_some() || !frame.is_open() || !frame.bounds.contains(point) {
+        if !frame.is_open() || !frame.bounds.contains(point) {
             return;
         }
         let in_content = crate::host::chrome::content_rect(frame.bounds, self.scale).contains(point);
         if in_content && self.page_uses_right_click(point) {
             self.route_pointer(PointerEvent::SecondaryReleased(point));
-        } else {
-            self.open_menu(point);
         }
         self.flush();
     }
@@ -136,13 +105,18 @@ impl Notch {
     }
 
     pub(super) fn scrolled_at(&mut self, now: Instant, amount: i32, is_horizontal: bool, is_touchpad: bool) {
-        if !self.hover.is_hovering || self.editor.is_some() {
+        if !self.hover.is_hovering {
             return;
         }
-        if self.menu.is_some() {
-            self.close_menu();
-            self.flush();
-            return;
+        if !is_horizontal {
+            let (cursor, bounds) = self.pointer_and_window_bounds();
+            let point = self.to_surface_space(cursor.x - bounds.left, cursor.y - bounds.top);
+            if self.page_claims_scroll(point) {
+                let notches = -(amount as f32) / WHEEL_NOTCH as f32;
+                self.route_pointer(PointerEvent::Scrolled { notches });
+                self.flush();
+                return;
+            }
         }
         let toward_next = if is_horizontal { amount } else { -amount };
         let is_smooth =
@@ -155,29 +129,13 @@ impl Notch {
 
     pub fn pointer_released(&mut self, window_x: i32, window_y: i32) {
         let point = self.to_surface_space(window_x, window_y);
-        let was_captured = self.hover.is_captured;
-        if self.editor.is_some() {
-            self.release_editor(point);
-            if was_captured {
-                self.hover.is_captured = false;
-                unsafe {
-                    let _ = ReleaseCapture();
-                }
-            }
-        } else {
-            self.route_pointer(PointerEvent::Released(point));
-        }
+        self.route_pointer(PointerEvent::Released(point));
         self.flush();
-        // A drag can end outside the pill, where no leave message follows.
-        if was_captured && !self.frame().bounds.contains(point) {
-            self.pointer_left();
-            self.flush();
-        }
     }
 
     /// Handles `WM_MOUSELEAVE`; returns false when the leave was not real and tracking must be re-armed.
     pub fn pointer_left_window(&mut self) -> bool {
-        if self.hover.is_captured || self.hover.is_dragging_files {
+        if self.hover.is_dragging_files {
             return true;
         }
         // A resize under a stationary pointer can report a leave that did not happen; only believe a real one.
@@ -192,16 +150,27 @@ impl Notch {
     }
 
     pub fn capture_lost(&mut self) {
-        self.hover.is_captured = false;
         self.route_pointer(PointerEvent::CaptureLost);
         self.flush();
     }
 
     pub(super) fn route_pointer(&mut self, event: PointerEvent) {
-        if self.editor.is_some() {
+        let viewport = self.frame();
+        // A collapsed notch shows no page, so its input belongs to the banner on it, or to nothing.
+        if self.springs.expansion.target == 0.0 && !viewport.is_open() {
+            if let Some((source, area)) = self.banner_area(&viewport) {
+                let scale = self.scale;
+                match source {
+                    Source::Activity(index) => {
+                        self.with_activity(index, |activity, context| activity.on_pointer(event, area, scale, context))
+                    }
+                    Source::Page(index) => {
+                        self.with_page(index, |page, context| page.on_presence_pointer(event, area, scale, context))
+                    }
+                }
+            }
             return;
         }
-        let viewport = self.frame();
         if let Some(pages) = self.visible_page_frames(&viewport) {
             for (index, frame, _) in pages {
                 self.with_page(index, |page, context| page.on_pointer(event, &frame, context));

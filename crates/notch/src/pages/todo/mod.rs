@@ -1,58 +1,25 @@
 //! A short todo list: add a task by typing in the notch, tick it off, delete it.
 
+mod draw;
+mod layout;
 mod list;
 
 #[cfg(test)]
 use self::list::Item;
-use self::list::{MAX_TASKS, TodoList};
+use self::{
+    layout::{
+        CONTENT_WIDTH, EMPTY_WIDTH, Row, add_button, clear_button, content_height, delete_rect, plan_rows, row_rect,
+    },
+    list::TodoList,
+};
 use crate::{
-    gfx::{Align, Canvas, Color, FontStyle, Point, Rect, Size, UI_FONT, Weight},
-    page::{Context, DEFAULT_CONTENT_HEIGHT, Frame, KeyInput, Mode, Page, PageSizes, PointerEvent, Priority},
-    ui::{FieldLook, FieldOutcome, Icon, PillButton, TextField},
+    gfx::{Canvas, Size},
+    page::{Context, Frame, KeyInput, Mode, Page, PageSizes, PointerEvent, Priority},
+    ui::{FieldOutcome, TextField},
 };
 
-const CONTENT_WIDTH: f32 = 508.0;
 const RESTING_WIDTH: f32 = 150.0;
-const SIDE_WIDTH: f32 = 120.0;
-const DIVIDER_GAP: f32 = 16.0;
-const LIST_LEFT: f32 = SIDE_WIDTH + DIVIDER_GAP * 2.0 + 1.0;
-const ROW_HEIGHT: f32 = 32.0;
-const ROW_GAP: f32 = 6.0;
-const ROW_RADIUS: f32 = 10.0;
-const ROW_PADDING: f32 = 10.0;
-const CHECK_SIZE: f32 = 14.0;
-const TEXT_LEFT: f32 = ROW_PADDING + CHECK_SIZE + 10.0;
-const DELETE_SIZE: f32 = 22.0;
-/// Rows the open notch shows at most; a longer list from an older version ends in a "more" line.
-const MAX_ROWS: usize = MAX_TASKS;
 const MAX_CHARACTERS: usize = 120;
-const ADD_BUTTON: Size = Size::new(64.0, 26.0);
-
-const TITLE: FontStyle = FontStyle::new(UI_FONT, 22.0, Weight::Medium, Align::Leading);
-const COUNT: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Leading);
-const NOTE: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Leading);
-const ROW_TEXT: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Regular, Align::Leading);
-const HINT: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Trailing);
-const EMPTY: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Center);
-
-const GRAY: Color = Color::rgb(0.604, 0.604, 0.651);
-const DIM: Color = Color::rgb(0.431, 0.431, 0.478);
-const ROW: Color = Color::rgb(0.078, 0.078, 0.094);
-const ROW_HOVERED: Color = Color::rgb(0.11, 0.11, 0.133);
-const DIVIDER: Color = Color::rgb(0.149, 0.149, 0.176);
-const DELETE_FILL: Color = Color::rgb(0.165, 0.165, 0.188);
-const FIELD_BORDER: Color = Color::rgb(0.251, 0.561, 1.0);
-const DONE_GREEN: Color = Color::rgb(0.19, 0.82, 0.35);
-const ACCENT: Color = Color::rgb(0.9, 0.9, 0.92);
-const LIMIT_NOTE: Color = Color::rgb(0.49, 0.53, 0.72);
-
-/// What a row of the list shows.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Row {
-    Field,
-    Item(usize),
-    More(usize),
-}
 
 pub struct TodoPage {
     list: TodoList,
@@ -61,6 +28,10 @@ pub struct TodoPage {
     has_keyboard: bool,
     hovered_row: Option<usize>,
     is_add_hovered: bool,
+    is_clear_hovered: bool,
+    /// The count under the title and the "N more" row, rebuilt by `refresh_texts` when the list or the field changes.
+    count_text: String,
+    more_text: String,
 }
 
 impl TodoPage {
@@ -69,71 +40,86 @@ impl TodoPage {
     }
 
     fn with_list(list: TodoList) -> Self {
-        Self {
+        let mut page = Self {
             list,
             field: TextField::new(MAX_CHARACTERS),
             is_adding: false,
             has_keyboard: false,
             hovered_row: None,
             is_add_hovered: false,
-        }
-    }
-
-    #[cfg(test)]
-    pub fn sample() -> Self {
-        let item = |text: &str, is_done| Item { text: text.to_owned(), is_done };
-        let mut page = Self::with_list(TodoList::with_items(vec![
-            item("Check hover on the 1440p monitor", false),
-            item("Reply to Rafi about the deploy", true),
-            item("Write the v0.5 release notes", false),
-            item("Buy a code-signing certificate", false),
-        ]));
-        page.hovered_row = Some(1);
+            is_clear_hovered: false,
+            count_text: String::new(),
+            more_text: String::new(),
+        };
+        page.refresh_texts();
         page
     }
 
-    fn rows(&self) -> Vec<Row> {
-        let order = self.list.shown_order();
-        let field = self.is_adding.then_some(Row::Field);
-        let room = MAX_ROWS - usize::from(self.is_adding);
-        let mut rows: Vec<Row> = field.into_iter().collect();
-        if order.len() <= room {
-            rows.extend(order.into_iter().map(Row::Item));
-        } else {
-            rows.extend(order[..room - 1].iter().copied().map(Row::Item));
-            rows.push(Row::More(order.len() - (room - 1)));
+    fn refresh_texts(&mut self) {
+        self.count_text = match (self.list.open_count(), self.list.done_count()) {
+            (open, 0) => format!("{open} left"),
+            (open, done) => format!("{open} left \u{b7} {done} done"),
+        };
+        let hidden =
+            self.rows().into_iter().find_map(|row| if let Row::More(count) = row { Some(count) } else { None });
+        self.more_text = hidden.map_or_else(String::new, |count| format!("{count} more"));
+    }
+
+    #[cfg(test)]
+    pub fn sample(scenario: u8) -> Self {
+        let item = |text: &str, is_done| Item { text: text.to_owned(), is_done };
+        let open = || {
+            vec![
+                item("Check hover on the 1440p monitor", false),
+                item("Write the v0.5 release notes", false),
+                item("Buy a code-signing certificate", false),
+            ]
+        };
+        let items = match scenario {
+            1 | 2 => Vec::new(),
+            3 => [open(), vec![item("Send the invoice to the client", false), item("Book the Jakarta flight", false)]]
+                .concat(),
+            4 => [open(), vec![item("Send the invoice to the client", false)]].concat(),
+            5 => [
+                open(),
+                vec![item("Send the invoice to the client", true), item("Reply to Rafi about the deploy", true)],
+            ]
+            .concat(),
+            _ => [open(), vec![item("Reply to Rafi about the deploy", true)]].concat(),
+        };
+
+        let mut page = Self::with_list(TodoList::with_items(items));
+        page.is_adding = matches!(scenario, 2 | 4);
+        if scenario == 4 {
+            page.field.apply(&KeyInput::Text("Call the notary".to_owned()));
+            page.has_keyboard = true;
         }
-        rows
+        page.hovered_row = (scenario == 0).then_some(1);
+        page.refresh_texts();
+        page
     }
 
-    fn row_rect(bounds: Rect, scale: f32, position: usize) -> Rect {
-        let top = bounds.top + position as f32 * (ROW_HEIGHT + ROW_GAP) * scale;
-        Rect::new(bounds.left + LIST_LEFT * scale, top, bounds.right, top + ROW_HEIGHT * scale)
+    /// An empty list that is not being added to shows the narrow page with its button.
+    fn is_empty_view(&self) -> bool {
+        self.list.is_empty() && !self.is_adding
     }
 
-    fn add_button(bounds: Rect, scale: f32) -> Rect {
-        let top = bounds.top + 58.0 * scale;
-        Rect::new(bounds.left, top, bounds.left + ADD_BUTTON.width * scale, top + ADD_BUTTON.height * scale)
+    fn rows(&self) -> Vec<Row> {
+        plan_rows(&self.list.shown_order(), self.is_adding)
     }
 
-    fn check_rect(row: Rect, scale: f32) -> Rect {
-        let left = row.left + ROW_PADDING * scale;
-        let top = row.center_y() - CHECK_SIZE * scale / 2.0;
-        Rect::new(left, top, left + CHECK_SIZE * scale, top + CHECK_SIZE * scale)
-    }
-
-    fn delete_rect(row: Rect, scale: f32) -> Rect {
-        let right = row.right - 5.0 * scale;
-        let top = row.center_y() - DELETE_SIZE * scale / 2.0;
-        Rect::new(right - DELETE_SIZE * scale, top, right, top + DELETE_SIZE * scale)
+    fn row_at(&self, bounds: crate::gfx::Rect, scale: f32, point: crate::gfx::Point) -> Option<(usize, Row)> {
+        self.rows().into_iter().enumerate().find(|&(position, _)| row_rect(bounds, scale, position).contains(point))
     }
 
     fn start_adding(&mut self, context: &mut Context) {
-        if self.list.is_full() {
+        if self.list.is_full() || self.is_adding {
             return;
         }
         self.is_adding = true;
+        self.is_add_hovered = false;
         self.field.clear();
+        self.refresh_texts();
         context.take_keyboard();
         context.request_repaint();
     }
@@ -144,87 +130,13 @@ impl TodoPage {
         }
         self.is_adding = false;
         self.field.clear();
+        self.refresh_texts();
         if self.has_keyboard {
             self.has_keyboard = false;
             context.release_keyboard();
         }
         context.request_repaint();
     }
-
-    fn draw_row(&self, canvas: &Canvas, row: Row, rect: Rect, position: usize, opacity: f32) {
-        let scale = canvas.scale();
-        let text_area = Rect { left: rect.left + TEXT_LEFT * scale, right: rect.right - 36.0 * scale, ..rect };
-        match row {
-            Row::Field => {
-                canvas.fill_rounded_rect(rect, ROW_RADIUS * scale, FIELD_BORDER.faded(opacity));
-                let inner = Rect::new(rect.left + scale, rect.top + scale, rect.right - scale, rect.bottom - scale);
-                canvas.fill_rounded_rect(inner, (ROW_RADIUS - 1.0) * scale, ROW.faded(opacity));
-                canvas.text(&ROW_TEXT, "+", Self::check_rect(rect, scale), FIELD_BORDER.faded(opacity));
-                let field_area = Rect { right: rect.right - 80.0 * scale, ..text_area };
-                let look = FieldLook { style: &ROW_TEXT, color: Color::WHITE, placeholder: "Add a task" };
-                self.field.draw(canvas, field_area, &look, self.has_keyboard, opacity);
-                let hint_area =
-                    Rect { left: rect.right - 80.0 * scale, right: rect.right - ROW_PADDING * scale, ..rect };
-                canvas.text(&HINT, "Enter to add", hint_area, DIM.faded(opacity));
-            }
-            Row::Item(index) => {
-                let Some(item) = self.list.item(index) else { return };
-                let is_hovered = self.hovered_row == Some(position);
-                let fill = if item.is_done {
-                    None
-                } else if is_hovered {
-                    Some(ROW_HOVERED)
-                } else {
-                    Some(ROW)
-                };
-                if let Some(fill) = fill {
-                    canvas.fill_rounded_rect(rect, ROW_RADIUS * scale, fill.faded(opacity));
-                } else if is_hovered {
-                    canvas.fill_rounded_rect(rect, ROW_RADIUS * scale, ROW.faded(opacity));
-                }
-                let check = Self::check_rect(rect, scale);
-                let half = check.width() / 2.0;
-                let center = Point::new(check.center_x(), check.center_y());
-                if item.is_done {
-                    canvas.fill_circle(center, half, DONE_GREEN.faded(opacity));
-                    canvas.text(&EMPTY, "\u{2713}", check, Color::BLACK.faded(opacity));
-                } else {
-                    canvas.fill_circle(center, half, DIM.faded(opacity));
-                    canvas.fill_circle(center, half - 1.5 * scale, ROW.faded(opacity));
-                }
-                let color = if item.is_done { DIM } else { Color::WHITE };
-                canvas.text(&ROW_TEXT, &item.text, text_area, color.faded(opacity));
-                if item.is_done {
-                    let width = (canvas.measure(&ROW_TEXT, &item.text) * scale).min(text_area.width());
-                    let line_y = rect.center_y();
-                    let line =
-                        Rect::new(text_area.left, line_y - 0.5 * scale, text_area.left + width, line_y + 0.5 * scale);
-                    canvas.fill_rounded_rect(line, 0.5 * scale, DIM.faded(opacity));
-                }
-                if is_hovered {
-                    let delete = Self::delete_rect(rect, scale);
-                    canvas.fill_rounded_rect(delete, delete.height() / 2.0, DELETE_FILL.faded(opacity));
-                    let center = Point::new(delete.center_x(), delete.center_y());
-                    Icon::Close.draw(canvas, center, 10.0 * scale, Color::rgb(0.769, 0.769, 0.8), opacity);
-                }
-            }
-            Row::More(count) => {
-                let label = format!("{count} more");
-                canvas.text(&COUNT, &label, Rect { left: rect.left + ROW_PADDING * scale, ..rect }, DIM.faded(opacity));
-            }
-        }
-    }
-}
-
-/// What the Add button says while the list is full: tick one off, or clear one that is already done.
-fn limit_note(has_done: bool) -> [&'static str; 2] {
-    ["Limit of 5.", if has_done { "Clear a done task." } else { "Tick one off to add." }]
-}
-
-/// The open height: today's height until the rows need more, up to `MAX_ROWS` rows.
-fn content_height(row_count: usize) -> f32 {
-    let rows = row_count as f32;
-    (rows * ROW_HEIGHT + (rows - 1.0).max(0.0) * ROW_GAP).max(DEFAULT_CONTENT_HEIGHT)
 }
 
 impl Page for TodoPage {
@@ -236,73 +148,26 @@ impl Page for TodoPage {
         "Todo"
     }
 
-    fn icon(&self) -> Icon {
-        Icon::Checklist
-    }
-
     fn priority(&self, mode: Mode) -> Option<Priority> {
         (mode == Mode::Expanded).then_some(Priority::BACKGROUND)
     }
 
     fn sizes(&self) -> PageSizes {
-        PageSizes {
-            resting_width: RESTING_WIDTH,
-            expanded: Size::new(CONTENT_WIDTH, content_height(self.rows().len())),
-        }
+        let width = if self.is_empty_view() { EMPTY_WIDTH } else { CONTENT_WIDTH };
+        PageSizes { resting_width: RESTING_WIDTH, expanded: Size::new(width, content_height(self.rows().len())) }
     }
 
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}
 
     fn draw_expanded(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
         let (bounds, scale) = (frame.bounds, frame.scale);
-        let title_area =
-            Rect::new(bounds.left, bounds.top, bounds.left + SIDE_WIDTH * scale, bounds.top + 30.0 * scale);
-        canvas.text(&TITLE, "Todo", title_area, Color::WHITE.faded(opacity));
-        let count = match (self.list.open_count(), self.list.done_count()) {
-            (0, 0) => "No tasks yet".to_owned(),
-            (open, 0) => format!("{open} left"),
-            (open, done) => format!("{open} left · {done} done"),
-        };
-        let count_area = Rect { top: bounds.top + 32.0 * scale, bottom: bounds.top + 48.0 * scale, ..title_area };
-        canvas.text(&COUNT, &count, count_area, GRAY.faded(opacity));
-        let add_area = Self::add_button(bounds, scale);
-        if self.list.is_full() {
-            canvas.fill_rounded_rect(add_area, add_area.height() / 2.0, ROW.faded(opacity));
-            canvas.text(&EMPTY, "+ Add", add_area, DIM.faded(opacity));
-            for (line, text) in limit_note(self.list.done_count() > 0).into_iter().enumerate() {
-                let top = add_area.bottom + (6.0 + line as f32 * 14.0) * scale;
-                let area = Rect::new(add_area.left, top, bounds.left + SIDE_WIDTH * scale, top + 14.0 * scale);
-                canvas.text(&NOTE, text, area, LIMIT_NOTE.faded(opacity));
-            }
-        } else {
-            let add = PillButton {
-                label: "+ Add",
-                area: add_area,
-                is_primary: false,
-                is_destructive: false,
-                is_hovered: self.is_add_hovered,
-                accent: ACCENT,
-            };
-            add.draw(canvas, opacity);
-        }
-
-        let divider_left = bounds.left + (SIDE_WIDTH + DIVIDER_GAP) * scale;
-        let divider = Rect::new(divider_left, bounds.top, divider_left + scale, bounds.bottom);
-        canvas.fill_rounded_rect(divider, 0.0, DIVIDER.faded(opacity));
-
-        let rows = self.rows();
-        if rows.is_empty() {
-            let area = Rect { left: bounds.left + LIST_LEFT * scale, ..bounds };
-            canvas.text(
-                &EMPTY,
-                "Nothing to do. Add a task and it stays here until you tick it off.",
-                area,
-                DIM.faded(opacity),
-            );
+        self.draw_toolbar(canvas, bounds, scale, opacity);
+        if self.is_empty_view() {
+            self.draw_empty(canvas, bounds, scale, opacity);
             return;
         }
-        for (position, row) in rows.into_iter().enumerate() {
-            self.draw_row(canvas, row, Self::row_rect(bounds, scale, position), position, opacity);
+        for (position, row) in self.rows().into_iter().enumerate() {
+            self.draw_row(canvas, row, row_rect(bounds, scale, position), position, opacity);
         }
     }
 
@@ -310,44 +175,54 @@ impl Page for TodoPage {
         let (bounds, scale) = (frame.bounds, frame.scale);
         match event {
             PointerEvent::Moved(point) => {
-                let rows = self.rows();
-                let hovered = (0..rows.len())
-                    .find(|&position| Self::row_rect(bounds, scale, position).contains(point))
-                    .filter(|&position| matches!(rows[position], Row::Item(_)));
-                let is_add_hovered = Self::add_button(bounds, scale).contains(point);
-                if hovered != self.hovered_row || is_add_hovered != self.is_add_hovered {
+                let is_add_hovered = add_button(bounds, scale).contains(point);
+                let is_clear_hovered = !self.list.is_empty() && clear_button(bounds, scale).contains(point);
+                let hovered = self
+                    .row_at(bounds, scale, point)
+                    .filter(|(_, row)| matches!(row, Row::Item(_)))
+                    .map(|(position, _)| position);
+                if hovered != self.hovered_row
+                    || is_add_hovered != self.is_add_hovered
+                    || is_clear_hovered != self.is_clear_hovered
+                {
                     self.hovered_row = hovered;
                     self.is_add_hovered = is_add_hovered;
+                    self.is_clear_hovered = is_clear_hovered;
                     context.request_repaint();
                 }
             }
             PointerEvent::Pressed(point) if frame.is_open() => {
-                if Self::add_button(bounds, scale).contains(point) {
-                    if self.is_adding {
-                        self.stop_adding(context);
-                    } else {
-                        self.start_adding(context);
-                    }
+                if add_button(bounds, scale).contains(point) {
+                    self.start_adding(context);
                     return;
                 }
-                let rows = self.rows();
-                let Some(position) =
-                    (0..rows.len()).find(|&position| Self::row_rect(bounds, scale, position).contains(point))
-                else {
-                    return;
-                };
-                let Row::Item(index) = rows[position] else { return };
-                let row = Self::row_rect(bounds, scale, position);
-                if self.hovered_row == Some(position) && Self::delete_rect(row, scale).contains(point) {
-                    self.list.remove(index);
+                if !self.list.is_empty() && clear_button(bounds, scale).contains(point) {
+                    self.list.clear();
                     self.hovered_row = None;
-                } else {
-                    self.list.toggle(index);
+                    self.refresh_texts();
+                    context.request_repaint();
+                    return;
                 }
-                context.request_repaint();
+                let Some((position, row)) = self.row_at(bounds, scale, point) else { return };
+                match row {
+                    Row::Item(index) => {
+                        let rect = row_rect(bounds, scale, position);
+                        if self.hovered_row == Some(position) && delete_rect(rect, scale).contains(point) {
+                            self.list.remove(index);
+                            self.hovered_row = None;
+                        } else {
+                            self.list.toggle(index);
+                        }
+                        self.refresh_texts();
+                        context.request_repaint();
+                    }
+                    Row::Field | Row::More(_) => {}
+                }
             }
             PointerEvent::Left | PointerEvent::CaptureLost
-                if self.hovered_row.take().is_some() | std::mem::take(&mut self.is_add_hovered) =>
+                if self.hovered_row.take().is_some()
+                    | std::mem::take(&mut self.is_add_hovered)
+                    | std::mem::take(&mut self.is_clear_hovered) =>
             {
                 context.request_repaint();
             }
@@ -362,7 +237,9 @@ impl Page for TodoPage {
         self.has_keyboard = true;
         match self.field.apply(&key) {
             FieldOutcome::Submitted => {
-                if self.list.add(self.field.text()) {
+                let was_added = self.list.add(self.field.text());
+                self.refresh_texts();
+                if was_added && !self.list.is_full() {
                     self.field.clear();
                 } else {
                     self.stop_adding(context);
@@ -389,7 +266,7 @@ impl Page for TodoPage {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{layout::MAX_ROWS, list::MAX_TASKS, *};
 
     fn page_with(open: usize, done: usize) -> TodoPage {
         let items = (0..open)
@@ -400,19 +277,23 @@ mod tests {
     }
 
     #[test]
-    fn a_short_list_keeps_the_usual_height_and_a_long_one_grows_to_five_rows() {
-        assert_eq!(content_height(0), DEFAULT_CONTENT_HEIGHT);
-        assert_eq!(content_height(2), DEFAULT_CONTENT_HEIGHT);
-        assert_eq!(content_height(3), 3.0 * ROW_HEIGHT + 2.0 * ROW_GAP);
-        assert_eq!(content_height(MAX_ROWS), 5.0 * ROW_HEIGHT + 4.0 * ROW_GAP);
-        assert_eq!(content_height(MAX_ROWS), 184.0);
+    fn an_empty_list_is_the_narrow_page_until_adding_starts() {
+        let mut page = page_with(0, 0);
+        assert_eq!(page.sizes().expanded.width, EMPTY_WIDTH);
+        assert_eq!(page.sizes().expanded.height, 86.0);
+        page.is_adding = true;
+        assert_eq!(page.sizes().expanded.width, CONTENT_WIDTH);
+        assert_eq!(page.rows(), [Row::Field]);
     }
 
     #[test]
-    fn more_items_than_rows_end_with_a_count_of_the_rest() {
-        // A list saved by an older version can hold more than the limit; it still shows, ending in a count.
-        let page = page_with(5, 2);
-        assert_eq!(page.rows(), [Row::Item(0), Row::Item(1), Row::Item(2), Row::Item(3), Row::More(3)]);
+    fn the_page_height_follows_the_toolbar_and_the_task_rows() {
+        assert_eq!(page_with(3, 0).sizes().expanded.height, 144.0);
+        assert_eq!(page_with(5, 0).sizes().expanded.height, 220.0);
+        assert_eq!(page_with(2, 0).sizes().expanded.width, CONTENT_WIDTH);
+        let mut adding = page_with(4, 0);
+        adding.is_adding = true;
+        assert_eq!(adding.sizes().expanded.height, 220.0, "the input is a fifth row");
     }
 
     #[test]
@@ -430,25 +311,22 @@ mod tests {
     }
 
     #[test]
-    fn the_limit_note_tells_what_frees_a_place() {
-        assert_eq!(limit_note(false), ["Limit of 5.", "Tick one off to add."]);
-        assert_eq!(limit_note(true), ["Limit of 5.", "Clear a done task."]);
-    }
-
-    #[test]
-    fn the_add_field_takes_the_first_row_while_adding() {
-        let mut page = page_with(4, 0);
-        page.is_adding = true;
-        assert_eq!(page.rows(), [Row::Field, Row::Item(0), Row::Item(1), Row::Item(2), Row::Item(3)]);
-        let mut short = page_with(1, 0);
-        short.is_adding = true;
-        assert_eq!(short.rows(), [Row::Field, Row::Item(0)]);
-    }
-
-    #[test]
-    fn finished_items_follow_open_ones() {
-        let page = page_with(1, 2);
+    fn finished_items_follow_open_ones_and_the_input_comes_last() {
+        let mut page = page_with(1, 2);
         assert_eq!(page.rows(), [Row::Item(0), Row::Item(1), Row::Item(2)]);
+        page.is_adding = true;
+        assert_eq!(page.rows().last(), Some(&Row::Field));
         assert!(page.list.item(1).is_some_and(|item| item.is_done));
+        assert!(page.rows().len() <= MAX_ROWS);
+    }
+
+    #[test]
+    fn clearing_the_list_empties_it_and_the_count_and_returns_to_the_narrow_page() {
+        let mut page = page_with(2, 1);
+        page.list.clear();
+        page.refresh_texts();
+        assert_eq!(page.count_text, "0 left");
+        assert!(page.is_empty_view());
+        assert_eq!(page.sizes().expanded.width, EMPTY_WIDTH);
     }
 }

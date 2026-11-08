@@ -16,8 +16,8 @@ use windows::{
         Bluetooth::{BluetoothConnectionStatus, BluetoothDevice, BluetoothLEDevice},
         Enumeration::DeviceInformation,
     },
-    Foundation::{IReference, TypedEventHandler},
-    core::{HSTRING, IInspectable, Interface, Ref, Result},
+    Foundation::TypedEventHandler,
+    core::{IInspectable, Ref, Result},
 };
 
 use crate::{
@@ -25,6 +25,7 @@ use crate::{
     gfx::{Canvas, Color, Rect},
     log,
     page::{Context, Notifier, TimerId},
+    platform,
     ui::{self, Icon},
 };
 
@@ -33,8 +34,6 @@ const SETTLE_TIME: Duration = Duration::from_secs(4);
 const BATTERY_DELAY: Duration = Duration::from_secs(2);
 const MAX_NAME_CHARACTERS: usize = 22;
 const CONNECTED_BLUE: Color = Color::rgb(0.302, 0.671, 0.969);
-const BATTERY_PROPERTY: &str = "{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2";
-const BATTERY_NODES_FILTER: &str = "System.Devices.DeviceInstanceId:~<\"BTHENUM\" OR System.Devices.DeviceInstanceId:~<\"BTHHFENUM\" OR System.Devices.DeviceInstanceId:~<\"BTHLE\"";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Change {
@@ -59,24 +58,6 @@ fn battery_text(change: &Change) -> Option<String> {
     change.battery_percent.filter(|_| change.is_connected).map(|percent| format!("{percent}%"))
 }
 
-fn read_battery(name: &str) -> Option<u8> {
-    let properties = windows_collections::IIterable::<HSTRING>::from(vec![HSTRING::from(BATTERY_PROPERTY)]);
-    let nodes = DeviceInformation::FindAllAsyncAqsFilterAndAdditionalProperties(
-        &HSTRING::from(BATTERY_NODES_FILTER),
-        &properties,
-    )
-    .ok()?
-    .join()
-    .ok()?;
-    nodes
-        .into_iter()
-        .filter(|node| node.Name().is_ok_and(|node_name| node_name.to_string().starts_with(name)))
-        .find_map(|node| {
-            let value = node.Properties().ok()?.Lookup(&HSTRING::from(BATTERY_PROPERTY)).ok()?;
-            value.cast::<IReference<u8>>().ok()?.Value().ok()
-        })
-}
-
 struct Shared {
     changes: Mutex<VecDeque<Change>>,
     notifier: Notifier,
@@ -92,7 +73,7 @@ impl Shared {
         thread::spawn(move || {
             let battery_percent = if is_connected {
                 thread::sleep(BATTERY_DELAY);
-                read_battery(&name)
+                platform::bluetooth_devices::read_battery(&name)
             } else {
                 None
             };

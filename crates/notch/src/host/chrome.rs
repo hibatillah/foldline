@@ -57,6 +57,14 @@ pub fn dot_rects(count: usize, track: f32, pill: Rect, scale: f32) -> Vec<Rect> 
         .collect()
 }
 
+/// Width of the page dots at rest, one of them stretched; zero when fewer than two pages show them.
+pub fn dots_width(count: usize) -> f32 {
+    if count < 2 {
+        return 0.0;
+    }
+    (count - 1) as f32 * (DOT_SIZE + DOT_GAP) + ACTIVE_DOT_WIDTH
+}
+
 pub fn draw_dots(canvas: &Canvas, dots: &[Rect], track: f32, opacity: f32) {
     for (position, rect) in dots.iter().enumerate() {
         let amount = stretch(position, dots.len(), track);
@@ -114,7 +122,7 @@ mod tests {
         assert_eq!(dots[1].width(), 16.0);
         assert_eq!(dots[1].left - dots[0].right, 4.0);
         assert_eq!(dots[2].left - dots[1].right, 4.0);
-        assert_eq!(dots[0].left, 116.0);
+        assert_eq!(dots[0].left, 116.0, "the page dots start at the header's left edge");
     }
 
     #[test]
@@ -136,6 +144,13 @@ mod tests {
         let single = dot_rects(2, 0.0, PILL, 1.0);
         let double = dot_rects(2, 0.0, Rect::new(100.0, 0.0, 440.0, 160.0), 2.0);
         assert!((double[0].width() - 2.0 * single[0].width()).abs() < 0.01);
+    }
+
+    #[test]
+    fn the_dots_take_one_stretched_dot_and_a_gap_for_each_of_the_others() {
+        assert_eq!(dots_width(1), 0.0);
+        let drawn = dot_rects(3, 0.0, PILL, 1.0);
+        assert_eq!(dots_width(3), drawn[2].right - drawn[0].left);
     }
 
     #[test]

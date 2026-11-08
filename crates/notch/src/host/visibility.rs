@@ -47,7 +47,24 @@ pub fn showing_for(mode: ScreenMode, maximized: Showing, fullscreen: Showing) ->
         ScreenMode::Normal => None,
         ScreenMode::Maximized => Some(maximized),
         ScreenMode::Fullscreen => Some(fullscreen),
+        // A screenshot must never catch the notch, so no setting can show it over the overlay.
+        ScreenMode::Capture => Some(Showing::Hidden),
     }
+}
+
+/// How much a showing lets through; Music and a regular window (`None`) both keep the pill up.
+fn openness(showing: Option<Showing>) -> u8 {
+    match showing {
+        Some(Showing::Hidden) => 0,
+        Some(Showing::ActivitiesOnly) => 1,
+        Some(Showing::MusicWithLyrics) => 2,
+        Some(Showing::Music) | None => 3,
+    }
+}
+
+/// Whether going from `from` to `to` may show what was hidden; such a change waits, a hiding one applies at once.
+pub fn reveals_more(from: Option<Showing>, to: Option<Showing>) -> bool {
+    openness(to) > openness(from)
 }
 
 /// Whether the pointer may open the notch; a regular window always allows it.
@@ -56,6 +73,7 @@ pub fn opens_on_hover(mode: ScreenMode, over_maximized: bool, over_fullscreen: b
         ScreenMode::Normal => true,
         ScreenMode::Maximized => over_maximized,
         ScreenMode::Fullscreen => over_fullscreen,
+        ScreenMode::Capture => false,
     }
 }
 
@@ -140,6 +158,13 @@ mod tests {
     }
 
     #[test]
+    fn a_screenshot_overlay_hides_the_notch_and_ignores_hover_whatever_the_settings_say() {
+        assert_eq!(showing_for(ScreenMode::Capture, Showing::Music, Showing::Music), Some(Showing::Hidden));
+        assert!(!opens_on_hover(ScreenMode::Capture, true, true));
+        assert!(reveals_more(showing_for(ScreenMode::Capture, Showing::Music, Showing::Music), None));
+    }
+
+    #[test]
     fn fullscreen_hide_on_migrates_to_hidden() {
         let (mut settings, path) = settings_with("notch.hide_for_fullscreen=on\n");
         migrate(&mut settings);
@@ -206,6 +231,17 @@ mod tests {
         assert!(!allows(Showing::MusicWithLyrics, false, false, true));
         assert!(allows(Showing::MusicWithLyrics, true, false, false));
         assert!(allows(Showing::Music, false, true, false));
+    }
+
+    #[test]
+    fn leaving_a_hiding_window_for_a_regular_one_reveals_more_but_coming_back_does_not() {
+        for hiding in [Showing::Hidden, Showing::ActivitiesOnly, Showing::MusicWithLyrics] {
+            assert!(reveals_more(Some(hiding), None), "{hiding:?} to a regular window");
+            assert!(!reveals_more(None, Some(hiding)), "a regular window to {hiding:?}");
+        }
+        assert!(reveals_more(Some(Showing::Hidden), Some(Showing::ActivitiesOnly)));
+        assert!(!reveals_more(Some(Showing::Music), None), "music already keeps the pill up");
+        assert!(!reveals_more(None, None));
     }
 
     #[test]

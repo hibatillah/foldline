@@ -25,6 +25,11 @@ impl Notch {
     }
 
     pub fn system_message(&mut self, message: SystemMessage) {
+        for index in 0..self.pages.len() {
+            if self.page_list.is_enabled(index) {
+                self.with_page(index, |page, context| page.on_system_message(&message, context));
+            }
+        }
         for index in 0..self.activities.len() {
             if self.activities[index].is_started {
                 self.with_activity(index, |activity, context| activity.on_system_message(&message, context));
@@ -97,6 +102,18 @@ impl Notch {
         }
     }
 
+    /// A page asked to be shown by a click on its banner, which opens the notch even where hovering would not.
+    pub(super) fn open_on_page(&mut self, index: usize) {
+        // Only a pointer on the notch can close it again by leaving.
+        if !self.page_list.is_enabled(index) || !self.hover.is_hovering {
+            return;
+        }
+        self.go_to_page(index);
+        self.hiding.is_revealed = true;
+        self.begin_opening();
+        self.start_animation();
+    }
+
     pub(super) fn select_page(&mut self, target: usize) {
         self.selected_page = Some(target);
         let id = self.pages[target].id();
@@ -113,7 +130,7 @@ impl Notch {
             self.go_to_page(self.navigable[position]);
             return true;
         }
-        false
+        self.press_header_marks(point)
     }
 
     /// Lets the settings window list the pages; the file is written only when the list changed.
@@ -134,6 +151,12 @@ impl Notch {
         if let Some((index, wants_keyboard)) = requests.keyboard {
             self.set_keyboard(index, wants_keyboard);
         }
+        if requests.close {
+            self.set_hovering(false);
+        }
+        if let Some(index) = requests.open_page {
+            self.open_on_page(index);
+        }
         let layout_changed = self.refresh_layout();
         if requests.animate {
             self.start_animation();
@@ -149,6 +172,7 @@ impl Notch {
 
     /// A list that switches every page off is ignored.
     pub(super) fn reload_page_list(&mut self) {
+        let was_enabled: Vec<bool> = (0..self.pages.len()).map(|index| self.page_list.is_enabled(index)).collect();
         let ids = self.page_ids();
         let opt_in: Vec<bool> = self.pages.iter().map(|page| page.is_opt_in()).collect();
         let (current_order, current_disabled) = (self.page_list.order_text(&ids), self.page_list.disabled_text(&ids));
@@ -160,6 +184,12 @@ impl Notch {
         );
         if (0..self.pages.len()).any(|index| page_list.is_enabled(index)) {
             self.page_list = page_list;
+        }
+        for (index, was_enabled) in was_enabled.into_iter().enumerate() {
+            let is_enabled = self.page_list.is_enabled(index);
+            if is_enabled != was_enabled {
+                self.with_page(index, |page, context| page.on_enabled_changed(is_enabled, context));
+            }
         }
     }
 

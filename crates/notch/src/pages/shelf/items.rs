@@ -5,12 +5,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::gfx::Color;
+
 /// The most files the shelf holds: two rows of six.
 pub const MAX_FILES: usize = 12;
 
 const LABEL_LENGTH: usize = 4;
 
-fn extension(path: &Path) -> String {
+pub(super) fn extension(path: &Path) -> String {
     path.extension().map(|extension| extension.to_string_lossy().to_lowercase()).unwrap_or_default()
 }
 
@@ -19,6 +21,28 @@ pub fn tile_label(path: &Path, is_folder: bool) -> String {
         return String::new();
     }
     extension(path).to_uppercase().chars().take(LABEL_LENGTH).collect()
+}
+
+const PICTURE_EXTENSIONS: [&str; 10] = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "heic", "avif", "tif", "tiff"];
+
+/// Pictures show their own thumbnail; every other file shows a colored tile with its extension.
+pub fn has_thumbnail(path: &Path) -> bool {
+    PICTURE_EXTENSIONS.contains(&extension(path).as_str())
+}
+
+/// The tile color of a file type; a type without its own color is grey.
+pub fn tile_color(path: &Path) -> Color {
+    let rgb = |red: u8, green: u8, blue: u8| Color::rgb(red as f32 / 255.0, green as f32 / 255.0, blue as f32 / 255.0);
+    match extension(path).as_str() {
+        "pdf" => rgb(0xd9, 0x48, 0x0f),
+        "xls" | "xlsx" | "csv" | "ods" => rgb(0x2f, 0x9e, 0x44),
+        "doc" | "docx" | "rtf" | "odt" => rgb(0x3b, 0x5b, 0xdb),
+        "ppt" | "pptx" | "key" => rgb(0xc2, 0x25, 0x5c),
+        "zip" | "rar" | "7z" | "tar" | "gz" => rgb(0xf0, 0x8c, 0x00),
+        "fig" | "sketch" | "psd" | "ai" => rgb(0x70, 0x48, 0xe8),
+        extension if PICTURE_EXTENSIONS.contains(&extension) => rgb(0x1c, 0x7e, 0xd6),
+        _ => rgb(0x86, 0x8e, 0x96),
+    }
 }
 
 pub fn file_name(path: &Path) -> String {
@@ -112,6 +136,15 @@ mod tests {
         assert_eq!(tile_label(Path::new("a.markdown"), false), "MARK");
         assert_eq!(tile_label(Path::new("a"), false), "");
         assert_eq!(tile_label(Path::new("a.pdf"), true), "");
+    }
+
+    #[test]
+    fn only_pictures_use_a_thumbnail_and_each_type_has_its_tile_color() {
+        assert!(has_thumbnail(Path::new("Hero.PNG")));
+        assert!(!has_thumbnail(Path::new("report.pdf")));
+        assert_eq!(tile_color(Path::new("a.pdf")).rgb_bytes(), [0xd9, 0x48, 0x0f]);
+        assert_eq!(tile_color(Path::new("a.xlsx")).rgb_bytes(), [0x2f, 0x9e, 0x44]);
+        assert_eq!(tile_color(Path::new("a.unknown")).rgb_bytes(), [0x86, 0x8e, 0x96]);
     }
 
     #[test]

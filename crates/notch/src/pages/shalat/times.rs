@@ -59,7 +59,8 @@ impl Prayer {
     }
 }
 
-/// The calculation methods the settings offer; `Auto` picks one from the city's country.
+/// The method words the settings window offers, which its tests compare against; `auto` picks one from the city's country.
+#[cfg(test)]
 pub const METHOD_OPTIONS: &[(&str, &str)] = &[
     ("auto", "Auto"),
     ("singapore", "Kemenag"),

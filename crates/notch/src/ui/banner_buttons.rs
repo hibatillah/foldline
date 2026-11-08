@@ -1,0 +1,200 @@
+//! The Dismiss and Open buttons a banner shows while the pointer is on it, right-aligned under its text.
+
+use crate::{
+    gfx::{Align, Canvas, Color, FontStyle, Fonts, Point, Rect, UI_FONT, Weight, clamp_lines},
+    page::PointerEvent,
+    ui::{Stroke, draw_strokes},
+};
+
+/// The space the buttons add under a banner's text, in DIP: the gap above them and their height.
+pub const BANNER_BUTTONS_HEIGHT: f32 = TOP_GAP + HEIGHT;
+
+const TOP_GAP: f32 = 10.0;
+const HEIGHT: f32 = 28.0;
+const GAP: f32 = 8.0;
+const PADDING: f32 = 14.0;
+const OPEN_RIGHT_PADDING: f32 = 12.0;
+const ICON_SIZE: f32 = 12.0;
+const ICON_GAP: f32 = 6.0;
+const MAX_OPEN_LABEL_WIDTH: f32 = 200.0;
+const DISMISS_LABEL: &str = "Dismiss";
+
+const LABEL: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Medium, Align::Leading);
+const DISMISS_FILL: Color = Color::WHITE.with_alpha(0.14);
+const DISMISS_FILL_HOVERED: Color = Color::WHITE.with_alpha(0.22);
+const OPEN_FILL_HOVERED: Color = Color::gray(0.86);
+/// An arrow pointing up and right, on the 24 unit grid.
+const OPEN_ARROW: &str = "M7 17l10-10M8 7h9v9";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BannerButton {
+    Dismiss,
+    Open,
+}
+
+/// The two buttons, measured once when the banner is shown; positions are worked out from the banner's area.
+#[derive(Debug, Default)]
+pub struct BannerButtons {
+    open_label: String,
+    dismiss_width: f32,
+    open_width: f32,
+    hovered: Option<BannerButton>,
+    pressed: Option<BannerButton>,
+}
+
+impl BannerButtons {
+    /// `open_label` is cut with an ellipsis so a long app name cannot push Dismiss off the banner.
+    pub fn new(fonts: &Fonts, open_label: &str) -> Self {
+        let open_label = clamp_lines(open_label, 1, MAX_OPEN_LABEL_WIDTH, |text| fonts.measure(&LABEL, text))
+            .pop()
+            .unwrap_or_default();
+        let dismiss_width = 2.0 * PADDING + fonts.measure(&LABEL, DISMISS_LABEL);
+        let open_width = PADDING + fonts.measure(&LABEL, &open_label) + ICON_GAP + ICON_SIZE + OPEN_RIGHT_PADDING;
+        Self { open_label, dismiss_width, open_width, hovered: None, pressed: None }
+    }
+
+    /// Where each button sits; `right` is the row's right edge and `top` the top of the gap above it, in device pixels.
+    pub fn rects(&self, right: f32, top: f32, scale: f32) -> [(BannerButton, Rect); 2] {
+        let button_top = top + TOP_GAP * scale;
+        let bottom = button_top + HEIGHT * scale;
+        let open_left = right - self.open_width * scale;
+        let dismiss_right = open_left - GAP * scale;
+        [
+            (
+                BannerButton::Dismiss,
+                Rect::new(dismiss_right - self.dismiss_width * scale, button_top, dismiss_right, bottom),
+            ),
+            (BannerButton::Open, Rect::new(open_left, button_top, right, bottom)),
+        ]
+    }
+
+    pub fn button_at(&self, point: Point, right: f32, top: f32, scale: f32) -> Option<BannerButton> {
+        self.rects(right, top, scale).into_iter().find(|(_, rect)| rect.contains(point)).map(|(button, _)| button)
+    }
+
+    /// Follows the pointer; returns the button that was clicked (pressed and released on it) and whether the look
+    /// changed, so the caller repaints.
+    pub fn on_pointer(
+        &mut self,
+        event: PointerEvent,
+        right: f32,
+        top: f32,
+        scale: f32,
+    ) -> (Option<BannerButton>, bool) {
+        let before = self.hovered;
+        let mut clicked = None;
+        match event {
+            PointerEvent::Moved(point) => self.hovered = self.button_at(point, right, top, scale),
+            PointerEvent::Pressed(point) => {
+                self.hovered = self.button_at(point, right, top, scale);
+                self.pressed = self.hovered;
+            }
+            PointerEvent::Released(point) => {
+                self.hovered = self.button_at(point, right, top, scale);
+                clicked = self.pressed.take().filter(|&pressed| Some(pressed) == self.hovered);
+            }
+            PointerEvent::Left | PointerEvent::CaptureLost => {
+                self.hovered = None;
+                self.pressed = None;
+            }
+            PointerEvent::SecondaryReleased(_) | PointerEvent::Scrolled { .. } => {}
+        }
+        (clicked, before != self.hovered)
+    }
+
+    pub fn draw(&self, canvas: &Canvas, right: f32, top: f32, scale: f32, opacity: f32) {
+        for (button, rect) in self.rects(right, top, scale) {
+            let is_hovered = self.hovered == Some(button);
+            let radius = rect.height() / 2.0;
+            let label_left = rect.left + PADDING * scale;
+            match button {
+                BannerButton::Dismiss => {
+                    let fill = if is_hovered { DISMISS_FILL_HOVERED } else { DISMISS_FILL };
+                    canvas.fill_rounded_rect(rect, radius, fill.faded(opacity));
+                    canvas.text(&LABEL, DISMISS_LABEL, Rect { left: label_left, ..rect }, Color::WHITE.faded(opacity));
+                }
+                BannerButton::Open => {
+                    let fill = if is_hovered { OPEN_FILL_HOVERED } else { Color::WHITE };
+                    canvas.fill_rounded_rect(rect, radius, fill.faded(opacity));
+                    canvas.text(
+                        &LABEL,
+                        &self.open_label,
+                        Rect { left: label_left, ..rect },
+                        Color::BLACK.faded(opacity),
+                    );
+                    let icon_center =
+                        Point::new(rect.right - (OPEN_RIGHT_PADDING + ICON_SIZE / 2.0) * scale, rect.center_y());
+                    // The 12 px design arrow is drawn on the 24 unit grid at twice its line width.
+                    draw_strokes(
+                        canvas,
+                        &[Stroke::new(OPEN_ARROW, Color::BLACK)],
+                        icon_center,
+                        ICON_SIZE * scale,
+                        3.0,
+                        opacity,
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn buttons() -> BannerButtons {
+        BannerButtons::new(&Fonts::new(1.0).unwrap(), "Open Discord")
+    }
+
+    #[test]
+    fn the_open_button_ends_at_the_right_edge_and_dismiss_sits_left_of_it() {
+        let [(dismiss, dismiss_rect), (open, open_rect)] = buttons().rects(380.0, 60.0, 1.0);
+        assert_eq!((dismiss, open), (BannerButton::Dismiss, BannerButton::Open));
+        assert_eq!(open_rect.right, 380.0);
+        assert_eq!(dismiss_rect.right, open_rect.left - GAP);
+        assert_eq!(open_rect.top, 60.0 + TOP_GAP);
+        assert_eq!(open_rect.height(), HEIGHT);
+    }
+
+    #[test]
+    fn a_press_and_release_on_the_same_button_is_a_click() {
+        let mut buttons = buttons();
+        let [_, (_, open)] = buttons.rects(380.0, 60.0, 1.0);
+        let point = Point::new(open.center_x(), open.center_y());
+        buttons.on_pointer(PointerEvent::Pressed(point), 380.0, 60.0, 1.0);
+        let (clicked, _) = buttons.on_pointer(PointerEvent::Released(point), 380.0, 60.0, 1.0);
+        assert_eq!(clicked, Some(BannerButton::Open));
+    }
+
+    #[test]
+    fn releasing_on_another_button_than_the_pressed_one_clicks_nothing() {
+        let mut buttons = buttons();
+        let [(_, dismiss), (_, open)] = buttons.rects(380.0, 60.0, 1.0);
+        buttons.on_pointer(PointerEvent::Pressed(Point::new(dismiss.center_x(), dismiss.center_y())), 380.0, 60.0, 1.0);
+        let released = PointerEvent::Released(Point::new(open.center_x(), open.center_y()));
+        assert_eq!(buttons.on_pointer(released, 380.0, 60.0, 1.0).0, None);
+    }
+
+    #[test]
+    fn a_click_on_the_text_of_the_banner_is_no_button() {
+        assert_eq!(buttons().button_at(Point::new(100.0, 20.0), 380.0, 60.0, 1.0), None);
+    }
+
+    #[test]
+    fn moving_onto_a_button_asks_for_a_repaint_and_staying_on_it_does_not() {
+        let mut buttons = buttons();
+        let [(_, dismiss), _] = buttons.rects(380.0, 60.0, 1.0);
+        let point = Point::new(dismiss.center_x(), dismiss.center_y());
+        assert!(buttons.on_pointer(PointerEvent::Moved(point), 380.0, 60.0, 1.0).1);
+        assert!(!buttons.on_pointer(PointerEvent::Moved(point), 380.0, 60.0, 1.0).1);
+    }
+
+    #[test]
+    fn a_long_app_name_keeps_the_open_button_narrower_than_its_cap() {
+        let buttons =
+            BannerButtons::new(&Fonts::new(1.0).unwrap(), &format!("Open {}", "Very long app name ".repeat(6)));
+        assert!(buttons.open_label.ends_with('\u{2026}'));
+        assert!(buttons.open_width <= PADDING + MAX_OPEN_LABEL_WIDTH + ICON_GAP + ICON_SIZE + OPEN_RIGHT_PADDING);
+    }
+}

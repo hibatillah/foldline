@@ -18,7 +18,7 @@ use windows::{
     core::{Result, w},
 };
 
-use super::privacy::{Device, Privacy};
+use super::privacy::{Device, DotRow, Privacy};
 use crate::{
     activity::{Activity, Presence},
     gfx::{Canvas, Color, Rect},
@@ -122,7 +122,7 @@ pub struct CameraActivity {
 impl CameraActivity {
     pub fn new() -> Self {
         Self {
-            privacy: Privacy::new(Device { name: "Camera", icon: Icon::Camera, color: GREEN }),
+            privacy: Privacy::new(Device { name: "Camera", icon: Icon::Camera, color: GREEN, row: DotRow::Top }),
             is_in_use: Arc::new(AtomicBool::new(false)),
             subscription: None,
         }

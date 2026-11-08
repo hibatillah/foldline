@@ -13,7 +13,7 @@ use windows::{
     core::{BOOL, GUID, Interface, PCWSTR, Ref, Result, implement},
 };
 
-use super::privacy::{Device, Privacy};
+use super::privacy::{Device, DotRow, Privacy};
 use crate::{
     activity::{Activity, Presence},
     gfx::{Canvas, Color, Rect},
@@ -148,7 +148,12 @@ pub struct MicrophoneActivity {
 impl MicrophoneActivity {
     pub fn new() -> Self {
         Self {
-            privacy: Privacy::new(Device { name: "Microphone", icon: Icon::Microphone, color: ORANGE }),
+            privacy: Privacy::new(Device {
+                name: "Microphone",
+                icon: Icon::Microphone,
+                color: ORANGE,
+                row: DotRow::Bottom,
+            }),
             listener: None,
         }
     }

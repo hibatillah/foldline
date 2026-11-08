@@ -1,5 +1,6 @@
 use super::{
     ANIMATION_TIMER_ID, CLOSE_TIMER_ID, EXPAND_TIMER_ID, HOVER_WATCH_TIMER_ID, Notch, RAISE_TIMER_ID, REVEAL_TIMER_ID,
+    WINDOW_REVEAL_TIMER_ID,
 };
 use windows::Win32::UI::WindowsAndMessaging::{KillTimer, SetTimer};
 
@@ -23,7 +24,8 @@ impl Notch {
             ANIMATION_TIMER_ID => self.advance_animation(),
             CLOCK_TIMER_ID => {
                 self.arm_clock_timer();
-                if self.resting_index.is_none() || self.springs.expansion.position > 0.001 {
+                let layout_changed = self.refresh_layout();
+                if layout_changed || self.resting_index.is_none() || self.springs.expansion.position > 0.001 {
                     self.paint();
                 }
             }
@@ -32,7 +34,7 @@ impl Notch {
                     let _ = KillTimer(Some(self.window), REVEAL_TIMER_ID);
                     SetTimer(Some(self.window), EXPAND_TIMER_ID, EXPAND_DELAY_MILLISECONDS, None);
                 }
-                if self.hover.is_hovering {
+                if self.hover.is_hovering && self.opens_on_hover() {
                     self.hiding.is_revealed = true;
                     self.flush();
                 }
@@ -41,18 +43,15 @@ impl Notch {
                 unsafe {
                     let _ = KillTimer(Some(self.window), EXPAND_TIMER_ID);
                 }
-                if self.hover.is_hovering && self.shown_banner.is_none() {
+                // The window in front can change to one that refuses hover while this timer runs.
+                if self.hover.is_hovering && self.shown_banner.is_none() && self.opens_on_hover() {
                     self.begin_opening();
                     self.start_animation();
                     self.flush();
                 }
             }
             HOVER_WATCH_TIMER_ID => {
-                if !self.hover.is_captured
-                    && !self.hover.is_dragging_files
-                    && !self.hover.is_close_pending
-                    && !self.pointer_is_over_window()
-                {
+                if !self.hover.is_dragging_files && !self.hover.is_close_pending && !self.pointer_is_over_window() {
                     let (cursor, bounds) = self.pointer_and_window_bounds();
                     log::debug(&format!(
                         "hover watch: pointer left the window; cursor=({},{}) window=({},{})-({},{}) expansion={:.2}",
@@ -76,6 +75,12 @@ impl Notch {
                     crate::host::window::raise_topmost(self.window);
                 }
             }
+            WINDOW_REVEAL_TIMER_ID => {
+                unsafe {
+                    let _ = KillTimer(Some(self.window), WINDOW_REVEAL_TIMER_ID);
+                }
+                self.finish_window_reveal();
+            }
             CLOSE_TIMER_ID => {
                 unsafe {
                     let _ = KillTimer(Some(self.window), CLOSE_TIMER_ID);
@@ -83,11 +88,7 @@ impl Notch {
                 self.hover.is_close_pending = false;
                 // The pointer may have come back without moving, which sends no message; a page that is typing keeps
                 // the notch open until it gives the keyboard back.
-                if !self.hover.is_captured
-                    && !self.hover.is_dragging_files
-                    && self.keyboard.owner.is_none()
-                    && !self.pointer_is_over_window()
-                {
+                if !self.hover.is_dragging_files && self.keyboard.owner.is_none() && !self.pointer_is_over_window() {
                     self.set_hovering(false);
                     self.flush();
                 }
@@ -117,10 +118,18 @@ mod tests {
     use windows::Win32::UI::WindowsAndMessaging::KillTimer;
 
     fn armed_host_timers(notch: &Notch) -> Vec<usize> {
-        [ANIMATION_TIMER_ID, HOVER_WATCH_TIMER_ID, REVEAL_TIMER_ID, EXPAND_TIMER_ID, CLOSE_TIMER_ID, RAISE_TIMER_ID]
-            .into_iter()
-            .filter(|&timer_key| unsafe { KillTimer(Some(notch.window), timer_key) }.is_ok())
-            .collect()
+        [
+            ANIMATION_TIMER_ID,
+            HOVER_WATCH_TIMER_ID,
+            REVEAL_TIMER_ID,
+            EXPAND_TIMER_ID,
+            CLOSE_TIMER_ID,
+            RAISE_TIMER_ID,
+            WINDOW_REVEAL_TIMER_ID,
+        ]
+        .into_iter()
+        .filter(|&timer_key| unsafe { KillTimer(Some(notch.window), timer_key) }.is_ok())
+        .collect()
     }
 
     fn run_animation_to_rest(notch: &mut Notch) {
@@ -130,6 +139,28 @@ mod tests {
             }
             notch.advance_by(1.0 / 60.0);
         }
+    }
+
+    #[test]
+    fn the_window_reveal_timer_is_gone_after_it_fires_even_with_no_screen_mode_waiting() {
+        use crate::host::notch::hiding::WINDOW_REVEAL_DELAY_MILLISECONDS;
+        use windows::Win32::UI::WindowsAndMessaging::SetTimer;
+        let mut notch = rig(SampleOptions::default());
+        unsafe { SetTimer(Some(notch.window), WINDOW_REVEAL_TIMER_ID, WINDOW_REVEAL_DELAY_MILLISECONDS, None) };
+        assert_eq!(notch.hiding.pending_screen_mode, None);
+        notch.timer_fired(WINDOW_REVEAL_TIMER_ID);
+        assert_eq!(armed_host_timers(&notch), Vec::<usize>::new());
+    }
+
+    #[test]
+    fn the_minute_tick_of_a_settled_collapsed_notch_starts_no_animation() {
+        let mut notch = rig(SampleOptions::default());
+        crate::host::notch::tests::settle(&mut notch);
+        run_animation_to_rest(&mut notch);
+        assert!(!notch.is_animating, "the notch settled before the tick");
+        notch.timer_fired(super::CLOCK_TIMER_ID);
+        assert!(!notch.is_animating, "the frame timer started on the minute tick");
+        assert_eq!(armed_host_timers(&notch), Vec::<usize>::new());
     }
 
     #[test]

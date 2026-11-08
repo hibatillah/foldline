@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use super::*;
 
 fn media_rig() -> Notch {
-    let mut notch = rig(SampleOptions { media: Some((true, false)), timer: true, ..SampleOptions::default() });
+    let mut notch = rig(SampleOptions { media: Some(true), timer: true, ..SampleOptions::default() });
     open(&mut notch, "media");
     notch
 }
@@ -99,7 +99,8 @@ fn a_page_switch_gives_width_and_height_new_targets_for_springs_that_animate_the
     assert!(notch.is_animating || notch.pending.animate || notch.track.target > 0.0);
     assert_eq!(notch.springs.expanded_width.position, width, "the size must not snap");
     assert_eq!(notch.springs.expanded_height.position, height, "the size must not snap");
-    assert!((notch.springs.expanded_width.target - (next_size.width + chrome::WIDTH_EXTRA)).abs() < 0.01);
+    let next_width = (next_size.width + chrome::WIDTH_EXTRA).max(notch.open_min_width());
+    assert!((notch.springs.expanded_width.target - next_width).abs() < 0.01);
 }
 
 #[test]
@@ -132,4 +133,25 @@ fn page_blend_between_neighbours_keeps_natural_widths_and_the_shorter_page_enter
         assert_eq!(next_frame.expanded.width, next_width);
         assert!((next_frame.bounds.left - first_frame.bounds.right - PAGE_GAP * SCALE).abs() < 0.01);
     }
+}
+
+#[test]
+fn a_page_that_asks_to_open_from_its_banner_opens_the_notch_on_itself() {
+    let mut notch = rig(SampleOptions { media: Some(true), timer: true, ..SampleOptions::default() });
+    settle(&mut notch);
+    let timer = notch.pages.iter().position(|page| page.id() == "timer").expect("the timer page is in the rig");
+    notch.set_hovering(true);
+    notch.with_page(timer, |_, context| context.request_open());
+    notch.flush();
+    assert_eq!(notch.springs.expansion.target, 1.0);
+    assert_eq!(notch.expanded_index, Some(timer));
+}
+
+#[test]
+fn an_activity_cannot_open_the_notch_on_a_page() {
+    let mut notch = marked_rig(SampleOptions::default(), vec![Mark::showing(None).0]);
+    notch.set_hovering(true);
+    notch.with_activity(0, |_, context| context.request_open());
+    notch.flush();
+    assert_eq!(notch.springs.expansion.target, 0.0);
 }

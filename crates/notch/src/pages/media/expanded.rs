@@ -5,6 +5,7 @@ use crate::{
 };
 
 const GRAY: Color = Color::rgb(0.604, 0.604, 0.651);
+const BADGE_TILE: Color = Color::gray(0.047);
 
 pub fn draw(page: &MediaPage, canvas: &Canvas, frame: &Frame, opacity: f32) {
     let layout = Layout::new(frame, page.title_lines.len(), page.text_width);
@@ -14,13 +15,14 @@ pub fn draw(page: &MediaPage, canvas: &Canvas, frame: &Frame, opacity: f32) {
         Some(image) => canvas.image(image, artwork, layout.artwork_radius(), opacity),
         None => {
             canvas.fill_rounded_rect(artwork, layout.artwork_radius(), Color::gray(0.16).faded(opacity));
-            canvas.text(&styles::RESTING_LABEL, "\u{266A}", artwork, Color::gray(0.6).faded(opacity));
+            canvas.text(&styles::ARTWORK_NOTE, "\u{266A}", artwork, Color::gray(0.6).faded(opacity));
         }
     }
     if let Some(icon) = page.app_icon.brush() {
         let (ring, ring_radius) = layout.app_badge_ring();
         canvas.fill_rounded_rect(ring, ring_radius, Color::BLACK.faded(opacity));
-        canvas.image(icon, layout.app_badge(), layout.app_badge_radius(), opacity);
+        canvas.fill_rounded_rect(layout.app_badge(), layout.app_badge_radius(), BADGE_TILE.faded(opacity));
+        canvas.image(icon, layout.app_badge_icon(), layout.app_badge_icon_radius(), opacity);
     }
 
     for (index, line) in page.title_lines.iter().enumerate() {

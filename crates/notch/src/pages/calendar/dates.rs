@@ -4,6 +4,7 @@ pub const SECONDS_PER_DAY: i64 = 86_400;
 pub const SECONDS_PER_MINUTE: i64 = 60;
 
 pub const WEEKDAY_LETTERS: [&str; 7] = ["M", "T", "W", "T", "F", "S", "S"];
+pub const WEEKDAY_NAMES: [&str; 7] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 pub const MONTH_NAMES: [&str; 12] = [
     "January",
     "February",
@@ -65,6 +66,31 @@ pub fn days_in_month(year: i64, month: u32) -> u32 {
 
 pub fn week_start(day: i64) -> i64 {
     day - i64::from(weekday(day))
+}
+
+/// The month of a day as the grid draws it: Monday first, blank cells before the 1st, at most six rows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MonthGrid {
+    pub first_day: i64,
+    pub day_count: u32,
+    /// Empty cells before the 1st in the first row.
+    pub leading: usize,
+}
+
+impl MonthGrid {
+    pub fn of(day: i64) -> Self {
+        let (year, month, date) = civil_from_days(day);
+        let first_day = day - i64::from(date) + 1;
+        Self { first_day, day_count: days_in_month(year, month), leading: weekday(first_day) as usize }
+    }
+
+    pub fn rows(&self) -> usize {
+        (self.leading + self.day_count as usize).div_ceil(7)
+    }
+
+    pub fn contains(&self, day: i64) -> bool {
+        (self.first_day..self.first_day + i64::from(self.day_count)).contains(&day)
+    }
 }
 
 /// The date `months` months after (or before) the month of `day`, on the same day of the month, or `None` when that
@@ -165,6 +191,16 @@ mod tests {
         assert_eq!(day_of(seconds), days_from_civil(2026, 10, 24));
         assert_eq!(seconds.rem_euclid(SECONDS_PER_DAY), 13 * 3600 + 30 * 60 + 15);
         assert_eq!(day_of(-1), -1);
+    }
+
+    #[test]
+    fn the_month_grid_starts_on_the_right_weekday_and_has_up_to_six_rows() {
+        let november = MonthGrid::of(days_from_civil(2026, 11, 13));
+        assert_eq!((november.leading, november.day_count, november.rows()), (6, 30, 6));
+        assert_eq!(civil_from_days(november.first_day), (2026, 11, 1));
+        let february = MonthGrid::of(days_from_civil(2027, 2, 9));
+        assert_eq!((february.leading, february.day_count, february.rows()), (0, 28, 4));
+        assert!(february.contains(february.first_day) && !february.contains(february.first_day + 28));
     }
 
     #[test]

@@ -4,11 +4,11 @@ use windows::Win32::System::SystemInformation::GetTickCount64;
 
 use crate::gfx::{Canvas, Color, Rect};
 
-pub const WIDTH: f32 = 16.0;
+pub const WIDTH: f32 = 18.0;
 pub const HEIGHT: f32 = 12.0;
 const BARS: usize = 5;
 const BAR_WIDTH: f32 = 2.0;
-const LOWEST: f32 = 0.25;
+const LOWEST: f32 = 1.0 / 6.0;
 const CYCLES_PER_SECOND: f32 = 1.0;
 const PHASE_STEP: f32 = 1.1;
 

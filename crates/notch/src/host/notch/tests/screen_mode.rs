@@ -1,6 +1,7 @@
 //! Topmost restoring, session recovery and the visibility keys.
 
 use super::*;
+use crate::host::notch::hiding::WINDOW_REVEAL_DELAY_MILLISECONDS;
 
 #[test]
 fn an_unchanged_screen_mode_restores_a_demoted_notch_without_activating_it() {
@@ -51,6 +52,96 @@ fn session_recovery_clears_stale_hover_and_allows_a_hidden_notch_to_open_again()
     assert!(notch.hiding.is_revealed);
     notch.timer_fired(EXPAND_TIMER_ID);
     assert_eq!(notch.springs.expansion.target, 1.0);
+}
+
+/// Whether the window reveal timer was armed; disarms it as a side effect.
+fn window_reveal_is_armed(notch: &Notch) -> bool {
+    use windows::Win32::UI::WindowsAndMessaging::KillTimer;
+    unsafe { KillTimer(Some(notch.window), WINDOW_REVEAL_TIMER_ID) }.is_ok()
+}
+
+fn hidden_over_maximized() -> Notch {
+    let mut notch = rig(SampleOptions::default());
+    notch.hiding.maximized_showing = Showing::Hidden;
+    notch.set_screen_mode(ScreenMode::Maximized);
+    notch
+}
+
+#[test]
+fn switching_between_maximized_windows_through_a_brief_regular_window_never_shows_the_notch() {
+    let mut notch = hidden_over_maximized();
+    notch.set_screen_mode(ScreenMode::Normal);
+    assert!(notch.is_suppressed(), "the notch waits before it comes back");
+    notch.set_screen_mode(ScreenMode::Maximized);
+    assert_eq!(notch.hiding.pending_screen_mode, None);
+    assert!(!window_reveal_is_armed(&notch), "a covering window inside the second disarms the reveal");
+    notch.timer_fired(WINDOW_REVEAL_TIMER_ID);
+    assert!(notch.is_suppressed());
+}
+
+#[test]
+fn a_regular_window_that_stays_in_front_for_half_a_second_shows_the_notch_again() {
+    assert_eq!(WINDOW_REVEAL_DELAY_MILLISECONDS, 500);
+    let mut notch = hidden_over_maximized();
+    notch.set_screen_mode(ScreenMode::Normal);
+    assert!(notch.is_suppressed());
+    notch.timer_fired(WINDOW_REVEAL_TIMER_ID);
+    assert!(!notch.is_suppressed());
+    assert_eq!(notch.hiding.screen_mode, ScreenMode::Normal);
+    assert!(!window_reveal_is_armed(&notch), "the one-shot timer is gone once the notch is back");
+}
+
+#[test]
+fn closing_a_screenshot_overlay_brings_the_notch_back_only_after_the_reveal_delay() {
+    let mut notch = rig(SampleOptions::default());
+    notch.set_screen_mode(ScreenMode::Capture);
+    assert!(notch.is_suppressed(), "the overlay hides the notch at once");
+    assert!(!window_reveal_is_armed(&notch));
+    notch.set_screen_mode(ScreenMode::Normal);
+    assert!(notch.is_suppressed(), "the notch waits before it comes back");
+    assert_eq!(notch.hiding.pending_screen_mode, Some(ScreenMode::Normal));
+    notch.timer_fired(WINDOW_REVEAL_TIMER_ID);
+    assert!(!notch.is_suppressed());
+    assert_eq!(notch.hiding.screen_mode, ScreenMode::Normal);
+}
+
+#[test]
+fn a_screenshot_overlay_over_a_music_showing_full_screen_window_hides_the_notch_at_once() {
+    let mut notch = rig(SampleOptions::default());
+    notch.hiding.fullscreen_showing = Showing::Music;
+    notch.set_screen_mode(ScreenMode::Fullscreen);
+    assert!(!notch.is_suppressed());
+    notch.set_screen_mode(ScreenMode::Capture);
+    assert!(notch.is_suppressed());
+    assert!(!window_reveal_is_armed(&notch), "hiding never waits");
+}
+
+#[test]
+fn a_window_that_covers_the_screen_hides_the_notch_at_once() {
+    let mut notch = rig(SampleOptions::default());
+    notch.hiding.maximized_showing = Showing::Hidden;
+    notch.hiding.fullscreen_showing = Showing::ActivitiesOnly;
+    notch.set_screen_mode(ScreenMode::Fullscreen);
+    assert!(notch.is_hidden(), "the idle pill hides as soon as the full-screen window is in front");
+    assert!(!window_reveal_is_armed(&notch));
+    notch.set_screen_mode(ScreenMode::Maximized);
+    assert!(notch.is_suppressed(), "going from activities only to hidden waits for nothing");
+    assert!(!window_reveal_is_armed(&notch));
+}
+
+#[test]
+fn a_banner_still_shows_over_an_activities_only_window_while_the_reveal_waits() {
+    let mut notch = rig(SampleOptions::default());
+    notch.hiding.maximized_showing = Showing::ActivitiesOnly;
+    notch.set_screen_mode(ScreenMode::Maximized);
+    assert!(notch.is_hidden());
+    notch.set_screen_mode(ScreenMode::Normal);
+    assert!(notch.is_hidden(), "the idle pill stays hidden during the wait");
+    notch.shown_banner = Some((Source::Activity(0), 330.0, 70.0));
+    assert!(!notch.is_hidden(), "an activity shows as it did over the maximized window");
+    notch.shown_banner = None;
+    notch.timer_fired(WINDOW_REVEAL_TIMER_ID);
+    assert!(!notch.is_hidden());
 }
 
 #[test]

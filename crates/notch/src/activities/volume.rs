@@ -160,12 +160,22 @@ impl Activity for VolumeActivity {
     }
 
     fn presence(&self) -> Option<Presence> {
-        let width = if self.is_muted { self.muted_width } else { ui::LEVEL_WIDTH };
-        self.flash.is_visible().then_some(Presence::Transient { width })
+        if self.flash.is_visible() {
+            let width = if self.is_muted { self.muted_width } else { ui::LEVEL_WIDTH };
+            Some(Presence::Transient { width })
+        } else {
+            self.is_muted.then_some(Presence::Badge { width: Icon::SpeakerMuted.size() })
+        }
     }
 
-    fn draw(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
-        if self.is_muted {
+    fn header_status_rank(&self) -> u8 {
+        2
+    }
+
+    fn draw(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+        if !self.flash.is_visible() {
+            self.draw_header_status(canvas, area, scale, opacity);
+        } else if self.is_muted {
             ui::draw_message(canvas, area, opacity, Icon::SpeakerMuted, Color::WHITE, "Muted", None);
         } else {
             ui::draw_level(canvas, area, opacity, Icon::Speaker, self.volume, &value_text(self.volume));
@@ -217,5 +227,29 @@ mod tests {
         assert_eq!(value_text(0.42), "42");
         assert_eq!(value_text(1.0), "100");
         assert_eq!(value_text(0.0), "0");
+    }
+
+    #[test]
+    fn a_muted_output_stays_as_an_icon_badge_after_its_message_ends() {
+        let mut activity = VolumeActivity::new();
+        assert_eq!(activity.presence(), None);
+        activity.is_muted = true;
+        activity.muted_width = 60.0;
+        assert_eq!(activity.presence(), Some(Presence::Badge { width: Icon::SpeakerMuted.size() }));
+        activity.flash = Flash::visible();
+        assert_eq!(activity.presence(), Some(Presence::Transient { width: 60.0 }));
+    }
+
+    #[test]
+    fn an_unmuted_output_shows_only_its_level_message() {
+        let mut activity = VolumeActivity::new();
+        activity.flash = Flash::visible();
+        assert_eq!(activity.presence(), Some(Presence::Transient { width: ui::LEVEL_WIDTH }));
+    }
+
+    #[test]
+    fn muted_ranks_after_the_wave_and_caps_lock() {
+        assert_eq!(VolumeActivity::new().header_status_rank(), 2);
+        assert_eq!(VolumeActivity::new().header_status_page(), None);
     }
 }

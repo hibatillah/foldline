@@ -8,7 +8,6 @@ use crate::{log, page::PointerEvent};
 pub(super) struct HoverState {
     pub(super) is_hovering: bool,
     pub(super) is_close_pending: bool,
-    pub(super) is_captured: bool,
     pub(super) is_dragging_files: bool,
 }
 
@@ -22,14 +21,14 @@ impl Notch {
         let Some(owner) = self.keyboard.owner.take() else { return };
         self.keyboard.previous = None;
         self.keyboard.pending_high_surrogate = None;
-        log::debug(&format!("keyboard lost by {owner:?}"));
+        log::debug(&format!("keyboard lost by page {owner}"));
         self.keyboard_lost_by(owner);
         self.close_if_pointer_is_away();
         self.flush();
     }
 
     pub(super) fn close_if_pointer_is_away(&mut self) {
-        if self.hover.is_hovering && !self.hover.is_captured && !self.pointer_is_over_window() {
+        if self.hover.is_hovering && !self.pointer_is_over_window() {
             self.set_hovering(false);
         }
     }
@@ -71,8 +70,6 @@ impl Notch {
         }
         self.hover.is_hovering = is_hovering;
         if !is_hovering {
-            self.editor = None;
-            self.menu = None;
             self.cancel_close();
         }
         log::debug(&format!("hovering={is_hovering}"));

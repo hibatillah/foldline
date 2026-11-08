@@ -3,9 +3,16 @@ use crate::gfx::{Canvas, Color, Point, Rect, lerp};
 
 const LINE_HEIGHT: f32 = 22.0;
 const NOTE: &str = "\u{266A}";
-const ROW_GAP: f32 = 6.0;
-const NEIGHBOR_SCALE: f32 = 0.8;
-const NEIGHBOR_GRAY: f32 = 0.36;
+const ROW_GAP: f32 = 10.0;
+/// The neighbouring lines are 13 px beside the 17 px current line.
+const NEIGHBOR_SCALE: f32 = 13.0 / 17.0;
+/// White opacity of a line next to the current one; lines two away have faded out.
+const NEIGHBOR_ALPHA: f32 = 0.2;
+
+fn line_alpha(distance: f32) -> f32 {
+    let distance = distance.max(0.0);
+    if distance <= 1.0 { lerp(1.0, NEIGHBOR_ALPHA, distance) } else { NEIGHBOR_ALPHA * (2.0 - distance).max(0.0) }
+}
 
 fn center_of(row: i64, anchor: i64, height: &impl Fn(i64, i64) -> f32) -> f32 {
     if row == anchor {
@@ -49,8 +56,7 @@ pub fn draw(page: &MediaPage, canvas: &Canvas, layout: &Layout, opacity: f32) {
             let distance = rows_from_center.abs();
             let offset = lerp(center_of(relative, -1, &row_height), center_of(relative, 0, &row_height), transition);
             let center = Point::new(panel.center_x(), panel.center_y() + offset * scale);
-            let gray = lerp(NEIGHBOR_GRAY, 1.0, (1.0 - distance).clamp(0.0, 1.0));
-            let alpha = (1.0 - 0.5 * distance).clamp(0.0, 1.0);
+            let alpha = line_alpha(distance);
 
             // Widen scaled neighbour rows so their text still fills the panel.
             let text_scale = lerp(1.0, NEIGHBOR_SCALE, distance.min(1.0));
@@ -68,7 +74,7 @@ pub fn draw(page: &MediaPage, canvas: &Canvas, layout: &Layout, opacity: f32) {
                         center.x + half_width,
                         line_center + LINE_HEIGHT * scale / 2.0,
                     );
-                    canvas.text(&styles::LYRIC_LINE, text, row, Color::gray(gray).with_alpha(opacity * alpha));
+                    canvas.text(&styles::LYRIC_LINE, text, row, Color::WHITE.with_alpha(opacity * alpha));
                 }
             });
         }
@@ -81,6 +87,15 @@ mod tests {
 
     fn tall(rows: f32) -> impl Fn(i64, i64) -> f32 {
         move |_, _| rows * 10.0
+    }
+
+    #[test]
+    fn the_current_line_is_white_its_neighbours_dim_and_lines_two_away_gone() {
+        assert_eq!(line_alpha(0.0), 1.0);
+        assert!((line_alpha(1.0) - NEIGHBOR_ALPHA).abs() < 1e-6);
+        assert!(line_alpha(0.5) > NEIGHBOR_ALPHA && line_alpha(0.5) < 1.0);
+        assert_eq!(line_alpha(2.0), 0.0);
+        assert_eq!(line_alpha(3.0), 0.0);
     }
 
     #[test]

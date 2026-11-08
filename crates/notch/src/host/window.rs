@@ -33,10 +33,10 @@ use super::{
     display, drop_target,
     icon::Icon,
     notch::{Notch, NotchParts, WINDOW_HEIGHT, WINDOW_WIDTH},
-    registry,
+    notification_banners, registry,
     screen_mode::{self, ScreenMode},
     settings::Settings,
-    settings_launcher, startup, tray,
+    settings_launcher, startup, tray, volume_flyout,
 };
 use crate::{
     activity::{Activity, SystemMessage, WM_ACTIVITY_NOTIFY},
@@ -292,6 +292,11 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
             }
             LRESULT(0)
         }
+        // Windows ends the process right after this message, so the message loop's exit path never runs.
+        WM_ENDSESSION if wparam.0 != 0 => {
+            notification_banners::release_at_session_end();
+            LRESULT(0)
+        }
         WM_DESTROY => {
             if SESSION_NOTIFICATIONS_REGISTERED.swap(false, Ordering::Relaxed)
                 && let Err(error) = unsafe { WTSUnRegisterSessionNotification(window) }
@@ -304,6 +309,7 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
         }
         _ if message != 0 && message == TASKBAR_CREATED_MESSAGE.load(Ordering::Relaxed) => {
             let _ = tray::add(window);
+            volume_flyout::explorer_restarted();
             LRESULT(0)
         }
         _ => unsafe { DefWindowProcW(window, message, wparam, lparam) },
@@ -404,6 +410,7 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
             let _ = TranslateMessage(&message);
             DispatchMessageW(&message);
         }
+        notification_banners::release_at_exit(window);
     }
     Ok(())
 }

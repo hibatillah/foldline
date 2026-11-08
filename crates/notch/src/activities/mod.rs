@@ -6,6 +6,7 @@ mod brightness;
 mod camera;
 mod caps_lock;
 mod clipboard;
+mod device_battery;
 mod microphone;
 pub mod notifications;
 mod privacy;
@@ -24,6 +25,7 @@ pub fn all() -> Vec<Box<dyn Activity>> {
         Box::new(brightness::BrightnessActivity::new()),
         Box::new(battery::BatteryActivity::new()),
         Box::new(bluetooth::BluetoothActivity::new()),
+        Box::new(device_battery::DeviceBatteryActivity::new()),
         Box::new(microphone::MicrophoneActivity::new()),
         Box::new(camera::CameraActivity::new()),
         Box::new(clipboard::ClipboardActivity::new()),

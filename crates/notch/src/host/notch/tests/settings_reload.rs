@@ -32,7 +32,7 @@ fn reloading_settings_applies_hide_when_idle() {
 #[test]
 fn reloading_settings_keeps_the_open_page_and_hover() {
     let settings_file = SettingsFile::new("reload-open-page");
-    let options = SampleOptions { media: Some((false, false)), timer: true, ..SampleOptions::default() };
+    let options = SampleOptions { media: Some(false), timer: true, ..SampleOptions::default() };
     let mut notch = configured_rig(options, settings_file.load(), Vec::new());
     open(&mut notch, "media");
     let media = notch.selected_page.unwrap();
@@ -54,7 +54,7 @@ fn reloading_settings_keeps_the_open_page_and_hover() {
 #[test]
 fn switching_off_an_earlier_page_keeps_the_open_page_in_place() {
     let settings_file = SettingsFile::new("reload-disable-earlier");
-    let options = SampleOptions { media: Some((false, false)), timer: true, ..SampleOptions::default() };
+    let options = SampleOptions { media: Some(false), timer: true, ..SampleOptions::default() };
     let mut notch = configured_rig(options, settings_file.load(), Vec::new());
     open(&mut notch, "calendar");
     let calendar = notch.selected_page.unwrap();
@@ -79,7 +79,7 @@ fn a_malformed_settings_file_keeps_the_current_values() {
     let settings_file = SettingsFile::new("reload-malformed");
     fs::write(&settings_file.0, "notch.hide_when_idle=on\nnotch.hide_for_fullscreen=off\nnavigation.disabled=stats\n")
         .unwrap();
-    let options = SampleOptions { media: Some((false, false)), timer: true, ..SampleOptions::default() };
+    let options = SampleOptions { media: Some(false), timer: true, ..SampleOptions::default() };
     let mut notch = configured_rig(options, settings_file.load(), Vec::new());
     notch.reload_settings();
     let stats = notch.pages.iter().position(|page| page.id() == "stats").unwrap();
@@ -110,7 +110,7 @@ fn a_malformed_settings_file_keeps_the_current_values() {
 #[test]
 fn reloading_settings_tells_the_media_page_to_switch_lyrics() {
     let settings_file = SettingsFile::new("reload-lyrics");
-    let options = SampleOptions { media: Some((true, false)), ..SampleOptions::default() };
+    let options = SampleOptions { media: Some(true), ..SampleOptions::default() };
     let mut notch = configured_rig(options, settings_file.load(), Vec::new());
     let media = notch.pages.iter().position(|page| page.id() == "media").unwrap();
     assert!(notch.pages[media].shows_live_text());

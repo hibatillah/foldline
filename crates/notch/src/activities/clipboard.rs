@@ -1,16 +1,12 @@
-//! "Copied" when something is put on the clipboard. It never reads the clipboard, so nothing copied is exposed.
+//! "Copied" when something is put on the clipboard. It never reads what was copied.
 
-use std::sync::OnceLock;
-
-use windows::{
-    Win32::System::DataExchange::{CountClipboardFormats, IsClipboardFormatAvailable, RegisterClipboardFormatW},
-    core::w,
-};
+use windows::Win32::System::DataExchange::CountClipboardFormats;
 
 use crate::{
     activity::{Activity, Flash, Presence, SystemMessage},
     gfx::{Canvas, Color, Rect},
     page::{Context, TimerId},
+    platform::clipboard,
     ui::{self, Icon},
 };
 
@@ -28,17 +24,10 @@ impl ClipboardActivity {
     }
 }
 
-/// Password managers mark what they copy with this format to ask clipboard watchers to ignore it.
-fn is_excluded_from_monitoring() -> bool {
-    static FORMAT: OnceLock<u32> = OnceLock::new();
-    let format =
-        *FORMAT.get_or_init(|| unsafe { RegisterClipboardFormatW(w!("ExcludeClipboardContentFromMonitorProcessing")) });
-    format != 0 && unsafe { IsClipboardFormatAvailable(format) }.is_ok()
-}
-
-/// A copy that put something on the clipboard, as opposed to a clear, and that its owner wants shown.
+/// A copy that put something on the clipboard, as opposed to a clear, that its owner wants shown and that the notch did
+/// not make itself (the Clipboard page writing an item back).
 fn is_visible_copy() -> bool {
-    (unsafe { CountClipboardFormats() }) > 0 && !is_excluded_from_monitoring()
+    (unsafe { CountClipboardFormats() }) > 0 && !clipboard::is_own_write() && !clipboard::is_excluded()
 }
 
 impl Activity for ClipboardActivity {

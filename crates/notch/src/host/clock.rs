@@ -2,12 +2,12 @@
 
 use windows::Win32::System::SystemInformation::GetLocalTime;
 
-use crate::gfx::{Align, Canvas, Color, FontStyle, Point, Rect, UI_FONT, Weight, lerp};
+use crate::gfx::{Align, Canvas, Color, FontStyle, Fonts, Point, Rect, UI_FONT, Weight, lerp};
 
 /// The collapsed pill never gets narrower than this, so the time sits in the middle of a pill of a steady size.
 pub const RESTING_WIDTH: f32 = crate::page::RESTING_MIN_WIDTH;
 
-const TIME: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Medium, Align::Center);
+const TIME: FontStyle = FontStyle::new(UI_FONT, 14.0, Weight::Medium, Align::Center);
 
 fn time_text(hour: u16, minute: u16) -> String {
     format!("{hour:02}:{minute:02}")
@@ -25,9 +25,9 @@ pub fn center(collapsed: Point, open: Point, amount: f32) -> Point {
     Point::new(lerp(collapsed.x, open.x, amount), lerp(collapsed.y, open.y, amount))
 }
 
-pub fn text_width(canvas: &Canvas) -> f32 {
-    let time = unsafe { GetLocalTime() };
-    canvas.measure(&TIME, &time_text(time.wHour, time.wMinute))
+/// Width the layout reserves for the time; a fixed sample keeps the row steady while the digits change.
+pub fn layout_width(fonts: &Fonts) -> f32 {
+    fonts.measure(&TIME, "00:00")
 }
 
 pub fn draw_time(canvas: &Canvas, area: Rect, opacity: f32) {

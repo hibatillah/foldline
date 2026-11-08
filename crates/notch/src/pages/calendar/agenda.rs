@@ -5,169 +5,72 @@ use super::{
     ics::Occurrence,
 };
 
-pub const MAX_ROWS: usize = 2;
-const REMINDER_LEAD_MINUTES: i64 = 15;
+pub const REMINDER_LEAD_SECONDS: i64 = 15 * SECONDS_PER_MINUTE;
 const REMINDER_TRAIL_MINUTES: i64 = 5;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Meeting {
-    pub url: String,
-    pub service: &'static str,
-}
-
-const SERVICES: [(&str, &str); 6] = [
-    ("meet.google.com", "Google Meet"),
-    ("zoom.us", "Zoom"),
-    ("teams.microsoft.com", "Teams"),
-    ("teams.live.com", "Teams"),
-    ("webex.com", "Webex"),
-    ("whereby.com", "Whereby"),
-];
-
-fn addresses(text: &str) -> Vec<&str> {
-    let mut found = Vec::new();
-    let mut rest = text;
-    while let Some(start) = rest.find("http") {
-        let candidate = &rest[start..];
-        if candidate.starts_with("https://") || candidate.starts_with("http://") {
-            let end = candidate
-                .find(|character: char| character.is_whitespace() || "<>\")'".contains(character))
-                .unwrap_or(candidate.len());
-            found.push(candidate[..end].trim_end_matches(['.', ',', ';']));
-            rest = &candidate[end..];
-        } else {
-            rest = &candidate[4..];
-        }
-    }
-    found
-}
-
-/// The meeting link of an event: a known video service in its location, link or description, else a link in its location.
-pub fn find_meeting(occurrence: &Occurrence) -> Option<Meeting> {
-    let places = [occurrence.location.as_str(), occurrence.url.as_str(), occurrence.description.as_str()];
-    for place in places {
-        for address in addresses(place) {
-            let lower = address.to_lowercase();
-            if let Some((_, service)) = SERVICES.iter().find(|(host, _)| lower.contains(host)) {
-                return Some(Meeting { url: address.to_owned(), service });
-            }
-        }
-    }
-    addresses(&occurrence.location).first().map(|address| Meeting { url: (*address).to_owned(), service: "Link" })
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum State {
-    Done,
-    Next,
-    Later,
-}
+const ALL_DAY_TEXT: &str = "All day";
 
 pub struct Row {
     pub occurrence: Occurrence,
-    pub state: State,
+    /// "All day" or the start time in the time column.
     pub time: String,
-    pub detail: Option<String>,
-    pub trailing: String,
-    pub meeting: Option<Meeting>,
 }
 
 pub struct Agenda {
     pub rows: Vec<Row>,
+    /// Today had events and all of them are over.
+    pub is_done: bool,
 }
 
-pub fn relative_text(seconds: i64) -> String {
-    let minutes = (seconds + SECONDS_PER_MINUTE - 1).div_euclid(SECONDS_PER_MINUTE).max(0);
-    match (minutes / 60, minutes % 60) {
-        (0, minutes) => format!("{minutes} min"),
-        (hours, 0) => format!("{hours} h"),
-        (hours, minutes) => format!("{hours} h {minutes} min"),
-    }
+fn row_for(occurrence: &Occurrence) -> Row {
+    let time = if occurrence.is_all_day {
+        ALL_DAY_TEXT.to_owned()
+    } else {
+        clock_text(occurrence.start.rem_euclid(SECONDS_PER_DAY))
+    };
+    Row { occurrence: occurrence.clone(), time }
 }
 
-pub fn duration_text(seconds: i64) -> String {
-    let minutes = seconds.div_euclid(SECONDS_PER_MINUTE).max(0);
-    match (minutes / 60, minutes % 60) {
-        (0, minutes) => format!("{minutes} min"),
-        (hours, 0) => format!("{hours} h"),
-        (hours, minutes) => format!("{hours} h {minutes} min"),
-    }
+/// All-day events first, then by start time.
+fn in_listing_order(occurrences: &[Occurrence]) -> Vec<&Occurrence> {
+    let mut ordered: Vec<&Occurrence> = occurrences.iter().collect();
+    ordered.sort_by_key(|occurrence| (!occurrence.is_all_day, occurrence.start));
+    ordered
 }
 
-fn next_index(occurrences: &[Occurrence], now: i64) -> Option<usize> {
-    occurrences.iter().position(|occurrence| !occurrence.is_all_day && occurrence.end.max(occurrence.start + 1) > now)
-}
-
-/// The rows to list: all events when they fit, else a window that has the next event in it.
-fn visible_range(total: usize, next: Option<usize>) -> std::ops::Range<usize> {
-    if total <= MAX_ROWS {
-        return 0..total;
-    }
-    let start = next.map_or(total - MAX_ROWS, |next| next.saturating_sub(1)).min(total - MAX_ROWS);
-    start..start + MAX_ROWS
-}
-
+/// Today: the events that are not over yet.
 pub fn build(occurrences: &[Occurrence], now: i64) -> Agenda {
-    rows_for(occurrences, now, true)
-}
-
-pub fn list(occurrences: &[Occurrence]) -> Agenda {
-    rows_for(occurrences, 0, false)
-}
-
-fn rows_for(occurrences: &[Occurrence], now: i64, is_today: bool) -> Agenda {
-    let next = if is_today { next_index(occurrences, now) } else { None };
-    let total = occurrences.len();
-    let rows = visible_range(total, next)
-        .map(|index| {
-            let occurrence = &occurrences[index];
-            let state = match next {
-                Some(next) if index == next => State::Next,
-                Some(next) if index > next => State::Later,
-                _ if occurrence.is_all_day || !is_today => State::Later,
-                _ => State::Done,
-            };
-            let meeting = find_meeting(occurrence);
-            let time = if occurrence.is_all_day {
-                String::new()
-            } else {
-                clock_text(occurrence.start.rem_euclid(SECONDS_PER_DAY))
-            };
-            let (detail, trailing) = match state {
-                State::Next => {
-                    let when = if occurrence.start <= now {
-                        "now".to_owned()
-                    } else {
-                        format!("in {}", relative_text(occurrence.start - now))
-                    };
-                    let place = meeting.as_ref().map(|meeting| meeting.service.to_owned()).or_else(|| {
-                        Some(occurrence.location.trim().to_owned())
-                            .filter(|location| !location.is_empty() && !location.starts_with("http"))
-                    });
-                    (
-                        Some(place.map_or(when.clone(), |place| format!("{when} \u{00b7} {place}"))),
-                        duration_text(occurrence.end - occurrence.start),
-                    )
-                }
-                State::Done => (None, "Done".to_owned()),
-                State::Later if occurrence.is_all_day => (None, "All day".to_owned()),
-                State::Later => (None, duration_text(occurrence.end - occurrence.start)),
-            };
-            Row { occurrence: occurrence.clone(), state, time, detail, trailing, meeting }
-        })
+    let upcoming: Vec<&Occurrence> = in_listing_order(occurrences)
+        .into_iter()
+        .filter(|occurrence| occurrence.end.max(occurrence.start + 1) > now)
         .collect();
-    Agenda { rows }
+    let rows = upcoming.into_iter().map(row_for).collect::<Vec<_>>();
+    Agenda { is_done: rows.is_empty() && !occurrences.is_empty(), rows }
+}
+
+/// Another day: all its events, whether or not their time has passed.
+pub fn list(occurrences: &[Occurrence]) -> Agenda {
+    let rows = in_listing_order(occurrences).into_iter().map(row_for).collect();
+    Agenda { rows, is_done: false }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Reminder {
     pub title: String,
     pub text: String,
+    /// When the event starts, in the same local seconds as the occurrences.
+    pub start: i64,
+}
+
+impl Reminder {
+    /// "12m" for "in 12m"; "now" stays.
+    pub fn short_text(&self) -> &str {
+        self.text.strip_prefix("in ").unwrap_or(&self.text)
+    }
 }
 
 pub fn reminder(occurrences: &[Occurrence], now: i64) -> Option<Reminder> {
     let occurrence = occurrences.iter().filter(|occurrence| !occurrence.is_all_day).find(|occurrence| {
-        occurrence.start - now <= REMINDER_LEAD_MINUTES * SECONDS_PER_MINUTE
+        occurrence.start - now <= REMINDER_LEAD_SECONDS
             && now - occurrence.start <= REMINDER_TRAIL_MINUTES * SECONDS_PER_MINUTE
     })?;
     let text = if occurrence.start <= now {
@@ -175,7 +78,7 @@ pub fn reminder(occurrences: &[Occurrence], now: i64) -> Option<Reminder> {
     } else {
         format!("in {}m", (occurrence.start - now + SECONDS_PER_MINUTE - 1) / SECONDS_PER_MINUTE)
     };
-    Some(Reminder { title: occurrence.summary.clone(), text })
+    Some(Reminder { title: occurrence.summary.clone(), text, start: occurrence.start })
 }
 
 #[cfg(test)]
@@ -199,114 +102,50 @@ mod tests {
         }
     }
 
-    #[test]
-    fn a_known_video_service_is_found_in_the_location_or_the_description() {
-        let mut meeting = event(13, 60, "Review");
-        meeting.location = "https://meet.google.com/abc-defg-hij".to_owned();
-        assert_eq!(
-            find_meeting(&meeting),
-            Some(Meeting { url: "https://meet.google.com/abc-defg-hij".to_owned(), service: "Google Meet" })
-        );
-        let mut described = event(13, 60, "Call");
-        described.description = "Join: https://us02web.zoom.us/j/12345?pwd=x. See you!".to_owned();
-        assert_eq!(find_meeting(&described).unwrap().service, "Zoom");
-        assert_eq!(find_meeting(&described).unwrap().url, "https://us02web.zoom.us/j/12345?pwd=x");
+    fn names(agenda: &Agenda) -> Vec<&str> {
+        agenda.rows.iter().map(|row| row.occurrence.summary.as_str()).collect()
     }
 
     #[test]
-    fn another_link_in_the_location_counts_as_a_plain_link_and_no_link_means_no_meeting() {
-        let mut other = event(9, 30, "Talk");
-        other.location = "https://example.com/room".to_owned();
-        assert_eq!(find_meeting(&other).unwrap().service, "Link");
-        assert_eq!(find_meeting(&event(9, 30, "Plain")), None);
-    }
-
-    #[test]
-    fn times_are_worded_in_minutes_and_hours() {
-        assert_eq!(relative_text(12 * MINUTE), "12 min");
-        assert_eq!(relative_text(12 * MINUTE - 20), "12 min");
-        assert_eq!(relative_text(2 * HOUR), "2 h");
-        assert_eq!(relative_text(HOUR + 30 * MINUTE), "1 h 30 min");
-        assert_eq!(duration_text(45 * MINUTE), "45 min");
-        assert_eq!(duration_text(HOUR), "1 h");
-    }
-
-    #[test]
-    fn the_next_event_is_the_first_one_that_has_not_finished() {
+    fn a_past_event_leaves_the_list_and_the_next_one_takes_its_place() {
         let day = [event(9, 30, "Standup"), event(13, 60, "Review"), event(16, 60, "Reading")];
-        let agenda = build(&day, DAY_START + 13 * HOUR - 12 * MINUTE);
-        let states: Vec<State> = agenda.rows.iter().map(|row| row.state).collect();
-        assert_eq!(states, vec![State::Done, State::Next]);
-        assert_eq!(agenda.rows[1].detail.as_deref(), Some("in 12 min"));
-        assert_eq!(agenda.rows[0].trailing, "Done");
-        let morning = build(&day, DAY_START + 8 * HOUR);
-        let states: Vec<State> = morning.rows.iter().map(|row| row.state).collect();
-        assert_eq!(states, vec![State::Next, State::Later]);
-        assert_eq!(morning.rows[1].trailing, "1 h");
+        assert_eq!(names(&build(&day, DAY_START + 8 * HOUR)), vec!["Standup", "Review", "Reading"]);
+        assert_eq!(names(&build(&day, DAY_START + 9 * HOUR + 40 * MINUTE)), vec!["Review", "Reading"]);
+        assert_eq!(names(&build(&day, DAY_START + 13 * HOUR + 10 * MINUTE)), vec!["Review", "Reading"]);
     }
 
     #[test]
-    fn the_next_event_names_its_meeting_service_or_place() {
-        let mut review = event(13, 60, "Review");
-        review.location = "https://meet.google.com/x".to_owned();
-        let mut visit = event(15, 60, "Visit");
-        visit.location = "Room 4".to_owned();
-        let agenda = build(&[review.clone()], review.start - 12 * MINUTE);
-        assert_eq!(agenda.rows[0].detail.as_deref(), Some("in 12 min \u{00b7} Google Meet"));
-        assert!(agenda.rows[0].meeting.is_some());
-        let agenda = build(&[visit.clone()], visit.start - 30 * MINUTE);
-        assert_eq!(agenda.rows[0].detail.as_deref(), Some("in 30 min \u{00b7} Room 4"));
-    }
-
-    #[test]
-    fn an_event_in_progress_is_next_and_says_now() {
-        let day = [event(13, 60, "Review")];
-        let agenda = build(&day, DAY_START + 13 * HOUR + 10 * MINUTE);
-        assert_eq!(agenda.rows[0].state, State::Next);
-        assert_eq!(agenda.rows[0].detail.as_deref(), Some("now"));
-    }
-
-    #[test]
-    fn after_the_last_event_everything_is_done() {
-        let agenda = build(&[event(9, 30, "Standup")], DAY_START + 20 * HOUR);
-        assert_eq!(agenda.rows[0].state, State::Done);
-    }
-
-    #[test]
-    fn another_day_lists_its_events_with_none_next_and_none_over() {
-        let agenda = list(&[event(9, 30, "Standup"), event(13, 60, "Review")]);
-        let states: Vec<State> = agenda.rows.iter().map(|row| row.state).collect();
-        assert_eq!(states, vec![State::Later, State::Later]);
-        assert_eq!(agenda.rows[1].trailing, "1 h");
-        assert!(agenda.rows.iter().all(|row| row.detail.is_none()));
-    }
-
-    #[test]
-    fn an_empty_day_has_no_rows() {
-        let agenda = build(&[], DAY_START);
-        assert!(agenda.rows.is_empty());
-    }
-
-    #[test]
-    fn all_day_events_have_no_clock_time_and_are_never_next() {
+    fn rows_show_the_start_time_or_all_day() {
         let mut trip = event(0, 0, "Trip");
         trip.is_all_day = true;
         trip.end = trip.start + SECONDS_PER_DAY;
-        let agenda = build(&[trip, event(13, 60, "Review")], DAY_START + 9 * HOUR);
-        assert_eq!(agenda.rows[0].time, "");
-        assert_eq!(agenda.rows[0].trailing, "All day");
-        assert_eq!(agenda.rows[1].state, State::Next);
+        let agenda = build(&[event(13, 60, "Review"), trip], DAY_START + 9 * HOUR);
+        let times: Vec<&str> = agenda.rows.iter().map(|row| row.time.as_str()).collect();
+        assert_eq!(times, vec!["All day", "13:00"], "an all-day event leads the list");
     }
 
     #[test]
-    fn a_long_day_lists_a_window_around_the_next_event() {
-        let day: Vec<Occurrence> = (8..14).map(|hour| event(hour, 30, &format!("Event {hour}"))).collect();
-        let agenda = build(&day, DAY_START + 10 * HOUR + 40 * MINUTE);
-        let names: Vec<&str> = agenda.rows.iter().map(|row| row.occurrence.summary.as_str()).collect();
-        assert_eq!(names, vec!["Event 10", "Event 11"]);
-        assert_eq!(agenda.rows.len(), MAX_ROWS);
-        let late = build(&day, DAY_START + 23 * HOUR);
-        assert_eq!(late.rows[0].occurrence.summary, "Event 12");
+    fn every_event_of_the_day_is_listed_for_the_list_to_scroll() {
+        let day: Vec<Occurrence> = (8..17).map(|hour| event(hour, 30, &format!("Event {hour}"))).collect();
+        let agenda = build(&day, DAY_START + 7 * HOUR);
+        assert_eq!(agenda.rows.len(), 9);
+        assert_eq!(agenda.rows[8].occurrence.summary, "Event 16");
+        assert_eq!(list(&day).rows.len(), 9);
+    }
+
+    #[test]
+    fn after_the_last_event_the_day_is_done_and_an_empty_day_is_not() {
+        let done = build(&[event(9, 30, "Standup")], DAY_START + 20 * HOUR);
+        assert!(done.rows.is_empty() && done.is_done);
+        let empty = build(&[], DAY_START);
+        assert!(empty.rows.is_empty() && !empty.is_done);
+    }
+
+    #[test]
+    fn another_day_lists_all_its_events_even_when_their_time_has_passed() {
+        let agenda = list(&[event(13, 60, "Review"), event(9, 30, "Standup")]);
+        assert_eq!(names(&agenda), vec!["Standup", "Review"]);
+        assert!(!agenda.is_done);
     }
 
     #[test]
@@ -320,6 +159,13 @@ mod tests {
         assert_eq!(reminder(&day, start + 5 * MINUTE).unwrap().text, "now");
         assert_eq!(reminder(&day, start + 5 * MINUTE + 1), None);
         assert_eq!(reminder(&day, start - 12 * MINUTE).unwrap().title, "Design review");
+    }
+
+    #[test]
+    fn the_short_reminder_text_drops_the_word_in() {
+        let reminder = |text: &str| Reminder { title: String::new(), text: text.to_owned(), start: 0 };
+        assert_eq!(reminder("in 12m").short_text(), "12m");
+        assert_eq!(reminder("now").short_text(), "now");
     }
 
     #[test]

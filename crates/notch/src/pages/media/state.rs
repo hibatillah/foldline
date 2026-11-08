@@ -2,15 +2,25 @@
 
 use super::lyrics::LyricLine;
 use super::session::LyricsStatus;
-use super::{MediaPage, NOTHING_PLAYING_DETAIL, NOTHING_PLAYING_TITLE, UNKNOWN_TITLE, resting};
+use super::{MediaPage, NOTHING_PLAYING_DETAIL, NOTHING_PLAYING_TITLE, UNKNOWN_TITLE};
 
 impl MediaPage {
     pub(super) fn is_wave_shown(&self) -> bool {
         self.is_track_playing()
     }
 
+    /// Playing with a lyric line: the page takes over the collapsed pill.
+    pub(super) fn claims_pill(&self) -> bool {
+        self.is_track_playing() && self.is_lyric_mode()
+    }
+
+    /// Playing without a lyric line: only the wave shows, as a badge.
+    pub(super) fn is_wave_in_pill(&self) -> bool {
+        self.is_track_playing() && !self.is_lyric_mode()
+    }
+
     pub(super) fn is_wave_visible(&self) -> bool {
-        self.is_wave_shown() && (self.is_hovered || self.resting_view() == resting::View::Wave)
+        self.is_wave_shown() && (self.is_hovered || !self.is_lyric_mode())
     }
 
     pub(super) fn is_track_playing(&self) -> bool {
@@ -27,17 +37,6 @@ impl MediaPage {
 
     pub(super) fn is_lyric_mode(&self) -> bool {
         self.info.is_playing && self.is_lyric_panel_visible()
-    }
-
-    pub(super) fn resting_view(&self) -> resting::View {
-        if self.is_title_shown {
-            resting::View::TrackChange
-        } else if self.is_lyric_mode() {
-            // Stays in lyric mode through a part of the song with no words; the pill then shows a note.
-            resting::View::Lyrics
-        } else {
-            resting::View::Wave
-        }
     }
 
     pub(super) fn visible_lyric_lines(&self) -> Option<&[LyricLine]> {

@@ -7,6 +7,9 @@ use crate::{
 const ACCENT: Color = Color::rgb(0.118, 0.843, 0.376);
 const INACTIVE: Color = Color::rgb(0.431, 0.431, 0.478);
 const INACTIVE_HOVERED: Color = Color::gray(0.85);
+/// Icon edge in DIP; the lyrics icon is drawn 2 px larger than the transport icons.
+const ICON_SIZE: f32 = 14.0;
+const LYRICS_ICON_SIZE: f32 = 16.0;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Control {
@@ -56,7 +59,8 @@ pub fn draw(page: &MediaPage, canvas: &Canvas, layout: &Layout, opacity: f32) {
             Some(is_on) => lyrics_color(is_on, page.has_lyrics(), is_hovered),
             None => Color::WHITE,
         };
-        IconButton { icon, center: layout.control_center(control), color, is_hovered }.draw(canvas, opacity);
+        let size = if control == Control::Lyrics { LYRICS_ICON_SIZE } else { ICON_SIZE };
+        IconButton { icon, center: layout.control_center(control), color, is_hovered }.draw(canvas, opacity, size);
     }
 }
 

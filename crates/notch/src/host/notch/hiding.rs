@@ -1,12 +1,9 @@
 use super::{
     EXPAND_TIMER_ID, HIDDEN_HEIGHT, HIDE_WHEN_IDLE_SETTING, HOVER_WATCH_TIMER_ID, Notch, RAISE_TIMER_ID,
-    REVEAL_TIMER_ID,
+    REVEAL_TIMER_ID, WINDOW_REVEAL_TIMER_ID,
 };
 use crate::host::settings::Settings;
-use windows::Win32::UI::{
-    Input::KeyboardAndMouse::ReleaseCapture,
-    WindowsAndMessaging::{KillTimer, SW_HIDE, SW_SHOWNOACTIVATE, SetTimer, ShowWindow},
-};
+use windows::Win32::UI::WindowsAndMessaging::{KillTimer, SW_HIDE, SW_SHOWNOACTIVATE, SetTimer, ShowWindow};
 
 use crate::host::{
     screen_mode::ScreenMode,
@@ -21,7 +18,9 @@ pub(super) struct HidingState {
     pub(super) fullscreen_showing: Showing,
     pub(super) opens_on_hover_over_maximized: bool,
     pub(super) opens_on_hover_over_fullscreen: bool,
+    /// The mode the notch follows; a mode that would show more waits in `pending_screen_mode` first.
     pub(super) screen_mode: ScreenMode,
+    pub(super) pending_screen_mode: Option<ScreenMode>,
     pub(super) is_revealed: bool,
 }
 
@@ -34,6 +33,7 @@ impl HidingState {
             opens_on_hover_over_maximized: settings.get_bool(visibility::HOVER_MAXIMIZED_KEY, true),
             opens_on_hover_over_fullscreen: settings.get_bool(visibility::HOVER_FULLSCREEN_KEY, true),
             screen_mode: ScreenMode::Normal,
+            pending_screen_mode: None,
             is_revealed: false,
         }
     }
@@ -50,14 +50,18 @@ const REVEAL_DELAY_OVER_WINDOW_MILLISECONDS: u32 = 350;
 const HIDDEN_HEIGHT_OVER_WINDOW: f32 = 3.0;
 /// The window the user switched to finishes raising itself after the foreground event, so raise the notch again.
 const RAISE_DELAY_MILLISECONDS: u32 = 250;
+/// Alt+Tab or a click between two maximized windows passes through a regular foreground window for a moment.
+pub(super) const WINDOW_REVEAL_DELAY_MILLISECONDS: u32 = 500;
 
 impl Notch {
     pub(super) fn is_hidden(&self) -> bool {
-        if self.hiding.is_revealed || self.springs.expansion.target != 0.0 || self.editor.is_some() {
+        if self.hiding.is_revealed || self.springs.expansion.target != 0.0 {
             return false;
         }
-        let has_activity =
-            !self.shown_transients.is_empty() || self.shown_banner.is_some() || !self.shown_badges.is_empty();
+        let has_activity = !self.shown_transients.is_empty()
+            || self.shown_banner.is_some()
+            || self.shown_badges.iter().any(|&(source, _)| !self.is_music_badge(source))
+            || !self.resting_row.dots.is_empty();
         match self.current_showing() {
             None => self.hiding.hides_when_idle && !has_activity && !self.has_resting_content,
             // The suppressed window draws nothing; a full-size layout avoids a strip growing back when it returns.
@@ -104,8 +108,41 @@ impl Notch {
             }
         }
         if mode == self.hiding.screen_mode {
+            self.cancel_window_reveal();
             return;
         }
+        let showing = visibility::showing_for(mode, self.hiding.maximized_showing, self.hiding.fullscreen_showing);
+        if visibility::reveals_more(self.current_showing(), showing) {
+            if self.hiding.pending_screen_mode != Some(mode) {
+                self.hiding.pending_screen_mode = Some(mode);
+                unsafe {
+                    SetTimer(Some(self.window), WINDOW_REVEAL_TIMER_ID, WINDOW_REVEAL_DELAY_MILLISECONDS, None);
+                }
+            }
+            return;
+        }
+        self.cancel_window_reveal();
+        self.apply_screen_mode(mode);
+    }
+
+    /// The window reveal delay ended: the last mode reported during the wait applies.
+    pub(super) fn finish_window_reveal(&mut self) {
+        let pending = self.hiding.pending_screen_mode;
+        self.cancel_window_reveal();
+        if let Some(mode) = pending {
+            self.apply_screen_mode(mode);
+        }
+    }
+
+    fn cancel_window_reveal(&mut self) {
+        if self.hiding.pending_screen_mode.take().is_some() {
+            unsafe {
+                let _ = KillTimer(Some(self.window), WINDOW_REVEAL_TIMER_ID);
+            }
+        }
+    }
+
+    fn apply_screen_mode(&mut self, mode: ScreenMode) {
         let was_suppressed = self.is_suppressed();
         self.hiding.screen_mode = mode;
         self.apply_suppression(was_suppressed);
@@ -113,12 +150,6 @@ impl Notch {
     }
 
     pub fn reset_session_interaction(&mut self) {
-        if self.hover.is_captured {
-            unsafe {
-                let _ = ReleaseCapture();
-            }
-            self.hover.is_captured = false;
-        }
         self.hover.is_dragging_files = false;
         self.set_hovering(false);
         self.hiding.is_revealed = false;

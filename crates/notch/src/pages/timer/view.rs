@@ -1,6 +1,6 @@
 //! Timer presentation rules, independent of drawing.
 
-use super::session::{Phase, SESSIONS_PER_ROUND, State, Timer, clock_text, compact_text};
+use super::session::{Phase, SESSIONS_PER_ROUND, State, Timer, compact_text, page_clock_text};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
@@ -36,7 +36,7 @@ fn button(action: Action, label: &str, is_primary: bool) -> ButtonSpec {
 fn phase_name(phase: Phase) -> &'static str {
     match phase {
         Phase::Focus => "Focus",
-        Phase::ShortBreak => "Break",
+        Phase::ShortBreak => "Short break",
         Phase::LongBreak => "Long break",
     }
 }
@@ -50,7 +50,7 @@ fn running_title(timer: &Timer, phase: Phase) -> String {
 
 fn start_button_label(next: Option<Phase>) -> &'static str {
     match next {
-        Some(Phase::ShortBreak) => "Start break",
+        Some(Phase::ShortBreak) => "Start short break",
         Some(Phase::LongBreak) => "Start long break",
         Some(Phase::Focus) | None => "Start focus",
     }
@@ -61,7 +61,7 @@ pub fn view(timer: &Timer, now: u64) -> View {
         State::Idle => View {
             title: "Focus timer".to_owned(),
             detail: Some(format!("Session {} of {SESSIONS_PER_ROUND}", timer.session_number())),
-            time: Some(clock_text(timer.lengths.focus * 60_000)),
+            time: Some(page_clock_text(timer.lengths.focus * 60_000)),
             buttons: vec![
                 button(Action::Shorter, "−5", false),
                 button(Action::Longer, "+5", false),
@@ -71,7 +71,7 @@ pub fn view(timer: &Timer, now: u64) -> View {
         State::Running { phase, .. } => View {
             title: running_title(timer, phase),
             detail: None,
-            time: timer.remaining(now).map(clock_text),
+            time: timer.remaining(now).map(page_clock_text),
             buttons: vec![
                 button(Action::Pause, "Pause", false),
                 button(Action::Extend, "+5 min", false),
@@ -81,7 +81,7 @@ pub fn view(timer: &Timer, now: u64) -> View {
         State::Paused { phase, .. } => View {
             title: format!("{} · paused", running_title(timer, phase)),
             detail: None,
-            time: timer.remaining(now).map(clock_text),
+            time: timer.remaining(now).map(page_clock_text),
             buttons: vec![
                 button(Action::Resume, "Resume", true),
                 button(Action::Extend, "+5 min", false),
@@ -215,8 +215,8 @@ mod tests {
         timer.tick(NOW + 25 * MINUTE);
         let view = view(&timer, NOW + 26 * MINUTE);
         assert_eq!(view.title, "Focus session done");
-        assert_eq!(view.detail.as_deref(), Some("25 min · 5 min break next"));
-        assert_eq!(view.buttons[0].label, "Start break");
+        assert_eq!(view.detail.as_deref(), Some("25 min · 5 min short break next"));
+        assert_eq!(view.buttons[0].label, "Start short break");
         assert_eq!(actions(&view), vec![Action::StartNext, Action::Skip]);
         assert!(view.time.is_none());
     }
@@ -228,7 +228,7 @@ mod tests {
         timer.start_next(NOW + 25 * MINUTE);
         timer.tick(NOW + 30 * MINUTE);
         let view = view(&timer, NOW + 31 * MINUTE);
-        assert_eq!(view.title, "Break over");
+        assert_eq!(view.title, "Short break over");
         assert_eq!(view.detail.as_deref(), Some("Ready for focus 2 of 4"));
         assert_eq!(view.buttons[0].label, "Start focus");
     }

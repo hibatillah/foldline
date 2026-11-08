@@ -18,6 +18,12 @@ pub fn clock_text(remaining: u64) -> String {
     format!("{}:{:02}", seconds / 60, seconds % 60)
 }
 
+/// The time left as "mm:ss" for the open page, which shows two digits of minutes.
+pub fn page_clock_text(remaining: u64) -> String {
+    let seconds = remaining.div_ceil(MILLISECONDS_PER_SECOND);
+    format!("{:02}:{:02}", seconds / 60, seconds % 60)
+}
+
 /// Milliseconds until the displayed time changes or the phase ends; open views update each second.
 pub fn next_wake(remaining: u64, is_open: bool) -> u64 {
     let counts_seconds = is_open || remaining <= SECONDS_SHOWN_BELOW_MINUTES * MILLISECONDS_PER_MINUTE;

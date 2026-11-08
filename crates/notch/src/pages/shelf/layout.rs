@@ -14,6 +14,8 @@ use std::{
 pub(super) const NAME_WIDTH: f32 = FILE_WIDTH - 2.0;
 pub(super) const COLUMN_HEIGHT: f32 = PREVIEW_SIZE + NAME_TOP + NAME_LINE_HEIGHT * NAME_LINES as f32;
 pub(super) const REMOVE_HIT_RADIUS: f32 = 9.0;
+/// The cross button hangs 3 px over the preview's corner, so its center is its 8 px radius less inside it.
+const REMOVE_INSET: f32 = 5.0;
 pub(super) const PREVIEW_SIZE: f32 = 40.0;
 pub(super) const NAME_LINES: usize = 2;
 
@@ -54,7 +56,7 @@ pub(super) fn preview_rect(column: Rect, scale: f32) -> Rect {
 }
 
 pub(super) fn remove_center(preview: Rect, scale: f32) -> Point {
-    Point::new(preview.right - scale, preview.top + scale)
+    Point::new(preview.right - REMOVE_INSET * scale, preview.top + REMOVE_INSET * scale)
 }
 
 pub(super) fn fitted(size: (u32, u32), area: Rect) -> Rect {

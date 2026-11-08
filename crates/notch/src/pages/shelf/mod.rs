@@ -21,7 +21,9 @@ use std::{
 };
 
 mod actions;
+mod document;
 mod draw;
+mod empty;
 mod layout;
 
 mod items;
@@ -59,31 +61,31 @@ const DRAG_START_DISTANCE: f32 = 5.0;
 /// Pixels asked of Explorer for each preview; enough for a 40 px tile on a screen scaled to 200 %.
 const PREVIEW_PIXELS: i32 = 96;
 
-const EMPTY_TITLE_HEIGHT: f32 = 17.0;
-
-const EMPTY_DETAIL_HEIGHT: f32 = 14.0;
-
-const EMPTY_GAP: f32 = 3.0;
-
-const EMPTY_TEXT_HEIGHT: f32 = EMPTY_TITLE_HEIGHT + EMPTY_GAP + EMPTY_DETAIL_HEIGHT;
-
 const ARRIVAL_RESPONSE: (f32, f32) = (200.0, 19.0);
 
 const ARRIVAL_STAGGER: f32 = 0.18;
 
 const NAME: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Center);
 
-const EMPTY_TITLE: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Medium, Align::Center);
+const MESSAGE: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Center);
 
-const EMPTY_DETAIL: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Center);
+const BORDER: Color = Color::rgb(0.353, 0.353, 0.408);
 
-const BORDER: Color = Color::rgb(0.33, 0.33, 0.375);
+const FULL_BORDER: Color = Color::rgb(0.839, 0.271, 0.239);
 
-const FULL_RED: Color = Color::rgb(1.0, 0.27, 0.23);
+const FULL_FILL: Color = Color::rgb(1.0, 0.271, 0.227);
 
-const ACCENT: Color = Color::rgb(0.25, 0.56, 1.0);
+const FULL_TEXT: Color = Color::rgb(1.0, 0.42, 0.42);
 
-const NAME_COLOR: Color = Color::rgb(0.769, 0.769, 0.8);
+const ACCENT: Color = Color::rgb(0.302, 0.671, 0.969);
+
+const ACCENT_TEXT: Color = Color::rgb(0.455, 0.753, 0.988);
+
+const ACCENT_FILL_ALPHA: f32 = 0.12;
+
+const FULL_FILL_ALPHA: f32 = 0.08;
+
+const NAME_COLOR: Color = Color::rgb(0.839, 0.839, 0.871);
 
 const GRAY: Color = Color::rgb(0.604, 0.604, 0.651);
 
@@ -149,22 +151,44 @@ impl ShelfPage {
     }
 
     #[cfg(test)]
-    pub fn sample(directory: &std::path::Path, fonts: &crate::gfx::Fonts, is_drag_over: bool) -> Self {
+    pub fn sample(
+        directory: &std::path::Path,
+        fonts: &crate::gfx::Fonts,
+        file_count: usize,
+        is_drag_over: bool,
+    ) -> Self {
         let mut page = Self::new();
         page.storage = None;
         page.is_drag_over = is_drag_over;
-        let files: Vec<PathBuf> =
-            ["hover-state-v3.png", "wallpaper-1440p.jpg", "notch-brief.pdf", "budget-q4.xlsx", "notes.txt", "tasks.md"]
-                .iter()
-                .map(|name| {
-                    let path = directory.join(name);
-                    let _ = std::fs::write(&path, "x");
-                    path
-                })
-                .collect();
+        const NAMES: [&str; 12] = [
+            "Report Q3.pdf",
+            "Hero shot.png",
+            "Invoice 0412.pdf",
+            "Notes.txt",
+            "release.zip",
+            "Review.fig",
+            "Budget 27.xlsx",
+            "Contract.docx",
+            "wallpaper-1440p.jpg",
+            "Deck.pptx",
+            "tasks.md",
+            "Backup of a very long file name.zip",
+        ];
+        let files: Vec<PathBuf> = NAMES
+            .iter()
+            .take(file_count)
+            .map(|name| {
+                let path = directory.join(name);
+                let _ = std::fs::write(&path, "x");
+                path
+            })
+            .collect();
         page.shelf.add(files);
         page.refresh_names(fonts);
         for path in page.shelf.items().iter().take(MAX_FILES) {
+            if !items::has_thumbnail(path) {
+                continue;
+            }
             if let Some(image) = platform::file_preview(path, PREVIEW_PIXELS) {
                 page.previews.get_mut().insert(path.clone(), Preview::new(image));
             }
@@ -188,10 +212,6 @@ impl Page for ShelfPage {
         "File shelf"
     }
 
-    fn icon(&self) -> Icon {
-        Icon::Folder
-    }
-
     fn priority(&self, mode: Mode) -> Option<Priority> {
         (mode == Mode::Expanded).then_some(Priority::BACKGROUND)
     }
@@ -208,11 +228,15 @@ impl Page for ShelfPage {
     fn draw_expanded(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
         let (bounds, scale) = (frame.bounds, frame.scale);
         let is_refusing = self.is_drag_over && self.shelf.is_full();
-        let accent = if is_refusing { FULL_RED } else { ACCENT };
         if self.is_drag_over {
-            canvas.fill_rounded_rect(bounds, ZONE_RADIUS * scale, accent.with_alpha(0.1 * opacity));
+            let (fill, alpha) = if is_refusing { (FULL_FILL, FULL_FILL_ALPHA) } else { (ACCENT, ACCENT_FILL_ALPHA) };
+            canvas.fill_rounded_rect(bounds, ZONE_RADIUS * scale, fill.with_alpha(alpha * opacity));
         }
-        let border = if self.is_drag_over { accent } else { BORDER };
+        let border = match (self.is_drag_over, is_refusing) {
+            (false, _) => BORDER,
+            (true, false) => ACCENT,
+            (true, true) => FULL_BORDER,
+        };
         ui::draw_dashed_outline(
             canvas,
             bounds,
@@ -226,22 +250,21 @@ impl Page for ShelfPage {
         if is_refusing {
             let area =
                 Rect::new(bounds.left, bounds.center_y() - 8.0 * scale, bounds.right, bounds.center_y() + 8.0 * scale);
-            canvas.text(&EMPTY_DETAIL, "The shelf is full. Remove a file to add more.", area, FULL_RED.faded(opacity));
+            canvas.text(&MESSAGE, "The shelf is full. Remove a file to add more.", area, FULL_TEXT.faded(opacity));
             return;
         }
         if self.shelf.len() == 0 {
-            let (title, detail, title_color, detail_color) = if self.is_drag_over {
-                ("Release to add", "Files stay where they are", Color::WHITE, ACCENT)
+            if self.is_drag_over {
+                let area = Rect::new(
+                    bounds.left,
+                    bounds.center_y() - 8.0 * scale,
+                    bounds.right,
+                    bounds.center_y() + 8.0 * scale,
+                );
+                canvas.text(&MESSAGE, "Release to hold them", area, ACCENT_TEXT.faded(opacity));
             } else {
-                ("Drop files here", "Drag them back out when you need them", NAME_COLOR, GRAY)
-            };
-            let top = bounds.center_y() - EMPTY_TEXT_HEIGHT / 2.0 * scale;
-            let title_area = Rect::new(bounds.left, top, bounds.right, top + EMPTY_TITLE_HEIGHT * scale);
-            let detail_top = title_area.bottom + EMPTY_GAP * scale;
-            let detail_area =
-                Rect::new(bounds.left, detail_top, bounds.right, detail_top + EMPTY_DETAIL_HEIGHT * scale);
-            canvas.text(&EMPTY_TITLE, title, title_area, title_color.faded(opacity));
-            canvas.text(&EMPTY_DETAIL, detail, detail_area, detail_color.faded(opacity));
+                empty::draw_empty_row(canvas, bounds, scale, opacity);
+            }
             return;
         }
         for position in 0..shown_count(self.shelf.len()) {

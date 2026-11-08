@@ -4,6 +4,7 @@ use crate::host::Settings;
 
 use super::{
     storage::{FOCUS_MINUTES_KEY, LONG_BREAK_MINUTES_KEY, SHORT_BREAK_MINUTES_KEY, format_state, parse_state},
+    text::clock_text,
     *,
 };
 
@@ -156,6 +157,13 @@ fn compact_text_shows_minutes_above_ten_and_seconds_below() {
     assert_eq!(compact_text(10 * MINUTE + 1), "10m");
     assert_eq!(compact_text(10 * MINUTE), "10:00");
     assert_eq!(compact_text(4 * MINUTE + 12_000), "4:12");
+}
+
+#[test]
+fn the_page_clock_pads_the_minutes_to_two_digits() {
+    assert_eq!(page_clock_text(4 * MINUTE + 12_000), "04:12");
+    assert_eq!(page_clock_text(25 * MINUTE), "25:00");
+    assert_eq!(page_clock_text(1), "00:01");
 }
 
 #[test]

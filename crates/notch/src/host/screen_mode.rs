@@ -1,32 +1,65 @@
 //! Follow foreground changes and only that window thread's moves/resizes; no polling.
 
+mod location_hook;
+
 use std::sync::{
-    OnceLock,
-    atomic::{AtomicIsize, AtomicU8, Ordering},
+    Mutex, OnceLock, PoisonError,
+    atomic::{AtomicU8, Ordering},
 };
 
 use windows::Win32::{
-    Foundation::{HWND, POINT},
+    Foundation::{CloseHandle, HWND, POINT},
     Graphics::Gdi::{
         GetMonitorInfoW, MONITOR_DEFAULTTONEAREST, MONITOR_DEFAULTTOPRIMARY, MONITORINFO, MonitorFromPoint,
         MonitorFromWindow,
     },
+    System::Threading::{
+        OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
+    },
     UI::{
-        Accessibility::{HWINEVENTHOOK, SetWinEventHook, UnhookWinEvent},
+        Accessibility::{HWINEVENTHOOK, SetWinEventHook},
         WindowsAndMessaging::{
             EVENT_OBJECT_LOCATIONCHANGE, EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_MINIMIZEEND, EVENT_SYSTEM_MINIMIZESTART,
             GWL_STYLE, GetClassNameW, GetForegroundWindow, GetWindowLongW, GetWindowRect, GetWindowThreadProcessId,
-            IsIconic, IsWindowVisible, IsZoomed, OBJID_WINDOW, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS,
-            WS_CAPTION,
+            IsIconic, IsWindowVisible, IsZoomed, WINEVENT_OUTOFCONTEXT, WINEVENT_SKIPOWNPROCESS, WS_CAPTION,
         },
     },
 };
+use windows::core::PWSTR;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ScreenMode {
     Normal,
     Maximized,
     Fullscreen,
+    /// A screenshot overlay is in front; the notch hides and ignores the pointer whatever the settings say.
+    Capture,
+}
+
+/// Which screenshot tool, if any, owns the window in front.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CaptureHost {
+    None,
+    /// The process hosts only the screenshot overlay, so any window of it counts.
+    OverlayOnly,
+    /// The process also has a regular window, so only a window covering the monitor counts as its overlay.
+    AppWithOverlay,
+}
+
+/// Win+Shift+S and the Print Screen key on Windows 11 open the overlay in `ScreenClippingHost.exe`.
+const OVERLAY_ONLY_PROCESSES: [&str; 1] = ["ScreenClippingHost.exe"];
+/// Newer Snipping Tool builds draw the overlay in the app itself; Xbox Game Bar's capture widget sits on its overlay.
+const APP_WITH_OVERLAY_PROCESSES: [&str; 2] = ["SnippingTool.exe", "GameBar.exe"];
+
+pub fn capture_host(process_file_name: &str) -> CaptureHost {
+    let matches = |names: &[&str]| names.iter().any(|name| name.eq_ignore_ascii_case(process_file_name));
+    if matches(&OVERLAY_ONLY_PROCESSES) {
+        CaptureHost::OverlayOnly
+    } else if matches(&APP_WITH_OVERLAY_PROCESSES) {
+        CaptureHost::AppWithOverlay
+    } else {
+        CaptureHost::None
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -48,12 +81,19 @@ pub struct Facts {
     pub monitor: Bounds,
     pub is_zoomed: bool,
     pub has_caption: bool,
+    pub capture_host: CaptureHost,
     /// The desktop, the taskbar, the notch itself, a window that is hidden or minimized, or one on another monitor.
     pub is_ignored: bool,
 }
 
 /// A maximized window with an auto-hidden taskbar can cover the monitor without being full screen.
 pub fn classify(facts: &Facts) -> ScreenMode {
+    // The overlay can span every monitor, so it is checked before the primary-monitor rule in `is_ignored`.
+    match facts.capture_host {
+        CaptureHost::OverlayOnly => return ScreenMode::Capture,
+        CaptureHost::AppWithOverlay if facts.window.covers(&facts.monitor) => return ScreenMode::Capture,
+        CaptureHost::AppWithOverlay | CaptureHost::None => {}
+    }
     if facts.is_ignored {
         return ScreenMode::Normal;
     }
@@ -71,12 +111,47 @@ const IGNORED_CLASSES: [&str; 6] =
 
 static ON_CHANGE: OnceLock<fn(ScreenMode)> = OnceLock::new();
 static LAST_MODE: AtomicU8 = AtomicU8::new(0);
-static LOCATION_HOOK: AtomicIsize = AtomicIsize::new(0);
+/// The foreground window's process id and image file name; cleared on every foreground change.
+static FOREGROUND_PROCESS: Mutex<Option<(u32, String)>> = Mutex::new(None);
 
 fn class_name(window: HWND) -> String {
     let mut buffer = [0u16; 64];
     let length = unsafe { GetClassNameW(window, &mut buffer) };
     String::from_utf16_lossy(&buffer[..usize::try_from(length).unwrap_or(0)])
+}
+
+/// The image file name (`SnippingTool.exe`) of a process, or an empty string when it cannot be read.
+fn process_file_name(process_id: u32) -> String {
+    let Ok(process) = (unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process_id) }) else {
+        return String::new();
+    };
+    let mut buffer = [0u16; 512];
+    let mut length = buffer.len() as u32;
+    let result =
+        unsafe { QueryFullProcessImageNameW(process, PROCESS_NAME_WIN32, PWSTR(buffer.as_mut_ptr()), &mut length) };
+    if let Err(error) = unsafe { CloseHandle(process) } {
+        crate::log::debug(&format!("could not close a process handle: {error}"));
+    }
+    if result.is_err() {
+        return String::new();
+    }
+    let path = String::from_utf16_lossy(&buffer[..length as usize]);
+    path.rsplit('\\').next().unwrap_or_default().to_string()
+}
+
+/// Opens the process once per foreground window; moves and resizes of that window reuse the name.
+fn foreground_process_name(window: HWND) -> String {
+    let mut process_id = 0;
+    unsafe { GetWindowThreadProcessId(window, Some(&mut process_id)) };
+    let mut cached = FOREGROUND_PROCESS.lock().unwrap_or_else(PoisonError::into_inner);
+    match cached.as_ref() {
+        Some((cached_id, name)) if *cached_id == process_id => name.clone(),
+        _ => {
+            let name = process_file_name(process_id);
+            *cached = Some((process_id, name.clone()));
+            name
+        }
+    }
 }
 
 fn read() -> ScreenMode {
@@ -93,6 +168,8 @@ fn read() -> ScreenMode {
             return ScreenMode::Normal;
         }
         let class = class_name(window);
+        let is_visible = IsWindowVisible(window).as_bool();
+        let capture_host = if is_visible { capture_host(&foreground_process_name(window)) } else { CaptureHost::None };
         let facts = Facts {
             window: Bounds { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
             monitor: Bounds {
@@ -103,8 +180,9 @@ fn read() -> ScreenMode {
             },
             is_zoomed: IsZoomed(window).as_bool(),
             has_caption: (GetWindowLongW(window, GWL_STYLE) as u32 & WS_CAPTION.0) == WS_CAPTION.0,
+            capture_host,
             is_ignored: monitor != primary
-                || !IsWindowVisible(window).as_bool()
+                || !is_visible
                 || IsIconic(window).as_bool()
                 || IGNORED_CLASSES.contains(&class.as_str()),
         };
@@ -115,7 +193,9 @@ fn read() -> ScreenMode {
 fn refresh(notify_when_unchanged: bool) {
     let mode = read();
     if notify_when_unchanged {
-        crate::log::debug(&format!("foreground class={} mode={mode:?}", class_name(unsafe { GetForegroundWindow() })));
+        let window = unsafe { GetForegroundWindow() };
+        let process = if window.0.is_null() { String::new() } else { foreground_process_name(window) };
+        crate::log::debug(&format!("foreground class={} process={process} mode={mode:?}", class_name(window)));
     }
     if (LAST_MODE.swap(mode as u8, Ordering::Relaxed) != mode as u8 || notify_when_unchanged)
         && let Some(on_change) = ON_CHANGE.get()
@@ -125,33 +205,9 @@ fn refresh(notify_when_unchanged: bool) {
 }
 
 pub fn refresh_foreground() {
-    follow_foreground_thread();
+    *FOREGROUND_PROCESS.lock().unwrap_or_else(PoisonError::into_inner) = None;
+    location_hook::follow_foreground_thread();
     refresh(true);
-}
-
-/// Watching every window would wake the notch on every mouse move.
-fn follow_foreground_thread() {
-    unsafe {
-        let previous = LOCATION_HOOK.swap(0, Ordering::Relaxed);
-        if previous != 0 {
-            let _ = UnhookWinEvent(HWINEVENTHOOK(previous as *mut _));
-        }
-        let window = GetForegroundWindow();
-        if window.0.is_null() {
-            return;
-        }
-        let thread = GetWindowThreadProcessId(window, None);
-        let hook = SetWinEventHook(
-            EVENT_OBJECT_LOCATIONCHANGE,
-            EVENT_OBJECT_LOCATIONCHANGE,
-            None,
-            Some(on_event),
-            0,
-            thread,
-            WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS,
-        );
-        LOCATION_HOOK.store(hook.0 as isize, Ordering::Relaxed);
-    }
 }
 
 unsafe extern "system" fn on_event(
@@ -161,18 +217,13 @@ unsafe extern "system" fn on_event(
     object: i32,
     _child: i32,
     _thread: u32,
-    _time: u32,
+    event_time: u32,
 ) {
     match event {
         EVENT_SYSTEM_FOREGROUND => {
             refresh_foreground();
         }
-        // The caret and other parts of the window report moves too; only the window itself counts.
-        EVENT_OBJECT_LOCATIONCHANGE => {
-            if object == OBJID_WINDOW.0 && window == unsafe { GetForegroundWindow() } {
-                refresh(false);
-            }
-        }
+        EVENT_OBJECT_LOCATIONCHANGE => location_hook::location_changed(window, object, event_time),
         _ => refresh(false),
     }
 }
@@ -180,6 +231,7 @@ unsafe extern "system" fn on_event(
 /// Called on the notch thread for mode changes and foreground switches. Register once.
 pub fn start(on_change: fn(ScreenMode)) {
     let _ = ON_CHANGE.set(on_change);
+    // Every process, because any window can come to the front or minimize; these fire only then, never on a move.
     for event in [EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_MINIMIZESTART, EVENT_SYSTEM_MINIMIZEEND] {
         let _ = unsafe {
             SetWinEventHook(event, event, None, Some(on_event), 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS)
@@ -195,7 +247,42 @@ mod tests {
     const MONITOR: Bounds = Bounds { left: 0, top: 0, right: 1920, bottom: 1080 };
 
     fn facts(window: Bounds, is_zoomed: bool, has_caption: bool) -> Facts {
-        Facts { window, monitor: MONITOR, is_zoomed, has_caption, is_ignored: false }
+        Facts { window, monitor: MONITOR, is_zoomed, has_caption, capture_host: CaptureHost::None, is_ignored: false }
+    }
+
+    #[test]
+    fn the_screenshot_tools_are_recognized_by_their_process_name_in_any_case() {
+        assert_eq!(capture_host("ScreenClippingHost.exe"), CaptureHost::OverlayOnly);
+        assert_eq!(capture_host("screenclippinghost.EXE"), CaptureHost::OverlayOnly);
+        assert_eq!(capture_host("SnippingTool.exe"), CaptureHost::AppWithOverlay);
+        assert_eq!(capture_host("GameBar.exe"), CaptureHost::AppWithOverlay);
+        assert_eq!(capture_host("explorer.exe"), CaptureHost::None);
+        assert_eq!(capture_host(""), CaptureHost::None);
+    }
+
+    #[test]
+    fn any_window_of_the_win_shift_s_overlay_process_is_a_capture_even_on_another_monitor() {
+        let mut overlay = facts(Bounds { left: 1920, top: 0, right: 3840, bottom: 1080 }, false, false);
+        overlay.capture_host = CaptureHost::OverlayOnly;
+        overlay.is_ignored = true;
+        assert_eq!(classify(&overlay), ScreenMode::Capture);
+    }
+
+    #[test]
+    fn the_snipping_tool_overlay_over_the_whole_monitor_is_a_capture() {
+        let mut overlay = facts(Bounds { left: 0, top: 0, right: 3840, bottom: 1080 }, false, false);
+        overlay.capture_host = CaptureHost::AppWithOverlay;
+        assert_eq!(classify(&overlay), ScreenMode::Capture);
+    }
+
+    #[test]
+    fn the_snipping_tool_app_in_a_regular_or_maximized_window_is_not_a_capture() {
+        let mut regular = facts(Bounds { left: 100, top: 100, right: 900, bottom: 700 }, false, true);
+        regular.capture_host = CaptureHost::AppWithOverlay;
+        assert_eq!(classify(&regular), ScreenMode::Normal);
+        let mut maximized = facts(Bounds { left: -8, top: -8, right: 1928, bottom: 1040 }, true, true);
+        maximized.capture_host = CaptureHost::AppWithOverlay;
+        assert_eq!(classify(&maximized), ScreenMode::Maximized);
     }
 
     #[test]

@@ -14,13 +14,14 @@ pub struct IconButton {
 }
 
 impl IconButton {
-    pub fn draw(&self, canvas: &Canvas, opacity: f32) {
+    /// `size` is the icon's edge in DIP; `Icon::size` gives its preferred one.
+    pub fn draw(&self, canvas: &Canvas, opacity: f32, size: f32) {
         let scale = canvas.scale();
         if self.is_hovered {
             let wash = Rect::around(self.center, WASH_HALF * scale, WASH_HALF * scale);
             canvas.fill_rounded_rect(wash, WASH_RADIUS * scale, Color::WHITE.with_alpha(WASH_ALPHA * opacity));
         }
-        self.icon.draw(canvas, self.center, self.icon.size() * scale, self.color, opacity);
+        self.icon.draw(canvas, self.center, size * scale, self.color, opacity);
     }
 
     pub fn is_hit(center: Point, scale: f32, point: Point) -> bool {

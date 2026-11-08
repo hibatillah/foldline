@@ -23,3 +23,8 @@ pub(super) fn remaining_text(seconds: i64) -> String {
 pub(super) fn badge_text(prayer: Prayer, seconds: i64) -> Option<String> {
     (seconds > 0 && seconds <= BADGE_MINUTES * 60).then(|| format!("{} in {}m", prayer.name(), (seconds + 59) / 60))
 }
+
+/// The collapsed mark when several share the pill, "Asr 24m".
+pub(super) fn short_badge_text(prayer: Prayer, seconds: i64) -> Option<String> {
+    (seconds > 0 && seconds <= BADGE_MINUTES * 60).then(|| format!("{} {}m", prayer.name(), (seconds + 59) / 60))
+}

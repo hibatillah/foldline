@@ -22,10 +22,19 @@ impl PillButton<'_> {
         let (fill, text) = if self.is_destructive {
             (if self.is_hovered { DANGER_FILL_HOVERED } else { DANGER_FILL }, Color::WHITE)
         } else if self.is_primary {
-            let lift = if self.is_hovered { 0.12 } else { 0.0 };
             let accent = self.accent;
+            let is_light = accent.r + accent.g + accent.b > 2.7;
+            let lift = match (self.is_hovered, is_light) {
+                (false, _) => 0.0,
+                (true, false) => 0.12,
+                (true, true) => -0.08,
+            };
             (
-                Color::rgb((accent.r + lift).min(1.0), (accent.g + lift).min(1.0), (accent.b + lift).min(1.0)),
+                Color::rgb(
+                    (accent.r + lift).clamp(0.0, 1.0),
+                    (accent.g + lift).clamp(0.0, 1.0),
+                    (accent.b + lift).clamp(0.0, 1.0),
+                ),
                 ACCENT_LABEL,
             )
         } else {

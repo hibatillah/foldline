@@ -1,6 +1,6 @@
 //! Phase times use Unix milliseconds so sessions survive restarts.
 
-pub use text::{clock_text, compact_text, next_wake};
+pub use text::{compact_text, next_wake, page_clock_text};
 
 mod storage;
 #[cfg(test)]

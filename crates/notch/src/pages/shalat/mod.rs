@@ -1,24 +1,21 @@
 //! Prayer times for a city, calculated on this PC: the next prayer and today's times, a mark in the collapsed pill
 //! before a prayer, and a short message when it starts.
 
-use self::times::PRAYERS;
 use crate::{
     activity::{Flash, Presence},
-    gfx::{Align, Canvas, Color, FontStyle, Rect, Size, UI_FONT, Weight},
+    gfx::{Align, Canvas, Color, FontStyle, Fonts, Point, Rect, Size, UI_FONT, Weight},
     host::Settings,
-    page::{
-        Context, Control, DEFAULT_CONTENT_HEIGHT, Frame, Mode, Page, PageSizes, Priority, SearchHit, SettingsGroup,
-        TimerId,
-    },
+    page::{Context, DEFAULT_CONTENT_HEIGHT, Frame, Mode, Page, PageSizes, Priority, TimerId},
     ui::{self, Icon},
 };
-use config::{BADGE_KEY, Config, HANAFI_KEY, MESSAGE_KEY, METHOD_KEY};
-use places::CITY_KEY;
+use config::Config;
 use salah::{DateTime, Utc};
 use schedule::Schedule;
-use text::{badge_text, clock_text, remaining_text};
+use text::{badge_text, clock_text, short_badge_text};
 
+mod arc;
 mod config;
+mod day;
 mod schedule;
 #[cfg(test)]
 mod tests;
@@ -30,33 +27,17 @@ const CONTENT_WIDTH: f32 = 508.0;
 
 const RESTING_WIDTH: f32 = 150.0;
 
-const SIDE_WIDTH: f32 = 150.0;
-
-const DIVIDER_GAP: f32 = 12.0;
-
-const CELL_RADIUS: f32 = 10.0;
-
 const BADGE_MINUTES: i64 = 30;
 
-const BADGE_TRAILING: f32 = 14.0;
+const BADGE_ICON_SIZE: f32 = 14.0;
 
-const MAX_HITS: usize = 3;
+const BADGE_ICON_GAP: f32 = 4.0;
 
 const REFRESH_TIMER: TimerId = TimerId(1);
 
-const MONO: &str = "Consolas";
-
 const SMALL: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Leading);
 
-const TINY: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Leading);
-
-const BIG_TIME: FontStyle = FontStyle::new(MONO, 28.0, Weight::Medium, Align::Leading);
-
 const COUNTDOWN: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Medium, Align::Leading);
-
-const CELL_NAME: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Center);
-
-const CELL_TIME: FontStyle = FontStyle::new(MONO, 13.0, Weight::Regular, Align::Center);
 
 const BADGE: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Medium, Align::Leading);
 
@@ -70,9 +51,10 @@ const LIGHT: Color = Color::rgb(0.9, 0.9, 0.92);
 
 const GREEN: Color = Color::rgb(0.388, 0.902, 0.745);
 
-const NEXT_FILL: Color = Color::rgb(0.051, 0.169, 0.141);
-
-const DIVIDER: Color = Color::rgb(0.149, 0.149, 0.176);
+/// The moon, a gap and `text`.
+fn badge_width(fonts: &Fonts, widest_text: &str) -> f32 {
+    BADGE_ICON_SIZE + BADGE_ICON_GAP + fonts.measure(&BADGE, widest_text).ceil()
+}
 
 pub struct ShalatPage {
     config: Config,
@@ -84,6 +66,8 @@ pub struct ShalatPage {
     alert_width: f32,
     badge: Option<String>,
     badge_width: f32,
+    badge_short: Option<String>,
+    badge_short_width: f32,
     last_announced: Option<DateTime<Utc>>,
     /// Snapshots and tests fix the clock here; `None` uses the real one.
     fixed_now: Option<DateTime<Utc>>,
@@ -101,6 +85,8 @@ impl ShalatPage {
             alert_width: 0.0,
             badge: None,
             badge_width: 0.0,
+            badge_short: None,
+            badge_short_width: 0.0,
             last_announced: None,
             fixed_now: None,
         }
@@ -112,7 +98,24 @@ impl ShalatPage {
 
     #[cfg(test)]
     pub fn sample() -> Self {
-        use places::{COUNTRY_KEY, LATITUDE_KEY, LONGITUDE_KEY};
+        Self::sample_at(|today| today[2] + salah::Duration::minutes(10))
+    }
+
+    /// Eight minutes before Asr.
+    #[cfg(test)]
+    pub fn sample_soon() -> Self {
+        Self::sample_at(|today| today[3] - salah::Duration::minutes(8))
+    }
+
+    /// Forty minutes after Isha, so the next prayer is tomorrow's Fajr.
+    #[cfg(test)]
+    pub fn sample_after_isha() -> Self {
+        Self::sample_at(|today| today[5] + salah::Duration::minutes(40))
+    }
+
+    #[cfg(test)]
+    fn sample_at(moment: impl Fn(&[DateTime<Utc>; 6]) -> DateTime<Utc>) -> Self {
+        use places::{CITY_KEY, COUNTRY_KEY, LATITUDE_KEY, LONGITUDE_KEY};
         use salah::Local;
         use schedule::compute;
         let get = |key: &str| match key {
@@ -128,8 +131,7 @@ impl ShalatPage {
         let place = page.config.place.clone().expect("the sample has a place");
         let today = times::day_times(now.with_timezone(&Local).date_naive(), &place, &page.config.rules)
             .expect("the sample's place has a sunrise and a sunset");
-        // A fixed moment between Dhuhr and Asr, so the picture shows an upcoming Asr.
-        let at = today[2] + salah::Duration::minutes(10);
+        let at = moment(&today);
         page.schedule = compute(&page.config, at, at.with_timezone(&Local).date_naive());
         page.fixed_now = Some(at);
         page
@@ -138,8 +140,7 @@ impl ShalatPage {
     #[cfg(test)]
     pub fn sample_badge(fonts: &crate::gfx::Fonts) -> Self {
         let mut page = Self::sample();
-        page.badge = Some("Asr in 24m".to_owned());
-        page.badge_width = fonts.measure(&BADGE, "Maghrib in 59m").ceil() + BADGE_TRAILING;
+        page.set_badge(fonts, times::Prayer::Asr, 24 * 60);
         page
     }
 
@@ -151,6 +152,14 @@ impl ShalatPage {
         page.alert_value = "15:19".to_owned();
         page.alert_width = ui::message_width(fonts, &page.alert_title, Some(&page.alert_value));
         page
+    }
+
+    fn draw_badge(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32, text: &str) {
+        let icon_center = Point::new(area.left + BADGE_ICON_SIZE * scale / 2.0, area.center_y());
+        Icon::Moon.draw(canvas, icon_center, BADGE_ICON_SIZE * scale, GREEN, opacity);
+        let text_area =
+            Rect::new(area.left + (BADGE_ICON_SIZE + BADGE_ICON_GAP) * scale, area.top, area.right, area.bottom);
+        canvas.text(&BADGE, text, text_area, GREEN.faded(opacity));
     }
 
     fn draw_empty(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
@@ -179,10 +188,6 @@ impl Page for ShalatPage {
         "Shalat"
     }
 
-    fn icon(&self) -> Icon {
-        Icon::Moon
-    }
-
     fn is_opt_in(&self) -> bool {
         true
     }
@@ -195,6 +200,32 @@ impl Page for ShalatPage {
         PageSizes { resting_width: RESTING_WIDTH, expanded: Size::new(CONTENT_WIDTH, DEFAULT_CONTENT_HEIGHT) }
     }
 
+    /// Lowest rank sits nearest the clock: wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5.
+    fn header_status_rank(&self) -> u8 {
+        5
+    }
+
+    fn header_status_width(&self) -> Option<f32> {
+        self.badge.as_ref().map(|_| Icon::Moon.size())
+    }
+
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+        if self.badge.is_none() {
+            return;
+        }
+        let center = Point::new(area.center_x(), area.center_y());
+        Icon::Moon.draw(canvas, center, Icon::Moon.size() * scale, GREEN, opacity);
+    }
+
+    fn header_status_page(&self) -> Option<&'static str> {
+        Some("shalat")
+    }
+
+    fn countdown_seconds(&self) -> Option<u64> {
+        let schedule = self.schedule.as_ref()?;
+        self.badge.as_ref().map(|_| (schedule.next.1 - self.now()).num_seconds().max(0) as u64)
+    }
+
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}
 
     fn draw_expanded(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
@@ -202,106 +233,7 @@ impl Page for ShalatPage {
             self.draw_empty(canvas, frame, opacity);
             return;
         };
-        let (bounds, scale) = (frame.bounds, frame.scale);
-        let left = bounds.left;
-        let line = |top: f32, bottom: f32| {
-            Rect::new(left, bounds.top + top * scale, left + SIDE_WIDTH * scale, bounds.top + bottom * scale)
-        };
-        let (prayer, time) = schedule.next;
-        canvas.text(&SMALL, &format!("Next \u{00b7} {}", prayer.name()), line(0.0, 16.0), GRAY.faded(opacity));
-        canvas.text(&BIG_TIME, &clock_text(time), line(14.0, 48.0), Color::WHITE.faded(opacity));
-        let now = self.now();
-        let remaining = remaining_text((time - now).num_seconds());
-        canvas.text(&COUNTDOWN, &remaining, line(50.0, 66.0), GREEN.faded(opacity));
-        canvas.text(&TINY, &self.config.city, line(68.0, 82.0), DIM.faded(opacity));
-
-        let divider_left = left + (SIDE_WIDTH + DIVIDER_GAP) * scale;
-        canvas.fill_rounded_rect(
-            Rect::new(divider_left, bounds.top, divider_left + scale, bounds.bottom),
-            0.0,
-            DIVIDER.faded(opacity),
-        );
-
-        let cells_left = divider_left + (DIVIDER_GAP + 1.0) * scale;
-        let cell_width = (bounds.right - cells_left) / PRAYERS.len() as f32;
-        for (index, (cell_prayer, cell_time)) in PRAYERS.iter().zip(schedule.today).enumerate() {
-            let cell = Rect::new(
-                cells_left + index as f32 * cell_width,
-                bounds.top + 8.0 * scale,
-                cells_left + (index + 1) as f32 * cell_width,
-                bounds.bottom - 8.0 * scale,
-            );
-            let is_next = *cell_prayer == prayer && cell_time == time;
-            let is_past = cell_time <= now;
-            if is_next {
-                canvas.fill_rounded_rect(cell, CELL_RADIUS * scale, NEXT_FILL.faded(opacity));
-            }
-            let (name_color, time_color) = match (is_next, is_past) {
-                (true, _) => (GREEN, Color::WHITE),
-                (false, true) => (DIM, DIM),
-                (false, false) => (GRAY, LIGHT),
-            };
-            let name_area = Rect { top: cell.top + 14.0 * scale, bottom: cell.top + 30.0 * scale, ..cell };
-            let time_area = Rect { top: cell.top + 36.0 * scale, bottom: cell.top + 56.0 * scale, ..cell };
-            canvas.text(&CELL_NAME, cell_prayer.name(), name_area, name_color.faded(opacity));
-            canvas.text(&CELL_TIME, &clock_text(cell_time), time_area, time_color.faded(opacity));
-        }
-    }
-
-    fn settings_groups(&self) -> Vec<SettingsGroup> {
-        let offsets = PRAYERS.map(|prayer| Control::Stepper {
-            key: prayer.offset_key(),
-            label: prayer.name(),
-            unit: "min",
-            default: 0,
-            min: -30,
-            max: 30,
-            step: 1,
-        });
-        let mut adjust: Vec<Control> = offsets.into_iter().collect();
-        adjust.push(Control::Switch {
-            key: MESSAGE_KEY,
-            label: "Message at prayer time",
-            hint: "a short note in the notch",
-            default: true,
-        });
-        adjust.push(Control::Switch {
-            key: BADGE_KEY,
-            label: "Next prayer in the pill",
-            hint: "30 minutes before",
-            default: true,
-        });
-        vec![
-            SettingsGroup {
-                title: "Shalat",
-                controls: vec![
-                    Control::Search { key: CITY_KEY, label: "City", placeholder: "Click, then type a city" },
-                    Control::Choice {
-                        key: METHOD_KEY,
-                        label: "Method",
-                        options: times::METHOD_OPTIONS,
-                        default: "auto",
-                    },
-                    Control::Switch {
-                        key: HANAFI_KEY,
-                        label: "Hanafi Asr",
-                        hint: "later Asr, two shadow lengths",
-                        default: false,
-                    },
-                ],
-            },
-            SettingsGroup { title: "Adjust", controls: adjust },
-        ]
-    }
-
-    fn search(&self, key: &str, query: &str) -> Vec<SearchHit> {
-        if key != CITY_KEY {
-            return Vec::new();
-        }
-        places::search(query, MAX_HITS)
-            .into_iter()
-            .map(|city| SearchHit { label: city.label(), values: places::values_of(&city) })
-            .collect()
+        self.draw_day(canvas, schedule, frame, opacity);
     }
 
     fn presence(&self) -> Option<Presence> {
@@ -312,11 +244,23 @@ impl Page for ShalatPage {
         }
     }
 
-    fn draw_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
         if self.alert.is_visible() {
             ui::draw_message(canvas, area, opacity, Icon::Moon, GREEN, &self.alert_title, Some(&self.alert_value));
         } else if let Some(text) = &self.badge {
-            canvas.text(&BADGE, text, area, GREEN.faded(opacity));
+            self.draw_badge(canvas, area, scale, opacity, text);
+        }
+    }
+
+    fn short_presence_width(&self) -> Option<f32> {
+        self.badge_short.as_ref().map(|_| self.badge_short_width)
+    }
+
+    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+        if self.alert.is_visible() {
+            self.draw_presence(canvas, area, scale, opacity);
+        } else if let Some(text) = self.badge_short.as_ref().or(self.badge.as_ref()) {
+            self.draw_badge(canvas, area, scale, opacity, text);
         }
     }
 

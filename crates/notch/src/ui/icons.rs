@@ -25,17 +25,19 @@ pub enum Icon {
     Copy,
     Bell,
     Clock,
-    Music,
     Folder,
     Calendar,
-    Stopwatch,
-    Chart,
-    Checklist,
     Moon,
     Cloud,
     Bluetooth,
-    Close,
     CapsLock,
+    Gear,
+    Mouse,
+    Keyboard,
+    Headphones,
+    Gamepad,
+    Pen,
+    CircleCheck,
 }
 
 #[derive(Debug, PartialEq)]
@@ -176,11 +178,6 @@ impl Icon {
                 let face = circle(at(12.0, 12.0), 9.0 * unit);
                 (join(face, line(&[(12.0, 7.0), (12.0, 12.0), (15.5, 14.0)])), Paint::Line)
             }
-            Icon::Music => {
-                let stem = line(&[(9.5, 17.5), (9.5, 5.5), (18.0, 3.5), (18.0, 15.5)]);
-                let heads = join(circle(at(7.0, 17.5), 2.5 * unit), circle(at(15.5, 15.5), 2.5 * unit));
-                (join(stem, heads), Paint::Line)
-            }
             Icon::Folder => (
                 solid(&[(3.0, 6.0), (9.0, 6.0), (11.0, 9.0), (21.0, 9.0), (21.0, 19.0), (3.0, 19.0)], 2.0),
                 Paint::Line,
@@ -190,49 +187,32 @@ impl Icon {
                 let rings = join(line(&[(8.5, 3.5), (8.5, 7.5)]), line(&[(15.5, 3.5), (15.5, 7.5)]));
                 (join(join(body, rings), line(&[(4.0, 10.5), (20.0, 10.5)])), Paint::Line)
             }
-            Icon::Stopwatch => {
-                let face = circle(at(12.0, 13.5), 7.0 * unit);
-                let hand = line(&[(12.0, 13.5), (14.5, 10.5)]);
-                let top = join(line(&[(10.0, 3.5), (14.0, 3.5)]), line(&[(12.0, 3.5), (12.0, 6.5)]));
-                (join(join(face, hand), top), Paint::Line)
-            }
             Icon::Bluetooth => {
                 (line(&[(7.0, 8.0), (17.0, 16.0), (12.0, 20.5), (12.0, 3.5), (17.0, 8.0), (7.0, 16.0)]), Paint::Line)
             }
             Icon::Moon => {
-                // A crescent: the big circle's arc from the right round to the top, then the small circle's arc back.
-                let arc = |center: (f32, f32), radius: f32, from: f32, to: f32, steps: u32| {
-                    (0..=steps).map(move |step| {
-                        let angle = (from + (to - from) * step as f32 / steps as f32).to_radians();
-                        (center.0 + radius * angle.cos(), center.1 + radius * angle.sin())
-                    })
-                };
-                let points: Vec<(f32, f32)> =
-                    arc((12.0, 12.0), 9.0, 0.0, 270.0, 24).chain(arc((16.5, 7.5), 6.364, 225.0, 45.0, 12)).collect();
-                (line(&points), Paint::Line)
+                // Lucide "moon-star" (ISC license, https://lucide.dev): the crescent as two arcs joined by two short curves, and a plus.
+                let outer = arc((12.0, 12.0), 9.0, 3.1, 266.9, 24);
+                let inner = arc((17.0, 7.0), 6.0, 212.0, 58.0, 12);
+                let mut crescent = Path::new().move_to(at(20.985, 12.486));
+                for (x, y) in outer.skip(1) {
+                    crescent = crescent.line_to(at(x, y));
+                }
+                crescent = crescent.curve_to(at(11.917, 2.992), at(12.129, 3.474), at(11.914, 3.817));
+                for (x, y) in inner.skip(1) {
+                    crescent = crescent.line_to(at(x, y));
+                }
+                crescent = crescent.curve_to(at(20.526, 11.870), at(21.007, 12.081), at(20.985, 12.486));
+                let star = join(line(&[(19.0, 3.0), (19.0, 7.0)]), line(&[(17.0, 5.0), (21.0, 5.0)]));
+                (join(crescent, star), Paint::Line)
             }
             Icon::Cloud => {
                 // Lucide "cloud" (ISC license, https://lucide.dev): the base, the big bump on the left, a step, the small bump.
-                let arc = |center: (f32, f32), radius: f32, from: f32, to: f32, steps: u32| {
-                    (0..=steps).map(move |step| {
-                        let angle = (from + (to - from) * step as f32 / steps as f32).to_radians();
-                        (center.0 + radius * angle.cos(), center.1 + radius * angle.sin())
-                    })
-                };
                 let points: Vec<(f32, f32)> = std::iter::once((17.5, 19.0))
                     .chain(arc((9.0, 12.0), 7.0, 90.0, 343.4, 24))
                     .chain(arc((17.5, 14.5), 4.5, 270.0, 450.0, 14))
                     .collect();
                 (line(&points), Paint::Line)
-            }
-            Icon::Checklist => {
-                let first = join(line(&[(4.0, 7.0), (6.0, 9.0), (9.5, 5.5)]), line(&[(12.5, 7.5), (20.0, 7.5)]));
-                let second = join(line(&[(4.0, 16.0), (6.0, 18.0), (9.5, 14.5)]), line(&[(12.5, 16.5), (20.0, 16.5)]));
-                (join(first, second), Paint::Line)
-            }
-            Icon::Chart => {
-                let bars = join(line(&[(6.0, 20.0), (6.0, 12.0)]), line(&[(12.0, 20.0), (12.0, 5.0)]));
-                (join(bars, line(&[(18.0, 20.0), (18.0, 9.0)])), Paint::Line)
             }
             // Lucide "copy" (ISC license, https://lucide.dev): a sheet with another behind it.
             Icon::Copy => {
@@ -246,14 +226,79 @@ impl Icon {
                     .curve_to(at(15.1, 2.0), at(16.0, 2.9), at(16.0, 4.0));
                 (join(front, back), Paint::Line)
             }
-            // Lucide "x" (ISC license, https://lucide.dev).
-            Icon::Close => (join(line(&[(6.0, 6.0), (18.0, 18.0)]), line(&[(18.0, 6.0), (6.0, 18.0)])), Paint::Line),
             Icon::CapsLock => {
                 let arrow = solid(
                     &[(12.0, 3.0), (20.5, 12.0), (15.5, 12.0), (15.5, 16.5), (8.5, 16.5), (8.5, 12.0), (3.5, 12.0)],
                     1.5,
                 );
                 (join(arrow, line(&[(8.5, 20.5), (15.5, 20.5)])), Paint::Line)
+            }
+            Icon::Gear => {
+                // A hex nut, as the design draws it: a pointy-top hexagon of circumradius 9.5 around a ring of 3.
+                const CIRCUMRADIUS: f32 = 9.5;
+                const RING_RADIUS: f32 = 3.0;
+                let corners: Vec<(f32, f32)> = (0..6)
+                    .map(|corner| {
+                        let angle = (corner as f32 * 60.0 - 90.0).to_radians();
+                        (12.0 + CIRCUMRADIUS * angle.cos(), 12.0 + CIRCUMRADIUS * angle.sin())
+                    })
+                    .collect();
+                (join(solid(&corners, CORNER_RADIUS), circle(at(12.0, 12.0), RING_RADIUS * unit)), Paint::Line)
+            }
+            Icon::Mouse => (
+                join(
+                    solid(&[(6.0, 3.0), (18.0, 3.0), (18.0, 21.0), (6.0, 21.0)], 6.0),
+                    line(&[(12.0, 3.0), (12.0, 9.0)]),
+                ),
+                Paint::Line,
+            ),
+            Icon::Keyboard => {
+                let body = solid(&[(2.0, 6.0), (22.0, 6.0), (22.0, 18.0), (2.0, 18.0)], 2.0);
+                let mut keys = line(&[(7.0, 14.0), (17.0, 14.0)]);
+                for x in [6.0, 10.0, 14.0, 18.0] {
+                    keys.append(line(&[(x, 10.0), (x + 0.01, 10.0)]));
+                }
+                (join(body, keys), Paint::Line)
+            }
+            Icon::Headphones => {
+                let band: Vec<(f32, f32)> = std::iter::once((4.0, 15.0))
+                    .chain(arc((12.0, 12.0), 8.0, 180.0, 360.0, 16))
+                    .chain(std::iter::once((20.0, 15.0)))
+                    .collect();
+                let left = solid(&[(3.0, 14.0), (7.0, 14.0), (7.0, 20.0), (3.0, 20.0)], 1.5);
+                let right = solid(&[(17.0, 14.0), (21.0, 14.0), (21.0, 20.0), (17.0, 20.0)], 1.5);
+                (join(join(line(&band), left), right), Paint::Line)
+            }
+            // Lucide "gamepad" (ISC license, https://lucide.dev): a body with two grips, a plus on the left.
+            Icon::Gamepad => {
+                let body = Path::new()
+                    .move_to(at(6.0, 8.0))
+                    .line_to(at(18.0, 8.0))
+                    .curve_to(at(19.7, 8.0), at(21.0, 9.4), at(21.0, 11.2))
+                    .line_to(at(20.4, 16.2))
+                    .curve_to(at(20.2, 18.4), at(17.4, 19.2), at(16.6, 17.5))
+                    .line_to(at(15.0, 16.0))
+                    .line_to(at(9.0, 16.0))
+                    .line_to(at(7.4, 17.5))
+                    .curve_to(at(6.6, 19.2), at(3.8, 18.4), at(3.6, 16.2))
+                    .line_to(at(3.0, 11.2))
+                    .curve_to(at(3.0, 9.4), at(4.3, 8.0), at(6.0, 8.0))
+                    .close();
+                let plus = join(line(&[(8.0, 11.0), (8.0, 14.0)]), line(&[(6.5, 12.5), (9.5, 12.5)]));
+                (join(body, plus), Paint::Line)
+            }
+            Icon::Pen => (
+                Path::new()
+                    .move_to(at(4.0, 20.0))
+                    .line_to(at(5.0, 16.0))
+                    .line_to(at(16.0, 5.0))
+                    .curve_to(at(17.0, 3.9), at(19.2, 6.0), at(19.0, 8.0))
+                    .line_to(at(8.0, 19.0))
+                    .close(),
+                Paint::Line,
+            ),
+            Icon::CircleCheck => {
+                (join(circle(at(12.0, 12.0), 9.0 * unit), line(&[(8.0, 12.5), (10.8, 15.3), (16.0, 9.5)])), Paint::Line)
             }
             Icon::Lyrics => {
                 let bubble = solid(
@@ -265,6 +310,14 @@ impl Icon {
             }
         }
     }
+}
+
+/// Points along a circle's arc, angles in degrees (increasing runs clockwise on screen).
+fn arc(center: (f32, f32), radius: f32, from: f32, to: f32, steps: u32) -> impl Iterator<Item = (f32, f32)> {
+    (0..=steps).map(move |step| {
+        let angle = (from + (to - from) * step as f32 / steps as f32).to_radians();
+        (center.0 + radius * angle.cos(), center.1 + radius * angle.sin())
+    })
 }
 
 fn circle(center: Point, radius: f32) -> Path {
@@ -288,7 +341,7 @@ fn join(mut first: Path, second: Path) -> Path {
 mod tests {
     use super::*;
 
-    const ALL: [Icon; 27] = [
+    const ALL: [Icon; 29] = [
         Icon::Lyrics,
         Icon::Previous,
         Icon::Play,
@@ -305,17 +358,19 @@ mod tests {
         Icon::Copy,
         Icon::Bell,
         Icon::Clock,
-        Icon::Music,
         Icon::Folder,
         Icon::Calendar,
-        Icon::Stopwatch,
-        Icon::Chart,
-        Icon::Checklist,
         Icon::Moon,
         Icon::Cloud,
         Icon::Bluetooth,
-        Icon::Close,
         Icon::CapsLock,
+        Icon::Gear,
+        Icon::Mouse,
+        Icon::Keyboard,
+        Icon::Headphones,
+        Icon::Gamepad,
+        Icon::Pen,
+        Icon::CircleCheck,
     ];
 
     #[test]
@@ -356,6 +411,39 @@ mod tests {
     fn a_low_battery_shows_fewer_bars_than_a_battery() {
         let count = |icon: Icon| icon.path(Point::default(), 24.0).0.points().count();
         assert!(count(Icon::BatteryLow) < count(Icon::Battery));
+    }
+
+    #[test]
+    fn the_gear_is_a_pointy_top_hexagon_around_a_ring_drawn_as_a_line() {
+        let (path, paint) = Icon::Gear.path(Point::default(), 24.0);
+        assert_eq!(paint, Paint::Line);
+        let (top, bottom) =
+            path.points().fold((f32::MAX, f32::MIN), |(low, high), point| (low.min(point.y), high.max(point.y)));
+        assert!(top < -9.0 && bottom > 9.0, "the hexagon keeps a vertex at the top and the bottom: {top} {bottom}");
+        let farthest = path.points().map(|point| point.x.hypot(point.y)).fold(0.0, f32::max);
+        assert!(farthest <= 10.01, "the hexagon stays inside the square with room for the stroke");
+        let ring: Vec<f32> =
+            path.points().map(|point| point.x.hypot(point.y)).filter(|&distance| distance < 5.0).collect();
+        let on_curve = ring.iter().filter(|&&distance| (distance - 3.0).abs() < 0.01).count();
+        assert!(on_curve >= 4, "the ring of radius 3 sits at the center: {ring:?}");
+    }
+
+    #[test]
+    fn the_moon_is_a_crescent_with_a_plus_shaped_star_at_its_top_right() {
+        let (path, paint) = Icon::Moon.path(Point::default(), 24.0);
+        assert_eq!(paint, Paint::Line);
+        let figures = path.flatten();
+        assert_eq!(figures.len(), 3, "the crescent and the two bars of the star");
+        for bar in &figures[1..] {
+            assert!(bar.points.iter().all(|point| point.x >= 5.0 && point.y <= -5.0), "{bar:?}");
+        }
+        let crescent = &figures[0].points;
+        let left = crescent.iter().map(|point| point.x).fold(f32::MAX, f32::min);
+        let bottom = crescent.iter().map(|point| point.y).fold(f32::MIN, f32::max);
+        assert!(left <= -8.9 && bottom >= 8.9, "the crescent keeps the big circle: {left} {bottom}");
+        let first = crescent.first().expect("a start");
+        let last = crescent.last().expect("an end");
+        assert!((first.x - last.x).hypot(first.y - last.y) < 0.01, "the crescent ends where it starts");
     }
 
     #[test]

@@ -2,7 +2,7 @@
 
 use super::*;
 
-const IMAGE_WIDTH: f32 = 700.0;
+pub(super) const IMAGE_WIDTH: f32 = 700.0;
 
 fn output_directory() -> PathBuf {
     let directory = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/snapshots");
@@ -18,7 +18,7 @@ fn background(fraction: f32) -> [f32; 3] {
 }
 
 /// Composite cropped premultiplied BGRA over the background and write a 24-bit bitmap.
-fn write_image(name: &str, pixels: &[u8], surface_width: usize, width: usize, height: usize) {
+pub(super) fn write_image(name: &str, pixels: &[u8], surface_width: usize, width: usize, height: usize) {
     let left = (surface_width - width) / 2;
     let row_bytes = (width * 3).div_ceil(4) * 4;
     let mut file = Vec::with_capacity(54 + row_bytes * height);
@@ -49,13 +49,13 @@ fn write_image(name: &str, pixels: &[u8], surface_width: usize, width: usize, he
     fs::write(output_directory().join(format!("{name}.bmp")), file).unwrap();
 }
 
-fn clear(notch: &Notch) {
+pub(super) fn clear(notch: &Notch) {
     let surface = &notch.surface;
     let region = RECT { left: 0, top: 0, right: surface.width, bottom: surface.height };
     surface.render_and_present(notch.window, notch.screen_position, region, &notch.fonts, SCALE, |_| {}).unwrap();
 }
 
-fn save(notch: &Notch, name: &str, height_dip: f32) {
+pub(super) fn save(notch: &Notch, name: &str, height_dip: f32) {
     clear(notch);
     notch.paint();
     let surface = &notch.surface;
@@ -66,9 +66,9 @@ fn save(notch: &Notch, name: &str, height_dip: f32) {
 #[test]
 #[ignore = "writes images to target/snapshots; run on purpose"]
 fn snapshots_of_every_open_page() {
-    let options = SampleOptions { media: Some((true, false)), timer: true, calendar: true, ..SampleOptions::default() };
+    let options = SampleOptions { media: Some(true), timer: true, calendar: true, ..SampleOptions::default() };
     let mut notch = rig(options);
-    for id in ["media", "shelf", "calendar", "timer", "stats", "todo", "shalat", "weather"] {
+    for id in ["media", "shelf", "calendar", "timer", "stats", "todo", "shalat", "weather", "devices"] {
         open(&mut notch, id);
         save(&notch, &format!("open-{id}"), WINDOW_HEIGHT);
     }
@@ -79,7 +79,7 @@ fn snapshots_of_every_open_page() {
         notch.refresh_layout();
         save(&notch, name, 260.0);
     }
-    let mut plain = rig(SampleOptions { media: Some((false, false)), ..options });
+    let mut plain = rig(SampleOptions { media: Some(false), ..options });
     open(&mut plain, "media");
     save(&plain, "open-media-plain", 260.0);
     open(&mut notch, "media");
@@ -91,48 +91,56 @@ fn snapshots_of_every_open_page() {
     let mut idle = rig(SampleOptions::default());
     open(&mut idle, "media");
     save(&idle, "open-media-empty", 260.0);
+    // No linked calendar: no dots, so the week is lower and the message fills the page.
+    let mut unlinked = rig(SampleOptions { calendar: false, ..options });
+    open(&mut unlinked, "calendar");
+    save(&unlinked, "open-calendar-no-link", 260.0);
     let mut dragged_over = rig(SampleOptions { file_drag: true, ..options });
     open(&mut dragged_over, "shelf");
     save(&dragged_over, "open-shelf-drag", 260.0);
-    open(&mut notch, "timer");
-    notch.page_list.set_enabled(4, false);
-    notch.editor = Some(PageEditor::default());
-    notch.panel.tab = Tab::Pages;
-    settle(&mut notch);
-    save(&notch, "open-edit-pages", WINDOW_HEIGHT);
-    for (tab, name) in [(Tab::General, "open-settings-general"), (Tab::Behavior, "open-settings-behavior")] {
-        notch.panel.tab = tab;
-        settle(&mut notch);
-        save(&notch, name, WINDOW_HEIGHT);
-    }
-    for (id, name) in [
-        ("timer", "open-settings-timer"),
-        ("calendar", "open-settings-calendar"),
-        ("stats", "open-settings-stats"),
-        ("shalat", "open-settings-shalat"),
-    ] {
-        open(&mut notch, id);
-        notch.open_panel();
-        settle(&mut notch);
-        save(&notch, name, WINDOW_HEIGHT);
-        notch.editor = None;
+}
+
+#[test]
+#[ignore = "writes images to target/snapshots; run on purpose"]
+fn snapshots_of_the_devices_page_states() {
+    let states = ["normal", "attention", "unknown-battery", "many", "no-devices", "bluetooth-off"];
+    for (scenario, name) in states.into_iter().enumerate() {
+        let mut notch = rig(SampleOptions { devices: scenario as u8, ..SampleOptions::default() });
+        open(&mut notch, "devices");
+        save(&notch, &format!("devices-{name}"), WINDOW_HEIGHT);
     }
 }
 
 #[test]
 #[ignore = "writes images to target/snapshots; run on purpose"]
 fn snapshots_of_the_collapsed_pill() {
-    let scenarios: [(&str, SampleOptions); 9] = [
+    let scenarios: [(&str, SampleOptions); 10] = [
         ("resting-idle", SampleOptions::default()),
         ("resting-idle-with-timer", SampleOptions { timer: true, ..SampleOptions::default() }),
         ("resting-idle-with-calendar", SampleOptions { calendar: true, ..SampleOptions::default() }),
-        ("resting-media-bars", SampleOptions { media: Some((false, false)), ..SampleOptions::default() }),
-        ("resting-media-lyrics", SampleOptions { media: Some((true, false)), ..SampleOptions::default() }),
-        ("resting-media-title", SampleOptions { media: Some((false, true)), ..SampleOptions::default() }),
+        ("resting-media-bars", SampleOptions { media: Some(false), ..SampleOptions::default() }),
+        ("resting-media-lyrics", SampleOptions { media: Some(true), ..SampleOptions::default() }),
         (
-            "resting-media-with-timer",
-            SampleOptions { media: Some((false, false)), timer: true, ..SampleOptions::default() },
+            "resting-media-lyrics-with-timer",
+            SampleOptions {
+                media: Some(true),
+                timer: true,
+                calendar: true,
+                shalat_mark: 1,
+                ..SampleOptions::default()
+            },
         ),
+        (
+            "resting-idle-with-group",
+            SampleOptions {
+                media: Some(false),
+                timer: true,
+                calendar: true,
+                shalat_mark: 1,
+                ..SampleOptions::default()
+            },
+        ),
+        ("resting-media-with-timer", SampleOptions { media: Some(false), timer: true, ..SampleOptions::default() }),
         ("resting-shalat-mark", SampleOptions { shalat_mark: 1, ..SampleOptions::default() }),
         ("resting-shalat-message", SampleOptions { shalat_mark: 2, ..SampleOptions::default() }),
     ];
@@ -254,4 +262,29 @@ fn snapshots_of_the_short_lived_messages() {
         let width = ui::message_width(fonts, message, value);
         pill(&notch, name, width, |canvas, area| ui::draw_message(canvas, area, 1.0, icon, color, message, value));
     }
+}
+
+#[test]
+#[ignore = "writes images to target/snapshots; run on purpose"]
+fn snapshots_of_the_idle_row_and_the_open_header() {
+    let group =
+        SampleOptions { media: Some(false), timer: true, calendar: true, shalat_mark: 1, ..SampleOptions::default() };
+    let marks = |presences: &[Presence]| -> Vec<Mark> {
+        presences.iter().map(|&presence| Mark::showing(Some(presence)).0).collect()
+    };
+    for (name, options, presences) in [
+        ("resting-empty", SampleOptions::default(), &[][..]),
+        ("resting-battery", SampleOptions::default(), &[RING][..]),
+        ("resting-battery-and-dot", SampleOptions::default(), &[RING, DOT][..]),
+        ("resting-group-battery-and-dot", group, &[RING, DOT][..]),
+        ("resting-group-on-a-pc", group, &[][..]),
+        ("resting-lyrics-with-group-and-dot", SampleOptions { media: Some(true), ..group }, &[RING, DOT][..]),
+    ] {
+        let mut notch = marked_rig(options, marks(presences));
+        close(&mut notch);
+        save(&notch, name, 40.0);
+    }
+    let mut notch = marked_rig(group, marks(&[RING, DOT]));
+    open(&mut notch, "timer");
+    save(&notch, "open-header-with-group-battery-and-dot", 160.0);
 }
