@@ -1,5 +1,5 @@
 use gpui::{App, SharedString, div, prelude::*, px};
-use gpui_component::{ActiveTheme as _, v_flex};
+use gpui_component::{ActiveTheme as _, Icon, IconName, Sizable as _, h_flex, v_flex};
 use store::Settings;
 
 use crate::{
@@ -16,25 +16,21 @@ pub struct Choice {
 
 // The words `Showing::parse` accepts in `src/host/visibility.rs`; a test compares them, the labels are this window's own.
 pub const CHOICES: [Choice; 4] = [
-    Choice {
-        word: "hidden",
-        label: "Hidden",
-        description: "The notch hides, even for notification banners and volume changes.",
-    },
+    Choice { word: "hidden", label: "0 · Hidden", description: "Nothing is drawn. Not even messages." },
     Choice {
         word: "activities",
-        label: "Activities only",
-        description: "The notch shows only notification banners, volume changes and badges.",
+        label: "1 · Activities",
+        description: "On-demand messages only, such as volume. Then it hides again.",
     },
     Choice {
         word: "lyrics",
-        label: "Lyrics only",
-        description: "The notch shows only while a lyric line is active, and for activities. Otherwise it hides.",
+        label: "2 · Lyrics",
+        description: "Lyrics while they play, plus everything from level 1.",
     },
     Choice {
         word: "music",
-        label: "Always visible",
-        description: "The notch always shows, with the idle clock when nothing is playing.",
+        label: "3 · Always visible",
+        description: "The idle pill with clock and battery, plus everything from levels 1 and 2.",
     },
 ];
 
@@ -100,6 +96,47 @@ fn choice_item(
     })
 }
 
+const INTRO: &str = "Behavior works like a log level. You pick how much the notch is allowed to show, and every level also shows everything below it. Level 2 does not mean lyrics only: it shows lyrics and messages. Level 3 shows all of it.";
+const MATRIX_COLUMNS: [&str; 3] = ["On-demand messages", "Lyrics", "Idle pill"];
+const LABEL_WIDTH: f32 = 170.0;
+
+/// Whether a level (its index in `CHOICES`) shows a column: column 0 needs level 1, column 1 level 2, column 2 level 3.
+fn level_shows(level: usize, column: usize) -> bool {
+    level > column
+}
+
+/// One matrix row: the level label, then a check or a dash for each column.
+fn matrix_row(level: usize, cx: &App) -> gpui::Div {
+    let cell = move |column: usize| {
+        let mark = if level_shows(level, column) {
+            Icon::new(IconName::Check).small().text_color(cx.theme().primary).into_any_element()
+        } else {
+            div().w(px(10.0)).h(px(2.0)).rounded_full().bg(cx.theme().muted_foreground.opacity(0.4)).into_any_element()
+        };
+        div().flex_1().flex().justify_center().child(mark)
+    };
+    h_flex()
+        .h(px(32.0))
+        .items_center()
+        .child(div().w(px(LABEL_WIDTH)).text_sm().child(CHOICES[level].label))
+        .children((0..MATRIX_COLUMNS.len()).map(cell))
+}
+
+/// The intro sentence and the read-only matrix of what each level shows.
+fn levels_item() -> Item {
+    Item::custom(move |_window, cx| {
+        let muted = cx.theme().muted_foreground;
+        let header = h_flex().child(div().w(px(LABEL_WIDTH))).children(MATRIX_COLUMNS.iter().map(move |name| {
+            div().flex_1().flex().justify_center().text_size(px(12.0)).text_color(muted).child(*name)
+        }));
+        v_flex()
+            .gap_3()
+            .child(div().text_sm().text_color(muted).child(INTRO))
+            .child(v_flex().child(header).children((0..CHOICES.len()).map(|level| matrix_row(level, cx))))
+            .into_any_element()
+    })
+}
+
 fn situation(
     heading: &'static str,
     description: &'static str,
@@ -121,8 +158,9 @@ fn situation(
 pub fn page() -> Page {
     Page::new(
         "Behavior",
-        "Choose what the notch shows while another window is in front.",
+        "Choose what the notch shows, as a level, while a maximized or full-screen window is in front of it.",
         vec![
+            Group::titled("Levels", vec![levels_item()]),
             situation(
                 "Over a maximized window",
                 "Applies while a maximized window is in front.",
@@ -161,13 +199,29 @@ mod tests {
         assert_eq!(
             offered,
             [
-                ("hidden", "Hidden"),
-                ("activities", "Activities only"),
-                ("lyrics", "Lyrics only"),
-                ("music", "Always visible"),
+                ("hidden", "0 · Hidden"),
+                ("activities", "1 · Activities"),
+                ("lyrics", "2 · Lyrics"),
+                ("music", "3 · Always visible"),
             ]
         );
         assert!(CHOICES.iter().all(|choice| !choice.description.is_empty()));
+    }
+
+    #[test]
+    fn each_level_shows_its_own_column_and_every_one_below() {
+        let rows: Vec<Vec<bool>> =
+            (0..4).map(|level| (0..3).map(|column| level_shows(level, column)).collect()).collect();
+        assert_eq!(
+            rows,
+            [vec![false, false, false], vec![true, false, false], vec![true, true, false], vec![true, true, true],]
+        );
+    }
+
+    #[test]
+    fn the_page_opens_with_the_levels_group() {
+        assert!(INTRO.starts_with("Behavior works like a log level."));
+        assert_eq!(MATRIX_COLUMNS.len(), 3);
     }
 
     #[test]

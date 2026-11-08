@@ -23,7 +23,7 @@ pub fn page() -> Page {
     });
     Page::new(
         "General",
-        "Startup, notifications, music and the focus timer.",
+        "Startup, your location, notifications, Windows popups, music and the focus timer.",
         vec![
             Group::titled(
                 "Startup",
@@ -46,10 +46,33 @@ pub fn page() -> Page {
             Group::titled(
                 "Notifications",
                 vec![
-                    Item::new("Show notifications", field::toggle("activity.notifications", true))
-                        .description("Shows a banner when Windows shows a notification."),
+                    Item::new("Show notifications", field::toggle("activity.notifications", true)).description(
+                        "Shows a banner when Windows shows a notification. To keep Windows' own banner away, turn on \
+                             \"Hide Windows notification banners\" under Windows popups.",
+                    ),
                     Item::new("Show notification text", field::toggle("notifications.show_text", true))
                         .description("Shows the message in the banner. Without it, the banner reads \"New message\"."),
+                    Item::new("Warn when a device battery is low", field::toggle("activity.device_battery", true))
+                        .description("Shows a message when a connected Bluetooth device reaches 20 % or 10 %."),
+                ],
+            ),
+            Group::titled(
+                "Windows popups",
+                vec![
+                    Item::new("Hide the Windows volume popup", field::toggle("notch.hide_windows_volume_popup", false))
+                        .description(
+                            "Keeps the volume box Windows shows above the taskbar away while the notch runs, so only \
+                             the notch shows the volume. It comes back when the notch closes.",
+                        ),
+                    Item::new(
+                        "Hide Windows notification banners",
+                        field::toggle("notch.hide_windows_notifications", false),
+                    )
+                    .description(
+                        "Turns off the banner Windows shows at the bottom right for every app while the notch runs, so \
+                         only the notch shows notifications; they stay in the notification center. Each app's own \
+                         choice comes back when this is off or the notch closes.",
+                    ),
                 ],
             ),
             Group::titled(

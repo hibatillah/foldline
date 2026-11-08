@@ -1,189 +1,70 @@
 #![windows_subsystem = "windows"]
 
+mod brand;
 mod card;
 mod field;
+mod header;
+mod icons;
 mod layout;
 mod location;
 mod notify;
+mod palette;
 mod picture;
-#[cfg(test)]
-mod pre_release;
+#[path = "../../../scripts/release_version.rs"]
+mod release_version;
 mod sections;
+mod sidebar;
 mod single_instance;
 mod startup;
 mod version;
 
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::rc::Rc;
 
 use gpui::{
-    App, Application, Bounds, Context, Image, ImageFormat, SharedString, Window, WindowBackgroundAppearance,
-    WindowBounds, WindowOptions, div, img, prelude::*, px, rgba, size, transparent_black,
+    App, Application, Bounds, Context, SharedString, Window, WindowBounds, WindowOptions, div, img, prelude::*, px,
+    size,
 };
-use gpui_component::{
-    ActiveTheme as _, IconName, Root, Theme, TitleBar, WindowExt as _, h_flex,
-    notification::Notification,
-    sidebar::{Sidebar, SidebarMenu, SidebarMenuItem},
-    v_flex,
-};
+use gpui_component::{ActiveTheme as _, Root, Theme, TitleBar, h_flex, v_flex};
 
-use layout::Page;
+use sidebar::{NavEntry, SelectHandler};
 
 const SIDEBAR_WIDTH: f32 = 200.0;
 const MINIMUM_WINDOW_SIZE: (f32, f32) = (720.0, 480.0);
-const DEFAULT_WINDOW_SIZE: (f32, f32) = (1140.0, 720.0);
-/// Space between two sidebar items; the component's default is 8.
-const SIDEBAR_ITEM_GAP: f32 = 5.0;
-/// Installed beside `notch-settings.exe`; the sidebar's bottom link opens it.
-const LICENSES_FILE: &str = "THIRD-PARTY-LICENSES.txt";
-/// How many folders above the program's own the licenses file is looked for (`run/` and `target/.../release` sit below the repository root).
-const LICENSES_SEARCH_LEVELS: usize = 6;
-const LICENSES_LABEL: &str = "Licenses";
-const LOGO_SIZE: f32 = 22.0;
+const DEFAULT_WINDOW_SIZE: (f32, f32) = (1040.0, 660.0);
+/// Space kept free around the window when the screen is smaller than the default size (taskbar and edges).
+const SCREEN_MARGIN: f32 = 80.0;
+const LOGO_SIZE: f32 = 28.0;
 // The notch's own font files (SIL Open Font License, assets/fonts/Geist-LICENSE.txt).
+/// The one scale knob: gpui-component's Root sets the window's rem size to this, so every rem-based size (text, `px_*`, `gap_*`, controls) follows it. 16 is the library default.
+const UI_FONT_SIZE: f32 = 14.7;
 const GEIST_FONTS: [&[u8]; 2] = [
     include_bytes!("../../../assets/fonts/Geist-Regular.ttf"),
     include_bytes!("../../../assets/fonts/Geist-Medium.ttf"),
 ];
 const FONT_FAMILY: &str = "Geist";
-// A fixed strip at the top: the sidebar and the content start below it so nothing sits under the window buttons.
-const HEADER_HEIGHT: f32 = 34.0;
-
-/// The three layers of the window plus the greys that sit on them, all opaque.
-///
-/// The content is the darkest layer; the sidebar and the cards in the content share one lighter gray; an input and a
-/// selected option sit one step above the card.
-struct Palette {
-    sidebar: u32,
-    content: u32,
-    card: u32,
-    input: u32,
-    border: u32,
-    divider: u32,
-    option: u32,
-    option_selected: u32,
-    option_border: u32,
-    title: u32,
-    // Text in the content and in the sidebar differ because the sidebar is the darker surface.
-    muted: u32,
-    sidebar_muted: u32,
-}
-
-fn palette(cx: &App) -> Palette {
-    if cx.theme().is_dark() {
-        Palette {
-            sidebar: 0x1c1c1cff,
-            content: 0x0e0e0eff,
-            card: 0x1c1c1cff,
-            input: 0x262626ff,
-            border: 0x2c2c2cff,
-            divider: 0x262626ff,
-            option: 0x141414ff,
-            option_selected: 0x2a2a2aff,
-            option_border: 0x2c2c2cff,
-            title: 0xffffffff,
-            muted: 0xa1a1a1ff,
-            sidebar_muted: 0x9a9a9aff,
-        }
-    } else {
-        Palette {
-            sidebar: 0xffffffff,
-            content: 0xe8e8e8ff,
-            card: 0xffffffff,
-            input: 0xf3f3f3ff,
-            border: 0xd9d9d9ff,
-            divider: 0xebebebff,
-            option: 0xf6f6f6ff,
-            option_selected: 0xe9e9e9ff,
-            option_border: 0xdcdcdcff,
-            title: 0x0a0a0aff,
-            muted: 0x666666ff,
-            sidebar_muted: 0x777777ff,
-        }
-    }
-}
-
-/// The field's own background, lighter than the card it sits in.
-pub fn input_background(cx: &App) -> gpui::Hsla {
-    rgba(palette(cx).input).into()
-}
-
-/// The line between two rows of a card.
-pub fn row_divider(cx: &App) -> gpui::Hsla {
-    rgba(palette(cx).divider).into()
-}
-
-/// The fill of an option card: lighter when selected, darker than the card around it otherwise.
-pub fn option_fill(selected: bool, cx: &App) -> gpui::Hsla {
-    let colors = palette(cx);
-    rgba(if selected { colors.option_selected } else { colors.option }).into()
-}
-
-/// The outline of an option card: bright when selected, quiet otherwise.
-pub fn option_border(selected: bool, cx: &App) -> gpui::Hsla {
-    if selected { cx.theme().foreground.opacity(0.85) } else { rgba(palette(cx).option_border).into() }
-}
-
-/// Muted text in the sidebar, a different grey from the content's because the surface is darker.
-pub fn sidebar_muted(cx: &App) -> gpui::Hsla {
-    rgba(palette(cx).sidebar_muted).into()
-}
-
-/// Section titles: full foreground, white in the dark theme.
-pub fn section_title(cx: &App) -> gpui::Hsla {
-    cx.theme().foreground
-}
-
-/// Sidebar, content and cards get their own greys; the title bar is clear so the content layer runs to the top edge.
-fn apply_palette(cx: &mut App) {
-    let colors = palette(cx);
-    let theme = Theme::global_mut(cx);
-    theme.font_family = FONT_FAMILY.into();
-    theme.sidebar = rgba(colors.sidebar).into();
-    theme.sidebar_border = transparent_black();
-    theme.background = rgba(colors.content).into();
-    theme.foreground = rgba(colors.title).into();
-    theme.group_box = rgba(colors.card).into();
-    theme.accordion = rgba(colors.card).into();
-    theme.accordion_hover = rgba(colors.input).into();
-    theme.border = rgba(colors.border).into();
-    theme.muted_foreground = rgba(colors.muted).into();
-    theme.title_bar = transparent_black();
-    theme.title_bar_border = transparent_black();
-}
+/// The frame that shows around the content card: above it, to its right and below it.
+const FRAME_PADDING: f32 = 8.0;
+const CARD_RADIUS: f32 = 8.0;
 
 struct SettingsWindow {
     selected_page_index: usize,
-    pages: Vec<Page>,
-    logo: Arc<Image>,
+    pages: Vec<NavEntry>,
 }
 
 impl Render for SettingsWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let view = cx.entity();
-        let menu = SidebarMenu::new().gap(px(SIDEBAR_ITEM_GAP)).children(self.pages.iter().enumerate().map(
-            |(page_index, page)| {
-                let view = view.clone();
-                SidebarMenuItem::new(page.title).active(page_index == self.selected_page_index).on_click(
-                    move |_event, _window, cx| {
-                        view.update(cx, |this, cx| {
-                            this.selected_page_index = page_index;
-                            cx.notify();
-                        });
-                    },
-                )
-            },
-        ));
         let version_label = format!("v{}", version::displayed_version());
-        let brand =
-            h_flex().gap_2().items_center().child(img(self.logo.clone()).size(px(LOGO_SIZE)).flex_none()).child(
+        let brand = h_flex()
+            .gap_3()
+            .items_center()
+            .child(img(brand::tile_image()).size(px(LOGO_SIZE)).flex_none())
+            .child(
                 h_flex()
                     .gap_1()
                     .items_baseline()
                     .min_w_0()
-                    .child(div().flex_none().font_weight(gpui::FontWeight::SEMIBOLD).child("Notch"))
+                    .child(div().flex_none().text_base().font_weight(gpui::FontWeight::SEMIBOLD).child("Notch"))
                     .child(
                         div()
                             .min_w_0()
@@ -191,63 +72,66 @@ impl Render for SettingsWindow {
                             .whitespace_nowrap()
                             .text_ellipsis()
                             .text_xs()
-                            .text_color(sidebar_muted(cx))
+                            .text_color(palette::muted(cx))
                             .child(version_label),
                     ),
-            );
-        let licenses = div().w_full().child(
-            SidebarMenu::new().child(
-                SidebarMenuItem::new(LICENSES_LABEL)
-                    .icon(IconName::File)
-                    .on_click(|_event, window, cx| open_licenses(window, cx)),
-            ),
-        );
-        let sidebar = Sidebar::left().w(px(SIDEBAR_WIDTH)).collapsed(false).header(brand).child(menu).footer(licenses);
-        let content = div()
-            .id("content")
-            .flex_1()
-            .min_w_0()
-            .h_full()
-            .overflow_y_scroll()
-            .px_6()
-            .pb_6()
-            .pt(px(HEADER_HEIGHT + 8.0))
-            .child(self.pages[self.selected_page_index].render(window, cx));
+            )
+            .into_any_element();
+        let on_select: SelectHandler = Rc::new(move |page_index, cx| {
+            view.update(cx, |this, cx| {
+                this.selected_page_index = page_index;
+                cx.notify();
+            });
+        });
+        let sidebar = sidebar::render(brand, &self.pages, self.selected_page_index, on_select, cx);
+        let selected = &self.pages[self.selected_page_index].page;
+        let content =
+            div().id("content").flex_1().min_h_0().overflow_y_scroll().px_6().py_6().child(selected.render(window, cx));
+        let card = v_flex()
+            .size_full()
+            .rounded(px(CARD_RADIUS))
+            .border_1()
+            .border_color(palette::card_border(cx))
+            .bg(palette::card(cx))
+            .overflow_hidden()
+            .child(header::render(selected.title, window, cx))
+            .child(content);
 
         v_flex()
             .relative()
             .size_full()
-            .bg(cx.theme().background)
+            .bg(palette::frame_fill(cx))
             .text_color(cx.theme().foreground)
-            .child(h_flex().size_full().child(sidebar).child(content))
-            .child(div().absolute().top_0().left_0().right_0().child(TitleBar::new()))
+            .child(
+                h_flex().size_full().child(sidebar).child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .h_full()
+                        .pt(px(FRAME_PADDING))
+                        .pr(px(FRAME_PADDING))
+                        .pb(px(FRAME_PADDING))
+                        .child(card),
+                ),
+            )
             .children(Root::render_notification_layer(window, cx))
     }
 }
 
-/// Looks for the licenses file in `start_folder`, then in each parent folder, up to `LICENSES_SEARCH_LEVELS` levels up.
-fn find_licenses_file(start_folder: &Path, file_exists: impl Fn(&Path) -> bool) -> Option<PathBuf> {
-    start_folder
-        .ancestors()
-        .take(LICENSES_SEARCH_LEVELS + 1)
-        .map(|folder| folder.join(LICENSES_FILE))
-        .find(|candidate| file_exists(candidate))
-}
-
-/// Opens the license notices, or tells the user in the window when the file cannot be found.
-fn open_licenses(window: &mut Window, cx: &mut App) {
-    let found =
-        std::env::current_exe().ok().and_then(|exe| find_licenses_file(exe.parent()?, |candidate| candidate.is_file()));
-    match found {
-        Some(path) => cx.open_with_system(&path),
-        None => window.push_notification(Notification::warning(format!("{LICENSES_FILE} was not found.")), cx),
-    }
+/// The opening size: the default, cut down to fit the screen with a margin, never below the minimum size.
+fn opening_size(screen: Option<(f32, f32)>) -> (f32, f32) {
+    let Some((screen_width, screen_height)) = screen else { return DEFAULT_WINDOW_SIZE };
+    let fit = |wanted: f32, available: f32, minimum: f32| wanted.min(available - SCREEN_MARGIN).max(minimum);
+    (
+        fit(DEFAULT_WINDOW_SIZE.0, screen_width, MINIMUM_WINDOW_SIZE.0),
+        fit(DEFAULT_WINDOW_SIZE.1, screen_height, MINIMUM_WINDOW_SIZE.1),
+    )
 }
 
 fn main() {
     let Some(_instance_guard) = single_instance::acquire() else { return };
 
-    Application::new().with_assets(gpui_component_assets::Assets).run(|cx: &mut App| {
+    Application::new().with_assets(icons::WindowAssets).run(|cx: &mut App| {
         gpui_component::init(cx);
         if let Err(error) =
             cx.text_system().add_fonts(GEIST_FONTS.iter().map(|bytes| std::borrow::Cow::Borrowed(*bytes)).collect())
@@ -261,30 +145,30 @@ fn main() {
         })
         .detach();
 
-        let bounds = Bounds::centered(None, size(px(DEFAULT_WINDOW_SIZE.0), px(DEFAULT_WINDOW_SIZE.1)), cx);
+        let work_area = cx.primary_display().map(|display| display.bounds().size);
+        let (width, height) = opening_size(work_area.map(|area| (f32::from(area.width), f32::from(area.height))));
+        let bounds = Bounds::centered(None, size(px(width), px(height)), cx);
         let mut titlebar = TitleBar::title_bar_options();
         titlebar.title = Some(SharedString::from("Notch Settings"));
         let options = WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(bounds)),
             titlebar: Some(titlebar),
-            window_background: WindowBackgroundAppearance::Opaque,
+            window_background: palette::window_background(),
             window_min_size: Some(size(px(MINIMUM_WINDOW_SIZE.0), px(MINIMUM_WINDOW_SIZE.1))),
             ..Default::default()
         };
         let opened = cx.open_window(options, |window, cx| {
             Theme::sync_system_appearance(Some(window), cx);
-            apply_palette(cx);
+            palette::apply(cx);
+            let view = cx.new(|_| SettingsWindow { selected_page_index: 0, pages: sections::all() });
+            let view_to_refresh = view.clone();
             window
-                .observe_window_appearance(|window, cx| {
+                .observe_window_appearance(move |window, cx| {
                     Theme::sync_system_appearance(Some(window), cx);
-                    apply_palette(cx);
+                    palette::apply(cx);
+                    view_to_refresh.update(cx, |_, cx| cx.notify());
                 })
                 .detach();
-            let logo = Arc::new(Image::from_bytes(
-                ImageFormat::Png,
-                include_bytes!("../../../assets/branding/logo.png").to_vec(),
-            ));
-            let view = cx.new(|_| SettingsWindow { selected_page_index: 0, pages: sections::all(), logo });
             cx.new(|cx| Root::new(view, window, cx))
         });
         if let Err(error) = opened {
@@ -301,26 +185,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_licenses_file_next_to_the_program_wins_over_one_further_up() {
-        let near = Path::new("repo/run").join(LICENSES_FILE);
-        let far = Path::new("repo").join(LICENSES_FILE);
-        let found = find_licenses_file(Path::new("repo/run"), |path| path == near || path == far);
-        assert_eq!(found, Some(near));
-    }
-
-    #[test]
-    fn the_search_walks_up_to_the_repository_root_from_the_build_folder() {
-        let root_file = Path::new("repo").join(LICENSES_FILE);
-        let found =
-            find_licenses_file(Path::new("repo/target/x86_64-pc-windows-msvc/release"), |path| path == root_file);
-        assert_eq!(found, Some(root_file));
-    }
-
-    #[test]
-    fn the_search_stops_after_the_level_limit_and_reports_nothing() {
-        let too_far = Path::new("a").join(LICENSES_FILE);
-        let start = Path::new("a/b/c/d/e/f/g/h");
-        assert_eq!(find_licenses_file(start, |path| path == too_far), None);
-        assert_eq!(find_licenses_file(start, |_| false), None);
+    fn the_window_opens_at_the_default_size_on_a_large_screen_and_shrinks_on_a_small_one() {
+        assert_eq!(opening_size(Some((2560.0, 1440.0))), DEFAULT_WINDOW_SIZE);
+        assert_eq!(opening_size(Some((1280.0, 720.0))), (1040.0, 640.0));
+        assert_eq!(opening_size(Some((800.0, 600.0))), (720.0, 520.0));
+        assert_eq!(opening_size(Some((640.0, 400.0))), MINIMUM_WINDOW_SIZE);
+        assert_eq!(opening_size(None), DEFAULT_WINDOW_SIZE);
     }
 }

@@ -136,7 +136,7 @@ fn step_button(
         .rounded(px(6.0))
         .border_1()
         .border_color(cx.theme().border)
-        .bg(crate::input_background(cx))
+        .bg(crate::palette::input_background(cx))
         .when(available, |button| {
             button.cursor_pointer().on_click(move |_event, _window, cx| {
                 let next = stepped(read_offset(&Settings::load(), key), delta);

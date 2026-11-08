@@ -122,7 +122,7 @@ fn draw_pill(pill: Pill) -> impl IntoElement {
             .child(div().child(SharedString::from(LYRIC_LINE)))
             .into_any_element(),
         Pill::Clock => {
-            div().flex().items_center().gap(px(24.0)).child(ring(BATTERY_GREEN)).child("15:05").into_any_element()
+            div().flex().items_center().gap(px(24.0)).child("15:05").child(ring(BATTERY_GREEN)).into_any_element()
         }
     };
     pill_frame(content, PILL_HEIGHT, 14.0, 3.0, PILL_CORNER)

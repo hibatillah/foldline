@@ -4,16 +4,29 @@ use std::{
 };
 
 use gpui::{AnyElement, App, SharedString, Window, div, prelude::*, px};
-use gpui_component::{ActiveTheme as _, accordion::Accordion, h_flex, v_flex};
+use gpui_component::{ActiveTheme as _, Icon, accordion::Accordion, h_flex, v_flex};
 
 /// From a card's bottom to the next section's title.
-const SECTION_GAP: f32 = 26.0;
-/// From a section title to its card.
-const SECTION_TITLE_GAP: f32 = 9.0;
+const SECTION_GAP: f32 = 22.0;
+/// From a section title to its block.
+const SECTION_TITLE_GAP: f32 = 8.0;
+/// The corner radius of a section's bordered block.
+const BLOCK_RADIUS: f32 = 8.0;
 
-/// A section title above its card, in full foreground and regular weight.
-fn heading(title: &'static str, cx: &App) -> gpui::Div {
-    div().text_base().font_weight(gpui::FontWeight::NORMAL).text_color(crate::section_title(cx)).child(title)
+/// The page's description: full title color, regular weight, `text_base`.
+fn description_heading(text: &'static str, cx: &App) -> gpui::Div {
+    div().text_base().text_color(crate::palette::heading(cx)).child(text)
+}
+
+/// A section's title above its block, with its small blue icon when it has one.
+fn section_title(text: &'static str, icon: Option<&'static str>, cx: &App) -> gpui::Div {
+    h_flex()
+        .gap_2()
+        .items_center()
+        .text_base()
+        .text_color(crate::palette::heading(cx))
+        .children(icon.map(|path| Icon::default().path(path).size_4().text_color(crate::palette::accent(cx))))
+        .child(text)
 }
 
 pub type Render = Rc<dyn Fn(&mut Window, &mut App) -> AnyElement>;
@@ -59,9 +72,18 @@ impl Item {
                 .when(!*top_aligned, |row| row.items_center())
                 .justify_between()
                 .gap_4()
-                .child(v_flex().flex_1().min_w_0().gap_0p5().child(div().text_sm().child(title.clone())).children(
-                    description.clone().map(|text| div().text_sm().text_color(cx.theme().muted_foreground).child(text)),
-                ))
+                .child(
+                    v_flex()
+                        .flex_1()
+                        .min_w_0()
+                        .gap_0p5()
+                        .child(div().text_sm().font_weight(gpui::FontWeight::MEDIUM).child(title.clone()))
+                        .children(
+                            description
+                                .clone()
+                                .map(|text| div().text_sm().text_color(cx.theme().muted_foreground).child(text)),
+                        ),
+                )
                 .child(div().flex_none().child(control(window, cx)))
                 .into_any_element(),
         }
@@ -70,34 +92,41 @@ impl Item {
 
 pub struct Group {
     title: Option<&'static str>,
+    icon: Option<&'static str>,
     items: Vec<Item>,
     boxed: bool,
 }
 
 impl Group {
     pub fn new(items: Vec<Item>) -> Self {
-        Self { title: None, items, boxed: true }
+        Self { title: None, icon: None, items, boxed: true }
     }
 
     /// Items drawn straight onto the page, for rows that bring their own border.
     pub fn loose(items: Vec<Item>) -> Self {
-        Self { title: None, items, boxed: false }
+        Self { title: None, icon: None, items, boxed: false }
     }
 
     pub fn titled(title: &'static str, items: Vec<Item>) -> Self {
-        Self { title: Some(title), items, boxed: true }
+        Self { title: Some(title), icon: None, items, boxed: true }
+    }
+
+    /// A small blue icon (an SVG path from `icons`) before the title.
+    pub fn icon(mut self, path: &'static str) -> Self {
+        self.icon = Some(path);
+        self
     }
 
     fn render(&self, window: &mut Window, cx: &mut App) -> AnyElement {
         if !self.boxed {
-            let heading = self.title.map(|title| heading(title, cx));
+            let heading = self.title.map(|title| section_title(title, self.icon, cx));
             return v_flex()
                 .gap(px(SECTION_TITLE_GAP))
                 .children(heading)
                 .children(self.items.iter().map(|item| item.render(window, cx)))
                 .into_any_element();
         }
-        let divider = crate::row_divider(cx);
+        let divider = crate::palette::row_divider(cx);
         let rows: Vec<AnyElement> = self
             .items
             .iter()
@@ -105,22 +134,23 @@ impl Group {
             .map(|(index, item)| {
                 div()
                     .px_4()
-                    .py_3()
+                    .py_3p5()
                     .when(index > 0, |row| row.border_t_1().border_color(divider))
                     .child(item.render(window, cx))
                     .into_any_element()
             })
             .collect();
-        let heading = self.title.map(|title| heading(title, cx));
-        let card = v_flex()
+        let heading = self.title.map(|title| section_title(title, self.icon, cx));
+        // The border closes the last row, so only the rows between two others carry a divider.
+        let block = v_flex()
             .w_full()
-            .rounded(cx.theme().radius)
+            .rounded(px(BLOCK_RADIUS))
             .border_1()
-            .border_color(cx.theme().border)
-            .bg(cx.theme().group_box)
+            .border_color(crate::palette::card_border(cx))
+            .bg(crate::palette::block_fill(cx))
             .overflow_hidden()
             .children(rows);
-        v_flex().w_full().gap(px(SECTION_TITLE_GAP)).children(heading).child(card).into_any_element()
+        v_flex().w_full().gap(px(SECTION_TITLE_GAP)).children(heading).child(block).into_any_element()
     }
 }
 
@@ -158,6 +188,11 @@ pub struct Page {
 }
 
 impl Page {
+    /// The sentence under the breadcrumb that says what the page is for.
+    pub fn description(&self) -> &'static str {
+        self.description
+    }
+
     pub fn new(title: &'static str, description: &'static str, groups: Vec<Group>) -> Self {
         Self { title, description, groups }
     }
@@ -166,12 +201,7 @@ impl Page {
         v_flex()
             .w_full()
             .gap(px(SECTION_GAP))
-            .child(
-                v_flex()
-                    .gap_1()
-                    .child(div().text_xl().font_weight(gpui::FontWeight::SEMIBOLD).child(self.title))
-                    .child(div().text_sm().text_color(cx.theme().muted_foreground).child(self.description)),
-            )
+            .child(description_heading(self.description(), cx))
             .children(self.groups.iter().map(|group| group.render(window, cx)))
             .into_any_element()
     }

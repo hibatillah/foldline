@@ -4,7 +4,7 @@
 use gpui::{AnyElement, App, ElementId, Stateful, div, prelude::*, px};
 use gpui_component::{ActiveTheme as _, h_flex, v_flex};
 
-use crate::{option_border, option_fill};
+use crate::palette::{option_border, option_fill};
 
 /// Columns of a block with many options (the calculation methods).
 pub const COLUMNS: u16 = 4;
@@ -23,14 +23,14 @@ pub fn frame(id: impl Into<ElementId>, selected: bool, padding: f32, gap: f32, c
         .p(px(padding))
         .border_1()
         .border_color(option_border(selected, cx))
-        .rounded(px(10.0))
+        .rounded(px(8.0))
         .bg(option_fill(selected, cx))
 }
 
-/// The radio ring of a single-choice card: an empty ring, or a white ring with a white dot when selected.
+/// The radio ring of a single-choice card: an empty ring, or an accent ring with an accent dot when selected.
 pub fn radio(selected: bool, cx: &App) -> gpui::Div {
     let theme = cx.theme();
-    let ring = if selected { theme.foreground } else { theme.muted_foreground.opacity(0.6) };
+    let ring = if selected { crate::palette::accent(cx) } else { theme.muted_foreground.opacity(0.6) };
     div()
         .flex_none()
         .size(px(RADIO_SIZE))
@@ -40,7 +40,7 @@ pub fn radio(selected: bool, cx: &App) -> gpui::Div {
         .flex()
         .items_center()
         .justify_center()
-        .when(selected, |ring_box| ring_box.child(div().size(px(RADIO_DOT)).rounded_full().bg(theme.foreground)))
+        .when(selected, |ring_box| ring_box.child(div().size(px(RADIO_DOT)).rounded_full().bg(ring)))
 }
 
 /// The top of a card: the radio, then the title in full foreground with an optional description under it.

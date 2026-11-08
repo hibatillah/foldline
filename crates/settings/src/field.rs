@@ -146,7 +146,7 @@ pub fn framed(width: f32, input: Input, cx: &App) -> gpui::Div {
         .rounded(cx.theme().radius)
         .border_1()
         .border_color(cx.theme().input)
-        .bg(crate::input_background(cx))
+        .bg(crate::palette::input_background(cx))
         .child(input)
 }
 

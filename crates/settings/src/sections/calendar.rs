@@ -24,7 +24,7 @@ const GOOGLE_NOTES: [&str; 2] = [
 pub fn page() -> Page {
     Page::new(
         "Calendar",
-        "Connect the calendar that the calendar page shows.",
+        "Connect your calendar and choose how often the notch downloads it again.",
         vec![
             Group::titled(
                 "Google Calendar",
@@ -48,7 +48,8 @@ pub fn page() -> Page {
                     )
                     .description("How often the notch downloads it again, 1 to 1440."),
                 ],
-            ),
+            )
+            .icon(crate::icons::CALENDAR),
             Group::loose(vec![Item::custom(guide)]),
         ],
     )

@@ -15,7 +15,7 @@ const BADGE_KEY: &str = "shalat.badge";
 pub fn page() -> Page {
     Page::new(
         "Shalat",
-        "Prayer times use the location set in General. They show on the Shalat page and in the collapsed pill.",
+        "Prayer times use the location set in General. Pick the calculation method, the reminders and any minute adjustments.",
         vec![
             Group::titled("Calculation method", vec![methods::item()]),
             Group::titled("Asr", vec![asr::item()]),

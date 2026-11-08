@@ -100,7 +100,7 @@ fn city_search_element(id: &'static str, window: &mut Window, cx: &mut App) -> A
             .rounded(cx.theme().radius)
             .border_1()
             .border_color(cx.theme().input)
-            .bg(crate::input_background(cx))
+            .bg(crate::palette::input_background(cx))
             .py(px(3.0))
             .children(rows)
     });

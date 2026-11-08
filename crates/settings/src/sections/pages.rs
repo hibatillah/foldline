@@ -121,6 +121,9 @@ fn page_description(id: &str) -> Option<&'static str> {
         "calendar" => Some("The week and the events of a day you pick."),
         "timer" => Some("Focus and break timer."),
         "stats" => Some("System stats, off until you switch it on."),
+        "clipboard" => Some(
+            "History of the last 7 copies with a preview, paste and copy buttons. Kept in memory only and cleared when the app quits.",
+        ),
         _ => None,
     }
 }
@@ -144,7 +147,7 @@ fn page_list(cx: &mut App) -> AnyElement {
     let order = current_order(&known, settings.get_string(ORDER_KEY));
     let disabled = disabled_pages(&known, settings.get_string(DISABLED_KEY));
     let border = cx.theme().border;
-    let card = cx.theme().group_box;
+    let card = crate::palette::input_background(cx);
     let muted = cx.theme().muted_foreground;
     let drop_highlight = cx.theme().accent;
     let rows = order.iter().enumerate().map(|(index, id)| {
@@ -200,7 +203,7 @@ fn page_list(cx: &mut App) -> AnyElement {
 pub fn page() -> Page {
     Page::new(
         "Pages",
-        "Drag a page to move it, and switch off the ones you do not want. At least one stays on.",
+        "Choose which pages the notch shows and drag them into your order. At least one stays on.",
         vec![Group::loose(vec![Item::custom(|_window, cx| page_list(cx))])],
     )
 }
@@ -208,6 +211,14 @@ pub fn page() -> Page {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_clipboard_page_has_a_description_and_starts_switched_off() {
+        let description = page_description("clipboard").expect("clipboard description");
+        assert!(description.starts_with("History of the last 7 copies"));
+        let pages = known("clock:Clock,clipboard:Clipboard:opt_in");
+        assert_eq!(disabled_pages(&pages, None), strings(&["clipboard"]));
+    }
 
     fn strings(items: &[&str]) -> Vec<String> {
         items.iter().map(|item| (*item).to_owned()).collect()
