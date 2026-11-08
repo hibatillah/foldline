@@ -1,6 +1,6 @@
 # Notch
 
-<img src="assets/branding/logo.png" alt="Notch folded-tab logo" width="96" />
+<img src="assets/branding/tile-stable.png" alt="Notch logo" width="96" />
 
 Notch puts a slim black pill at the top of your Windows screen. Hover over it and it opens into a media player with synced lyrics, a file shelf, a calendar, a focus timer, prayer times, a todo list and system stats. Short messages (volume, notifications, Caps Lock) appear in the pill while they happen.
 
@@ -10,49 +10,55 @@ It is written in Rust and draws straight to the screen with Direct2D: no UI fram
 
 ## Install
 
-Run `notch-<version>-windows-x64-setup.exe`. The installer is not code-signed, so Windows may show a SmartScreen warning. Notch starts with Windows unless you untick that in the installer or in the right-click or tray menu (**Start with Windows**).
+Run `notch-<version>-windows-x64-setup.exe`. The installer is not code-signed, so Windows may show a SmartScreen warning. A stable installer offers **Start Notch when Windows starts** (on by default); you can also switch it in the tray menu (**Start with Windows**) or in the settings window.
 
 Requirements: Windows 10 or 11, 64-bit (tested on Windows 11). The media page needs a player that appears in the Windows media controls.
 
-**Updating.** Notch does not check for new versions. Run the newer `-setup.exe`: the installer sees the installed copy, says which version it has and which it would put in its place, and asks whether to continue. If you say yes, it closes the running notch, replaces it and starts it again. Your settings stay.
+**Updating.** Notch does not check for new versions. Run the newer `-setup.exe`: a stable installer sees the installed stable copy, says which version it has and which it would put in its place, and asks whether to continue. If you say yes, it closes the running notch, replaces it and starts it again. Your settings stay.
+
+**Pre-releases.** A version with a suffix (`0.5.0-alpha.1`, beta, rc) installs to its own folder as `Notch <version>`, with its own Start menu and Add or remove programs entry. It never asks and never replaces another copy, so several can sit side by side. It has no start-with-Windows option. All copies share `%APPDATA%\notch\settings.txt`, and the settings window opens once across copies.
 
 ## What it includes
 
 Pages are what you see when you open the notch; the time sits in the header of every one.
 
-- **Media:** the current track with synced lyrics, line by line. With lyrics off, the collapsed pill fits the song title.
-- **Shelf:** drop files to keep them for a while.
-- **Calendar:** the week and the events of a day you pick.
-- **Timer:** a focus timer.
-- **Shalat** (off until you add it): prayer times for any city, worked out on your PC with no internet. It shows the next prayer and today's times, puts a mark in the collapsed pill 30 minutes before, and shows a short message when a prayer starts. You choose the city, the calculation method and a few minutes of adjustment per time.
-- **Todo:** type a task into the notch, tick it off or delete it. The list is the file `%APPDATA%\notch\todo.txt`.
-- **System stats** (off until you add it): CPU, memory, up to 2 GPUs, up to 3 disks and the network.
-- **Weather** (off until you add it): the temperature now and the next hours for your location, or the next days (click the left side to switch), and an optional message 30 minutes before rain. The location is the one you pick in the notch's settings panel (**Settings** in the right-click menu, General tab), shared with the prayer times.
+- **Media:** the current track with synced lyrics, line by line. While music plays without a lyric line, the collapsed pill shows an animated wave at its right end. With a lyric line, the pill shows the artwork and the line.
+- **Shelf:** drop files to keep them for a while: six per row, two rows at most, so twelve. A full shelf refuses a drop and says so in red.
+- **Calendar:** the whole month with Monday first (today a solid blue circle, the day you pick a light blue one, Sundays red), and all the events of the day you pick, each with its start time ("All day" for an all-day event). Five cards fit; with more, the sixth shows by half and the list scrolls with the wheel, a swipe or a drag, with no scrollbar. A past event leaves today's list and "Done for today" shows when all are over.
+- **Timer:** a focus timer with short breaks and a long break after four sessions; the main button is orange (blue for a break) and Stop is red.
+- **Shalat** (off until you add it): prayer times for any city, worked out on your PC with no internet. It shows the next prayer in large type with a countdown, and the day as a sun arc through the five prayers, filled up to now. It puts a mark in the collapsed pill 30 minutes before, and shows a short message when a prayer starts. You choose the city, the calculation method and a few minutes of adjustment per time.
+- **Todo:** a list that stops at five tasks (done ones count until you delete them). Add is a button at the top right (dimmed at five): press it, type and press Enter. Clear all removes every task. Tick a task off or delete it. The list is the file `%APPDATA%\notch\todo.txt`.
+- **System stats** (off until you add it): five fixed-size cards: CPU, memory and up to 2 GPUs with a load chart (a dotted line and two bars), the network rates and up to 3 disks.
+- **Weather** (off until you add it): the temperature now and the next hours for your location, or the next days (the "Today" / "Week" pill at the top of the left column switches), and an optional alert 30 minutes before rain: a short message in the pill, then a banner that stays while the pointer is on it. Under each hour the page shows the rain in millimetres when there is rain. The location is the one you pick in the settings window (General), shared with the prayer times.
+- **Clipboard** (off until you add it): your last 7 copies (text, links, code, colors and pictures) on the left and a preview of the selected one on the right. Click selects, double-click pastes into the window you were working in (or copies it again and moves it to the front when there is nowhere to paste), right-click removes it with a 5 second Undo, and the Delete, Copy and Paste buttons do the same. Nothing is saved: the history lives in memory only and is gone when Notch quits or when you switch the page off. A copy from a password manager (one that asks not to be recorded) is skipped, text over 100 KB is skipped, and a large picture is kept at a reduced size.
+- **Connected devices** (off until you add it): the battery of the Bluetooth mouse, keyboard, headphones, controller or pen connected to Windows, one ring per device (red at 20 % or less, "On" on a full gray ring when Windows does not report a battery, dimmed with "Off" for a paired device that is switched off). The page is as wide as its devices; with more than five, the five lowest batteries show. It reads Windows when you open the page and once a minute while it shows, and does nothing otherwise. A mouse, keyboard or controller on a 2.4 GHz USB receiver shows too; a Logitech receiver's device shows its battery while it is awake, any other one shows "On". "Bluetooth is off" shows only when no receiver device is there to list.
 
-Activities are what the collapsed pill shows while something happens: volume, brightness, charger and battery, Bluetooth devices, microphone in use, camera in use, copied to the clipboard, Caps Lock, and Windows notifications. A notification opens the pill into a banner with the app's logo for a few seconds; point at it to keep it on screen. A message that was cut short grows taller to show all its text.
+Activities are what the collapsed pill shows while something happens: volume, brightness, charger and battery, Bluetooth devices (connecting, and a low battery at 20 % and 10 % on a connected mouse, keyboard or headphones), microphone in use, camera in use, copied to the clipboard, Caps Lock, and Windows notifications. A notification opens the pill into a card with the app's logo and two lines of the message for five seconds. Point at it to keep it on screen and get two buttons: Dismiss clears it from the Windows notification center, and Open brings up the app, in apps such as WhatsApp at the conversation the notification came from. The rain alert of the weather page offers Dismiss and Open Weather the same way.
 
-While the notch is open, small marks beside the time show what is going on: a wave while music plays, a ring while a focus timer runs, a crossed speaker while the sound is muted, an arrow while Caps Lock is on.
+The collapsed pill reads, left to right: the time at the left edge, then one group at the right edge. The group is the same in the open notch, always in this order: a wave while music plays, an arrow while Caps Lock is on, a crossed speaker while the sound is muted, a timer, the next calendar event, the next prayer (the last three with their countdown, for example `12m`), then, on a laptop, a ring for the battery charge, then a small dot for the camera (above) and the microphone when one is in use. A new mark appears between the time and the ones already there, and nothing to its right moves; marks slide when they come or go. A PC with nothing active shows only the time, centered in a small pill. While the notch is open the page dots sit at the left edge, the time stays in the exact middle, and the same group shows as icons only, followed by the settings gear at the right edge; when the notch is too narrow for every icon, the ones nearest the time are left out, and a click on the timer, event, prayer or wave icon opens its page. While a lyric line shows, the pill is the artwork, the camera and microphone dot beside it when one is in use, the line and a shorter group: muted, Caps Lock and the one countdown with the least time left.
 
 ## Use it
 
 - **Open and close.** Hover over the pill to open it. Move away to close it.
 - **Switch pages.** Scroll the wheel, swipe two fingers on a touchpad, or click a dot. One wheel notch or one swipe moves one page, and scrolling loops from the last page to the first. The notch opens on the page you left.
 - **Media.** Click the buttons. The speech-bubble button turns lyrics on and off.
-- **Shelf.** Drag files onto the notch; it turns blue when it is ready. It shows six places, and the last one shows the overflow count. Double-click a file to open it, drag it out to copy it into another app, and right-click it or press the cross on its corner to remove it from the shelf.
-- **Calendar.** Click a day of the week to list its events. Paste your calendar's iCal address into **Settings > Calendar**, which lists the Google Calendar steps for finding it. Treat the address like a password.
-- **Right-click menu.** Right-click anywhere on the open notch for **Start with Windows**, **Settings** and **Quit Notch**. On the shelf, right-clicking a file still removes it.
-- **Tray menu.** Right-click the tray icon (on Windows 11 it may sit under the `^` menu): **Start with Windows**, **Settings** and **Quit Notch**, the same items as the right-click menu.
-- **Settings in the notch.** **Settings** in the right-click menu opens a panel inside the open notch. Its first tab holds the open page's own settings, followed by General, Behavior and Pages. On Pages, drag a page by its dotted handle to reorder it, double-click it to remove it, click a dashed one to add it. **Done** closes the panel.
-- **Settings window.** **Settings** in the tray menu opens General, Pages, Behavior, Calendar, Shalat and Advanced. General and Shalat both hold the city search for the prayer times and the weather. Toggles apply at once; type a value and press Enter, or click away, to save it.
+- **Shelf.** Drag files onto the notch; it turns blue when it is ready. It shows up to twelve files, six to a row. Pictures show a thumbnail and other files a small drawn document for their type (PDF, text, archive, spreadsheet and so on). Double-click a file to open it, drag it out to copy it into another app, and right-click it or press the cross on its corner to remove it from the shelf.
+- **Calendar.** Click a day of the month to list its events. Paste your calendar's iCal address into **Settings > Calendar**, which lists the Google Calendar steps for finding it. Treat the address like a password.
+- **Settings gear.** The gear at the right edge of the open header opens the settings window. On the shelf, right-clicking a file removes it; the notch has no other right-click menu.
+- **Tray menu.** Right-click the tray icon (on Windows 11 it may sit under the `^` menu): **Start with Windows**, **Settings** (the settings window) and **Quit Notch**.
+- **Settings window.** The gear and **Settings** in the tray menu open it. Settings are edited only there, not inside the notch. The sidebar lists General, Pages, Behavior and Advanced under "Notch", Calendar, Shalat, System stats and Weather under "Page settings", and About at the bottom; each page opens with a sentence on what it is for, then its sections as bordered blocks of rows, each with a description and a control. The sidebar sits on a translucent neutral frame with the app's tile logo on top (blue in a stable build, orange in a pre-release), and the page is one solid card in front of it with its own header ("Settings › page") and the minimize, maximize and close buttons; icons and the page title are blue. On a small display it opens smaller than its default size, never below 720 x 480. **About** shows the version, links to the licenses, the lyrics source and the release notes (not available yet), and opens the settings file and the data folder; its **Check now** button is not available yet. The city search for the prayer times and the weather is in General. Toggles apply at once; type a value and press Enter, or click away, to save it. Which disks and GPUs the stats page shows are chosen under System stats (the lists appear after the stats page has been shown once in the notch); the message before rain is the **Rain alert** switch under Weather (see [docs/reference/settings-keys.md](docs/reference/settings-keys.md)).
 
 [docs/reference/settings-keys.md](docs/reference/settings-keys.md) lists every setting and its key.
 
 | Option | Default |
 | --- | --- |
 | Notifications | On |
+| Device battery warnings | On |
 | Hide when idle | Off |
-| Over a maximized window | Lyrics only |
-| Over a full-screen app | Hidden |
+| Hide the Windows volume popup | Off |
+| Hide Windows notification banners | Off |
+| Over a maximized window | 2 · Lyrics |
+| Over a full-screen app | 0 · Hidden |
 | Open on hover over a maximized window | On |
 | Open on hover over a full-screen app | On |
 | Start with Windows | On in the installer |
@@ -61,7 +67,13 @@ Defaults apply when no choice has been saved. Choices saved with older versions 
 
 ### Over maximized and full-screen windows
 
-Over a **maximized** window and over a **full-screen** app (a game, a video, an F11 window), the notch follows its own choice for each, from hiding to keeping music visible. Set them in **Settings > Behavior**. They take precedence over **Hide when idle**. The same section can stop the pointer from opening the notch over either kind of window.
+Over a **maximized** window and over a **full-screen** app (a game, a video, an F11 window), the notch follows its own choice for each, as a level: 0 Hidden, 1 Activities (messages only), 2 Lyrics (lyrics and messages) or 3 Always visible (the idle pill as well). Every level also shows everything below it. Set them in **Settings > Behavior**. They take precedence over **Hide when idle**. The same section can stop the pointer from opening the notch over either kind of window. The notch hides at once and comes back half a second after such a window leaves the front, so switching between two maximized windows does not flash it. While a screenshot overlay is up (Win+Shift+S, Print Screen, the Snipping Tool, the Xbox Game Bar), the notch is hidden and pointing at the top edge does not open it, whatever these settings say.
+
+### Windows' own popups
+
+**Hide the Windows volume popup** (Settings > General) keeps away the volume box Windows draws above the taskbar, so only the notch shows the volume. It is hidden again each time Windows shows it, and nothing in Windows is changed: when the notch closes or crashes, the popup comes back.
+
+**Hide Windows notification banners** (Settings > General) turns off the banner Windows shows at the bottom right for every app while the notch runs, so only the notch shows notifications. Notifications stay in Windows' notification center, which is where the notch reads them. Each app's previous choice is saved first and put back when you turn the switch off, when the notch quits, or at the next start after a crash. An app that has never shown a notification gets its first Windows banner before the notch can turn it off. [docs/how-to/hide-windows-popups.md](docs/how-to/hide-windows-popups.md) has the details and what is not yet confirmed, such as the brightness popup.
 
 After you unlock Windows or resume from sleep, Notch moves back above app windows and resets hover so the hidden strip can open again. It does not take focus from the app you are using.
 
@@ -69,10 +81,9 @@ After you unlock Windows or resume from sleep, Notch moves back above app window
 
 - Windows only, on the primary display, centered at the top. Other monitors and display changes while running get no special handling, and the display scale is read once at start-up.
 - Microphone and camera show that an app has the device open, not that it is recording. An app that keeps the microphone open while you are muted (Google Meet in a browser) keeps the orange dot. The camera is found through the Windows Frame Server log, so it misses some older DirectShow apps and a camera that was already on at start-up.
-- Notifications show a few seconds after Windows shows its own banner, and only as a banner: there is no list of past ones and no buttons. `notifications.show_text=off` in the settings file leaves the text out.
+- Notifications show about half a second after Windows shows its own banner (a few seconds when Windows numbers a toast in an unexpected way), and only as a card: there is no list of past ones. Open reaches the conversation only when the app put it in the notification (WhatsApp does; Discord does not, so it opens the app). `notifications.show_text=off` in the settings file leaves the text out.
 - The calendar reads an iCal address, not a Google sign-in. An event that crosses a daylight-saving change can show an hour off.
 - The shelf keeps the paths of files, not copies. Dragging a file out copies it and never moves or deletes the original.
-- The open notch is 86 px high for every page, so the calendar lists two events at a time.
 - Brightness follows the laptop panel only.
 - Prayer times are within a few minutes of published tables. Check them against your local authority before relying on them.
 - Notch is at version 0.5: expect rough edges.
@@ -101,14 +112,15 @@ Notch runs on your computer, with no account and no analytics. Everything below 
 
 - What is playing, from the Windows media controls.
 - The text and app of your Windows notifications.
-- Whether the clipboard changed. It never reads what you copied.
+- Whether the clipboard changed. It never reads what you copied, unless you switch the **Clipboard** page on: then it reads copied text and pictures (see below).
 - The paths of the files on your shelf, and the todo list in `%APPDATA%\notch\todo.txt`.
 - Which window is in front, only to tell whether it is maximized or full screen.
 - Caps Lock, through a keyboard hook that looks at that one key and keeps nothing it sees.
 - CPU, memory, GPU, disk and network readings for the stats page.
+- What you copy (text and pictures), only while the Clipboard page is on: the last 7 copies are kept in memory, never written to disk, never sent anywhere, and dropped when Notch quits or the page is switched off.
 - The location you pick (a city). The city list ships with the app and prayer times are calculated on your PC from it; only the Weather page sends the place's coordinates anywhere (see below).
 
-Settings are in `%APPDATA%\notch\settings.txt`. The installer adds a "Start with Windows" entry under your user's `Run` key unless you untick it.
+Settings are in `%APPDATA%\notch\settings.txt`. A stable installer adds a "Start with Windows" entry under your user's `Run` key unless you untick it; a pre-release installer adds none.
 
 **Leaves your computer**
 
@@ -143,4 +155,4 @@ It builds on public APIs and resources:
 
 ## License
 
-Proprietary. Copyright © 2026 hibatillah. All rights reserved; see [LICENSE](LICENSE). Third-party components keep their own licenses, listed in `THIRD-PARTY-LICENSES.txt` and under **Licenses** in the settings window.
+Proprietary. Copyright © 2026 hibatillah. All rights reserved; see [LICENSE](LICENSE). Third-party components keep their own licenses, listed in `THIRD-PARTY-LICENSES.txt` and under **Licenses** on the settings window's About page.

@@ -9,7 +9,7 @@ The project is proprietary and sold (see `LICENSE`), so every dependency must al
 - One weak-copyleft crate: `option-ext` 0.2.0 (MPL-2.0), reached through `gpui-component-assets`, `rust-embed` and `dirs`. Unmodified, it is allowed in a closed-source app if the MPL text ships and recipients are told where its source is; both are in `THIRD-PARTY-LICENSES.txt`. Modifying its files would require publishing the changed files. It disappears if the settings window does.
 - No GPL, LGPL or AGPL crate is in the build.
 
-Permissive licenses still require their notices: the license texts ship in `THIRD-PARTY-LICENSES.txt` ([cut a release](../how-to/cut-a-release.md#third-party-licenses)), which also carries the credits that are not crates (`scripts/third_party_extra.txt`: GeoNames CC BY 4.0, the Lucide icons, the Geist font, the MPL source notice). Re-check after changing `Cargo.lock`:
+Permissive licenses still require their notices: the license texts ship in `THIRD-PARTY-LICENSES.txt` ([cut a release](../how-to/cut-a-release.md#third-party-licenses)), which also carries the credits that are not crates (`scripts/third_party_extra.txt`: GeoNames CC BY 4.0, the Lucide icons (the settings window ships nine as SVG files in `crates/settings/assets/icons`), the Geist font, the MPL source notice). Re-check after changing `Cargo.lock`:
 
 ```
 cargo install cargo-license --locked    # once

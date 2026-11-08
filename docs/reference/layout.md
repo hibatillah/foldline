@@ -14,14 +14,14 @@ are in device-independent pixels (multiply by the display scale when drawing). T
           \________________________________________________/     top edge of the screen
           |                                                |
           |  10 px padding top                             |
-          |  [== o o o]               (o) |||  18:41       |     header, 16 px high
-          |   page dots (left)     status marks  time      |     marks and time sit at the right edge
+          |  [==ooo]    18:41    [~][^][t][O][.] [gear]   |     header, 16 px high
+          |  page dots  clock    the group, icons only, gear|     page dots left, clock in the middle, group and gear at the right edge
           |  10 px gap                                     |
           |  +------------------------------------------+  |
           |  |                                          |  |
     16 px |  |  THE PAGE: only this area is its own     |  | 16 px
           |  |  width  = PageSizes.expanded.width       |  |
-          |  |  height = 86 (chrome::CONTENT_HEIGHT)    |  |
+          |  |  height = 86 (DEFAULT_CONTENT_HEIGHT)    |  |
           |  |  drawn in Frame::bounds                  |  |
           |  +------------------------------------------+  |
           |  14 px padding bottom                          |
@@ -31,45 +31,142 @@ are in device-independent pixels (multiply by the display scale when drawing). T
     pill height = 86 + 50 = 136       (10 + 16 + 10 + 86 + 14)
 ```
 
-- The header belongs to the host, on every page: the page dots (the long one is the open page) on the left, and at the
-  right the status marks (the music wave, the timer ring, muted speakers, Caps Lock) and the time. The header has no settings button; Settings is in the right-click menu.
-- Every page has the same 86 px of content height, whatever it asks for. Content that is taller is clipped, so lay a
-  page out for 86 px (the stats tiles and the calendar do).
+- The header belongs to the host, on every page: the page dots (the long one is the open page) at the left, the clock in
+  the middle, and at the right the group as icons only (the same items and order as the idle pill) and the gear at the
+  right edge.
+  A click on a status icon opens its page and a click on the gear opens the settings window; both are described under
+  [the open header](#the-open-header).
+- A page content is 86 px high unless the page asks for more (`PageSizes::expanded.height`, at most 220 px, `MAX_CONTENT_HEIGHT` in `page.rs`: the shelf and
+  the calendar do). Content that is taller than what the page asked for is clipped.
 - A page cannot draw into the header or the padding.
 
 **Collapsed**, the pill is 33 px high (`RESTING_HEIGHT`, plus 3 px of bottom padding) and at least 150 px wide
-(`RESTING_MIN_WIDTH`), and one of four things fills it:
+(`RESTING_MIN_WIDTH`), except the empty idle pill below, and one of four things fills it:
 
 ```
-  nothing happening     music playing        activity or timer      notification banner
-     _________        ____________________    __________________    ____________________
-    /  18:41  \      / (page draws it) [o] \  / (activity draws) \  | [D] Rafi - Discord  |
-    \_________/      \____________________/  \__________________/  |  Deploy is green... |
-    host: the time    the media page, plus    a transient takes      \____________________/
-    in a 150 px pill  an optional badge       the pill for a moment  an activity opens the pill
-                      at the right            (volume, Caps Lock)    into a card, 48 to 70 px high (400 px wide)
+  nothing claims the pill   lyrics on                transient              notification banner
+  (idle row)                (media claims the pill)  (volume, Caps Lock msg)
+   ____________________      ____________________     __________________    ____________________
+  / 18:41  [12m][ring][.] \  / [A] lyric line [t] . \  / (activity draws) \  | [D] Rafi - Discord  |
+  \____________________/    \_____________________/  \__________________/  |  Deploy is green... |
+  clock, group              artwork, line, group,    replaces the content   \____________________/
+                            dots
 ```
 
-- A page answers `priority(Mode::Resting)` to claim the collapsed pill; with no answer the host shows the time.
-- An activity or a page can add a **badge** at the right end (the page draws to the left of it), a **transient** that
-  replaces the pill's content for a moment, or, for an activity, a **banner** that opens the pill into a card
-  (`presence()`; see [adding-an-activity.md](../how-to/add-an-activity.md)).
-- The time is one element: it glides from the middle of the collapsed pill to the right end of the header as the notch
-  opens, and stays visible the whole way.
+The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
+
+```
+  12   clock   24 or more   group, right-anchored, 8 between items                   12
+  edge 14 pt                [wave][Caps][muted] [timer][event][prayer] [ring][dots] edge
+```
+
+- **Clock:** at the left edge, 12 px from it, 14 pt Medium Geist (`clock.rs`).
+- **Group:** one run anchored to the right edge, left to right: the badges by `header_status_rank` (lowest first: music
+  wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5), then the battery ring, then the dot column. The ring and
+  the dots are not ranked; they are always the right end. A new item joins between the clock and the items already
+  there, so nothing right of it moves (`pill_row.rs`). The rank list is in [design-rules.md](design-rules.md#collapsed-pill).
+- **Badges:** timer, event and prayer draw an icon and text; the wave, muted and Caps Lock draw an icon only. With two or
+  more badges that have a short form (`Page::short_presence_width`), each takes it ("12m", "Asr 24m"); alone, a badge
+  draws its longer form.
+- **Battery ring:** 14 px, laptop only; a PC has no ring, no weather icon and no other item in its place
+  (`activities/battery.rs`).
+- **Dot column:** 6 px wide, camera over microphone; a microphone alone is a 5 px dot (see [activities.md](activities.md)). It reserves no width: with no dot
+  showing the rest of the group fills its place, and when a dot appears everything left of it moves by its width and an
+  8 px gap.
+- **Gaps:** 8 px between two items of the group, at least 24 px between the clock and the first item, 12 px from the
+  pill's edge to the clock and to the last item. The pill is as wide as its row, at least 150 px; a wider minimum leaves
+  the extra room between the clock and the group.
+- **The empty pill:** with no item at all (a PC with nothing active) the clock is centered and the pill hugs it with
+  `EMPTY_SIDE` (28 px) on each side, narrower than the 150 px minimum. When anything appears the clock glides to the left
+  edge and the pill grows.
+- **Every item has its own spring** (`host/notch/row_motion.rs`: one for the idle clock, one for the header clock, one
+  per item of the pill's row and of the header's group). An item joining or leaving, or a dot appearing, slides its
+  neighbours and never snaps; a new item starts at its place and only the items already shown move. The springs settle,
+  so no timer keeps running.
+- **A page claims the pill** (`priority(Mode::Resting)`): the media page does it only while a lyric line shows. With a
+  lead (`Page::resting_lead_width() > 0`, the media page's 20 px artwork) the row reads
+  (`host/claimed_row.rs`):
+
+  ```
+  12   lead   10   dots   24   page content   24   group                             12
+  edge artwork      6 px        lyric line          muted, Caps Lock, one countdown   edge
+  ```
+
+  The dots and their 10 px gap exist only while a dot shows and take no width otherwise; the line starts 24 px after
+  the dots, or 24 px after the artwork without a dot. `Frame::lead_gap` is the room the page keeps free after its lead:
+  24 px, or 10 px, the dot column and 24 px while a dot shows. The host moves it on a spring
+  (`Springs::claim_lead_gap`), so the line slides when a dot comes or goes and the group keeps the right end. A page's
+  `sizes().resting_width` is the lead plus the content, without the lead gap, the group, the dots and the pill's edges;
+  the host adds them. The line is trimmed so both 24 px gaps hold. The
+  group is muted, then Caps Lock, then at most one countdown (the one with the least time left,
+  `Page::countdown_seconds`), each in its long form (icon and text). There is no clock, no battery ring and no music
+  wave; the artwork and the line already say that music plays. A claiming page without a lead keeps its content at the
+  left edge, and its dots end the row, 8 px after the group and 12 px from the edge.
+- **The dot column** is the right end of the idle row and sits beside the artwork on a lyric pill; it slides with its
+  own spring when the pill changes between the two.
+- With no page claiming, the host shows the idle row.
+- An activity or a page can add a **badge** to the group, a **transient** that replaces the pill's content for a moment,
+  or, for an activity, a **banner** that opens the pill into a card, or a **companion** (the battery ring and the
+  camera and microphone dots; `presence()`, see [add-an-activity.md](../how-to/add-an-activity.md)).
+  Only activities place companions. The music wave is a `Presence::Badge` from the media page; the host treats a badge
+  of a page with `resting_lead_width() > 0` as the wave.
+- The time is one element: it glides from its place in the collapsed row to the middle of the header as the notch opens,
+  and stays visible the whole way. The ring and the dot column travel with it to their places in the header's group.
+
+### The open header
+
+```
+  page dots   12+   clock (exact middle)   14+   group, icons only, 10 apart                          10   gear
+  at the left                                    [wave][Caps][muted] [timer][event][prayer] [ring][dots]    14 px
+```
+
+(`header_row` in `crates/notch/src/host/pill_row.rs`; the items and their clicks are in `host/notch/header_row.rs`.)
+
+- **Left:** the page dots start at the header's left edge.
+- **Right:** the gear (14 px) is the last item, at the header's right edge. The group ends 10 px before it, in the idle
+  row's order, 10 px between items: the icons by rank (the activities' and pages' header status marks,
+  `header_status_width` and `draw_header_status`; icons only, never text), then the battery ring, then the dot column.
+  The dot column reserves no width here either. Every group item's header place is the gear's width and 10 px left of
+  the edge, so the group slides there as the notch opens; the gear has its own spring in the header row.
+- **Middle:** the clock is in the exact middle of the header and never moves. An icon that would come nearer than 14 px
+  to it is not shown: the icons are dropped from the clock side (lowest rank first) until the rest fit
+  (`HeaderRow::dropped_icons`). The battery ring, the dot column and the gear are never dropped.
+- **Width floor:** the open notch is never narrower than the timer page's open width: its 290 px plus the 32 px of side
+  padding, 322 px (`open_min_width` in `host/notch/layout.rs`). When the header needs more, that is the floor instead:
+  the clock plus twice the wider of its two sides (the page dots and 12 px, or 14 px, the ring, the dot column and
+  the gear with their gaps) plus the side padding (`header_min_width`; 285 px with nine pages). With the timer page
+  switched off only the header counts. A page narrower than the floor opens at it; a wider one (the 507 px shelf at
+  539) sets the width itself.
+- **Clicks** land in a 24 px square around each shown icon, without moving the 10 px gap; where two squares meet, the nearer icon
+  wins (`hit_item`). A click on the timer, event, prayer or wave icon opens its page (`header_status_page`: Timer,
+  Calendar, Shalat, Media). Muted, Caps Lock, the ring and the dots take the click and do nothing. A click that lands on
+  an item never reaches the page below it.
+- **The gear** is drawn as a hexagon around a ring (`Icon::Gear`), `#8c8c94`, and shows on hover and never in the idle
+  pill. It is not an activity and has no rank. A click on it starts the settings window (`notch-settings.exe`) through
+  `host/settings_launcher.rs`, the launcher the tray's **Settings** item uses.
 - By default, over a maximized window the pill hides to a strip unless lyrics play, and over a full-screen window the
   notch is off the screen; see
-  [architecture.md](../explanation/architecture.md#hiding).
+  [architecture.md](../explanation/architecture.md#hiding). Hiding is immediate, but the notch comes back only after the
+  window in front has stopped covering the screen for 500 ms (`WINDOW_REVEAL_DELAY_MILLISECONDS` in
+  `host/notch/hiding.rs`), so switching between two maximized windows does not flash it. A screenshot overlay in front
+  (`ScreenMode::Capture`) hides the notch entirely, banners included, and the pointer does not open it, whatever the
+  settings say; it comes back through the same 500 ms wait. The music wave badge keeps the pill up under Hide when idle but does not count as an activity over a maximized window.
 
 **Where to change what:**
 
 | To change | Edit |
 | --- | --- |
 | padding, header height, the gap, the dots, the content height | `crates/notch/src/host/chrome.rs` |
-| the time and the collapsed pill's minimum width | `crates/notch/src/host/clock.rs` |
+| the time (14 pt Medium) and the collapsed pill's minimum width | `crates/notch/src/host/clock.rs` |
+| the idle row's and the open header's positions and gaps (pure math) | `crates/notch/src/host/pill_row.rs` |
+| the claimed pill's row (lead, content, group, dot column; pure math) | `crates/notch/src/host/claimed_row.rs` |
+| the idle row's state and drawing: the group, the ring, the dot column | `crates/notch/src/host/notch/resting_row.rs` |
+| the springs of every row item and of the clocks | `crates/notch/src/host/notch/row_motion.rs` |
+| the open header's items: the gear, the icons and what a click on them does | `crates/notch/src/host/notch/header_row.rs` |
 | which page shows, swiping, hover, the springs, hiding | `crates/notch/src/host/notch/` (`animation.rs`, `hover.rs`, `hiding.rs`, `layout.rs`) |
-| maximized and full-screen detection | `crates/notch/src/host/screen_mode.rs` |
+| maximized, full-screen and screenshot-overlay detection | `crates/notch/src/host/screen_mode.rs` |
 | the tray menu | `crates/notch/src/host/tray.rs` (the items), `crates/notch/src/host/window.rs` (what they do) |
-| the settings window | `crates/settings/src/sections/` (one file per section), `crates/settings/src/field.rs` (toggles and text fields); [adding-a-setting.md](../how-to/add-a-setting.md) |
+| the settings window | `crates/settings/src/sections/` (one file per section), `crates/settings/src/field.rs` (toggles and text fields); [add a setting](../how-to/add-a-setting.md) |
 | start with Windows | `crates/notch/src/host/startup.rs` (the tray item), `crates/settings/src/startup.rs` (the window's switch), `installer/notch.iss` (the installer's choice) |
 | a page's content and size | that page's folder in `crates/notch/src/pages/` |
 | register a page | `crates/notch/src/pages/mod.rs` |

@@ -31,6 +31,10 @@ The run used `scripts/perf.sh` (release build) and passed every baseline gate.
 Notch settled after startup and after the animations. Normal pages were restored after the test.
 This baseline did not measure music playback, live lyrics, held hover or swiping.
 
+A new run is pending: `scripts/perf.sh` now also checks the devices page (`NOTCH_PAGES=shelf,devices`), the stats page
+(`NOTCH_PAGES=stats`) and, with `--screen-mode`, a maximized test window. Those scenarios have no recorded numbers yet.
+The `device_battery` activity adds a WinRT `DeviceWatcher` on a thread of its own that sleeps until Windows pushes a battery change; it has no timer and no polling, and its idle cost has not been measured yet.
+
 ## Run-to-run variation (2026-11-06)
 
 Six runs of `scripts/perf.sh` on the same PC with other apps open: three on commit `cda8691` and three on the working tree
@@ -79,7 +83,7 @@ window opened; CPU is process CPU time over the following 10 s.
 Before the recovery fix, the main window had lost `WS_EX_TOPMOST` while its drop-target overlay retained it.
 Targeted checks deliberately demoted the running window, then tested hover handoff and simulated lock/unlock
 notifications. Both restored topmost, opened the notch and preserved foreground focus.
-The physical lock/unlock cycle was not tested; see the manual checklist in [testing.md](../how-to/test-and-snapshot.md).
+The physical lock/unlock cycle was not tested; see the manual checklist in [test and snapshot](../how-to/test-and-snapshot.md).
 
 ## Repeat the checks
 
@@ -87,4 +91,4 @@ Run `scripts/perf.sh` from Git Bash for the baseline, or add `--extended` for he
 For live lyrics, play a track with synced lyrics and use `--lyrics-only`.
 
 The check moves the pointer and replaces the running Notch. Leave the mouse alone during measurement, then run
-`scripts/reload.sh` to restore normal pages. See [testing.md](../how-to/test-and-snapshot.md) for the gates and workload details.
+`scripts/reload.sh` to restore normal pages. See [test and snapshot](../how-to/test-and-snapshot.md) for the gates and workload details.

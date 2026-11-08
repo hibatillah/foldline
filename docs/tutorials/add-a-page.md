@@ -121,7 +121,7 @@ What each part does:
   header. Ask for `DEFAULT_CONTENT_HEIGHT` unless the content needs more; the cap is `MAX_CONTENT_HEIGHT`.
 - `sizes` is the size you want, in device-independent pixels. Ask again whenever your content changes size; the host
   asks after every event and animates the change.
-- Resting content uses `RESTING_HEIGHT` (33 DIP); the host adds 3 DIP below it and enforces a minimum collapsed width of 150 DIP.
+- Resting content uses `RESTING_HEIGHT` (33 DIP); the host adds 3 DIP below it and enforces a minimum collapsed width of 150 DIP. `resting_width` is your content only: when a page claims the pill, the host adds 12 DIP at each edge and room for the dot column and for any badges. A page that draws something at its left end can answer `resting_lead_width()` and read `Frame::lead_gap` for the gap the host keeps after it; the media page does this (see [page API](../reference/page-api.md)).
 - `draw_resting` and `draw_expanded` draw your content. Multiply sizes by `frame.scale` to get device pixels, and fade
   your colors with the `opacity` you are given so the content follows the open and close animation.
   During navigation, each visible page keeps its requested width in `frame.bounds` and `frame.expanded.width`.
@@ -133,8 +133,13 @@ What each part does:
   changes nothing. Never write settings from it.
 - `on_timer` runs when a timer from `context.set_timer` fires. Request a repaint when something visible changed.
 - `on_pointer` receives pointer events while your page is visible, including beside another page during a swipe.
-- A right-click on the open notch opens the host's menu (Start with Windows, Settings, Quit Notch). A page that uses right-click itself answers `uses_right_click` for those points and then gets `PointerEvent::SecondaryReleased`; the shelf does this for its files.
+  The collapsed pill sends none to pages: a page whose `presence()` is a banner gets the pointer over it in
+  `on_presence_pointer`, and `context.request_open()` from there opens the notch on the page (the rain alert's Open
+  Weather button).
+- A page that uses right-click answers `uses_right_click` for those points and then gets `PointerEvent::SecondaryReleased`; the shelf does this for its files. A right-click elsewhere does nothing.
   Positions are in the same space as its own shifted `frame.bounds`.
+- A page with a scrolling area answers `claims_scroll` for the points where the vertical wheel or a touchpad swipe scrolls it and then gets `PointerEvent::Scrolled { notches }` (positive moves toward later content, one wheel notch is 1.0); the calendar's event list does this. Elsewhere the wheel still switches pages, and a horizontal swipe always does.
+- A page that must not hold anything while it is off (the clipboard page) answers `on_enabled_changed`, which runs at start and whenever the settings window switches the page. A page that wants a Windows message (the clipboard) calls `context.listen_to_clipboard()` in `on_start` and reads it in `on_system_message`; only a page that is on gets it. `context.request_close()` closes the notch.
 - A page that takes typing (the todo page's add field) calls `context.take_keyboard()` from a click, never on hover,
   and gets `on_key` with a `KeyInput` until it calls `context.release_keyboard()`. The notch stays open meanwhile. When
   the user clicks another window first, the page gets `on_keyboard_lost` and stops editing. `ui::TextField` handles

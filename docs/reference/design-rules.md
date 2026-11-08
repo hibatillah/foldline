@@ -9,37 +9,90 @@ new visual decision is added here with its reason, in the same change.
 
 ## Collapsed pill
 
-Left to right: battery ring, clock, static activities, countdown activities. The pill is as wide as its content, never
-narrower than ring and clock (150). The order is fixed and never re-sorts by time left.
+Left to right: clock, group. The clock is at the left edge; everything else is one group anchored to the right edge:
+the marks of what is going on, then the battery ring, then the camera and microphone dots. Positions and gaps are in
+[layout.md](layout.md).
 
-- **Persistence rule:** within a group, the longest-lived item sits leftmost, next to the clock, and the most volatile
-  at the outer end, so an item that appears or leaves moves only the ones outside it. Frequent and short-lived means
-  volatile.
-- **Static group, leftmost: music.** Its moving wave stays away from the ticking countdowns. Muted is on-demand, and Caps
-  Lock toggles within seconds, so both follow, Caps Lock last.
-- **Countdown group, leftmost: timer.** It lasts the whole session. A prayer shows only in its reminder window, and
-  events are more frequent with a shorter window, so the event is outermost.
-- **Countdowns after statics:** they change every minute, so they sit at the edge.
-- **Music shows only its wave**, alone or with others; the wave already says something plays, and the title is one
-  hover away.
-- **Several at once:** event and prayer shrink to a short countdown ("12m", "Asr 24m"); alone, each shows its longer form.
-- **Camera and microphone** are 6 px dots in one column 6 px right of the battery ring: camera on top, microphone below.
-  A dot alone keeps its slot, since both dots share a shape and position carries half the meaning.
+- **The clock is at the left edge** whenever the group has anything in it, 14 pt Medium. It is the only thing the idle pill
+  has to say, so it is set larger than a mark.
+- **The group is right-anchored and its order is fixed, left to right:** music wave, Caps Lock, muted, timer, event, prayer,
+  battery ring, dots. The pill and the open header use one order, `header_status_rank`: wave 0, Caps Lock 1, muted 2,
+  timer 3, event 4, prayer 5, with the lowest rank nearest the clock. The ring and the dots are not ranked; they stay at
+  the right end. A fixed order puts each mark where the eye looks for it every time.
+- **A new item appears between the clock and the ring, and nothing right of it moves.** The right end stays still, so the
+  marks the user has already read do not shift.
+- **Persistence rule:** among the ranked marks, the longest-lived sits nearest the clock and the most volatile nearest the
+  ring, so a mark that appears or leaves moves only the ones outside it. Frequent and short-lived means volatile.
+- **The dot column reserves no width.** With no dot showing the group fills its place; when a dot appears everything left
+  of it slides by the dot and one gap. A reserved empty column reads as a hole in the pill.
+- **Everything slides, nothing snaps.** Every item has its own spring (`host/notch/row_motion.rs`), so an item that joins
+  or leaves, or a dot that flickers, moves its neighbours visibly and the user can tell what changed. The springs settle
+  and stop, so the pill costs no CPU at rest.
+- **The empty pill centers the clock.** A PC with nothing active shows only the time, centered, in a pill that hugs it
+  with 28 px on each side (narrower than the 150 px minimum, which holds everywhere else). The clock glides to the left
+  edge and the pill grows when anything appears.
+- **Idle shows icon and text for timer, event and prayer** ("12m", "Asr 24m"); the wave, muted and Caps Lock are icon only.
+  Two or more texts at once use the short form; alone, each shows its longer form.
+- **A badge reports exactly its content width** (icon, 4 px, text; the icon alone for the wave, muted and Caps Lock), with no padding before or after, so the 8 px between two items is the visible gap. A message or banner keeps its own padding.
+- **Music while idle is only the wave**, as a group item: no artwork and no title. Playing music keeps the pill up under
+  Hide when idle.
+- **Muted and Caps Lock are icon-only group items** while their state is on, in the pill and in the open header. Their
+  message (icon and text) still takes over the pill when it fires; the icon returns when the message ends.
+- **Battery ring:** 14 px, laptop only. The arc is the charge. A PC shows nothing in its place, because a ring that never
+  changes says nothing; there is no weather icon, prayer or day ring, and no other stand-in.
+- **Camera and microphone** are 6 px dots in one column, camera on top, microphone below, 3 px apart. A dot alone keeps its
+  row, since both dots share a shape and position carries half the meaning. The microphone alone is the exception: a 5 px
+  dot in a 15 px column (2 px padding above and below, no gap, the 6 px camera slot kept empty above it), 0.5 px left of
+  the column's middle as the design draws it. The camera alone keeps its 6 px dot in the same 15 px column.
 
 | Gap between | px |
 | --- | --- |
-| ring, clock, activity group | 24 |
-| two activities | 8 |
+| two items of the group | 8 |
+| the clock and the first item of the group (at least) | 24 |
 | an activity's icon and its text | 4 |
-| pill edge and first or last item | 12 |
+| pill edge and the clock or the last item | 12 |
+| the empty pill's edge and its clock | 28 |
+
+## Open header
+
+- Left to right: the page dots at the left edge, the clock in the exact middle, then the group and the gear at the right
+  edge, 10 px between the group's items and before the gear. The group is the pill's group (same items, same order) as
+  icons only. The clock glides from its place in the pill; the ring and the dots travel with it.
+- **The clock is alone and never moves.** It stays in the exact middle of the header whatever shows beside it, so it reads
+  first. At least 12 px separate it from the page dots and at least 14 px from the nearest icon.
+- **Icons with no room are dropped, nearest the clock first** (the wave, then Caps Lock, and so on by rank). The battery
+  ring, the dots and the gear always show; the header's least width keeps room for them. Dropping keeps the clock still;
+  the icons nearest the clock are the steadiest states and the least urgent to see on hover.
+- **The header's least width** is the clock plus twice the wider side: the page dots and 12 px, or 14 px, the ring, the
+  dots and the gear with their gaps. With nine pages that is 285 px.
+- **The open notch is never narrower than the timer page's open width** (or its header, when that needs more), so
+  every page opens at one shared least width instead of one squeezed around the header. A page wider than that floor
+  sets the width itself.
+- **Icons only, never text** (no "12m" on hover). The icons keep the size their activity or page gives them.
+- **A click on an icon opens its page** (timer, event to Calendar, prayer to Shalat, wave to Media). Muted, Caps Lock, the
+  battery ring and the dots take the click and do nothing, so a click near them never reaches the page below. The hit
+  area is 24 px around the icon, without widening the 10 px gap.
+- **The gear** is a hexagon around a ring (circumradius 9.5 and ring radius 3 in a 24 px box), 14 px, `#8c8c94`, the
+  last item at the right edge, 10 px after the group. It shows on hover and never in the idle pill, and opens the
+  settings window. It is not an activity and has no rank. The page dots keep the left edge to themselves, so the page
+  the user is on reads first; the gear sits at the right end, where controls usually are, and the group slides left by
+  its width and 10 px as the notch opens.
 
 ## Lyrics on
 
-- The artwork (20 px) replaces the battery ring and the current line replaces the clock, at the width the line needs,
-  trimmed at 280 px, or 200 px when activities share the pill. The time stays in the header when the notch opens.
-- Camera and microphone dots stay right of the artwork.
-- Static and countdown activities follow the line in their usual order; music's wave steps aside, since the artwork and
-  the line already say it.
+- The pill reads artwork (20 px), the dots only while a dot shows, lyric line, group, with 12 px at both edges, 10 px
+  between the artwork and the dots, 24 px before the line (after the dots, or after the artwork without a dot) and
+  24 px between the line and the group. The dots sit beside the artwork because the line takes the middle and the
+  group the right end; next to the artwork they are always at the same spot of a lyric pill. The artwork is the media
+  page's `resting_lead_width()`; the host passes the room after it (the dots, their 10 px and the 24 px) in
+  `Frame::lead_gap`. The line is trimmed so both 24 px gaps hold. The time stays in the header when the notch opens.
+- The line's width sets the pill's width, within the page's limits (`crates/notch/src/pages/media/resting.rs`).
+- There is no clock, no battery ring and no wave while the line shows: the artwork and the line already say that music plays.
+- The group follows the line in its long form (icon and text): muted, then Caps Lock, then only one countdown, the one
+  with the least time left (`Page::countdown_seconds`). One countdown keeps the line wide; the nearest is the one the user
+  will act on.
+- The dots slide in and out like everything else: the line slides right by the dot and its 10 px (its own spring) and
+  the pill grows; the group stays at the right end.
 
 ## Short messages and notifications
 
@@ -54,23 +107,275 @@ narrower than ring and clock (150). The order is fixed and never re-sorts by tim
   missing sender cannot leave a dangling mark. A sender that is empty or only whitespace counts as missing and the
   app name takes its place, in white.
 - Hover shows two buttons: Dismiss (secondary: translucent white fill, white text) and Open (primary: white fill,
-  black text). A click on the card does nothing, so it never opens an app by accident.
+  black text). A click on the card does nothing, so it never opens an app by accident. The card shows for 5 s, stays
+  while the pointer is on it and goes 1.5 s after the pointer leaves; the rain alert's banner follows the same rules
+  with Dismiss and Open Weather.
 - Open focuses the sending app and removes the notification, as a click on the native banner does; Dismiss only
   removes it. With the text hidden (privacy mode) Open still names the app.
 
 ## Settings window
 
-- **Three layers, dark theme:** the content is near black (`#0e0e0e`); the sidebar and the cards in the content share one
-  lighter gray (`#1c1c1c`); an input and a selected option sit one step above the card (`#262626`, `#2a2a2a`). Card
-  borders (`#2c2c2c`) and row dividers (`#262626`) are one step from their surface. The light theme keeps the order:
-  content `#e8e8e8`, sidebar and cards white. The colors live in `Palette` in `crates/settings/src/main.rs`.
-- **Section titles** are the full foreground (`#ffffff` dark, `#0a0a0a` light), regular weight, above the card; muted gray is for
-  descriptions only. A card's bottom to the next title is 26 px, a title to its card 9 px.
-- **Option cards follow shadcn's radio card:** the radio ring sits inside the card at the top left, left of the title
-  (semibold, full foreground) with the muted description under it; the picture follows. Selected: lighter fill, bright
-  border, white ring with a white dot. Unselected: darker fill, quiet border, empty ring. A multi-select option uses a
-  checkbox in the same place. Cards sit in equal-width columns (`card::grid`): four for the calculation methods, two for
-  the rest; a partial last row keeps the cell width and starts at the left.
+The picture of the redesigned window leads where it differs from earlier text. The colors are `Palette` in
+`crates/settings/src/palette.rs`, which has tests for their contrast.
+
+- **A translucent neutral frame, the sidebar on it, and one solid card.** The window's frame is one flat neutral color
+  over a blurred backdrop (`WindowBackgroundAppearance::Blurred`, Windows acrylic), so the desktop shows through frosted;
+  there is no tint, gradient or glow, and the sidebar sits on it with no card and no solid fill. Dark theme: `#101010` at
+  64 %. Light theme: white at 35 %. `NOTCH_SETTINGS_SOLID=1` makes it opaque and neutral (`#141414` dark, `#eeeeee`
+  light). The content is the only solid surface: one rounded (8 px), thinly bordered card inset 8 px from the top, right
+  and bottom edges. Dark theme: card `#161618`, card border `#2a2a2e`, header `#1b1c21`, a section's block `#202022`,
+  buttons and inputs `#151517` with a `#303035` border, row divider `#2c2c30`, titles `#f4f6fa`, muted text `#a3a3aa`.
+  Light theme: card `#ffffff`, border `#d9dde6`, block `#f8f9fc`, muted `#4b4d55`, titles `#0b0d14`. A translucent frame
+  with one solid card keeps the content the brightest, steadiest thing in the window. The contrast tests keep titles at
+  7:1 and muted text at 4.5:1 on the card and the blocks; on the frame they keep titles at 4.5:1 over a pure white desktop
+  (dark theme) and 7:1 over a mid-grey one (light theme), and muted text at 3:1 over a bright wallpaper (`#c8c8c8`). Over a
+  pure white desktop the dark theme's muted group labels fall below 3:1, because the frame stays within 55 to 65 %
+  opacity.
+- **One blue accent**, from the logo's blue: dark `#4c9aff`, light `#2563eb`. Every sidebar icon is blue (selected or
+  not), the active part of the breadcrumb, a section's small icon, switches that are on, checkboxes, links, focus rings and
+  the selected option card's border and radio. Text stays white or muted. The tests keep the accent at 4.5:1 as text on
+  the card and 3:1 as an icon on a block; as an icon on the frame it is held at 2:1 (over a bright wallpaper in the dark
+  theme, over a mid-grey desktop in the light theme).
+- **The sidebar** is 200 px wide and opens with the brand strip (58 px high, 6 px of it top padding so the tile is 18 px from the window top and 18 px from the left edge; the squared tile logo, 28 px, then "Notch" in `text_base`
+  semibold and the version in `text_xs`, muted), then two labelled groups (`text_xs`, muted): "Notch" (General, Pages, Behavior, Advanced) and
+  "Page settings" (Calendar, Shalat, System stats, Weather), with **About** at the bottom, without a label. The empty sidebar (the strips between and below the items, at their sides, and the group labels) moves the window like the header; the items never do. Items are 32 px
+  high, `text_sm` text, a 14 px blue icon; the selected one has a rounded (8 px), faint white fill. The tile is blue in a
+  stable build and orange in a pre-release build, in both themes. The icons are General the hex nut (the same drawing as
+  the notch's gear), Pages Lucide "layers", Behavior "puzzle", Calendar "calendar-days", Shalat "moon-star" (the shalat
+  icon in the notch too), System stats "chart-column", Weather "cloud-drizzle", Advanced "wrench" and About "info". They
+  are SVG files in `crates/settings/assets/icons`, served by `crates/settings/src/icons.rs`; the Lucide ISC notice is in
+  `THIRD-PARTY-LICENSES.txt`.
+- **The card's header** is 36 px with its own fill, a little lighter than the card, over a divider. It reads
+  "Settings › <Page>" (Settings muted, the page in the accent blue) with the window buttons (minimize, maximize, close) at
+  the right end, and it is the drag area together with the brand strip. The window draws it itself and not the component
+  library's title bar: the header's top corners are rounded to match the card (radius less the 1 px border), and the close
+  button rounds its own top-right corner, so its red hover follows the card's corner instead of poking out of it.
+- **Every page opens with a description**, one sentence under the header at the page's top, in `text_base` and
+  the full title color, saying what the page is for.
+- **A section is one bordered block** (8 px radius, the card's border color, one step lighter than the card) with its
+  rows separated by dividers; the border closes the last row, so only rows between two others carry a divider. The
+  section's title (`text_base`, full title color, with a small blue icon where one fits) sits above the block. A
+  block's bottom to the next title is 22 px, and a title to its block 8 px. Muted gray is for row descriptions
+  (`text_sm`) and group labels; row titles are medium weight (`text_sm`) in the full foreground.
+- **Rows** have `px_4`/`py_3p5` padding: the title and a muted description at the left, the control at the right. A button
+  is a dark rounded pill (32 px high, 10 px radius, thin border); one that does nothing yet is dimmed, with "Coming soon" to its left.
+- **The font is Geist**, set through the component library's `theme.font_family`, so every control uses it.
+- **One scale knob.** The window follows the Windows display scale (GPUI sizes are logical pixels times the monitor's scale factor). On top of that, `theme.font_size` (`UI_FONT_SIZE` in `main.rs`, 14.7 instead of the library's 16, set in `palette::apply`) is the window's rem size, so every rem-based size shrinks together: `text_*` (`text_sm` is about 12.9 px, `text_base` 14.7 px), `px_*`, `gap_*` and the library's controls. Sizes written in `px(..)` (sidebar, header, brand) do not follow it.
+- **Option cards** are for picking among pictures (the calculation methods, the Asr choice, what the notch shows over a
+  maximized or full-screen window). They follow shadcn's radio card: the radio ring sits inside the card at the top left,
+  left of the title (semibold, full foreground) with the muted description under it; the picture follows. Selected:
+  blue-tinted fill, accent border, accent ring with an accent dot. Unselected: darker fill, quiet border, empty ring. A
+  multi-select option uses a checkbox in the same place. Cards sit in equal-width columns (`card::grid`): four for the
+  calculation methods, two for the rest; a partial last row keeps the cell width and starts at the left.
+
+## Connected devices page
+
+The page is off until added and has no collapsed state; it reads Windows only while it shows (`crates/notch/src/pages/devices/`).
+
+- **One 88 px column per device, up to five; the page is as wide as its tiles** (at least 253 px of content, so one or two
+  devices do not make it tiny) and the row is centered. A tile is a 58 px ring (4 px
+  stroke, round ends, track `#2c2c30`), the device icon (22 px, `#c4c4cc`) and the percentage inside it, and the name
+  under it (10 px, `#9a9aa6`, at most 76 px wide, cut with an ellipsis). A device is read at a glance by its icon, its
+  ring and one number.
+- **Ring colors follow the battery ring:** idle `#2f9e44`, charging `#30d158` with a bolt after the number, low
+  `#ff453a` at 20 % or less (number red too). Charging wins over low. Windows reports no charging state for Bluetooth
+  devices, so the bolt shows only when a source supplies one.
+- **No reading is "On" in white on a full solid ring (`#3a3a44`, 4 px); a device that is off is a dashed ring of the same
+  color (20 dashes), a dimmed icon (`#55555f`) and "Off" (`#6e6e7a`).** "On" says the device is connected and does not
+  report a battery; "Off" says it is not connected. A device that is off shows only beside a connected one, so an old pairing never hides the empty message.
+- **More than five devices show the five lowest batteries (then devices with no reading, then off devices) in Windows'
+  order, with no "+N more".** Up to five keep Windows' order, so tiles do not jump between reads. The ones that need
+  charging are the ones the user came to see.
+- **Two messages replace the tiles, on a 318 px content width (350 px with the host padding):** "No wireless devices"
+  (Bluetooth mark in `#63e6be`, with "Connect any device to see its battery") and "Bluetooth is off" (mark in `#8a8a96`,
+  with "Turn it on in Windows to see battery levels"). One row, centered as a whole: the 22 px mark in a 36 px round badge
+  (`#17171c`, 1 px `#26262d` border) at the left, 10 px, then the left-aligned text: a 15 px title (the design says
+  semibold; only Medium is bundled), 3 px, a 12 px detail line in `#9a9aa6`. The width is fixed, not measured, because a
+  page reports its size without fonts; it fits the longer of the two lines with room to spare.
+- **Devices behind a 2.4 GHz USB receiver are tiles like Bluetooth ones**; built-in, wired and Bluetooth devices
+  are not listed as receiver devices. Their battery comes over the receiver when the device answers (Logitech HID++);
+  one that does not answer, or that is asleep, shows the dash, because a receiver cannot tell asleep from off. The name
+  is the one the receiver or device gives ("B330/M330/M331"), else the brand and kind ("Logitech mouse"), because
+  Windows only says "HID-compliant mouse". Bluetooth devices come first, then receiver devices; a name and kind
+  listed twice counts once. "Bluetooth is off" shows only when Bluetooth is off and no receiver device is there; with
+  receiver devices and Bluetooth off the page lists them. A name wider than 76 px is cut with an ellipsis.
+- **Numbers (including "On") are Geist with tabular figures, not the Geist Mono the design file uses**, as the rule below sets for every
+  number.
+
+## Media page
+
+- **The open player is the artwork (86 px, radius 12), 20 px, then a text column fitted to the text, 118 to 170 px wide** (never narrower than the 118 px control row, so a short title leaves no empty strip at the right; the page is as wide as the artwork, the gap and the column; 170 px with lyrics on): the title (14 px Medium), the artist
+  (12 px, `#9a9aa6`) 2 px under it, and 14 px below that the controls, previous, play or pause, next, then lyrics. Transport
+  icons are 14 px with 20 px between them, the lyrics icon 16 px; it is green when on, white when lyrics exist and gray
+  when they do not. There is no remaining time and no progress bar.
+- **The source app's icon is a 19 px tile (`#0c0c0c`) with a 3 px black rim, its right and bottom edges 1 px past the
+  artwork's corner**, with the app icon at 15 px inside it.
+- **Lyrics on widen the page to 614 px (582 px of content) and tint the backdrop from the artwork color**, from black at
+  the top through 11 % at 35 % of the height to 45 % at the bottom. The lyric panel is the rest of the row after a 20 px
+  gap: the current line 17 px Medium white, the lines before and after it 13 px at 20 % white, 10 px between lines.
+- **Nothing playing:** a `#292929` artwork with a 16 px note, "Play a song", "Nothing is playing" and dimmed controls
+  (`#6e6e7a`); the page is as wide as its text needs, within the same limits.
+- **The collapsed lyric pill's artwork has radius 5;** the wave is 18 px wide with five 2 px bars.
+
+## Focus timer page
+
+- **Time at the left in 38 px Medium tabular figures (`mm:ss`), the label 12 px after it, the words ending on the bottom edge of
+  the time row** (13 px Medium, with a 11 px `#9a9aa6` detail line under it while idle). A paused time is `#9a9aa6`.
+- **The page is 86 px high: a 42 px time row, a 12 px gap, then the buttons.** A headline without a time (finished) is
+  centered in the row, so the buttons are never closer than 12 px to the text.
+- **Buttons are 30 px high pills in equal columns with 9 px between, along the bottom.** The main action (Start, Resume,
+  Start next) is the timer orange `#ff9e0a` with dark text, or blue `#4dabf7` when it starts a break (the green is the battery ring's); the others are
+  `#232323`, and Stop is the only red one (`#8c1a1f`). Orange as a main action belongs to this page only; the other pages'
+  main action stays white.
+- **A finished session or break has no time:** a 17 px Medium headline over a 12 px `#9a9aa6` detail line, then
+  the next action and Skip. Breaks are "Short break" and "Long break"; the page is 322 px wide.
+
+## Calendar page
+
+- **The left column is 182 px wide and the events are 16 px after it; both end on the bottom of the page.** The page is
+  168 px high (the events viewport), or 170 px for a month of six rows.
+- **The month is the month name (20 px Medium) and the year (12 px, `#9a9aa6`), one row of weekday letters (M T W T F S S,
+  10 px, `#9a9aa6`) 8 px under it, and the dates 6 px under the letters:** seven 26 x 20 px cells, Monday first, up to six
+  rows, the date in a 20 px circle (11 px, tabular). Days of other months stay empty. Sundays are `#ff6b6b`. Today is a
+  solid `#2f81f7` circle with a white number (Medium; the design asks for 600, which is not bundled); a selected day
+  is a `#4dabf7` circle at 28 %, and when it is today only the solid circle shows. There are no event dots, and the
+  hovered day gets a white 6 % circle.
+- **The events are a 168 px viewport of 26 px cards, 5 px apart,** radius 8, `#17171c` with a 1 px `#26262d` border, the
+  start time (12 px, `#9a9aa6`, "All day" for an all-day event) in a 52 px column, then the title (13 px). Cards start at
+  the top of the viewport. Five cards fit exactly; with more, the sixth shows by half, and the list scrolls with the
+  wheel (one card a notch), a swipe or a drag, with no scrollbar and no "+N more". Picking a day shows its list from the top.
+  A past event of today leaves the list; another day lists its events as planned. There is no "Join" button.
+- **Done for today** is a check icon, "Done for today" (13 px Medium) and "No more events" in one centered row; **an empty
+  day** is a 22 px calendar icon (`#9a9aa6`), "No events on Thursday 13" (14 px Medium) and "Events from your calendar show
+  here." (12 px, `#9a9aa6`), 6 px apart and centered in the viewport.
+
+## Stats page
+
+- **Every card is exactly 132 x 86 px** (radius 12, `#141418`, 8 px apart) with 12 px of padding at both sides
+  (`TILE_PADDING_X`). The page is five cards wide with a GPU (692 px content, 724 px with the host padding) and four
+  without one (552 px content, 584 px with the padding; the board says 592, which does not follow from its own formula, so the
+  formula wins). Order: CPU, memory, GPU, network, disks.
+- **A chart is a dotted baseline and two bars**, not a history: the baseline runs from x 12 to 118 (1.4 px dots 4 px apart,
+  90 % opacity) and two 2.6 px bars with a 1 px radius stand on it at x 111.5 and 115.5, 1 px high at rest up to 12 px at
+  full load. The older bar is the lighter shade, and at no load only the newer bar shows. CPU `#4dabf7` / `#74c0fc`, memory
+  `#cc5de8` / `#e599f7`, GPU `#f08c00` / `#ffa94d`. CPU and memory: label at 8, 20 px value at 19, baseline at 60, line
+  under it at 64. One GPU: "GPU · name" label, 20 px value, baseline at 66. Two GPUs: "GPU" label and two rows, name and
+  percentage at 22 and 53 with a baseline at 47 and 79 each.
+- **Network** is the download (14 px Medium, white) at 20, the upload (`#8c8c94`) at 43 and the kind (11 px) at 66.
+  **Disks** are rows of a name (`#9a9aa6`), a 56 x 4 px bar at x 34 (track `#26262d`, fill `#30d158`) and the percentage
+  at the right (11 px; the design says 600, only Medium is bundled): one row at 32, two at 27 and 46, three at 24, 40 and 56.
+
+## Clipboard page
+
+Board `d2a7dd31` (`slim.html`). The page is opt-in, 508 x 179 px of content (540 x 229 px with the host padding and
+header; the page is taller than the 86 px of other pages).
+
+- **Two columns 12 px apart.** The list is 214 px wide and shows the last 7 copies, newest on top, so it never scrolls:
+  rows are 23 px high, 3 px apart, radius 8, 8 px of padding, a 14 px icon (`#8a8a96`, 1.8 px line) and 7 px before the
+  text (11 px, `#e6e6eb`, cut with an ellipsis). A row is fill `#121216` with a 1 px `#1e1e24` border; the selected row is
+  `#1a1a20` with `#3a3a44`. Hover is `#17171c` (not in the board; proposed). Code rows use 10.5 px Consolas, because
+  Geist Mono is not bundled (the same fallback as the calendar). A color row shows a 15 px swatch of the color, an image
+  row a 15 px orange stand-in and "Image (360x70)", a link the link icon and text the document icon.
+- **The right column** is the preview panel (`#0b0b0e`, radius 8, 8 px above and below and 10 px at the sides) over one
+  26 px action row 8 px below it. Text and code are 12 px on 17 px lines, at most 7 lines, the last ending with an
+  ellipsis when more would not fit; a picture is drawn contained and centered, never upscaled beyond its stored size; a
+  color is a 96 x 56 px swatch (radius 8) with its hex under it.
+- **The action row.** Details at the left on two lines (10 px, `#6e6e7a`, 12 px apart): the type with its size or length
+  ("Text · 24 characters", "Image · 360x70 · PNG", "Link · n characters", "Code · n characters", "Color · #4dabf7"), then
+  how long ago ("just now", "30 sec ago", "12 min ago", "3 h ago", "2 d ago"). Then Delete and Copy, 26 px icon buttons
+  (fill `#121216`, 1 px `#2c2c34` border, radius 8; trash `#ff6b6b`, copy `#9a9aa6`), and Paste, a white 76 px button
+  (the board's is about 66 px; the width is fixed so "Pasted" fits), icon and label in black, 6 px apart.
+- **Confirmations are green** (`#63e6be` on `#0d2b24`, 1 px border): after a paste the selected row reads "Pasted" with a
+  check, the Paste button reads "Pasted" with a check, and the notch closes after about 600 ms; after Copy the row reads
+  "Copied, moved to front" and the Copy button shows a check for 1.5 s.
+- **The bar** is 26 px high over the bottom of the list (covering the last row), `#26262d`, radius 8, 11 px text with
+  10 px of padding. "Removed" with a `#74c0fc` "Undo" at the right stays 5 s; "Skipped: password manager" stays 3 s
+  (the board gives no time; proposed). One bar at a time: a new one replaces the old, which drops the undo.
+  "Skipped: too large" is the same bar for text over 100 KB or a picture over 40 MB (not in the board; proposed).
+- **The empty page** is a 36 px badge (circle, `#17171c`, 1 px `#26262d` border, a 20 px clipboard icon `#9a9aa6`), 16 px,
+  then "Nothing copied yet" (15 px; the board says 600, only Medium is bundled) over "Copy text, a link or an image
+  and it appears here" (12 px, `#9a9aa6`), the two centered as one row.
+- **Behavior.** Click selects. A double-click (two presses within the system double-click time, 4 px apart) pastes into
+  the window in front by writing the clipboard and sending Ctrl+V; with no window to paste into (the desktop, the
+  taskbar, the notch itself) it copies the item again and moves it to the front. Right-click removes. Copying the same
+  content again, even long after, moves the existing row to the front instead of adding a second one. Kinds: a color is
+  `#rgb` or `#rrggbb`; a link starts with `http://`, `https://` or `www.`, or is a host name with a dot and a path
+  (`docs.example.com/shortcuts`; a bare `readme.md` is text); code starts with a command (npm, git, cargo and similar)
+  followed by an argument, has braces in a pair, a line ending in `;`, `=>`, or starts with a statement keyword
+  (`fn`, `let`, `const`, `def`, `import`, `class`); everything else is text.
+- **Limits and privacy** (decisions, not from the board): memory only, cleared on quit and when the page is switched off;
+  capture happens only while the page is on; text over 100 KB is skipped; a picture over 40 MB as a bitmap is skipped and
+  one over 786,432 pixels (about 3 MiB) is shrunk before it is kept, so pasting it back gives the smaller picture; all
+  copies together stay under 12 MiB, oldest first out. A copy marked `ExcludeClipboardContentFromMonitorProcessing` or
+  `CanIncludeInClipboardHistory = 0` is never read.
+
+## Shelf page
+
+- Six files a row, two rows at most, so twelve; the page is 86 px high for one row and 159 px for two (10 px less the
+  1.5 px border of padding, rows 6 px apart). Each file is a 78 px column: a 40 px tile with a 6 px radius, 3 px, then
+  two lines of its name (10 px, `#d6d6de`).
+- A picture shows its Explorer thumbnail; every other file is a small drawn document in the 40 px box. PDF, pictures and
+  design files are a white 30 by 38 sheet (3 px radius) with a red `#e03131` "PDF" tag, a blue rounded square or a
+  purple outlined square with a dot and a lilac bar. Text (and a file with no extension) is a sheet with four 1 px
+  `#c4c4cc` lines. Archives are a yellow folder with a zipper (flat `#f8bd3b` where the design has a gradient).
+  Spreadsheets are a sheet with a green strip and a `#107c41` "X" badge. Any other type is a sheet with its extension
+  on a tag in the type's old tile color (documents `#3b5bdb`, slides `#c2255c`, unknown `#868e96`). The gradients of
+  the design are flat (mid color), and the tag text is Medium, as the design's 600 is not bundled.
+- The outline is dashed `#5a5a68`. Empty: a row in the middle of the outline, a 36 px round badge (`#17171c`, 1 px
+  `#26262d`) with a download icon (stroke `#9a9aa6`), 16 px to its left of the text, "Drop files here" (15 px, Medium)
+  and "They are held for a moment, then you drag them out" (12 px, `#9a9aa6`), left aligned. Dragging over: the outline turns `#4dabf7` and the area `#4dabf7` at 12 %, the empty line reads "Release to hold them"
+  in `#74c0fc`, and files already there stay. Full and dragging over: outline `#d6453d`, area red at 8 % and the red
+  line "The shelf is full. Remove a file to add more." (`#ff6b6b`); nothing is replaced.
+- The remove button is a 16 px circle (`#2a2a30`, 2 px black ring) over the top right corner of the tile, 3 px outside
+  it, with an 8 px `#c4c4cc` cross; it shows on hover.
+
+## Todo page
+
+- A task is a 32 px row (10 px radius, `#141418`, hover `#1c1c22`), 6 px apart, with a 14 px ring, the text (13 px, one
+  line cut with an ellipsis, 120 characters at most) and, on hover, a 22 px delete button 6 px from the right edge.
+  A done task has no fill, a green check (`#30d158`) and struck-through `#6e6e7a` text, and keeps its row, so it counts
+  toward the five. Done tasks follow open ones.
+- Five tasks at most. The toolbar (28 px high, then 8 px) sits on top: "Todo" (20 px, Medium) and the count ("3 left",
+  "3 left · 2 done", "0 left" in 12 px grey, 8 px after the title, on its baseline) at the left, **Clear all** and **Add**
+  at the right, 8 px apart. Rows run the full width below it.
+- **Add** is a fixed white pill (26 px high, 13 px radius, black "+ Add" in 12 px Medium, as the design's 600 is not
+  bundled). At five tasks it stays but is dimmed (`#26262d`, text `#6e6e7a`) and does nothing. Pressing it adds the
+  input as the last row, with the keyboard (1 px `#408fff` outline, "+" in the same blue, "What needs doing?", "Enter
+  to add" at the right). The input never covers a task.
+- **Clear all** is a 26 px pill (`#1c1c22`, 1 px `#2c2c34` border, text `#e6e6eb`, a 12 px trash icon in `#ff6b6b`). It
+  removes every task, done or not, without asking, and is hidden when the list is empty.
+- The page is 508 px wide and 28 + 8 + the rows high (3 tasks 144 px, five rows 220 px), at least 86 px.
+- Empty: a narrow page (290 px, the timer page's width) with the title and Add on top and "All clear" centered below;
+  pressing Add widens the page to 508 px with the input as the only row.
+
+## Prayer page
+
+- The left column (124 px): "Next" (11 px grey; "Starts soon" in the last ten minutes, "Tomorrow" after Isha), the
+  prayer's name in 26 px, the countdown in green `#63e6be` (12 px) and the city (10 px dim). The name leads, not the time.
+- The right side is one sun arc through Fajr, Dhuhr, Asr, Maghrib and Isha (Sunrise is not on it) with the name and
+  time under each marker. The curve is a sketch, not the sun's height. A passed marker is a green dot, the next one a
+  larger dot with a halo and a green name, a coming one a hollow dot. The arc and its fill are green up to now and grey
+  after; the sun (yellow, with a glow) sits on the arc at the present time and is hidden before Fajr and after Isha,
+  when the whole arc is green and tomorrow's Fajr is the next marker.
+
+## Weather page
+
+- The left column (146 px), always in this order: the place (10 px eyebrow), the temperature (28 px), the condition
+  with "feels" (11 px) and the rain line in blue (12 px). Six cells fill the rest, 4 px apart: a label, a 20 px sky icon,
+  the temperature and, for hours, the rain under it in millimetres. The first cell ("Now", "Today") has a `#2b2312`
+  fill and an amber label. A pill ("Today" or "Week", 22 px high, `#1c1c22` with a 1 px `#2c2c34` border, text `#e6e6eb`)
+  at the right end of the left column's first line, level with the place, names what is shown and switches between the
+  hours and the days when pressed; a day shows its high above its low. The choice is kept while the notch runs, not
+  across restarts.
+- Sky icons are Lucide-style lines (cloud `#c4c4cc`, sun and moon `#ffc078`, rain `#74c0fc`, bolt `#ffd43b`).
+- Offline and no location are rows: a 36 px round badge (`#17171c`, 1 px `#26262d`) on the left, 16 px, then a
+  left-aligned title (15 px, Medium) and a line (12 px, `#9a9aa6`). Offline: a crossed-out cloud, "Weather is offline"
+  and "Last updated 13:40 · retrying on its own". No location: a `#4dabf7` pin, "Choose a city" and "Pick a location in
+  Settings to see the weather". Both hug their content: the page is as wide as the row plus the notch's padding, never
+  below the notch's minimum width (the timer page's). The design draws them in a 392 px notch; that is not a rule.
+- The rain alert starts 30 minutes before rain: a short message in the pill ("Rain in 30 min" and the time), then a
+  400 px banner (a blue 30 px tile with a rain icon, "Rain in 30 min" with "Weather" after it in grey, two lines of
+  text) that stays while the pointer is on it. Weather takes no place in the pill's group.
 
 ## Color and type
 
@@ -80,36 +385,28 @@ narrower than ring and clock (150). The order is fixed and never re-sorts by tim
   low battery `#ff453a`.
 - Camera dot `#30d158`, microphone dot `#ff9e0a`.
 - The collapsed pill is all Geist, clock and countdown numbers included; it is a label, not a readout.
-- Geist Mono is for numbers in page content, where digits align or tick in large type. The header clock stays Geist.
+- Numbers are Geist everywhere, in the pill, the header and the pages. There is no monospace font. A number that changes
+  while it is shown (a countdown, a percentage, a temperature) uses `FontStyle::tabular()`, so every digit has the same width
+  and the neighbouring text stays put.
 
-## Right-click menu
+## Opening settings
 
-- A right-click on the open notch opens a small menu under the pointer, kept inside the notch: Start with Windows (with a check), Settings and,
-  below a line, Quit Notch in red. It closes on a click elsewhere, a scroll, or
-  when the pointer leaves the notch.
-- A page that uses right-click for its own content (a file on the shelf) keeps it; the menu opens everywhere else.
-- The menu is the shortcut. The decision for a visible settings button is open (see the "Where the settings button goes"
-  board).
+- The gear in the open header and the tray's **Settings** item open the settings window (`notch-settings.exe`); settings
+  are edited only there, and the notch has no settings panel and no right-click menu. **Start with Windows**, **Settings**
+  and **Quit Notch** are in the tray menu. A page that uses right-click for its own content (a file on the shelf) keeps it.
 
 ## Open
 
 - The reminder windows are fixed: 30 min for the prayer (`BADGE_MINUTES`), 15 min for an event
-  (`REMINDER_LEAD_MINUTES`). A per-page number setting, default 10, is proposed and not decided.
-- Between lyric lines (intro, instrumental) the slot's content is not decided; a "♪" placeholder that keeps lyric mode
+  (`REMINDER_LEAD_SECONDS`, 15 minutes). A per-page number setting, default 10, is proposed and not decided.
+- Between lyric lines (intro, instrumental) what the pill shows is not decided; a "♪" placeholder that keeps lyric mode
   for the whole song is proposed.
-
-- The idle pill's clock position and the case of a PC without a battery are under review on the "raw" page (board
-  "Idle layout"); the order above stays until that is decided. The code has no idle battery ring that I found: the
-  battery activity only reports plugging, unplugging and low charge.
 
 ## Code gaps
 
-- The event countdown is drawn in Consolas (`BADGE_TIME`, `crates/notch/src/pages/calendar/mod.rs`); the rules say Geist.
-- Camera and microphone are drawn as one dot badge at the pill's right end (`Presence::Badge` in
-  `crates/notch/src/activities/privacy.rs`); the rules put two stacked dots beside the battery ring.
-- The notification card shows the whole message on hover (`Words::shown` in `crates/notch/src/activities/notifications/mod.rs`) and
-  has no buttons or click handling.
-- The notification heading is built as "sender · app" (`heading` in `crates/notch/src/activities/notifications/items.rs`) and tests
-  only an empty sender, so a sender of only whitespace likely shows "· Discord" (not reproduced); the rules drop
-  the separator and style the app name grey.
-- The battery ring, the percentage rings and the lyric layout have not been checked against the code.
+- The weather page has no chance of rain (MET Norway's `complete` answer carries no probability for most places), so
+  the cells show millimetres where the design shows percentages; the alert's pill message shows its time in grey and a
+  plain cloud, not blue and a rain cloud (`ui::draw_message`).
+- Only Regular and Medium Geist are bundled, so the design's 600 weight draws as Medium (the prayer name, the todo
+  title, the offline title).
+- The percentage rings have not been checked against the code.

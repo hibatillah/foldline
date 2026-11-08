@@ -7,7 +7,7 @@ This is the guide for people joining the Notch team. Notch is closed-source and 
 Notch is a Windows "dynamic island" written in Rust: a black pill at the top of the screen, drawn with Direct2D and no UI framework. Two programs ship together:
 
 - `notch.exe` (`crates/notch/`) is the pill. It idles at 0 % CPU and stays under 50 MB of memory. Every change to it is held to that budget.
-- `notch-settings.exe` (`crates/settings/`, built with GPUI) is the settings window that the tray's **Settings** item starts. `crates/store/` holds the settings-file code both programs share.
+- `notch-settings.exe` (`crates/settings/`, built with GPUI) is the settings window that the gear in the open notch and the tray's **Settings** item start; settings are edited only there, and its About page shows the version and opens the licenses and the data files. `crates/store/` holds the settings-file code both programs share.
 
 ## Set up your machine
 
@@ -54,8 +54,8 @@ Plain `cargo` commands cover only the notch. Add `+stable-x86_64-pc-windows-msvc
 
 ## How the code is organized
 
-- `crates/notch/src/host/` is the notch itself: the window, hover, animation, input, the tray and the settings panel. It names no page. `Notch` is one struct whose methods live one job per file in `crates/notch/src/host/notch/`.
-- `crates/notch/src/pages/` holds one folder per page (media, shelf, calendar, timer, stats, shalat, todo) and `crates/notch/src/activities/` one file per pill message (volume, battery, notifications…). Each is listed in one registry line, so adding or removing one touches no other file.
+- `crates/notch/src/host/` is the notch itself: the window, hover, animation, input, the tray and the launcher of the settings window. It names no page. `Notch` is one struct whose methods live one job per file in `crates/notch/src/host/notch/`.
+- `crates/notch/src/pages/` holds one folder per page (media, shelf, calendar, timer, todo, shalat, stats, weather, devices, clipboard) and `crates/notch/src/activities/` one file per pill message (volume, battery, notifications…). Each is listed in one registry line, so adding or removing one touches no other file.
 - `crates/notch/src/gfx/` and `crates/notch/src/ui/` are the drawing toolkit and widgets. `crates/notch/src/platform/` holds small Windows actions.
 - Dependencies point one way: pages and activities use `page`, `activity`, `gfx`, `ui` and `platform`; nothing in those knows a particular page; pages never use each other.
 
@@ -83,7 +83,7 @@ cargo test
 scripts/perf.sh          # after host, animation, timer or drawing changes
 ```
 
-When you touched `crates/settings/` or `crates/store/`, run the first three as `cargo +stable-x86_64-pc-windows-msvc ... --workspace`. `scripts/perf.sh` moves the mouse for about two minutes and replaces the running notch; leave the mouse alone while it runs. [docs/how-to/test-and-snapshot.md](docs/how-to/test-and-snapshot.md) and [docs/how-to/run-the-perf-check.md](docs/how-to/run-the-perf-check.md) explain the gates.
+When you touched `crates/settings/` or `crates/store/`, run the first three as `cargo +stable-x86_64-pc-windows-msvc ... --workspace`. `scripts/perf.sh` moves the mouse for about three minutes and replaces the running notch; leave the mouse alone while it runs. [docs/how-to/test-and-snapshot.md](docs/how-to/test-and-snapshot.md) and [docs/how-to/run-the-perf-check.md](docs/how-to/run-the-perf-check.md) explain the gates.
 
 ## Working with Claude Code
 
@@ -91,7 +91,7 @@ When you touched `crates/settings/` or `crates/store/`, run the first three as `
 
 | Agent | Owns |
 | --- | --- |
-| `notch-host` | `crates/notch/src/host/**`, `crates/notch/src/platform/**`: Win32 behavior, hover, timers, the settings panel |
+| `notch-host` | `crates/notch/src/host/**`, `crates/notch/src/platform/**`: Win32 behavior, hover, timers, the tray, the header gear |
 | `notch-pages` | `crates/notch/src/pages/**`, `crates/notch/src/activities/**`, `page.rs`, `activity.rs` |
 | `notch-render` | `crates/notch/src/gfx/**`, `crates/notch/src/ui/**`: Direct2D and DirectWrite drawing |
 | `settings-gpui` | `crates/settings/**`, `crates/store/**` |

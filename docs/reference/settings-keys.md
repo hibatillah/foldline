@@ -7,12 +7,14 @@
 `%APPDATA%\notch\settings.txt` is a plain text file with one `key=value` per line. The notch and the settings window
 write it one key at a time through a temporary file, so keys another program wrote are kept.
 
+Settings are edited in the settings window (`notch-settings.exe`), which the gear in the open header and the tray's **Settings** item open; the notch has no settings panel of its own.
+
 The todo page keeps its list in `%APPDATA%\notch\todo.txt`, one task per line as a markdown checkbox (`- [ ] task`,
 `- [x] done`). Any other line loads as an open task, so the file can be edited by hand while the notch is closed.
 
 After a write, the settings window posts `WM_SETTINGS_CHANGED` (`WM_APP + 30`) to the window of class `NotchWindow`. The
 notch then re-reads the file and applies the `notch.*` keys except `notch.top`, `navigation.order`, `navigation.disabled`,
-`activity.notifications`, `media.lyrics`, `timer.*_minutes`, `calendar.*` and `notifications.show_text` keys without a
+`activity.notifications`, `activity.device_battery`, `media.lyrics`, `timer.*_minutes`, `calendar.*` and `notifications.show_text` keys without a
 restart, keeping the page that is open. A missing or unreadable value keeps the current one. A hand edit is read at the
 next start, or at once if something posts that message.
 
@@ -23,25 +25,32 @@ next start, or at once if something posts that message.
 | `timer.focus_minutes` | 5 to 120 | length of a focus session (default 25); the timer page changes it in steps of 5 |
 | `timer.short_break_minutes`, `timer.long_break_minutes` | minutes | break lengths (default 5 and 15) |
 | `timer.state`, `timer.completed` | written by the notch | the running timer and the focus sessions finished in this round, so a restart keeps them |
-| `navigation.order`, `navigation.disabled` | page ids, comma-separated | the order of the pages and the ones switched off; the settings window's Pages section and the notch's Pages tab write them |
+| `navigation.order`, `navigation.disabled` | page ids, comma-separated | the order of the pages and the ones switched off; the settings window's Pages section writes them |
 | `notifications.show_text` | `on`, `off` | show what a notification says in its banner (off is private mode). Switch the banner itself off with `activity.notifications` |
 | `calendar.ics_url` | a web address | the calendar address; the settings window sets it. It is a secret: anyone with it can read the calendar |
 | `advanced.debug_log` | a file path | the file the notch appends its timestamped log to; empty means no log. Read once at start, and `NOTCH_DEBUG` overrides it |
 | `notch.top` | pixels, 0 to 2000 | how far the notch sits below the top edge of the screen (default 0). Read once at start, and `NOTCH_TOP` overrides it |
 | `calendar.refresh_minutes` | minutes | how often the calendar is downloaded again (default 15) |
-| `location.city`, `location.lat`, `location.lon`, `location.country` | text, degrees, degrees, a two-letter country code | the one place the prayer times and the weather are for, chosen with the location search in the panel's General tab, the Shalat page's settings or the settings window's General section. Older versions saved these as `shalat.city`, `shalat.lat`, `shalat.lon` and `shalat.country`; those are read until the shared keys are saved. |
+| `location.city`, `location.lat`, `location.lon`, `location.country` | text, degrees, degrees, a two-letter country code | the one place the prayer times and the weather are for, chosen with the location search in the settings window's General section. Older versions saved these as `shalat.city`, `shalat.lat`, `shalat.lon` and `shalat.country`; those are read until the shared keys are saved. |
 | `shalat.method` | `auto`, `singapore` (Kemenag), `mwl`, `northamerica`, `karachi`, `ummalqura`, `egyptian` | the calculation method; `auto` (default) picks one from `shalat.country` |
 | `shalat.hanafi` | `on`, `off` | off by default (Shafi'i, Maliki and Hanbali Asr); on uses the Hanafi Asr |
 | `shalat.offset_fajr`, `_sunrise`, `_dhuhr`, `_asr`, `_maghrib`, `_isha` | minutes, -30 to 30 | added to that time (default 0) |
 | `shalat.message`, `shalat.badge` | `on`, `off` | on by default: a message when a prayer starts, and the next prayer in the collapsed pill for the last 30 minutes |
-| `weather.rain_alert` | `on`, `off` (default `on`) | a message in the collapsed pill 30 minutes before the next rain; the weather page itself is off until you add it. The place is the shared `location.*` |
-| `stats.disks`, `stats.gpus` | names, comma-separated | the disks (`C:`) and GPUs the stats page shows, in that order: up to 3 disks and 2 GPUs. Written by the stats settings in the notch's panel; without the key the page shows the first ones |
+| `weather.rain_alert` | `on`, `off` (default `on`) | a message in the collapsed pill 30 minutes before the next rain; the weather page itself is off until you add it. The place is the shared `location.*`. The **Rain alert** switch under Weather in the settings window sets it |
+| (none) | | the clipboard page has no settings key of its own: it is switched on and off in the Pages list (`navigation.disabled`), and its history is never saved |
+| `stats.disks` | drive names, comma-separated (`C:,G:`) | the disks the stats page shows, in that order, up to 3 (more are dropped); chosen with the checkboxes under System stats in the settings window, which writes the chosen drives in the known order. Without the key the page shows the first 3 fixed drives; an empty value shows none. A name that is no longer present is skipped and the others keep their order; if none is present the Disks card is empty |
+| `stats.gpus` | GPU names separated by `\|` (`RTX 4050\|Radeon 760M`); a list without `\|` splits at commas | the GPUs the stats page shows, in that order, up to 2; chosen under System stats in the settings window, which writes them joined with `\|`. Without the key the page shows the first 2; an empty value shows none and drops the GPU card. A name that is no longer present is skipped; with none present the GPU card is dropped |
+| `stats.known_disks` | drive names, comma-separated (`C:,G:`) | written by the notch when the stats page starts sampling (it is shown), only when the list changed: every fixed drive, in drive-letter order. The settings window offers these for `stats.disks`. Absent until the stats page has been shown once; leave it alone: the notch owns it |
+| `stats.known_gpus` | GPU names separated by `\|` (`RTX 4050\|Radeon 760M`) | written like `stats.known_disks`: every hardware GPU, in the order Windows lists them, by the short names `stats.gpus` uses. `\|` cannot appear in a name (the notch replaces it and line breaks with a space). An empty value means the machine has no hardware GPU; absent means the stats page was never shown |
 | `notch.hide_when_idle` | `on`, `off` | off by default: hide the notch when there is nothing to show until you point at the top of the screen |
+| `notch.hide_windows_volume_popup` | `on`, `off` | off by default: hide the volume flyout Windows shows above the taskbar each time it appears, while the notch runs (`host/volume_flyout.rs`). Applies without a restart; the flyout returns when the notch exits or crashes. See [hide Windows' own popups](../how-to/hide-windows-popups.md) |
+| `notch.hide_windows_notifications` | `on`, `off` | off by default: turn off Windows' notification banner for every app while the notch runs, by writing `ShowBanner=0` per app and saving the previous values in `%APPDATA%\notch\notification-banners.txt` (`host/notification_banners.rs`). Notifications stay in the notification center, so the notch still shows them. Applies without a restart; the values go back when it is switched off, when the notch quits, and at the next start after a crash. See [hide Windows' own popups](../how-to/hide-windows-popups.md) |
 | `notch.maximized`, `notch.fullscreen` | `hidden`, `activities`, `lyrics`, `music` | what the notch shows over a maximized window (default `lyrics`) and over a full-screen app (default `hidden`); the words are in [the next table](#what-the-notch-shows-over-another-window). A missing or unknown word uses the default |
-| `notch.hover_maximized`, `notch.hover_fullscreen` | `on`, `off` | on by default: pointing at the top edge opens the notch over a maximized window and over a full-screen app. Off stops the pointer from opening it there; short messages still follow `notch.maximized` and `notch.fullscreen`, and dragging files onto the shelf still opens it |
+| `notch.hover_maximized`, `notch.hover_fullscreen` | `on`, `off` | on by default: pointing at the top edge opens the notch over a maximized window and over a full-screen app. Off stops the pointer from opening it there; short messages still follow `notch.maximized` and `notch.fullscreen`, and dragging files onto the shelf still opens it. Neither key applies over a screenshot overlay (Win+Shift+S, Snipping Tool, Game Bar): the notch is hidden there and the pointer never opens it |
 | `pages.known` | `id:Label,...`, with `:opt_in` after the label of an opt-in page | written by the notch at start, only when it changed: the pages the settings window lists (label is `Page::name`; an opt-in page shows as off until `navigation.disabled` is saved). Leave it alone: the notch owns it |
 | `navigation.page` | a page id | the page that was open last; the notch opens on it and writes this when you change page |
 | `activity.notifications` | `on`, `off` | on by default: show Windows notification banners in the notch |
+| `activity.device_battery` | `on`, `off` | on by default: a message when a connected Bluetooth device's battery falls to 20 % or 10 %. Read at start; switching it off while the notch runs hides the message but the watcher keeps running until exit |
 
 Pages add their own keys, always starting with the page id. A page reads and writes them through
 `Context::settings`.
@@ -75,6 +84,7 @@ tray item. The notch reads them only when the new key is missing, at start and o
 | --- | --- |
 | `NOTCH_PAGES` | comma-separated page ids to switch on (see above) |
 | `NOTCH_LYRICS=off` | never look up lyrics, so nothing about your music leaves the computer |
+| `NOTCH_SETTINGS_SOLID=1` | the settings window draws its frame opaque instead of translucent and blurred |
 | `NOTCH_DEBUG=<file>` | append a timestamped log of what the notch is doing to this file; overrides `advanced.debug_log` |
 | `NOTCH_TOP=<pixels>` | move the notch down by this many pixels, to compare it with another notch app; overrides `notch.top` |
 
@@ -94,7 +104,7 @@ Things a developer tunes by editing source:
 
 ## Start with Windows
 
-The installer starts the notch at sign-in unless that is unticked in its options. The right-click and tray menus' **Start with
+The stable installer starts the notch at sign-in unless that is unticked in its options; a pre-release installer has no such option and writes no entry. The tray menu's **Start with
 Windows** item and the settings window's General section show whether it does, and switch it: each adds or removes a
 `Notch` value under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` that points at the copy of `notch.exe` that is
 running. The settings window points it at the `notch.exe` beside `notch-settings.exe`.

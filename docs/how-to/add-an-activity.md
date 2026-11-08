@@ -25,11 +25,13 @@ listens to one Windows power setting and flashes a level bar when it changes.
 | `id()` | stable name; the settings key is `activity.<id>` |
 | `is_optional()` | false by default: required activities are always enabled; return true to expose a saved settings toggle |
 | `presence()` | what to show right now |
-| `draw()` | draw into the area the host gives |
-| `header_status_width()`, `draw_header_status()` | optional: a small mark kept in the open notch's header beside the time while something lasts (muted speakers, Caps Lock on); `None` for no mark |
+| `draw()` | draw into the area the host gives; a companion's `draw` also serves the open header (see below) |
+| `header_status_width()`, `draw_header_status()`, `header_status_rank()` | optional: a small mark kept at the right edge of the header, icon only, while something lasts (muted speakers, Caps Lock on); `None` for no mark. The rank orders the group in the pill and the header |
+| `header_status_page()` | optional: the id of the page a click on the header mark opens; `None` (the default) opens nothing, as for muted and Caps Lock |
 | `on_start()` | begin listening; called once, and only if the activity is switched on |
 | `on_timer()`, `on_notify()` | a timer fired; a background thread used the `Notifier` |
 | `on_hover_changed()` | the pointer entered or left the notch |
+| `on_pointer()` | pointer input over this activity's banner while the notch is collapsed, in the `area` and `scale` `draw()` got; `PointerEvent::Left` means the pointer left the banner. `ui::BannerButtons` draws and hit-tests the Dismiss and Open pair (the notification card) |
 | `on_system_message()` | a power setting or the clipboard changed (see below) |
 | `on_settings_changed()` | on a started activity, after the notch received `WM_SETTINGS_CHANGED` and re-read `settings.txt`; re-read the activity's own keys, falling back to the current value |
 
@@ -37,6 +39,28 @@ Use `Flash` for a transient that shows and then goes: `flash.show(context, milli
 visible keeps it up for a fresh duration, and `flash.on_timer(timer, context)` hides it. It uses `TimerId(0)`; an
 activity that needs more timers starts from `TimerId(1)`. Timer ids and wake-up messages are separate from the pages',
 so an activity and a page never collide.
+
+A mark that lasts at the right end of the group (the battery ring, a camera or microphone dot) answers
+`Presence::Companion { slot, width }` instead of a transient or a badge. `Slot::Ring` puts it before the dots (one
+item; the battery activity answers it only on a machine with a battery); `Slot::Dots` puts it in the dot column at the very end. Neither is ranked, and both sit right of every badge. Three rules follow from how the host uses it:
+
+- The same `draw` paints the companion in the collapsed pill and in the open header, in areas of different heights, so draw
+  centered on `area` (`area.center_x()`, `area.center_y()`) and never from its top or bottom edge. The ring draws its
+  diameter around the center; a dot draws in a row offset from the center (`DotRow` in `activities/privacy.rs`).
+- Every `Slot::Dots` companion draws into one shared area as wide as the widest of them, so give each its own
+  row: camera on top, microphone below. `Slot::Ring` holds one item. The dot column reserves no width, so a dot that
+  appears or leaves slides the group.
+- A companion has no timer. It repaints on the events its activity already handles, so `presence()` is the only place its
+  state shows.
+
+Only activities place companions; a page's `Companion` is ignored. While a transient shows, the activity answers the
+transient instead, and the companion returns after it.
+
+A state that lasts and also announces itself, like muted speakers or Caps Lock, uses a badge and a transient together:
+`presence()` answers `Presence::Transient` while the `Flash` is visible and `Presence::Badge { width }` while the state is on.
+`draw` paints the message while the flash shows and the icon alone otherwise (`volume.rs`, `caps_lock.rs`), and
+`header_status_width` and `draw_header_status` give the same icon to the open header. Set `header_status_rank` to place
+it in the group: lower ranks sit nearer the clock, in the pill and in the header (music wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5; the default is 0).
 
 Draw messages with `ui::draw_level` (icon, bar, value) or `ui::draw_message` (icon, text, optional value) so every
 transient looks alike, and add an `Icon` to `crates/notch/src/ui/icons.rs` when you need a new glyph.
@@ -52,8 +76,9 @@ The notch must use no CPU while nothing happens, so an activity never polls. Pic
 | a COM callback (Core Audio) | store the change in an `Arc<Mutex<..>>` and call `context.notifier().notify()`; read it in `on_notify` |
 | a Windows event log channel | `EvtSubscribe` with a callback, which runs on a system thread and calls the `Notifier`; see `camera.rs` |
 | one key | a low-level keyboard hook on a thread of its own that wakes the activity for that key only, then read the state from Windows; see `caps_lock.rs` |
+| a Windows device watcher | a WinRT `DeviceWatcher` on a thread of its own, which Windows pushes property changes into; it calls the `Notifier`; see `device_battery/` |
 | a folder changing | `FindFirstChangeNotificationW` and a blocking wait on a thread of its own; see `notifications/listener.rs` |
 
 ### 4. Register it
 
-Add the module and an entry to `all()` in `crates/notch/src/activities/mod.rs`. Registration order controls badges.
+Add the module and an entry to `all()` in `crates/notch/src/activities/mod.rs`. Registration order breaks ties between badges of equal `header_status_rank`.
