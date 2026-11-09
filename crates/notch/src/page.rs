@@ -90,7 +90,14 @@ pub enum PointerEvent {
     },
 }
 
-/// Typing delivered to the page that holds the keyboard (`Context::take_keyboard`).
+/// Who holds the keyboard; a page and an activity each count from zero.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KeyboardOwner {
+    Page(usize),
+    Activity(usize),
+}
+
+/// Typing delivered to the page or activity that holds the keyboard (`Context::take_keyboard`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum KeyInput {
     /// Typed or pasted characters, without line breaks or other control characters.
@@ -263,8 +270,8 @@ pub trait Page {
 pub(crate) struct Requests {
     pub repaint: bool,
     pub animate: bool,
-    /// The page that asked for the keyboard (`true`) or gave it back (`false`).
-    pub keyboard: Option<(usize, bool)>,
+    /// The page or activity that asked for the keyboard (`true`) or gave it back (`false`).
+    pub keyboard: Option<(KeyboardOwner, bool)>,
     /// A page asked the notch to close, for example after it pasted into another window.
     pub close: bool,
     /// A page asked the notch to open on it, for example from a button on its banner.
@@ -351,12 +358,20 @@ impl<'a> Context<'a> {
     /// Takes the keyboard from the app in front so `Page::on_key` gets typing; call it only from a click, never on
     /// hover. The notch stays open until `release_keyboard` or `Page::on_keyboard_lost`.
     pub fn take_keyboard(&mut self) {
-        self.requests.keyboard = Some((self.owner_index, true));
+        self.requests.keyboard = Some((self.keyboard_owner(), true));
     }
 
     /// Gives the keyboard back to the app that had it.
     pub fn release_keyboard(&mut self) {
-        self.requests.keyboard = Some((self.owner_index, false));
+        self.requests.keyboard = Some((self.keyboard_owner(), false));
+    }
+
+    fn keyboard_owner(&self) -> KeyboardOwner {
+        if self.timer_base == PAGE_TIMER_BASE {
+            KeyboardOwner::Page(self.owner_index)
+        } else {
+            KeyboardOwner::Activity(self.owner_index)
+        }
     }
 
     /// Closes the open notch as if the pointer had left it.

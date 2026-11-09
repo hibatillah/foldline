@@ -1,6 +1,7 @@
 //! The notification card: its size, its words and its drawing.
 
 use super::items::{Item, app_color, app_letter, body_text, heading, open_label};
+use super::reply::ReplyState;
 use crate::ui::palette::{CARD_APP_NAME_TEXT, CARD_BODY_TEXT};
 use crate::ui::type_styles::{MEDIUM_14, REGULAR_13, REGULAR_14};
 use crate::{
@@ -64,6 +65,15 @@ impl Words {
     }
 }
 
+/// Where and how the card is drawn: its area in device pixels, the scale and opacity, and whether the buttons show.
+#[derive(Clone, Copy)]
+pub struct DrawLook {
+    pub area: Rect,
+    pub scale: f32,
+    pub opacity: f32,
+    pub shows_buttons: bool,
+}
+
 /// What the card shows for one notification, and the state of its buttons.
 pub struct Card {
     pub words: Words,
@@ -73,6 +83,11 @@ pub struct Card {
 impl Card {
     pub fn new(item: &Item, shows_text: bool, fonts: &Fonts) -> Self {
         Self { words: Words::new(item, shows_text, fonts), buttons: BannerButtons::new(fonts, &open_label(item)) }
+    }
+
+    /// Adds the Reply button once the toast is known to offer one.
+    pub fn offer_reply(&mut self, fonts: &Fonts) {
+        self.buttons = BannerButtons::with_reply(fonts);
     }
 
     pub fn height(&self, shows_buttons: bool) -> f32 {
@@ -92,7 +107,8 @@ impl Card {
         self.buttons.on_pointer(event, right, top, scale)
     }
 
-    pub fn draw(&self, canvas: &Canvas, item: &Item, area: Rect, scale: f32, opacity: f32, shows_buttons: bool) {
+    pub fn draw(&self, canvas: &Canvas, item: &Item, look: DrawLook, reply: &ReplyState) {
+        let DrawLook { area, scale, opacity, shows_buttons } = look;
         let tile = Rect::new(
             area.left + PADDING * scale,
             area.top + TOP_PADDING * scale,
@@ -119,7 +135,11 @@ impl Card {
         }
         if shows_buttons {
             let (right, top) = self.buttons_origin(area, scale);
-            self.buttons.draw(canvas, right, top, scale, opacity);
+            if reply.is_typing() {
+                reply.draw(canvas, tile.left, right, top, scale, opacity);
+            } else {
+                self.buttons.draw(canvas, right, top, scale, opacity);
+            }
         }
     }
 }
@@ -211,7 +231,7 @@ mod tests {
         let card = Card::new(&long, true, &fonts);
         let area = Rect::new(0.0, 0.0, WIDTH, card.height(true));
         let (right, top) = card.buttons_origin(area, 1.0);
-        let [(_, dismiss), _] = card.buttons.rects(right, top, 1.0);
+        let dismiss = card.buttons.rects(right, top, 1.0).next().unwrap().1;
         assert!(dismiss.left >= PADDING, "Dismiss starts at {}", dismiss.left);
     }
 

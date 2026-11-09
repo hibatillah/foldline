@@ -8,12 +8,13 @@ mod list;
 use self::list::Item;
 use self::{
     layout::{
-        CONTENT_WIDTH, EMPTY_WIDTH, Row, add_button, clear_button, content_height, delete_rect, plan_rows, row_rect,
+        CONTENT_WIDTH, Row, WHEEL_NOTCH_DISTANCE, add_button, clear_button, content_height, delete_rect, empty_area,
+        max_scroll, plan_rows, row_rect,
     },
     list::TodoList,
 };
 use crate::{
-    gfx::{Canvas, Size},
+    gfx::{Canvas, Point, Rect, Size},
     page::{Context, Frame, KeyInput, Mode, Page, PageSizes, PointerEvent, Priority},
     ui::{FieldOutcome, TextField},
 };
@@ -29,9 +30,10 @@ pub struct TodoPage {
     hovered_row: Option<usize>,
     is_add_hovered: bool,
     is_clear_hovered: bool,
-    /// The count under the title and the "N more" row, rebuilt by `refresh_texts` when the list or the field changes.
+    /// The count under the title, rebuilt by `refresh_texts` when the list or the field changes.
     count_text: String,
-    more_text: String,
+    /// How far the rows are scrolled up, in DIP.
+    scroll: f32,
 }
 
 impl TodoPage {
@@ -49,7 +51,7 @@ impl TodoPage {
             is_add_hovered: false,
             is_clear_hovered: false,
             count_text: String::new(),
-            more_text: String::new(),
+            scroll: 0.0,
         };
         page.refresh_texts();
         page
@@ -60,9 +62,12 @@ impl TodoPage {
             (open, 0) => format!("{open} left"),
             (open, done) => format!("{open} left \u{b7} {done} done"),
         };
-        let hidden =
-            self.rows().into_iter().find_map(|row| if let Row::More(count) = row { Some(count) } else { None });
-        self.more_text = hidden.map_or_else(String::new, |count| format!("{count} more"));
+        self.scroll = self.scroll.clamp(0.0, max_scroll(self.rows().len()));
+    }
+
+    /// Shows the last row, where the input is while typing.
+    fn scroll_to_end(&mut self) {
+        self.scroll = max_scroll(self.rows().len());
     }
 
     #[cfg(test)]
@@ -99,7 +104,7 @@ impl TodoPage {
         page
     }
 
-    /// An empty list that is not being added to shows the narrow page with its button.
+    /// An empty list that is not being added to shows the "All clear" message under the buttons.
     fn is_empty_view(&self) -> bool {
         self.list.is_empty() && !self.is_adding
     }
@@ -108,18 +113,27 @@ impl TodoPage {
         plan_rows(&self.list.shown_order(), self.is_adding)
     }
 
-    fn row_at(&self, bounds: crate::gfx::Rect, scale: f32, point: crate::gfx::Point) -> Option<(usize, Row)> {
-        self.rows().into_iter().enumerate().find(|&(position, _)| row_rect(bounds, scale, position).contains(point))
+    /// The row under `point`, when the point is in the list area and not under the toolbar.
+    fn row_at(&self, bounds: Rect, scale: f32, point: Point) -> Option<(usize, Row)> {
+        if !empty_area(bounds, scale).contains(point) {
+            return None;
+        }
+        let scroll = self.scroll;
+        self.rows()
+            .into_iter()
+            .enumerate()
+            .find(|&(position, _)| row_rect(bounds, scale, position, scroll).contains(point))
     }
 
     fn start_adding(&mut self, context: &mut Context) {
-        if self.list.is_full() || self.is_adding {
+        if self.is_adding {
             return;
         }
         self.is_adding = true;
         self.is_add_hovered = false;
         self.field.clear();
         self.refresh_texts();
+        self.scroll_to_end();
         context.take_keyboard();
         context.request_repaint();
     }
@@ -153,8 +167,10 @@ impl Page for TodoPage {
     }
 
     fn sizes(&self) -> PageSizes {
-        let width = if self.is_empty_view() { EMPTY_WIDTH } else { CONTENT_WIDTH };
-        PageSizes { resting_width: RESTING_WIDTH, expanded: Size::new(width, content_height(self.rows().len())) }
+        PageSizes {
+            resting_width: RESTING_WIDTH,
+            expanded: Size::new(CONTENT_WIDTH, content_height(self.rows().len())),
+        }
     }
 
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}
@@ -166,9 +182,11 @@ impl Page for TodoPage {
             self.draw_empty(canvas, bounds, scale, opacity);
             return;
         }
-        for (position, row) in self.rows().into_iter().enumerate() {
-            self.draw_row(canvas, row, row_rect(bounds, scale, position), position, opacity);
-        }
+        canvas.clipped(empty_area(bounds, scale), || {
+            for (position, row) in self.rows().into_iter().enumerate() {
+                self.draw_row(canvas, row, row_rect(bounds, scale, position, self.scroll), position, opacity);
+            }
+        });
     }
 
     fn on_pointer(&mut self, event: PointerEvent, frame: &Frame, context: &mut Context) {
@@ -199,6 +217,7 @@ impl Page for TodoPage {
                 if !self.list.is_empty() && clear_button(bounds, scale).contains(point) {
                     self.list.clear();
                     self.hovered_row = None;
+                    self.scroll = 0.0;
                     self.refresh_texts();
                     context.request_repaint();
                     return;
@@ -206,7 +225,7 @@ impl Page for TodoPage {
                 let Some((position, row)) = self.row_at(bounds, scale, point) else { return };
                 match row {
                     Row::Item(index) => {
-                        let rect = row_rect(bounds, scale, position);
+                        let rect = row_rect(bounds, scale, position, self.scroll);
                         if self.hovered_row == Some(position) && delete_rect(rect, scale).contains(point) {
                             self.list.remove(index);
                             self.hovered_row = None;
@@ -216,7 +235,15 @@ impl Page for TodoPage {
                         self.refresh_texts();
                         context.request_repaint();
                     }
-                    Row::Field | Row::More(_) => {}
+                    Row::Field => {}
+                }
+            }
+            PointerEvent::Scrolled { notches } => {
+                let scroll = (self.scroll + notches * WHEEL_NOTCH_DISTANCE).clamp(0.0, max_scroll(self.rows().len()));
+                if scroll != self.scroll {
+                    self.scroll = scroll;
+                    self.hovered_row = None;
+                    context.request_repaint();
                 }
             }
             PointerEvent::Left | PointerEvent::CaptureLost
@@ -239,8 +266,9 @@ impl Page for TodoPage {
             FieldOutcome::Submitted => {
                 let was_added = self.list.add(self.field.text());
                 self.refresh_texts();
-                if was_added && !self.list.is_full() {
+                if was_added {
                     self.field.clear();
+                    self.scroll_to_end();
                 } else {
                     self.stop_adding(context);
                 }
@@ -249,6 +277,10 @@ impl Page for TodoPage {
             FieldOutcome::Changed | FieldOutcome::Unchanged => {}
         }
         context.request_repaint();
+    }
+
+    fn claims_scroll(&self, point: Point, frame: &Frame) -> bool {
+        max_scroll(self.rows().len()) > 0.0 && empty_area(frame.bounds, frame.scale).contains(point)
     }
 
     fn on_keyboard_lost(&mut self, context: &mut Context) {
@@ -266,7 +298,7 @@ impl Page for TodoPage {
 
 #[cfg(test)]
 mod tests {
-    use super::{layout::MAX_ROWS, list::MAX_TASKS, *};
+    use super::{layout::VISIBLE_ROWS, *};
 
     fn page_with(open: usize, done: usize) -> TodoPage {
         let items = (0..open)
@@ -277,9 +309,9 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_list_is_the_narrow_page_until_adding_starts() {
+    fn an_empty_list_is_as_wide_as_a_full_one_and_keeps_the_usual_height() {
         let mut page = page_with(0, 0);
-        assert_eq!(page.sizes().expanded.width, EMPTY_WIDTH);
+        assert_eq!(page.sizes().expanded.width, CONTENT_WIDTH);
         assert_eq!(page.sizes().expanded.height, 86.0);
         page.is_adding = true;
         assert_eq!(page.sizes().expanded.width, CONTENT_WIDTH);
@@ -297,17 +329,23 @@ mod tests {
     }
 
     #[test]
-    fn a_sixth_task_is_refused_and_a_done_task_counts_toward_the_five() {
-        let mut list =
-            TodoList::with_items((0..4).map(|index| Item { text: format!("task {index}"), is_done: false }).collect());
-        assert!(list.add("fifth"));
-        assert!(list.is_full());
-        assert!(!list.add("sixth"));
-        assert_eq!(list.len(), MAX_TASKS);
-        list.toggle(0);
-        assert!(list.is_full(), "a finished task keeps its row until it is cleared");
-        list.remove(0);
-        assert!(list.add("replacement"));
+    fn the_list_takes_any_number_of_tasks_and_the_page_stops_growing_at_five_rows() {
+        let mut page = page_with(0, 0);
+        for index in 0..12 {
+            assert!(page.list.add(&format!("task {index}")));
+        }
+        assert_eq!(page.list.len(), 12);
+        assert_eq!(page.sizes().expanded.height, 220.0);
+    }
+
+    #[test]
+    fn scrolling_stops_at_the_last_row_and_a_cleared_list_returns_to_the_top() {
+        let mut page = page_with(8, 0);
+        page.scroll = max_scroll(page.rows().len());
+        assert_eq!(page.scroll, 3.0 * WHEEL_NOTCH_DISTANCE);
+        page.list.clear();
+        page.refresh_texts();
+        assert_eq!(page.scroll, 0.0);
     }
 
     #[test]
@@ -317,16 +355,16 @@ mod tests {
         page.is_adding = true;
         assert_eq!(page.rows().last(), Some(&Row::Field));
         assert!(page.list.item(1).is_some_and(|item| item.is_done));
-        assert!(page.rows().len() <= MAX_ROWS);
+        assert!(page.rows().len() <= VISIBLE_ROWS);
     }
 
     #[test]
-    fn clearing_the_list_empties_it_and_the_count_and_returns_to_the_narrow_page() {
+    fn clearing_the_list_empties_it_and_the_count_and_shows_the_empty_message() {
         let mut page = page_with(2, 1);
         page.list.clear();
         page.refresh_texts();
         assert_eq!(page.count_text, "0 left");
         assert!(page.is_empty_view());
-        assert_eq!(page.sizes().expanded.width, EMPTY_WIDTH);
+        assert_eq!(page.sizes().expanded.width, CONTENT_WIDTH);
     }
 }

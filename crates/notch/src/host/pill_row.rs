@@ -13,9 +13,9 @@ pub(super) const EMPTY_SIDE: f32 = 28.0;
 /// Between two items of the open header's group, and between the group and the gear.
 pub(super) const HEADER_ITEM_GAP: f32 = 10.0;
 /// The least room between the header clock and the nearest icon; icons nearer than this are dropped.
-pub(super) const HEADER_CLOCK_GAP: f32 = 14.0;
+pub(super) const HEADER_CLOCK_GAP: f32 = 40.0;
 /// The least room between the page dots and the header clock.
-pub(super) const PAGE_DOTS_CLOCK_GAP: f32 = 12.0;
+pub(super) const PAGE_DOTS_CLOCK_GAP: f32 = 40.0;
 pub(super) const GEAR_SIZE: f32 = 14.0;
 /// Edge of the square a click on a header icon lands in; neighbours 10 apart never overlap it.
 pub(super) const HIT_SIZE: f32 = 24.0;
@@ -279,9 +279,9 @@ mod tests {
     }
 
     #[test]
-    fn nine_page_dots_and_a_37_px_clock_need_a_285_px_panel() {
+    fn nine_page_dots_and_a_37_px_clock_need_a_341_px_panel() {
         let nine_dots = 8.0 * 10.0 + 16.0;
-        assert_eq!(header_content_width(nine_dots, 37.0, &[RING]) + 32.0, 285.0);
+        assert_eq!(header_content_width(nine_dots, 37.0, &[RING]) + 32.0, 341.0);
     }
 
     #[test]

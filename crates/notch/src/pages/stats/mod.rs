@@ -90,11 +90,23 @@ pub struct StatsPage {
     disk_choice: Option<Vec<String>>,
     /// GPU names to show, in order; `None` shows the first GPUs.
     gpu_choice: Option<Vec<String>>,
+    is_enabled: bool,
+    is_hovered: bool,
+    is_sampling: bool,
 }
 
 impl StatsPage {
     pub fn new() -> Self {
-        Self { sampler: Sampler::new(), latest: None, readout: None, disk_choice: None, gpu_choice: None }
+        Self {
+            sampler: Sampler::new(),
+            latest: None,
+            readout: None,
+            disk_choice: None,
+            gpu_choice: None,
+            is_enabled: false,
+            is_hovered: false,
+            is_sampling: false,
+        }
     }
 
     #[cfg(test)]
@@ -127,6 +139,26 @@ impl StatsPage {
             ..reading
         });
         page
+    }
+
+    /// Samples from the moment the notch is hovered, on any page, so the numbers are there when the page opens.
+    fn sync_sampling(&mut self, context: &mut Context) {
+        let should_sample = self.is_enabled && self.is_hovered;
+        if should_sample == self.is_sampling {
+            return;
+        }
+        self.is_sampling = should_sample;
+        if should_sample {
+            self.sampler.reset();
+            let sample = self.sampler.sample();
+            publish_known(context.settings, &sample.disks, &sample.gpus);
+            self.set_latest(sample);
+            context.set_timer(SAMPLE_TIMER, FIRST_SAMPLE_MILLISECONDS);
+        } else {
+            context.kill_timer(SAMPLE_TIMER);
+            self.sampler.release();
+        }
+        context.request_repaint();
     }
 
     /// A saved list picks which disks and GPUs show; no list shows the first ones.
@@ -214,18 +246,14 @@ impl Page for StatsPage {
         }
     }
 
-    fn on_shown_changed(&mut self, is_shown: bool, context: &mut Context) {
-        if is_shown {
-            self.sampler.reset();
-            let sample = self.sampler.sample();
-            publish_known(context.settings, &sample.disks, &sample.gpus);
-            self.set_latest(sample);
-            context.set_timer(SAMPLE_TIMER, FIRST_SAMPLE_MILLISECONDS);
-        } else {
-            context.kill_timer(SAMPLE_TIMER);
-            self.sampler.release();
-        }
-        context.request_repaint();
+    fn on_hover_changed(&mut self, is_hovering: bool, context: &mut Context) {
+        self.is_hovered = is_hovering;
+        self.sync_sampling(context);
+    }
+
+    fn on_enabled_changed(&mut self, is_enabled: bool, context: &mut Context) {
+        self.is_enabled = is_enabled;
+        self.sync_sampling(context);
     }
 
     fn on_timer(&mut self, timer: TimerId, context: &mut Context) {

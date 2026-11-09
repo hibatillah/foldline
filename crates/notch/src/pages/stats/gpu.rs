@@ -1,4 +1,4 @@
-//! GPU load from the per-engine counters Task Manager shows, named through DXGI; open only while the page is shown.
+//! GPU load from the per-engine counters Task Manager shows, named through DXGI; open only while the notch is hovered.
 
 use windows::{
     Win32::{

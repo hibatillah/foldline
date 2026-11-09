@@ -169,19 +169,20 @@ fn the_header_floor_is_the_centered_clock_with_the_wider_side_twice_and_the_side
 }
 
 #[test]
-fn the_open_notch_is_never_narrower_than_the_timer_pages_open_width() {
+fn the_open_notch_is_never_narrower_than_the_timer_page_or_the_header() {
     let notch = open_header(SampleOptions::default());
-    assert!(notch.header_min_width() < timer_open_width(&notch), "the sample header is narrower than the timer");
-    assert!((notch.open_min_width() - timer_open_width(&notch)).abs() < 0.001);
+    let wider = timer_open_width(&notch).max(notch.header_min_width());
+    assert!((notch.open_min_width() - wider).abs() < 0.001);
+    assert!(notch.open_min_width() >= timer_open_width(&notch));
 }
 
 #[test]
-fn a_page_narrower_than_the_timer_opens_the_notch_as_wide_as_the_timer_page() {
+fn a_page_narrower_than_the_floor_opens_the_notch_as_wide_as_the_floor() {
     let notch = open_header(SampleOptions::default());
     let media_width = notch.pages[page_index(&notch, "media")].sizes().expanded.width;
-    assert!(media_width + chrome::WIDTH_EXTRA < timer_open_width(&notch), "the sample media page is narrow");
-    assert!((notch.springs.expanded_width.target - timer_open_width(&notch)).abs() < 0.001);
-    assert!((notch.frame().bounds.width() / notch.scale - timer_open_width(&notch)).abs() < 0.01);
+    assert!(media_width + chrome::WIDTH_EXTRA < notch.open_min_width(), "the sample media page is narrow");
+    assert!((notch.springs.expanded_width.target - notch.open_min_width()).abs() < 0.001);
+    assert!((notch.frame().bounds.width() / notch.scale - notch.open_min_width()).abs() < 0.01);
 }
 
 #[test]

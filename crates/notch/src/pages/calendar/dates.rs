@@ -68,20 +68,26 @@ pub fn week_start(day: i64) -> i64 {
     day - i64::from(weekday(day))
 }
 
-/// The month of a day as the grid draws it: Monday first, blank cells before the 1st, at most six rows.
+/// The days the page draws as a grid, Monday first: a whole month (blank cells before the 1st, at most six rows) or
+/// one week (a single row).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct MonthGrid {
+pub struct DayGrid {
     pub first_day: i64,
     pub day_count: u32,
-    /// Empty cells before the 1st in the first row.
+    /// Empty cells before the first day in the first row.
     pub leading: usize,
 }
 
-impl MonthGrid {
-    pub fn of(day: i64) -> Self {
+impl DayGrid {
+    pub fn month_of(day: i64) -> Self {
         let (year, month, date) = civil_from_days(day);
         let first_day = day - i64::from(date) + 1;
         Self { first_day, day_count: days_in_month(year, month), leading: weekday(first_day) as usize }
+    }
+
+    /// The Monday-to-Sunday week that holds `day`, even when it crosses a month.
+    pub fn week_of(day: i64) -> Self {
+        Self { first_day: week_start(day), day_count: 7, leading: 0 }
     }
 
     pub fn rows(&self) -> usize {
@@ -195,12 +201,22 @@ mod tests {
 
     #[test]
     fn the_month_grid_starts_on_the_right_weekday_and_has_up_to_six_rows() {
-        let november = MonthGrid::of(days_from_civil(2026, 11, 13));
+        let november = DayGrid::month_of(days_from_civil(2026, 11, 13));
         assert_eq!((november.leading, november.day_count, november.rows()), (6, 30, 6));
         assert_eq!(civil_from_days(november.first_day), (2026, 11, 1));
-        let february = MonthGrid::of(days_from_civil(2027, 2, 9));
+        let february = DayGrid::month_of(days_from_civil(2027, 2, 9));
         assert_eq!((february.leading, february.day_count, february.rows()), (0, 28, 4));
         assert!(february.contains(february.first_day) && !february.contains(february.first_day + 28));
+    }
+
+    #[test]
+    fn the_week_grid_is_one_row_from_monday_and_crosses_a_month_edge() {
+        let friday = days_from_civil(2026, 10, 30);
+        let week = DayGrid::week_of(friday);
+        assert_eq!((week.leading, week.day_count, week.rows()), (0, 7, 1));
+        assert_eq!(civil_from_days(week.first_day), (2026, 10, 26));
+        assert!(week.contains(days_from_civil(2026, 11, 1)) && !week.contains(days_from_civil(2026, 11, 2)));
+        assert_eq!(DayGrid::week_of(week.first_day), week, "a Monday starts its own week");
     }
 
     #[test]

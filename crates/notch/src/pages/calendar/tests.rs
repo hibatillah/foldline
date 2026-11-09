@@ -6,7 +6,7 @@ use super::{
 #[test]
 fn a_new_page_has_a_label_for_every_date_of_its_month_before_any_refresh() {
     let page = CalendarPage::new();
-    assert_eq!(page.labels.day_numbers.len(), page.month.day_count as usize);
+    assert_eq!(page.labels.day_numbers.len(), page.grid.day_count as usize);
     assert_eq!(page.labels.year, "1970");
 }
 
@@ -17,7 +17,7 @@ fn the_month_is_written_in_full() {
 }
 
 fn another_day_of_the_month(page: &CalendarPage) -> i64 {
-    if page.month.contains(page.today + 1) { page.today + 1 } else { page.today - 1 }
+    if page.grid.contains(page.today + 1) { page.today + 1 } else { page.today - 1 }
 }
 
 #[test]
@@ -30,7 +30,7 @@ fn a_picked_day_lists_its_own_events_and_today_is_the_fallback() {
     page.refresh(&fonts);
     assert!(!page.agenda.is_done);
     assert!(page.agenda.rows.is_empty(), "the sample has events only today");
-    page.selected_day = Some(page.month.first_day - 3);
+    page.selected_day = Some(page.grid.first_day - 3);
     page.refresh(&fonts);
     assert_eq!(page.selected(), page.today);
 }
@@ -39,7 +39,7 @@ fn a_picked_day_lists_its_own_events_and_today_is_the_fallback() {
 fn a_day_picked_in_an_earlier_month_is_forgotten() {
     let fonts = Fonts::new(1.0).unwrap();
     let mut page = CalendarPage::sample(&fonts);
-    page.selected_day = Some(page.month.first_day + i64::from(page.month.day_count));
+    page.selected_day = Some(page.grid.first_day + i64::from(page.grid.day_count));
     page.refresh(&fonts);
     assert_eq!(page.selected_day, None);
 }
@@ -48,8 +48,8 @@ fn a_day_picked_in_an_earlier_month_is_forgotten() {
 fn the_page_is_the_viewport_high_and_taller_only_for_a_six_row_month() {
     let fonts = Fonts::new(1.0).unwrap();
     let page = CalendarPage::sample(&fonts);
-    assert_eq!(page.sizes().expanded.height, content_height(page.month.rows()));
-    assert!(page.sizes().expanded.height >= geometry::VIEWPORT_HEIGHT);
+    assert_eq!(page.sizes().expanded.height, content_height(page.grid.rows(), page.view));
+    assert!(page.sizes().expanded.height >= geometry::MONTH_VIEWPORT_HEIGHT);
     assert_eq!(page.sizes().expanded.width, EXPANDED_WIDTH);
 }
 
@@ -57,7 +57,7 @@ fn the_page_is_the_viewport_high_and_taller_only_for_a_six_row_month() {
 fn the_month_labels_cover_every_date_of_the_month() {
     let fonts = Fonts::new(1.0).unwrap();
     let page = CalendarPage::sample(&fonts);
-    assert_eq!(page.labels.day_numbers.len(), page.month.day_count as usize);
+    assert_eq!(page.labels.day_numbers.len(), page.grid.day_count as usize);
 }
 
 #[test]
@@ -76,10 +76,10 @@ fn the_empty_day_message_names_the_selected_weekday_and_date_and_follows_the_pic
 }
 
 #[test]
-fn only_a_list_of_more_than_five_cards_claims_the_wheel() {
+fn only_a_list_of_more_than_four_cards_claims_the_wheel_in_the_month_view() {
     let fonts = Fonts::new(1.0).unwrap();
     let mut page = CalendarPage::sample(&fonts);
-    let bounds = Rect::new(0.0, 0.0, EXPANDED_WIDTH, content_height(page.month.rows()));
+    let bounds = Rect::new(0.0, 0.0, EXPANDED_WIDTH, content_height(page.grid.rows(), page.view));
     let frame = Frame {
         scale: 1.0,
         bounds,
@@ -140,4 +140,57 @@ fn the_event_badge_is_exactly_its_content_with_no_padding_after_the_time() {
     assert_eq!(width, 14.0 + 4.0 + title + 8.0 + time);
     let short = fonts.measure(&BADGE_TIME, reminder.short_text()).ceil();
     assert_eq!(page.short_presence_width(), Some(14.0 + 4.0 + short));
+}
+
+fn week_page(fonts: &Fonts) -> CalendarPage {
+    let mut page = CalendarPage::sample(fonts);
+    page.view = View::Week;
+    page.refresh(fonts);
+    page
+}
+
+#[test]
+fn the_week_view_draws_one_row_of_seven_days_that_holds_today() {
+    let fonts = Fonts::new(1.0).unwrap();
+    let page = week_page(&fonts);
+    assert_eq!((page.grid.rows(), page.grid.day_count, page.labels.day_numbers.len()), (1, 7, 7));
+    assert!(page.grid.contains(page.today));
+}
+
+#[test]
+fn the_week_view_is_three_cards_high_and_as_wide_as_the_month_view() {
+    let fonts = Fonts::new(1.0).unwrap();
+    let page = week_page(&fonts);
+    assert_eq!(page.sizes().expanded.height, 112.0);
+    assert_eq!(page.sizes().expanded.width, EXPANDED_WIDTH);
+}
+
+#[test]
+fn a_day_picked_in_another_week_is_forgotten_when_the_view_turns_to_week() {
+    let fonts = Fonts::new(1.0).unwrap();
+    let mut page = CalendarPage::sample(&fonts);
+    page.selected_day = Some(page.today - 14);
+    page.view = View::Week;
+    page.refresh(&fonts);
+    assert_eq!(page.selected_day, None);
+}
+
+#[test]
+fn a_week_list_of_more_than_three_cards_claims_the_wheel() {
+    let fonts = Fonts::new(1.0).unwrap();
+    let mut page = week_page(&fonts);
+    let bounds = Rect::new(0.0, 0.0, EXPANDED_WIDTH, page.sizes().expanded.height);
+    let frame = Frame {
+        scale: 1.0,
+        bounds,
+        expansion: 1.0,
+        expanded: Size::new(EXPANDED_WIDTH, bounds.height()),
+        lead_gap: 0.0,
+    };
+    let inside = Point::new(bounds.right - 20.0, bounds.bottom - 20.0);
+    assert!(!page.claims_scroll(inside, &frame), "three events fill the week list");
+    page.agenda.rows = (0..4)
+        .map(|index| agenda::Row { occurrence: page.agenda.rows[0].occurrence.clone(), time: format!("{index}") })
+        .collect();
+    assert!(page.claims_scroll(inside, &frame));
 }

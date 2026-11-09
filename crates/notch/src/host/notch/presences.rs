@@ -63,12 +63,17 @@ impl Notch {
                 .collect()
         };
         badges.sort_by_key(|&(source, _)| self.rank_of(source));
-        let claimed = resting_row::claimed_group(
+        let mut claimed = resting_row::claimed_group(
             &badges,
             |source| self.rank_of(source),
             |source| self.countdown_of(source),
             |source| self.is_music_badge(source),
         );
+        for (source, width) in &mut claimed {
+            if let Some(icon_width) = self.countdown_icon_width(*source) {
+                *width = icon_width;
+            }
+        }
         let uses_short_badges = self.shortens_badges(&mut badges);
         let changed = shown != self.presences.transients
             || badges != self.presences.badges

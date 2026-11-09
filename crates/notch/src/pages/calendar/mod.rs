@@ -1,6 +1,6 @@
 use self::{
     agenda::{Agenda, Reminder, build, list, reminder},
-    dates::{MonthGrid, day_of},
+    dates::{DayGrid, day_of},
     ics::{Event, Occurrence, occurrences_on, parse},
 };
 use crate::{
@@ -19,6 +19,7 @@ use std::{
     time::Instant,
 };
 use style::*;
+use view::View;
 
 mod agenda;
 mod badge;
@@ -34,6 +35,7 @@ mod settings;
 mod style;
 #[cfg(test)]
 mod tests;
+mod view;
 mod wake;
 
 const EXPANDED_WIDTH: f32 = 508.0;
@@ -57,6 +59,7 @@ const EMPTY_GAP: f32 = 6.0;
 
 const LINK_SETTING: &str = "calendar.ics_url";
 const REFRESH_SETTING: &str = "calendar.refresh_minutes";
+const VIEW_SETTING: &str = "calendar.view";
 
 /// Wakes once a minute, like the clock, while shown or counting down; see `wake.rs` for the hidden schedule.
 const MINUTE_TIMER: TimerId = TimerId(1);
@@ -74,7 +77,8 @@ pub struct CalendarPage {
     reminder: Option<Reminder>,
     reminder_width: f32,
     reminder_short_width: f32,
-    month: MonthGrid,
+    grid: DayGrid,
+    view: View,
     /// How far the event list is scrolled up, in device-independent pixels.
     scroll: f32,
     /// The pointer height while a drag scrolls the list.
@@ -103,7 +107,8 @@ impl CalendarPage {
             reminder: None,
             reminder_width: 0.0,
             reminder_short_width: 0.0,
-            month: MonthGrid::of(0),
+            grid: DayGrid::month_of(0),
+            view: View::default(),
             scroll: 0.0,
             drag_last_y: None,
             selected_day: None,
@@ -111,16 +116,16 @@ impl CalendarPage {
             fetch_interval_milliseconds: minutes_to_milliseconds(DEFAULT_REFRESH_MINUTES),
             is_shown: false,
             last_fetch: None,
-            labels: Labels::new(0, 0),
+            labels: Labels::new(0, 0, &DayGrid::month_of(0)),
         }
     }
 
     fn refresh(&mut self, fonts: &Fonts) {
         let now = local_now();
         self.today = day_of(now);
-        self.month = MonthGrid::of(self.today);
-        // A day picked in an earlier month is forgotten when the month turns.
-        if self.selected_day.is_some_and(|day| !self.month.contains(day)) {
+        self.grid = self.view.grid_of(self.today);
+        // A day picked outside the grid is forgotten when the month or the week turns.
+        if self.selected_day.is_some_and(|day| !self.grid.contains(day)) {
             self.selected_day = None;
         }
         self.occurrences = occurrences_on(&self.events, self.today, &SystemClock);
@@ -128,8 +133,8 @@ impl CalendarPage {
             Some(day) if day != self.today => list(&occurrences_on(&self.events, day, &SystemClock)),
             _ => build(&self.occurrences, now),
         };
-        self.scroll = self.scroll.min(max_scroll(self.agenda.rows.len()));
-        self.labels = Labels::new(self.today, self.selected());
+        self.scroll = self.scroll.min(max_scroll(self.agenda.rows.len(), self.view));
+        self.labels = Labels::new(self.today, self.selected(), &self.grid);
         self.reminder = reminder(&self.occurrences, now);
         if let Some(reminder) = &self.reminder {
             let title = fonts.measure(&BADGE, &reminder.title).min(REMINDER_TITLE_WIDTH).ceil();
@@ -173,6 +178,14 @@ impl CalendarPage {
         page
     }
 
+    #[cfg(test)]
+    pub fn sample_week(fonts: &Fonts) -> Self {
+        let mut page = Self::sample(fonts);
+        page.view = View::Week;
+        page.refresh(fonts);
+        page
+    }
+
     fn load_events(&mut self, text: &str) {
         self.events = parse(text);
     }
@@ -198,7 +211,7 @@ impl Page for CalendarPage {
     fn sizes(&self) -> PageSizes {
         PageSizes {
             resting_width: RESTING_WIDTH,
-            expanded: Size::new(EXPANDED_WIDTH, content_height(self.month.rows())),
+            expanded: Size::new(EXPANDED_WIDTH, content_height(self.grid.rows(), self.view)),
         }
     }
 
@@ -233,7 +246,7 @@ impl Page for CalendarPage {
         let (bounds, scale) = (frame.bounds, frame.scale);
         self.draw_month(canvas, bounds, opacity);
         if self.agenda.rows.is_empty() {
-            self.draw_events_message(canvas, events_area(bounds, scale), opacity);
+            self.draw_events_message(canvas, events_area(bounds, scale, self.view), opacity);
         } else {
             self.draw_rows(canvas, bounds, opacity);
         }
@@ -259,6 +272,7 @@ impl Page for CalendarPage {
         self.notifier = Some(context.notifier());
         self.link = context.settings.get_string(LINK_SETTING).map(str::to_owned).filter(|link| !link.is_empty());
         self.read_fetch_interval(context);
+        self.view = View::from_setting(context.settings.get_string(VIEW_SETTING), self.view);
         // The stored copy belongs to the address; with none, a cleared calendar must not come back.
         let stored =
             self.link.as_ref().and(self.storage.as_ref()).and_then(|storage| std::fs::read_to_string(storage).ok());
@@ -275,12 +289,20 @@ impl Page for CalendarPage {
     fn on_settings_changed(&mut self, context: &mut Context) {
         let previous_interval = self.fetch_interval_milliseconds;
         self.read_fetch_interval(context);
+        let previous_view = self.view;
+        self.view = View::from_setting(context.settings.get_string(VIEW_SETTING), self.view);
+        let view_changed = self.view != previous_view;
+        if view_changed {
+            self.scroll = 0.0;
+        }
         match link_change(self.link.as_deref(), context.settings.get_string(LINK_SETTING)) {
             LinkChange::Keep => {
                 if self.link.is_some() && self.fetch_interval_milliseconds != previous_interval {
                     context.set_timer(FETCH_TIMER, self.fetch_interval_milliseconds);
                 }
-                return;
+                if !view_changed {
+                    return;
+                }
             }
             LinkChange::Remove => {
                 self.forget_link();
@@ -336,7 +358,8 @@ impl Page for CalendarPage {
     }
 
     fn claims_scroll(&self, point: Point, frame: &Frame) -> bool {
-        max_scroll(self.agenda.rows.len()) > 0.0 && events_area(frame.bounds, frame.scale).contains(point)
+        max_scroll(self.agenda.rows.len(), self.view) > 0.0
+            && events_area(frame.bounds, frame.scale, self.view).contains(point)
     }
 
     fn on_timer(&mut self, timer: TimerId, context: &mut Context) {

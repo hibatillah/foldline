@@ -2,7 +2,7 @@ use super::{HIDDEN_WIDTH, Notch, RESTING_BOTTOM_PADDING, RESTING_PILL_HEIGHT};
 use crate::host::{activity_layout, chrome, navigation};
 use crate::{
     gfx::{Point, Size, Spring},
-    page::{DEFAULT_CONTENT_HEIGHT, Frame, MAX_CONTENT_HEIGHT, Mode, Priority, RESTING_MIN_WIDTH},
+    page::{DEFAULT_CONTENT_HEIGHT, Frame, KeyboardOwner, MAX_CONTENT_HEIGHT, Mode, Priority, RESTING_MIN_WIDTH},
 };
 
 const DRAG_GROWTH: Size = Size::new(28.0, 14.0);
@@ -83,7 +83,8 @@ impl Notch {
     }
 
     pub(super) fn sync_shown_page(&mut self) -> bool {
-        let shown = (self.hover.is_hovering || self.keyboard.owner.is_some()).then_some(self.expanded_index).flatten();
+        let is_typing_in_a_page = matches!(self.keyboard.owner, Some(KeyboardOwner::Page(_)));
+        let shown = (self.hover.is_hovering || is_typing_in_a_page).then_some(self.expanded_index).flatten();
         if shown == self.shown_page {
             return false;
         }

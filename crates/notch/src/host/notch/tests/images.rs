@@ -90,6 +90,9 @@ fn snapshots_of_every_open_page() {
     let mut unlinked = rig(SampleOptions { calendar: false, ..options });
     open(&mut unlinked, "calendar");
     save(&unlinked, "open-calendar-no-link", 260.0);
+    let mut week = rig(SampleOptions { calendar_week: true, ..options });
+    open(&mut week, "calendar");
+    save(&week, "open-calendar-week", 260.0);
     let mut dragged_over = rig(SampleOptions { file_drag: true, ..options });
     open(&mut dragged_over, "shelf");
     save(&dragged_over, "open-shelf-drag", 260.0);

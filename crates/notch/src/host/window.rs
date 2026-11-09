@@ -170,6 +170,10 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
             LRESULT(0)
         }
         WM_MOUSEACTIVATE => LRESULT(MA_NOACTIVATE as isize),
+        WM_HOTKEY => {
+            with_notch(|notch| notch.hotkey_pressed(wparam.0 as i32));
+            LRESULT(0)
+        }
         WM_KEYDOWN => {
             let is_control_down = unsafe { GetKeyState(i32::from(VK_CONTROL.0)) } < 0;
             if with_notch(|notch| notch.key_pressed(wparam.0 as u16, is_control_down)) == Some(true) {

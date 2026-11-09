@@ -144,8 +144,8 @@ impl Notch {
 
     pub(super) fn flush(&mut self) {
         let requests = std::mem::take(&mut self.pending);
-        if let Some((index, wants_keyboard)) = requests.keyboard {
-            self.set_keyboard(index, wants_keyboard);
+        if let Some((owner, wants_keyboard)) = requests.keyboard {
+            self.set_keyboard(owner, wants_keyboard);
         }
         if requests.close {
             self.set_hovering(false);
@@ -154,6 +154,7 @@ impl Notch {
             self.open_on_page(index);
         }
         let layout_changed = self.refresh_layout();
+        self.sync_page_hotkeys();
         if requests.animate {
             self.start_animation();
         }

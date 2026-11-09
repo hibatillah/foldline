@@ -21,17 +21,17 @@ pub const TITLE_MAX_LINES: usize = 2;
 const TITLE_LINE_HEIGHT: f32 = 18.0;
 const DETAIL_LINE_HEIGHT: f32 = 15.0;
 const DETAIL_GAP: f32 = 2.0;
-const CONTROLS_GAP: f32 = 14.0;
+const CONTROLS_GAP: f32 = 12.0;
 /// The lyrics icon is the tallest control, so it sets the height of the control row.
-const CONTROLS_HEIGHT: f32 = 16.0;
-/// Center of the first control from the text column edge: half of its 14 px icon.
-const CONTROL_FIRST_CENTER: f32 = 7.0;
-/// Distance between control centers: a 14 px icon and a 20 px gap.
-const CONTROL_PITCH: f32 = 34.0;
-/// The 16 px lyrics icon is 2 px wider than the others, so its center sits 1 px further along.
+const CONTROLS_HEIGHT: f32 = 20.0;
+/// Center of the first control from the text column edge: half of its 18 px icon.
+const CONTROL_FIRST_CENTER: f32 = 9.0;
+/// Distance between control centers: an 18 px icon and a 20 px gap.
+const CONTROL_PITCH: f32 = 38.0;
+/// The 20 px lyrics icon is 2 px wider than the others, so its center sits 1 px further along.
 const LYRICS_NUDGE: f32 = 1.0;
 /// Width of the control row from the text column edge to the right edge of the lyrics icon.
-const CONTROLS_WIDTH: f32 = CONTROL_FIRST_CENTER + 3.0 * CONTROL_PITCH + LYRICS_NUDGE + 8.0;
+const CONTROLS_WIDTH: f32 = CONTROL_FIRST_CENTER + 3.0 * CONTROL_PITCH + LYRICS_NUDGE + 10.0;
 const LYRIC_GAP: f32 = 20.0;
 pub const LYRIC_MAX_LINES: usize = 2;
 const BADGE_SIZE: f32 = 19.0;
@@ -214,13 +214,13 @@ mod tests {
     }
 
     #[test]
-    fn the_controls_are_14_px_icons_with_a_20_px_gap_and_a_slightly_wider_last_one() {
+    fn the_controls_are_18_px_icons_with_a_20_px_gap_and_a_slightly_wider_last_one() {
         let layout = plain(2);
         let x = |control| (layout.control_center(control).x - layout.title_line(0).left) / layout.scale;
-        assert_eq!(x(Control::Previous), 7.0);
-        assert_eq!(x(Control::PlayPause) - x(Control::Previous), 34.0);
-        assert_eq!(x(Control::Next) - x(Control::PlayPause), 34.0);
-        assert_eq!(x(Control::Lyrics) - x(Control::Next), 35.0);
+        assert_eq!(x(Control::Previous), 9.0);
+        assert_eq!(x(Control::PlayPause) - x(Control::Previous), 38.0);
+        assert_eq!(x(Control::Next) - x(Control::PlayPause), 38.0);
+        assert_eq!(x(Control::Lyrics) - x(Control::Next), 39.0);
     }
 
     #[test]
@@ -274,7 +274,7 @@ mod tests {
         let width = plain_width(TEXT_MIN_WIDTH);
         let narrow = Frame { bounds: Rect::new(100.0, 0.0, 100.0 + width * 2.0, PLAIN_HEIGHT * 2.0), ..frame(width) };
         let layout = Layout::new(&narrow, 1, TEXT_MIN_WIDTH);
-        let controls_right = layout.control_center(Control::Lyrics).x + 8.0 * layout.scale;
+        let controls_right = layout.control_center(Control::Lyrics).x + 10.0 * layout.scale;
         assert_eq!(controls_right, layout.bounds.right);
     }
 

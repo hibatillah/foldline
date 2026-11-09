@@ -186,11 +186,12 @@ fn the_lyric_pill_has_no_clock_no_battery_and_no_wave_and_grows_to_fit_its_group
 }
 
 #[test]
-fn the_lyric_pill_shows_the_countdown_in_its_long_form() {
+fn the_lyric_pill_shows_the_countdown_as_its_icon_alone() {
     let (notch, _) = lyric_rig(None);
     let &(source, width) = notch.resting_row.claimed_group.last().unwrap();
     let Source::Page(index) = source else { panic!("the countdown is a page badge") };
-    assert_eq!(notch.pages[index].presence(), Some(Presence::Badge { width }));
+    assert_eq!(notch.pages[index].header_status_width(), Some(width));
+    assert_ne!(notch.pages[index].presence(), Some(Presence::Badge { width }), "the badge's text is left out");
 }
 
 #[test]

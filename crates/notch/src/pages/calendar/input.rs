@@ -7,27 +7,27 @@ use crate::page::{Context, Frame, PointerEvent};
 impl CalendarPage {
     pub(super) fn handle_pointer(&mut self, event: PointerEvent, frame: &Frame, context: &mut Context) {
         let (bounds, scale) = (frame.bounds, frame.scale);
-        let scroll_limit = max_scroll(self.agenda.rows.len());
+        let scroll_limit = max_scroll(self.agenda.rows.len(), self.view);
         match event {
             PointerEvent::Moved(point) => {
                 if let Some(last_y) = self.drag_last_y {
                     self.drag_last_y = Some(point.y);
                     self.scroll_by((last_y - point.y) / scale, scroll_limit, context);
                 }
-                let hovered_cell = day_at(point, &self.month, bounds, scale);
+                let hovered_cell = day_at(point, &self.grid, bounds, scale);
                 if hovered_cell != self.hovered_cell {
                     self.hovered_cell = hovered_cell;
                     context.request_repaint();
                 }
             }
             PointerEvent::Pressed(point) if frame.is_open() => {
-                if let Some(cell) = day_at(point, &self.month, bounds, scale) {
-                    let day = self.month.first_day + (cell - self.month.leading) as i64;
+                if let Some(cell) = day_at(point, &self.grid, bounds, scale) {
+                    let day = self.grid.first_day + (cell - self.grid.leading) as i64;
                     self.selected_day = (day != self.today).then_some(day);
                     self.scroll = 0.0;
                     self.refresh(context.fonts());
                     context.request_repaint();
-                } else if scroll_limit > 0.0 && events_area(bounds, scale).contains(point) {
+                } else if scroll_limit > 0.0 && events_area(bounds, scale, self.view).contains(point) {
                     self.drag_last_y = Some(point.y);
                 }
             }

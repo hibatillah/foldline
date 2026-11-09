@@ -177,9 +177,28 @@ impl Notch {
         self.draw_badges_at_springs(canvas, frame, &self.presences.badges, self.resting_row.uses_short_badges, opacity);
     }
 
-    /// The claimed pill's group, each badge in its long form.
+    /// The width of a countdown's icon alone, which the claimed pill shows in place of its text; `None` for any other badge.
+    pub(super) fn countdown_icon_width(&self, source: Source) -> Option<f32> {
+        match source {
+            Source::Page(index) if self.pages[index].countdown_seconds().is_some() => {
+                self.pages[index].header_status_width()
+            }
+            _ => None,
+        }
+    }
+
+    /// The claimed pill's group: a countdown shows only its icon, the same mark the header shows; other badges keep
+    /// their long form.
     pub(super) fn draw_claimed_group(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
-        self.draw_badges_at_springs(canvas, frame, &self.resting_row.claimed_group, false, opacity);
+        for &(source, width) in &self.resting_row.claimed_group {
+            let Some(area) = self.badge_rect(frame.bounds, source, width) else { continue };
+            match source {
+                Source::Page(index) if self.countdown_icon_width(source).is_some() => {
+                    self.pages[index].draw_header_status(canvas, area, self.scale, opacity);
+                }
+                _ => self.draw_badge(source, canvas, area, false, opacity),
+            }
+        }
     }
 
     /// The x of an item's left edge in device pixels: its collapsed place moving to its header place as the notch

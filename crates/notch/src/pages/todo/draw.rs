@@ -6,8 +6,8 @@ use super::{
     },
 };
 use crate::ui::palette::{
-    LIGHT_GRAY, REMOVE_BUTTON_FILL, SOFT_RED, SUCCESS_GREEN, SURFACE_BORDER, SURFACE_BUTTON_BORDER, SURFACE_HOVER,
-    SURFACE_ROW, TEXT_DIM, TEXT_LIGHT, TEXT_MUTED,
+    LIGHT_GRAY, REMOVE_BUTTON_FILL, SUCCESS_GREEN, SURFACE_BORDER, SURFACE_BUTTON_BORDER, SURFACE_HOVER, SURFACE_ROW,
+    TEXT_DIM, TEXT_LIGHT, TEXT_MUTED,
 };
 use crate::ui::type_styles::{MEDIUM_12, MEDIUM_13, REGULAR_12, REGULAR_13, REGULAR_14};
 use crate::{
@@ -24,19 +24,18 @@ const TITLE_GAP: f32 = 8.0;
 /// The count sits this far below the title's vertical middle so both share a baseline (about 0.35 of a font size each).
 const COUNT_DROP: f32 = 2.8;
 const BUTTON_CONTENT_GAP: f32 = 5.0;
-const TRASH_SIZE: f32 = 12.0;
 const MESSAGE_ICON_SIZE: f32 = 18.0;
 const MESSAGE_ICON_GAP: f32 = 8.0;
 const MESSAGE_HEIGHT: f32 = 18.0;
 
 const TITLE: FontStyle = FontStyle::new(UI_FONT, 20.0, Weight::Medium, Align::Leading);
 const PLUS: FontStyle = FontStyle::new(UI_FONT, 15.0, Weight::Regular, Align::Center);
+const CLEAR_LABEL: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Medium, Align::Center);
 const HINT: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Trailing);
 
 const FIELD_BORDER: Color = Color::rgb(0.251, 0.561, 1.0);
 const CLOSE: &str = "M6 6l12 12M18 6 6 18";
 const CHECK: &str = "m5 12 5 5 9-10";
-const TRASH: &str = "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3";
 const ALL_CLEAR_RING: &str = "M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0";
 const ALL_CLEAR_CHECK: &str = "m8 12.5 2.8 2.8L16 9.5";
 
@@ -72,23 +71,12 @@ impl TodoPage {
         canvas.fill_rounded_rect(area, radius, SURFACE_BUTTON_BORDER.faded(opacity));
         let inner = Rect::new(area.left + scale, area.top + scale, area.right - scale, area.bottom - scale);
         canvas.fill_rounded_rect(inner, radius - scale, fill.faded(opacity));
-        let text_width = canvas.measure(&MEDIUM_12, "Clear all") * scale;
-        let content = (TRASH_SIZE + BUTTON_CONTENT_GAP) * scale + text_width;
-        let left = area.center_x() - content / 2.0;
-        let icon_center = Point::new(left + TRASH_SIZE * scale / 2.0, area.center_y());
-        draw_strokes(canvas, &[Stroke::new(TRASH, SOFT_RED)], icon_center, TRASH_SIZE * scale, 2.0, opacity);
-        let label = Rect { left: left + (TRASH_SIZE + BUTTON_CONTENT_GAP) * scale, right: area.right, ..area };
-        canvas.text(&MEDIUM_12, "Clear all", label, TEXT_LIGHT.faded(opacity));
+        canvas.text(&CLEAR_LABEL, "Clear all", area, TEXT_LIGHT.faded(opacity));
     }
 
     fn draw_add_button(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-        let is_dimmed = self.list.is_full();
-        let fill = match (is_dimmed, self.is_add_hovered) {
-            (true, _) => SURFACE_BORDER,
-            (false, true) => Color::gray(0.85),
-            (false, false) => Color::WHITE,
-        };
-        let text = if is_dimmed { TEXT_DIM } else { Color::BLACK };
+        let fill = if self.is_add_hovered { Color::gray(0.85) } else { Color::WHITE };
+        let text = Color::BLACK;
         canvas.fill_rounded_rect(area, area.height() / 2.0, fill.faded(opacity));
         let plus_width = canvas.measure(&REGULAR_14, "+") * scale;
         let content = plus_width + BUTTON_CONTENT_GAP * scale + canvas.measure(&MEDIUM_12, "Add") * scale;
@@ -168,14 +156,6 @@ impl TodoPage {
                     draw_strokes(canvas, &cross, center, 10.0 * scale, 2.5, opacity);
                 }
             }
-            Row::More(_) => {
-                canvas.text(
-                    &REGULAR_12,
-                    &self.more_text,
-                    Rect { left: rect.left + ROW_PADDING * scale, ..rect },
-                    TEXT_DIM.faded(opacity),
-                );
-            }
         }
     }
 }
@@ -201,12 +181,10 @@ mod tests {
     }
 
     #[test]
-    fn the_cached_texts_follow_the_list_and_the_overflow_row() {
+    fn the_cached_count_follows_the_list() {
         let mut crowded = page(7, 0);
-        assert!(crowded.more_text.ends_with(" more"), "{}", crowded.more_text);
         crowded.list.toggle(0);
         crowded.refresh_texts();
         assert_eq!(crowded.count_text, "6 left \u{b7} 1 done");
-        assert!(page(1, 0).more_text.is_empty());
     }
 }

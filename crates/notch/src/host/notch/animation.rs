@@ -128,6 +128,7 @@ impl Notch {
             self.page_swap.finish();
             self.stop_animation();
         }
+        self.sync_page_hotkeys();
         self.paint();
     }
 

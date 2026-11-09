@@ -4,7 +4,7 @@ use windows::{Win32::UI::WindowsAndMessaging::WM_APP, core::GUID};
 
 use crate::{
     gfx::{Canvas, Rect},
-    page::{Context, PAGE_TIMER_LIMIT, PointerEvent, TimerId},
+    page::{Context, KeyInput, PAGE_TIMER_LIMIT, PointerEvent, TimerId},
 };
 
 pub(crate) const WM_ACTIVITY_NOTIFY: u32 = WM_APP + 3;
@@ -86,6 +86,12 @@ pub trait Activity {
     /// Pointer input over this activity's banner while the notch is collapsed; `area` and `scale` are what `draw` got.
     /// `PointerEvent::Left` means the pointer left the banner.
     fn on_pointer(&mut self, _event: PointerEvent, _area: Rect, _scale: f32, _context: &mut Context) {}
+
+    /// Typing, delivered only while this activity holds the keyboard (`Context::take_keyboard`).
+    fn on_key(&mut self, _key: KeyInput, _context: &mut Context) {}
+
+    /// The keyboard went elsewhere without the activity releasing it: stop editing.
+    fn on_keyboard_lost(&mut self, _context: &mut Context) {}
 
     fn on_notify(&mut self, _context: &mut Context) {}
 

@@ -223,7 +223,8 @@ impl Alert {
                 self.is_pointer_over = false;
                 self.flash.on_timer(FLASH_TIMER, context);
             }
-            None => {}
+            // This banner has no Reply button.
+            Some(BannerButton::Reply) | None => {}
         }
     }
 

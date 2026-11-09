@@ -35,6 +35,8 @@ pub struct SampleOptions {
     pub media: Option<bool>,
     pub timer: bool,
     pub calendar: bool,
+    /// The calendar page shows its week view instead of the month.
+    pub calendar_week: bool,
     pub file_drag: bool,
     /// The shelf holds six files (`0`), none (`1`), seven (`2`) or twelve (`3`).
     pub shelf: u8,
@@ -65,7 +67,11 @@ pub fn samples(fonts: &crate::gfx::Fonts, directory: &std::path::Path, options: 
             [6, 0, 7, 12][usize::from(options.shelf).min(3)],
             options.file_drag,
         )),
-        Box::new(if options.calendar { calendar::CalendarPage::sample(fonts) } else { calendar::CalendarPage::new() }),
+        Box::new(match (options.calendar, options.calendar_week) {
+            (true, false) => calendar::CalendarPage::sample(fonts),
+            (true, true) => calendar::CalendarPage::sample_week(fonts),
+            (false, _) => calendar::CalendarPage::new(),
+        }),
         Box::new(if options.timer { timer::TimerPage::sample(fonts) } else { timer::TimerPage::new() }),
         Box::new(todo::TodoPage::sample(options.todo)),
         Box::new(match options.shalat_mark {

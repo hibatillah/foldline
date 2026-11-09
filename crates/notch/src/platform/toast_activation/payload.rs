@@ -119,7 +119,7 @@ fn toast_tag(payload: &str) -> Option<&str> {
 }
 
 /// `name="value"` pairs of one tag, with single or double quotes and XML escapes decoded.
-fn attributes(tag: &str) -> Vec<(String, String)> {
+pub(super) fn attributes(tag: &str) -> Vec<(String, String)> {
     let mut found = Vec::new();
     let mut rest = tag;
     while let Some(equals) = rest.find('=') {

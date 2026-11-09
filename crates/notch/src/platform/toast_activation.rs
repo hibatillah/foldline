@@ -5,6 +5,8 @@ mod activator;
 mod click_limits;
 mod foreground;
 mod payload;
+mod reply;
+mod running_window;
 mod stored_payload;
 
 use std::{
@@ -18,7 +20,7 @@ use windows::{
         Foundation::{ERROR_BUSY, ERROR_TIMEOUT},
         System::Com::{CLSCTX_ALL, CLSCTX_LOCAL_SERVER, CoAllowSetForegroundWindow, CoCreateInstance},
         UI::{
-            Notifications::INotificationActivationCallback,
+            Notifications::{INotificationActivationCallback, NOTIFICATION_USER_INPUT_DATA},
             Shell::{
                 AO_NONE, ApplicationActivationManager, IApplicationActivationManager, SEE_MASK_FLAG_NO_UI,
                 SEE_MASK_NOASYNC, SHELLEXECUTEINFOW, ShellExecuteExW,
@@ -29,10 +31,12 @@ use windows::{
     core::{Error, HSTRING, PCWSTR, Result, w},
 };
 
+pub use self::reply::ReplyAction;
 use self::{
     click_limits::{ClickDeadline, OutstandingActivators},
     foreground::ForegroundWatch,
     payload::{ActivationKind, Route, ToastLaunch, application_id, routes, toast_launch},
+    reply::reply_action,
 };
 use super::ComApartment;
 use crate::log;
@@ -94,6 +98,32 @@ pub fn open(app_user_model_id: &str, id: u32) -> bool {
     false
 }
 
+/// The quick reply notification `id` offers, read from its stored toast; call it off the UI thread.
+pub fn reply_offered(id: u32) -> Option<ReplyAction> {
+    reply_action(&stored_payload::read(id)?)
+}
+
+/// Sends `text` as the reply through the app's toast activator, the way Windows' own banner does; returns whether the
+/// app took it. Starting the app is no fallback here, since it would show the chat without sending anything.
+pub fn send_reply(app_user_model_id: &str, reply: &ReplyAction, text: &str) -> bool {
+    let deadline = ClickDeadline::new(Instant::now(), CLICK_TIME_LIMIT);
+    let _apartment = ComApartment::enter();
+    let inputs = [(reply.input_id.as_str(), text)];
+    match activate_in_time(app_user_model_id, &reply.arguments, &inputs, deadline) {
+        Ok(()) => {
+            log::debug(&format!(
+                "notifications: reply of {} characters sent to {app_user_model_id}",
+                text.chars().count()
+            ));
+            true
+        }
+        Err(error) => {
+            log::debug(&format!("notifications: the reply to {app_user_model_id} was not taken: {error}"));
+            false
+        }
+    }
+}
+
 fn route_name(route: &Route) -> &'static str {
     match route {
         Route::Activator(_) => "the toast activator",
@@ -105,22 +135,30 @@ fn route_name(route: &Route) -> &'static str {
 
 fn take_route(app_user_model_id: &str, route: &Route, deadline: ClickDeadline) -> Result<()> {
     match route {
-        Route::Activator(arguments) => activate_in_time(app_user_model_id, arguments, deadline),
+        Route::Activator(arguments) => activate_in_time(app_user_model_id, arguments, &[], deadline),
         Route::OpenUri(uri) => shell_open(uri),
         Route::LaunchWithArguments(arguments) => activate_package(app_user_model_id, arguments),
-        // The activation manager brings a packaged app forward itself; the Apps folder starts any app it lists.
-        Route::StartApp => activate_package(app_user_model_id, "").or_else(|error| {
-            if application_id(app_user_model_id).is_some() {
-                log::debug(&format!("notifications: the activation manager did not start the app: {error}"));
-            }
-            shell_open(&format!(r"shell:AppsFolder\{app_user_model_id}"))
-        }),
+        // A window the app already has is brought forward; else the activation manager starts a packaged app
+        // and the Apps folder any other.
+        Route::StartApp => running_window::bring_forward(app_user_model_id)
+            .or_else(|_| activate_package(app_user_model_id, ""))
+            .or_else(|error| {
+                if application_id(app_user_model_id).is_some() {
+                    log::debug(&format!("notifications: the activation manager did not start the app: {error}"));
+                }
+                shell_open(&format!(r"shell:AppsFolder\{app_user_model_id}"))
+            }),
     }
 }
 
 /// Calls the toast activator on a thread of its own and gives up waiting at the click's deadline; no thread is started
 /// while an earlier one for the same app is still stuck.
-fn activate_in_time(app_user_model_id: &str, arguments: &str, deadline: ClickDeadline) -> Result<()> {
+fn activate_in_time(
+    app_user_model_id: &str,
+    arguments: &str,
+    inputs: &[(&str, &str)],
+    deadline: ClickDeadline,
+) -> Result<()> {
     let Some(claim) = OUTSTANDING_ACTIVATORS.claim(app_user_model_id) else {
         log::debug(&format!("notifications: an earlier activator call to {app_user_model_id} is still waiting"));
         return Err(Error::from_hresult(ERROR_BUSY.to_hresult()));
@@ -128,6 +166,8 @@ fn activate_in_time(app_user_model_id: &str, arguments: &str, deadline: ClickDea
     let class = activator::find(app_user_model_id).ok_or_else(|| Error::from_hresult(not_found()))?;
     let (sender, receiver) = mpsc::channel();
     let (app_user_model_id, arguments) = (app_user_model_id.to_owned(), arguments.to_owned());
+    let inputs: Vec<(HSTRING, HSTRING)> =
+        inputs.iter().map(|&(id, text)| (HSTRING::from(id), HSTRING::from(text))).collect();
     thread::spawn(move || {
         let _claim = claim;
         let _apartment = ComApartment::enter();
@@ -138,7 +178,14 @@ fn activate_in_time(app_user_model_id: &str, arguments: &str, deadline: ClickDea
             if let Err(error) = unsafe { CoAllowSetForegroundWindow(&callback, None) } {
                 log::debug(&format!("could not let the app take the foreground: {error}"));
             }
-            unsafe { callback.Activate(&HSTRING::from(&app_user_model_id), &HSTRING::from(&arguments), &[]) }
+            let data: Vec<NOTIFICATION_USER_INPUT_DATA> = inputs
+                .iter()
+                .map(|(id, text)| NOTIFICATION_USER_INPUT_DATA {
+                    Key: PCWSTR(id.as_ptr()),
+                    Value: PCWSTR(text.as_ptr()),
+                })
+                .collect();
+            unsafe { callback.Activate(&HSTRING::from(&app_user_model_id), &HSTRING::from(&arguments), &data) }
         })();
         // The receiver is gone when the time limit passed first; the result is only logged then.
         if let Err(unsent) = sender.send(result) {

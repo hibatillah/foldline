@@ -21,6 +21,8 @@ pub(super) const TIME_WIDTH: f32 = 52.0;
 pub(super) const TIME_GAP: f32 = 14.0;
 /// The year sits on the month's baseline, 8 px after it.
 const YEAR_GAP: f32 = 8.0;
+/// How far the year's line ends above the month line's bottom so both share a baseline (measured on a snapshot).
+const YEAR_LIFT: f32 = 1.0;
 const YEAR_HEIGHT: f32 = 16.0;
 const TITLE_LINE_HEIGHT: f32 = 17.0;
 const DETAIL_LINE_HEIGHT: f32 = 15.0;
@@ -39,13 +41,12 @@ impl CalendarPage {
     pub(super) fn draw_month(&self, canvas: &Canvas, bounds: Rect, opacity: f32) {
         let scale = canvas.scale();
         let (_, month_number, _) = civil_from_days(self.today);
-        let rows = self.month.rows();
+        let rows = self.grid.rows();
         let header = header(bounds, scale, rows);
         let month_name = MONTH_NAMES[(month_number as usize - 1) % 12];
         canvas.text(&MONTH, month_name, header, Color::WHITE.faded(opacity));
         let month_width = canvas.measure(&MONTH, month_name) * scale;
-        // The year shares the month's baseline: its line ends 3 px above the month line's bottom.
-        let year_bottom = header.bottom - 3.0 * scale;
+        let year_bottom = header.bottom - YEAR_LIFT * scale;
         let year_area = Rect::new(
             header.left + month_width + YEAR_GAP * scale,
             year_bottom - YEAR_HEIGHT * scale,
@@ -62,9 +63,9 @@ impl CalendarPage {
         }
 
         let selected = self.selected();
-        for date_index in 0..self.month.day_count as usize {
-            let cell_index = self.month.leading + date_index;
-            let day = self.month.first_day + date_index as i64;
+        for date_index in 0..self.grid.day_count as usize {
+            let cell_index = self.grid.leading + date_index;
+            let day = self.grid.first_day + date_index as i64;
             let circle = day_circle(day_cell(cell_index, rows, bounds, scale), scale);
             let center = Point::new(circle.center_x(), circle.center_y());
             let radius = circle.width() / 2.0;
@@ -135,10 +136,10 @@ impl CalendarPage {
     /// The cards, clipped to the viewport so a scrolled card is cut at its edge.
     pub(super) fn draw_rows(&self, canvas: &Canvas, bounds: Rect, opacity: f32) {
         let scale = canvas.scale();
-        let viewport = events_area(bounds, scale);
+        let viewport = events_area(bounds, scale, self.view);
         canvas.clipped(viewport, || {
             for (position, row) in self.agenda.rows.iter().enumerate() {
-                let area = row_rect(position, self.scroll, bounds, scale);
+                let area = row_rect(position, self.scroll, bounds, scale, self.view);
                 if area.bottom > viewport.top && area.top < viewport.bottom {
                     self.draw_row(canvas, area, row, opacity);
                 }

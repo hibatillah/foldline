@@ -24,6 +24,7 @@ use header_row::HeaderMarks;
 use hiding::HidingState;
 use hover::HoverState;
 use keyboard::KeyboardState;
+use page_hotkeys::PageHotkeys;
 use pages::activity_setting_key;
 use presences::ShownPresences;
 use resting_row::RestingRow;
@@ -37,6 +38,7 @@ mod hover;
 mod input;
 mod keyboard;
 mod layout;
+mod page_hotkeys;
 mod pages;
 mod paint;
 mod presences;
@@ -120,6 +122,7 @@ pub(super) struct Notch {
     badge_pointer: BadgePointer,
     frame_timer: FrameTimer,
     keyboard: KeyboardState,
+    page_hotkeys: PageHotkeys,
     region_origin: Cell<(i32, i32)>,
 }
 
@@ -188,6 +191,7 @@ impl Notch {
             badge_pointer: BadgePointer::default(),
             frame_timer: FrameTimer::new(ticks_per_second, display::frame_interval_milliseconds()),
             keyboard: KeyboardState::default(),
+            page_hotkeys: PageHotkeys::default(),
             region_origin: Cell::new((0, 0)),
         }
     }

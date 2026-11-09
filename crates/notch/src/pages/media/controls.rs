@@ -8,8 +8,8 @@ use crate::{
 const ACCENT: Color = Color::rgb(0.118, 0.843, 0.376);
 const INACTIVE_HOVERED: Color = Color::gray(0.85);
 /// Icon edge in DIP; the lyrics icon is drawn 2 px larger than the transport icons.
-const ICON_SIZE: f32 = 14.0;
-const LYRICS_ICON_SIZE: f32 = 16.0;
+const ICON_SIZE: f32 = 18.0;
+const LYRICS_ICON_SIZE: f32 = 20.0;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Control {
