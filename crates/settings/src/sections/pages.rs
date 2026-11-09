@@ -117,7 +117,7 @@ fn page_description(id: &str) -> Option<&'static str> {
     match id {
         "media" => Some("Music player with synced lyrics."),
         "shelf" => Some("Holds dropped files for a while."),
-        "calendar" => Some("The week and the events of a day you pick."),
+        "calendar" => Some("The month or the week, and the events of a day you pick."),
         "timer" => Some("Focus and break timer."),
         "stats" => Some("System stats, off until you switch it on."),
         "clipboard" => Some(
