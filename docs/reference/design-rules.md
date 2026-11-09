@@ -66,12 +66,12 @@ the marks of what is going on, then the battery ring, then the camera and microp
   edge, 10 px between the group's items and before the gear. The group is the pill's group (same items, same order) as
   icons only. The clock glides from its place in the pill; the ring and the dots travel with it.
 - **The clock is alone and never moves.** It stays in the exact middle of the header whatever shows beside it, so it reads
-  first. At least 12 px separate it from the page dots and at least 14 px from the nearest icon.
+  first. At least 40 px separate it from the page dots and at least 40 px from the nearest icon.
 - **Icons with no room are dropped, nearest the clock first** (the wave, then Caps Lock, and so on by rank). The battery
   ring, the dots and the gear always show; the header's least width keeps room for them. Dropping keeps the clock still;
   the icons nearest the clock are the steadiest states and the least urgent to see on hover.
-- **The header's least width** is the clock plus twice the wider side: the page dots and 12 px, or 14 px, the ring, the
-  dots and the gear with their gaps. With nine pages that is 285 px.
+- **The header's least width** is the clock plus twice the wider side: the page dots and 40 px, or 40 px, the ring, the
+  dots and the gear with their gaps. With nine pages that is 341 px.
 - **The open notch is never narrower than the timer page's open width** (or its header, when that needs more), so
   every page opens at one shared least width instead of one squeezed around the header. A page wider than that floor
   sets the width itself.
@@ -95,9 +95,9 @@ the marks of what is going on, then the battery ring, then the camera and microp
   `Frame::lead_gap`. The line is trimmed so both 24 px gaps hold. The time stays in the header when the notch opens.
 - The line's width sets the pill's width, within the page's limits (`crates/notch/src/pages/media/resting.rs`).
 - There is no clock, no battery ring and no wave while the line shows: the artwork and the line already say that music plays.
-- The group follows the line in its long form (icon and text): muted, then Caps Lock, then only one countdown, the one
-  with the least time left (`Page::countdown_seconds`). One countdown keeps the line wide; the nearest is the one the user
-  will act on.
+- The group follows the line: muted, then Caps Lock, then only one countdown, the one with the least time left
+  (`Page::countdown_seconds`), drawn as its icon alone (the header's status mark) so the line keeps its room. The nearest
+  is the one the user will act on.
 - The dots slide in and out like everything else: the line slides right by the dot and its 10 px (its own spring) and
   the pill grows; the group stays at the right end.
 
@@ -211,9 +211,9 @@ The page is off until added and has no collapsed state; it reads Windows only wh
 
 ## Media page
 
-- **The open player is the artwork (86 px, radius 12), 20 px, then a text column fitted to the text, 118 to 170 px wide** (never narrower than the 118 px control row, so a short title leaves no empty strip at the right; the page is as wide as the artwork, the gap and the column; 170 px with lyrics on): the title (14 px Medium), the artist
-  (12 px, `#9a9aa6`) 2 px under it, and 14 px below that the controls, previous, play or pause, next, then lyrics. Transport
-  icons are 14 px with 20 px between them, the lyrics icon 16 px; it is green when on, white when lyrics exist and gray
+- **The open player is the artwork (86 px, radius 12), 20 px, then a text column fitted to the text, 134 to 170 px wide** (never narrower than the 134 px control row, so a short title leaves no empty strip at the right; the page is as wide as the artwork, the gap and the column; 170 px with lyrics on): the title (14 px Medium), the artist
+  (12 px, `#9a9aa6`) 2 px under it, and 12 px below that the controls, previous, play or pause, next, then lyrics. Transport
+  icons are 18 px with 20 px between them, the lyrics icon 20 px; it is green when on, white when lyrics exist and gray
   when they do not. There is no remaining time and no progress bar.
 - **The source app's icon is a 19 px tile (`#0c0c0c`) with a 3 px black rim, its right and bottom edges 1 px past the
   artwork's corner**, with the app icon at 15 px inside it.
@@ -240,16 +240,19 @@ The page is off until added and has no collapsed state; it reads Windows only wh
 ## Calendar page
 
 - **The left column is 182 px wide and the events are 16 px after it; both end on the bottom of the page.** The page is
-  168 px high (the events viewport), or 170 px for a month of six rows.
-- **The month is the month name (20 px Medium) and the year (12 px, `#9a9aa6`), one row of weekday letters (M T W T F S S,
+  168 px high (the events viewport), or 170 px for a month of six rows. With `calendar.view` set to `week` the left
+  column holds only the current Monday-to-Sunday row (the same cells, a day of another month keeps its date) and the page
+  is 112 px high: the viewport shows three cards and the list scrolls for more.
+- **The month is the month name (20 px Medium) and the year (12 px, `#9a9aa6`, on the month's baseline: its line ends 1 px
+  above the month line's bottom, measured on a snapshot), one row of weekday letters (M T W T F S S,
   10 px, `#9a9aa6`) 8 px under it, and the dates 6 px under the letters:** seven 26 x 20 px cells, Monday first, up to six
   rows, the date in a 20 px circle (11 px, tabular). Days of other months stay empty. Sundays are `#ff6b6b`. Today is a
   solid `#2f81f7` circle with a white number (Medium; the design asks for 600, which is not bundled); a selected day
   is a `#4dabf7` circle at 28 %, and when it is today only the solid circle shows. There are no event dots, and the
   hovered day gets a white 6 % circle.
-- **The events are a 168 px viewport of 26 px cards, 5 px apart,** radius 8, `#17171c` with a 1 px `#26262d` border, the
+- **The events are a 168 px viewport of 34 px cards, 5 px apart,** radius 8, `#17171c` with a 1 px `#26262d` border, the
   start time (12 px, `#9a9aa6`, "All day" for an all-day event) in a 52 px column, then the title (13 px). Cards start at
-  the top of the viewport. Five cards fit exactly; with more, the sixth shows by half, and the list scrolls with the
+  the top of the viewport. Four cards fit; with more, the fifth shows by 12 px, and the list scrolls with the
   wheel (one card a notch), a swipe or a drag, with no scrollbar and no "+N more". Picking a day shows its list from the top.
   A past event of today leaves the list; another day lists its events as planned. There is no "Join" button.
 - **Done for today** is a check icon, "Done for today" (13 px Medium) and "No more events" in one centered row; **an empty
@@ -342,20 +345,21 @@ The bar stays at the bottom of the page in both heights.
 
 - A task is a 32 px row (10 px radius, `#141418`, hover `#1c1c22`), 6 px apart, with a 14 px ring, the text (13 px, one
   line cut with an ellipsis, 120 characters at most) and, on hover, a 22 px delete button 6 px from the right edge.
-  A done task has no fill, a green check (`#30d158`) and struck-through `#6e6e7a` text, and keeps its row, so it counts
-  toward the five. Done tasks follow open ones.
-- Five tasks at most. The toolbar (28 px high, then 8 px) sits on top: "Todo" (20 px, Medium) and the count ("3 left",
+  A done task has no fill, a green check (`#30d158`) and struck-through `#6e6e7a` text, and keeps its row. Done tasks
+  follow open ones.
+- No limit on tasks; the page shows five rows at most and the list scrolls under the wheel or a swipe (one row a notch),
+  with no scrollbar and no hint of the rows beyond. The toolbar (28 px high, then 8 px) sits on top: "Todo" (20 px, Medium) and the count ("3 left",
   "3 left · 2 done", "0 left" in 12 px grey, 8 px after the title, on its baseline) at the left, **Clear all** and **Add**
   at the right, 8 px apart. Rows run the full width below it.
 - **Add** is a fixed white pill (26 px high, 13 px radius, black "+ Add" in 12 px Medium, as the design's 600 is not
-  bundled). At five tasks it stays but is dimmed (`#26262d`, text `#6e6e7a`) and does nothing. Pressing it adds the
-  input as the last row, with the keyboard (1 px `#408fff` outline, "+" in the same blue, "What needs doing?", "Enter
-  to add" at the right). The input never covers a task.
-- **Clear all** is a 26 px pill (`#1c1c22`, 1 px `#2c2c34` border, text `#e6e6eb`, a 12 px trash icon in `#ff6b6b`). It
+  bundled). It is never dimmed. Pressing it adds the
+  input as the last row (scrolled into view), with the keyboard (1 px `#408fff` outline, "+" in the same blue, "What needs doing?", "Enter
+  to add" at the right).
+- **Clear all** is a 26 px pill (`#1c1c22`, 1 px `#2c2c34` border, text `#e6e6eb`, text only). It
   removes every task, done or not, without asking, and is hidden when the list is empty.
-- The page is 508 px wide and 28 + 8 + the rows high (3 tasks 144 px, five rows 220 px), at least 86 px.
-- Empty: a narrow page (290 px, the timer page's width) with the title and Add on top and "All clear" centered below;
-  pressing Add widens the page to 508 px with the input as the only row.
+- The page is 508 px wide and 28 + 8 + the rows high (3 tasks 144 px, five or more rows 220 px), at least 86 px.
+- Empty: the same 508 px width as a list, 86 px high, with the title and Add on top and "All clear" centered below;
+  pressing Add shows the input as the only row.
 
 ## Prayer page
 

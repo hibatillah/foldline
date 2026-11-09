@@ -32,6 +32,7 @@ listens to one Windows power setting and flashes a level bar when it changes.
 | `on_timer()`, `on_notify()` | a timer fired; a background thread used the `Notifier` |
 | `on_hover_changed()` | the pointer entered or left the notch |
 | `on_pointer()` | pointer input over this activity's banner while the notch is collapsed, in the `area` and `scale` `draw()` got; `PointerEvent::Left` means the pointer left the banner. `ui::BannerButtons` draws and hit-tests the Dismiss and Open pair (the notification card) |
+| `on_key()`, `on_keyboard_lost()` | typing, after `context.take_keyboard()` from a click (the notification banner's reply field); the keyboard went elsewhere |
 | `on_system_message()` | a power setting or the clipboard changed (see below) |
 | `on_settings_changed()` | on a started activity, after the notch received `WM_SETTINGS_CHANGED` and re-read `settings.txt`; re-read the activity's own keys, falling back to the current value |
 

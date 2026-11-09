@@ -132,13 +132,13 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
   `header_status_width` and `draw_header_status`; icons only, never text), then the battery ring, then the dot column.
   The dot column reserves no width here either. Every group item's header place is the gear's width and 10 px left of
   the edge, so the group slides there as the notch opens; the gear has its own spring in the header row.
-- **Middle:** the clock is in the exact middle of the header and never moves. An icon that would come nearer than 14 px
+- **Middle:** the clock is in the exact middle of the header and never moves. An icon that would come nearer than 40 px
   to it is not shown: the icons are dropped from the clock side (lowest rank first) until the rest fit
   (`HeaderRow::dropped_icons`). The battery ring, the dot column and the gear are never dropped.
 - **Width floor:** the open notch is never narrower than the timer page's open width: its 290 px plus the 32 px of side
   padding, 322 px (`open_min_width` in `host/notch/layout.rs`). When the header needs more, that is the floor instead:
-  the clock plus twice the wider of its two sides (the page dots and 12 px, or 14 px, the ring, the dot column and
-  the gear with their gaps) plus the side padding (`header_min_width`; 285 px with nine pages). With the timer page
+  the clock plus twice the wider of its two sides (the page dots and 40 px, or 40 px, the ring, the dot column and
+  the gear with their gaps) plus the side padding (`header_min_width`; 341 px with nine pages). With the timer page
   switched off only the header counts. A page narrower than the floor opens at it; a wider one (the 507 px shelf at
   539) sets the width itself.
 - **Clicks** land in a 24 px square around each shown icon, without moving the 10 px gap; where two squares meet, the nearer icon

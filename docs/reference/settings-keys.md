@@ -30,6 +30,7 @@ next start, or at once if something posts that message.
 | `calendar.ics_url` | a web address | the calendar address; the settings window sets it. It is a secret: anyone with it can read the calendar |
 | `advanced.debug_log` | a file path | the file the notch appends its timestamped log to; empty means no log. Read once at start, and `NOTCH_DEBUG` overrides it |
 | `notch.top` | pixels, 0 to 2000 | how far the notch sits below the top edge of the screen (default 0). Read once at start, and `NOTCH_TOP` overrides it |
+| `calendar.view` | `month`, `week` | the calendar page's left column: the whole month (default) or the current week; the week page is three cards high. The settings window's Calendar section writes it |
 | `calendar.refresh_minutes` | minutes | how often the calendar is downloaded again (default 15) |
 | `location.city`, `location.lat`, `location.lon`, `location.country` | text, degrees, degrees, a two-letter country code | the one place the prayer times and the weather are for, chosen with the location search in the settings window's General section. Older versions saved these as `shalat.city`, `shalat.lat`, `shalat.lon` and `shalat.country`; those are read until the shared keys are saved. |
 | `shalat.method` | `auto`, `singapore` (Kemenag), `mwl`, `northamerica`, `karachi`, `ummalqura`, `egyptian` | the calculation method; `auto` (default) picks one from `shalat.country` |
