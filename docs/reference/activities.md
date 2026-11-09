@@ -9,9 +9,9 @@ An activity answers `presence()` after every event, and the host does the layout
 | Presence | Looks like | Example |
 | --- | --- | --- |
 | `Transient { width }` | takes over the pill for a moment, then goes | volume bar, "Copied", "Charging 56%" |
-| `Badge { width }` | a small mark in the group at the right edge for as long as something lasts, ordered by `header_status_rank` | the timer ring, the prayer or event countdown, the muted speaker, the Caps Lock icon, the music wave |
+| `Badge { width }` | a small mark in the group at the right edge for as long as something lasts, ordered by `header_status_rank`; a page's badge gets the pointer over its own area in `on_presence_pointer` (a press on the rain badge opens the weather page) | the timer ring, the prayer or event countdown, the muted speaker, the Caps Lock icon, the music wave |
 | `Companion { slot, width }` | a mark at the fixed right end of the group for as long as something lasts: `Slot::Ring` is the battery ring, the item before the dots, `Slot::Dots` the dot column at the very end | the battery ring (`Ring`), the camera and microphone dots (`Dots`) |
-| `Banner { width, height }` | opens the pill into a card, taller than the idle pill and smaller than the open notch, and draws into all of it; it has the pill to itself, so transients wait. Pointing at the notch does not open it while a banner shows; the pointer over the banner arrives in `on_pointer` (`on_presence_pointer` for a page), so the activity can hold it, answer a taller `presence()` with buttons, and take their clicks | a notification, the rain alert |
+| `Banner { width, height }` | opens the pill into a card, taller than the idle pill and smaller than the open notch, and draws into all of it; it has the pill to itself, so transients wait. Pointing at the notch does not open it while a banner shows; the pointer over the banner arrives in `on_pointer` (`on_presence_pointer` for a page), so the activity can hold it, answer a taller `presence()` with buttons, and take their clicks | a notification, the rain alert (a banner, then a countdown badge) |
 | `None` | nothing | |
 
 - Up to two transients show at once, side by side with a thin divider; the newest two win.
@@ -21,7 +21,7 @@ An activity answers `presence()` after every event, and the host does the layout
   is in [layout.md](layout.md).
 - Ranks order the group in the pill and the icons in the open header; the lowest is nearest the clock, and equal ranks
   keep list order. `Activity::header_status_rank` (default 0) and `Page::header_status_rank` share one scale: music wave 0,
-  Caps Lock 1, muted 2, timer 3, event 4, prayer 5.
+  Caps Lock 1, muted 2, timer 3, event 4, prayer 5, rain 6.
 - A state that lasts and also announces itself (muted, Caps Lock) answers a `Badge` while the state is on and a `Transient`
   while its message shows; the badge is an icon alone, drawn by `draw` and `draw_header_status` alike.
 - Companions are drawn by `draw` in the collapsed pill and in the open header, so a companion centers its drawing on the
@@ -43,7 +43,7 @@ An activity answers `presence()` after every event, and the host does the layout
 | `microphone` | "Microphone on/off", then an orange dot in the lower row of the dot column at the right end (`Slot::Dots`): 6 px beside the camera's dot, 5 px when it is alone | audio sessions of the default recording device; shows that an app has the microphone open, so an app that keeps it open while you are muted (Google Meet in a browser) keeps the dot |
 | `camera` | "Camera on/off", then a green 6 px dot, in the upper row of the dot column at the right end (`Slot::Dots`) | stream start and stop events in the `Microsoft-Windows-MF-FrameServer/Camera_FrameServer` event log; misses apps that bypass the Frame Server and a camera already streaming when the notch starts |
 | `clipboard` | "Copied" | clipboard change message; never reads the clipboard itself (only the opt-in [Clipboard page](design-rules.md#clipboard-page) reads it, and only while it is on), skips copies that ask not to be monitored and copies the notch made itself (`platform::clipboard::is_excluded`, `is_own_write`) |
-| `notifications` | a 400 DIP card with the app's own icon (the Apps folder's, else its packaged logo, else a colored letter), the sender, the app name and two lines, for 5 s. The pointer on the card holds it and adds Dismiss and Open *app* under the same two lines; it goes 1.5 s after the pointer leaves. Dismiss removes the toast from the Action Center; Open opens the app the way a click on Windows' banner does (see below) and removes the toast | `UserNotificationListener`, on a thread of its own when the notification folder changes: the new toast is asked for by id (`GetNotification` for the ids above the highest seen) at the first change and again once the folder is still, and the whole list (about 80 ms per notification in the Action Center) is read only as a fallback. The same thread removes dismissed toasts (`RemoveNotification`) |
+| `notifications` | a 340 DIP card with the app's own icon (the Apps folder's, else its packaged logo, else a colored letter), the sender, the app name and two lines, for 5 s. The pointer on the card holds it and adds Dismiss and Open *app* under the same two lines; it goes 1.5 s after the pointer leaves. Dismiss removes the toast from the Action Center; Open opens the app the way a click on Windows' banner does (see below) and removes the toast | `UserNotificationListener`, on a thread of its own when the notification folder changes: the new toast is asked for by id (`GetNotification` for the ids above the highest seen) at the first change and again once the folder is still, and the whole list (about 80 ms per notification in the Action Center) is read only as a fallback. The same thread removes dismissed toasts (`RemoveNotification`) |
 | `caps_lock` | "Caps Lock on/off"; an arrow (rank 1) in the pill group and the header while it is on | a low-level keyboard hook on a thread of its own that only wakes the activity when the Caps Lock key goes down; the lock state is then read from Windows, and no other key is looked at |
 
 ## Opening a notification's app
@@ -55,17 +55,30 @@ order, until one works:
 
 | `activationType` of the toast | Tried |
 | --- | --- |
-| foreground (or none) | the app's toast activator (`INotificationActivationCallback::Activate` with the toast's `launch` text, which is what Windows itself does on a click), the `launch` text as a URI when it is one, the `launch` text as launch arguments of a packaged app, then starting the app |
+| foreground, with `launch` text | the app's toast activator (`INotificationActivationCallback::Activate` with the toast's `launch` text, which is what Windows itself does on a click), the `launch` text as a URI when it is one, the `launch` text as launch arguments of a packaged app, then starting the app |
+| foreground, without `launch` text | starting the app (an activator given no text can name no target) |
 | protocol | the `launch` URI, then starting the app |
 | background | starting the app |
 
 The activator's class comes from the package manifest (`ToastActivatorCLSID`), else
-`HKCU\Software\Classes\AppUserModelId\<id>\CustomActivator`, else the app's Start menu shortcut. Starting the app opens
+`HKCU\Software\Classes\AppUserModelId\<id>\CustomActivator`, else the app's Start menu shortcut. The activator call
+runs on a thread of its own, since an app can leave it unanswered; while one for an app is still unanswered, another
+click on that app skips its activator, and at most three such threads run at once (`toast_activation/click_limits.rs`).
+Starting the app asks
+`IApplicationActivationManager::ActivateApplication` for a packaged app, which brings it to the front, else opens
 `shell:AppsFolder\<id>`, which brings a running single-instance app forward.
+
+An activator can answer with success and show nothing, so a way counts only when a window other than the notch and
+the one in front at the click comes to the front within 3 s; otherwise the next way is tried. The wait is a hook on
+foreground changes, on a thread that ends, unhooked, as soon as a window comes forward or the wait is over. All the
+waits of one click share 5 s: the activator call and the window waits end at that deadline, and a way that comes after
+it is skipped. Starting the app is the last way, is tried even after the deadline, and counts as soon as Windows
+accepts it. Each way and its result go to the `NOTCH_DEBUG` log.
 
 - WhatsApp (the Store app) declares an activator, so Open hands it the toast's own `launch` text; the conversation
   opens when that text names one, as with Windows' banner. A WhatsApp toast that names no chat
   (`action=LaunchApp`) opens WhatsApp.
-- A toast without `launch` (Discord, Warp) opens the app, not the message.
+- A toast without `launch` (Discord, Warp) starts or brings forward the app, not the message: nothing in the stored
+  toast names the channel.
 - A toast the database no longer holds (the app or the user cleared it) only starts the app.
 - Open also removes the toast from the Action Center; the app may already have removed it.

@@ -1,6 +1,6 @@
 # Switch pages and activities off, or remove them
 
-> **How-to.** Read when: you want fewer pages or activities, temporarily or for good. Skip if: you are adding one: see [the tutorial](../tutorials/add-a-page.md) or [add an activity](add-an-activity.md).
+> **How-to.** Read when: you want fewer pages or activities, temporarily or for good. Skip if: you are adding one: see [add a page](add-a-page.md) or [add an activity](add-an-activity.md).
 
 ## Switch pages off
 
@@ -22,7 +22,7 @@ set NOTCH_PAGES=shelf
 notch.exe
 ```
 
-To change which pages are *compiled in*, edit `crates/notch/src/pages/mod.rs`; see [the tutorial](../tutorials/add-a-page.md).
+To change which pages are *compiled in*, edit `crates/notch/src/pages/mod.rs`; see [add a page](add-a-page.md).
 
 ## Switch an activity off
 

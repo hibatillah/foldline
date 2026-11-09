@@ -17,7 +17,7 @@ and close the pill, which page shows, input, the tray and the launcher of the se
 Windows messages into calls on the `Notch`, and the `Notch` decides what to show and draws it.
 
 `Notch` is one struct whose methods are split one job per file (`host/notch/`), and a job that keeps its own state
-owns a small struct for it (`Springs`, `RowMotion`, `HoverState`, `HidingState`, `KeyboardState`). The reason is
+owns a small struct for it (`Springs`, `RowMotion`, `HoverState`, `HidingState`, `KeyboardState`, `ShownPresences`). The reason is
 reach: with one 2,000-line file every change could touch every field, and a reader had to hold the whole notch in
 mind. With a file per job, the springs can only be changed through `animation.rs`, hover only through `hover.rs`, and
 a job's logic that takes and returns plain values can be tested without a window. [The source
@@ -67,9 +67,9 @@ target grows along a smoothstep from nothing, so the move begins gently (an ease
 a retarget while moving keeps the pull it had. Springs with the same response and lead-in settle in the same time
 whatever the distance, so width and height start and stop together; the frame timer still stops once they settle. `frame()` clamps the overshooting size to the
 window (`size_room`) and keeps it above 75 % of the collapsed size, and the pill's radius never exceeds half its height,
-so the shape stays a pill while it over- or undershoots. The page row's own spring (`PAGE_SLIDE_RESPONSE`) stays
-critically damped, because an overshoot would blend the wrong pages. All the tuning numbers of this and of page
-switching input are in `host/motion.rs`.
+so the shape stays a pill while it over- or undershoots. The page dots' long mark has its own spring
+(`PAGE_SLIDE_RESPONSE`), critically damped so it never passes the open page. All the tuning numbers of this, of the
+page swap and of page switching input are in `host/motion.rs`.
 While files are dragged over the notch it opens at once on the page that takes drops and grows a little, as if ready.
 
 ### Hiding
@@ -117,12 +117,17 @@ The user moves between pages by scrolling the mouse wheel, swiping two fingers o
 clicking a dot. A wheel notch moves one page; touchpad and precision-wheel input accumulates until 120 units cross
 the threshold, moves one page and is then ignored until the gesture ends (150 ms without an event). After any
 switch, scroll input is ignored for 300 ms (`PAGE_SWITCH_COOLDOWN`), so one scroll never runs through the row. The
-row slides with a critically damped spring and the selected page is remembered as the logical selection.
+selected page is remembered as the logical selection.
 
-Each visible page gets its own requested content width for drawing and pointer input. Their center spacing is half
-of each width plus the page gap. The notch's width interpolates between these natural widths using the rendered
-scroll progress, so it progressively shrinks or grows instead of stretching the incoming page to the outgoing one.
-No per-frame allocations are needed for this pair of page frames, and the animation timer stops once motion settles.
+A switch is a swap (`host/page_swap.rs`, a pure `PageSwap` the notch holds): it starts when the open
+page changes while the pointer is on the notch, and it runs on a fixed time curve to its end, so no input can leave the
+notch between two pages. The leaving page fades out first; the arriving page starts a moment later and finishes just
+after the size springs of the pill are within 5 % of its size. A time curve is used instead of a spring because its
+end is known, which lets the content finish right after the pill instead of trailing it on a spring's long tail. A
+swap started during another hands the half-arrived page's look to the leaving one, so nothing jumps. Each page's frame
+has its own width and height from the top of the content area, independent of the pill's size spring, so content moves
+only sideways; the host clips it below the header. The swap counts as motion for the frame timer, which stops once the
+swap ends and the springs settle.
 
 Windows input-source metadata identifies touchpads; drivers without it fall back to small deltas and the active
 gesture, so a large delta inside a gesture stays part of it. `host/scroll_gate.rs` holds that logic as a pure type
@@ -161,8 +166,10 @@ The host asks every running activity for its `presence()` after each event.
 - A **badge** joins the group at the right edge of the idle pill (icon and text; icon only for the wave, muted and Caps Lock), ordered by `header_status_rank`, between the clock and the battery ring. While a page claims the pill, the group (muted, Caps Lock, one countdown) follows the page's line with 24 px between them.
 - A **banner** opens the pill into a card taller than the idle pill and smaller than the open notch. It has the pill to
   itself, transients wait behind it, and while it shows, pointing at the notch holds it instead of opening the notch.
-  Pointer input on a collapsed notch goes only to the banner (`Activity::on_pointer`, `Page::on_presence_pointer`, in
-  the rect it draws into), never to the page that would open, so its buttons are real hit targets.
+  Pointer input on a collapsed notch goes to the banner (`Activity::on_pointer`, `Page::on_presence_pointer`, in
+  the rect it draws into), never to the page that would open, so its buttons are real hit targets. Without a banner,
+  a page's badge gets the pointer over its own rect (`Page::on_presence_pointer`, `host/notch/badge_pointer.rs`); the
+  rain badge opens the weather page on a press.
 
 Required activities always start and ignore saved disable settings. Only optional activities expose a saved
 `activity.<id>` settings toggle; Notifications and the device battery warning are the optional built-ins, and both default to on. The host registers the
@@ -224,7 +231,7 @@ To add a setting, see [add a setting](../how-to/add-a-setting.md).
 
 ## Pages
 
-`pages/mod.rs` is the registry. See [the tutorial](../tutorials/add-a-page.md) to write one. A page may also answer
+`pages/mod.rs` is the registry. See [add a page](../how-to/add-a-page.md) to write one. A page may also answer
 `presence()` to show something in the collapsed pill beside or instead of the page on show (the timer does); the host
 treats it like an activity's presence.
 

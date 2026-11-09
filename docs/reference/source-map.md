@@ -13,24 +13,24 @@ crates/
       activity.rs     the whole contract for an activity: the Activity trait, Presence, SystemMessage, Flash
       log.rs          optional debug log (set NOTCH_DEBUG to a file path)
       host/           the notch itself: window, animation, hover, tray, the launcher of the settings window. Knows no page.
-      gfx/            drawing toolkit: Canvas, fonts, colors, images, springs, geometry, text clamping, the bounded cache of measured text (`text_cache.rs`), SVG path data read into a `Path` (`svg_path.rs`)
-      platform/       small Windows actions for pages and activities: an app's icon, open a file, read and write the clipboard (`clipboard.rs`), paste into the window in front (`paste.rs`), drag a file
-                      out, the picture Explorer shows, whether the machine has a battery (`power.rs`), each app's notification banner value and a watch on those values (`notification_settings.rs`), paired Bluetooth devices, their battery and the radio (`bluetooth_devices.rs`), devices behind a 2.4 GHz USB receiver and a Logitech receiver's HID++ battery (`dongle_devices.rs`; `dongle_devices/` holds the tree walk, the HID channel, the receiver rules and the HID++ messages), opening a notification's app as a click on Windows' banner does (`toast_activation.rs`; `toast_activation/` holds the toast XML rules, the read of Windows' notification database and the toast activator lookup)
-      ui/             reusable widgets: IconButton, PillButton, Ring, TextField (the todo page's add field), icons (the gear included), line icons from SVG path data in several colors (`svg_icon.rs`), the dashed outline, the HUD layouts, a banner's Dismiss and Open buttons (`banner_buttons.rs`)
+      gfx/            drawing toolkit: Canvas, fonts, colors, image pixels (`image_data.rs`) and their uploaded brushes (`image_brush.rs`), springs, geometry, text clamping, the bounded cache of measured text (`text_cache.rs`), SVG path data read into a `Path` (`svg_path.rs`)
+      platform/       small Windows actions for pages and activities: an app's icon, a shell bitmap's pixels (`bitmap.rs`), a window's class and its executable (`window_info.rs`), open a file, read and write the clipboard (`clipboard.rs`), paste into the window in front (`paste.rs`), drag a file
+                      out, the picture Explorer shows, whether the machine has a battery (`power.rs`), each app's notification banner value and a watch on those values (`notification_settings.rs`), paired Bluetooth devices, their battery and the radio (`bluetooth_devices.rs`), devices behind a 2.4 GHz USB receiver and a Logitech receiver's HID++ battery (`dongle_devices.rs`; `dongle_devices/` holds the tree walk, the HID channel, the receiver rules and the HID++ messages), opening a notification's app as a click on Windows' banner does (`toast_activation.rs`; `toast_activation/` holds the toast XML rules, the read of Windows' notification database, the toast activator lookup, the click's deadline and cap on stuck activator threads, and the foreground hook that tells whether the app came forward)
+      ui/             reusable widgets: IconButton, PillButton, Ring, TextField (the todo page's add field), icons (`icons/`: the shapes in `paths.rs`; the gear included), line icons from SVG path data in several colors (`svg_icon.rs`), the shared bitmap square of cached shapes (`bitmap_square.rs`), the dashed outline, the HUD layouts, the shared colors (`palette.rs`) and text styles (`type_styles.rs`), a banner's Dismiss and Open buttons (`banner_buttons.rs`)
       activities/     the registry (mod.rs) and one file or folder per activity: volume, brightness, battery, Bluetooth,
                       microphone, camera, clipboard, Caps Lock, notifications (`notifications/`: the card, the item and
                       its heading, the listener thread and its rounds of asking by id)
       pages/
         mod.rs        the registry: the only place pages are listed
         media/        media player: session, controls, lyrics, artwork, app icon, the lyric glow
-        shelf/        file shelf: the list of files (items.rs, with the thumbnail rule and tag colors), the drawn documents (document.rs), the empty row (empty.rs), the places (layout.rs), drawing (draw.rs), drag in and out
-        calendar/     calendar: dates, the iCal reader, the month grid and the day's agenda, the download, the month grid's text (`labels.rs`), when the page wakes and fetches (`wake.rs`)
-        timer/        focus timer: the rules, what is said in each state, the layout
+        shelf/        file shelf: the list of files (items.rs, with the thumbnail rule and tag colors), the drawn documents (document.rs), the empty row (empty.rs), the places (layout.rs), drawing (draw.rs), pointer input (input.rs), the example files for snapshots (sample.rs), drag in and out
+        calendar/     calendar: dates, the iCal reader, the month grid and the day's agenda, the download, the month grid's text (`labels.rs`), when the page wakes and fetches (`wake.rs`), pointer input (`input.rs`), the collapsed badge (`badge.rs`)
+        timer/        focus timer: the rules, what is said in each state, the layout, the page's tests (`tests.rs`)
         clipboard/    clipboard history: what a copy becomes (capture.rs, item.rs with the kind rules), the bounded list and undo (history.rs), the bitmap reader and writer (dib.rs, no Windows calls), the preview lines (preview.rs), places and double click (layout.rs), clicks and pasting (actions.rs), drawing (draw.rs, style.rs), the page
         stats/        system stats: the readings (GPU load in gpu.rs), how they are written (readout.rs), the load charts and disk bars (charts.rs), card areas (layout.rs), the CPU, memory and network cards (cards.rs), the GPU and disk cards (rows.rs) and the known disk and GPU lists for the settings window (publish.rs)
         shalat/       prayer times: the calculation (times.rs), settings (config.rs), the open page (day.rs) and its sun arc (arc.rs)
         devices/      connected devices: the list and its rules (model.rs), Bluetooth plus receiver devices and the messages (merge.rs), the worker that reads Windows (source.rs), tiles (layout.rs, draw.rs, ring.rs)
-        weather/      weather: the MET Norway request (fetch.rs), the forecast (forecast.rs), the sky icons (picture.rs), the message states and their width (message.rs), the page's drawing and the Today/Week pill (draw.rs), the rain alert (alert.rs)
+        weather/      weather: the MET Norway request (fetch.rs), the forecast (forecast.rs), the sky icons (picture.rs), the message states and their width (message.rs), the page's drawing and the Today/Week pill (draw.rs), the rain alert (alert.rs: the banner, badge.rs: the countdown badge), the weather.com addresses (link.rs) the clickable cells (click.rs), fetch and rain-alert scheduling (refresh.rs), pointer input (input.rs) and the snapshot samples (sample.rs)
         todo/         todo list: the list and its todo.txt file (list.rs), which rows show and where (layout.rs), drawing (draw.rs), the page
   places/                the city list and the shared `location.*` keys, used by the notch and the settings window
   store/                 the settings file code shared by the notch and the settings window (per-key atomic writes)
@@ -53,17 +53,19 @@ assets/fonts/     Geist, the bundled font, and its license
 
 | File | Job |
 | --- | --- |
-| `window.rs` | creates the window, runs the message loop, turns Windows messages into calls on the notch |
+| `window.rs` | creates the window, runs the message loop, turns Windows messages into calls on the notch; `window/focus.rs` keeps the window topmost and hands the keyboard to the notch and back |
 | `notch.rs` + `notch/` | the `Notch`; `notch.rs` holds the struct and the timer ids, one file per job in `notch/` (see [The notch's files](#the-notchs-files)) |
 | `registry.rs` | decides which registered pages are switched on (`NOTCH_PAGES`, the `pages` setting) |
-| `navigation.rs` | the user's page order and which pages are on, which page opens, the page row's spring (pure) |
+| `navigation.rs` | the user's page order and which pages are on, which page opens, the spring of the dots' long mark (pure) |
+| `page_swap.rs` | the page swap in the open notch: when the leaving page fades out and how the arriving one fades and shifts in (pure) |
 | `scroll_gate.rs` | when scrolling switches a page: one per wheel notch or gesture, with a cooldown (pure) |
-| `motion.rs` | every tuning number of the size springs and of scroll switching |
+| `motion.rs` | every tuning number of the size springs, the page swap and scroll switching |
 | `drop_target.rs` | a second thread with an almost invisible window that takes dragged files (OLE needs a single-threaded apartment) and tells the notch to open |
 | `chrome.rs` | the padding and the page dots (they start at the header's left edge) around every open page |
 | `pill_row.rs` | where the idle row's items and the open header's items sit, the gaps, the empty pill and the hit areas: `idle_row`, `header_row`, `hit_item` (pure) |
 | `clock.rs` | the time: in the header of the open notch, and in the collapsed pill's idle row, and its width |
 | `screen_mode.rs` | whether the window in front is maximized or full screen, from Windows' event hooks (no polling) |
+| `screen_mode/classify.rs` | the screen mode the facts about the window in front give: full screen, maximized, a screenshot overlay (pure) |
 | `screen_mode/location_hook.rs` | the hook on the foreground window's thread; pauses it for 250 ms when caret or pointer moves come less than 100 ms apart |
 | `visibility.rs` | what the notch shows over a maximized or full-screen window: the four words, `allows`, and the one-time migration of the retired keys (pure) |
 | `startup.rs` | the "Start with Windows" entry under the user's `Run` key |
@@ -80,19 +82,20 @@ assets/fonts/     Geist, the bundled font, and its license
 
 `Notch` is one struct whose methods live in one file per job under `host/notch/`. Each job that keeps its own state
 owns a small struct for it, defined beside its logic and held by `Notch` (`springs`, `row_motion`, `hover`, `hiding`, `keyboard`,
-`resting_row`).
+`resting_row`, `presences`).
 
 | File | Job | State it owns |
 | --- | --- | --- |
-| `notch.rs` | the `Notch` struct, `new`, `start`, the timer ids and the constants several files share | |
+| `notch.rs` | the `Notch` struct, `new`, `start`, the timer ids and the constants several files share | `PageSwap` (from `host/page_swap.rs`) |
 | `input.rs` | pointer, wheel and touchpad scroll, a page's right click and drag-and-drop input | |
 | `timers.rs` | what each timer does when it fires | |
 | `pages.rs` | page and activity lifecycle, choosing and moving between pages | |
-| `layout.rs` | page frames, blending between two pages, refreshing sizes and which page shows | |
+| `layout.rs` | page frames, the pages a swap draws, starting a swap, refreshing sizes and which page shows | |
+| `presences.rs` | collecting what activities and pages show in the collapsed pill: transients, the banner, badges, the ring and the dots | `ShownPresences` |
 | `hover.rs` | opening and closing, the delays, the hover watch | `HoverState` |
 | `hiding.rs` | what shows over a maximized or full-screen window, suppression, hide when idle | `HidingState` |
-| `animation.rs` | the springs, the frame the springs describe, the animation timer | `Springs` |
-| `keyboard.rs` | typing: who owns the keyboard, text keys, pasted text | `KeyboardState` |
+| `animation.rs` | the springs, the frame the springs describe, the animation timer | `Springs`, `FrameTimer` |
+| `keyboard.rs` | typing: who owns the keyboard, text keys, pasted text, the keyboard lost to another window | `KeyboardState` |
 | `settings_reload.rs` | applying a changed settings file after `WM_SETTINGS_CHANGED` | |
 | `resting_row.rs` | the idle row and the claimed pill's row: the group, the battery ring, the dot column, short badges, their drawing | `RestingRow` |
 | `row_motion.rs` | one spring per row item and for the clocks, so items slide when the row changes | `RowMotion` |

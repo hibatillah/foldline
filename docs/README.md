@@ -1,20 +1,15 @@
 # Documentation index
 
-Four kinds of document, each with one job ([Diátaxis](https://diataxis.fr)). Every document opens with a line that says when to read it and when to skip it. Find the task, open one file.
+Three kinds of document, each with one job ([Diátaxis](https://diataxis.fr)). Every document opens with a line that says when to read it and when to skip it. Find the task, open one file.
 
 New to the team? Start with [ONBOARDING.md](../ONBOARDING.md) at the repository root: setup, structure and the rules the code follows.
-
-## Tutorials: learn by doing
-
-| Read | When |
-| --- | --- |
-| [Build a page](tutorials/add-a-page.md) | writing your first page and wanting one working example |
 
 ## How-to guides: do a task
 
 | Read | When |
 | --- | --- |
 | [Build, run and debug](how-to/build-run-and-debug.md) | building, running a change, or finding why a page does not show |
+| [Add a page](how-to/add-a-page.md) | writing a page, with one working example |
 | [Add an activity](how-to/add-an-activity.md) | something should show in the collapsed pill |
 | [Add a setting](how-to/add-a-setting.md) | a new key, or a control in the settings window |
 | [Switch off or remove](how-to/switch-off-or-remove.md) | fewer pages or activities, temporarily or for good |

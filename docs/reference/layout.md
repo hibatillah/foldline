@@ -38,7 +38,11 @@ are in device-independent pixels (multiply by the display scale when drawing). T
   [the open header](#the-open-header).
 - A page content is 86 px high unless the page asks for more (`PageSizes::expanded.height`, at most 220 px, `MAX_CONTENT_HEIGHT` in `page.rs`: the shelf and
   the calendar do). Content that is taller than what the page asked for is clipped.
-- A page cannot draw into the header or the padding.
+- A page cannot draw into the header or the padding. Its frame always has its own requested size, from the top of the
+  content area, even while the pill is still resizing; the host clips page content to the pill below the header
+  (`chrome::page_clip_rect`), so a page entering a pill that is still growing is cut at the pill's bottom edge and never
+  covers the header. During a page switch the frames shift sideways by a few pixels (see the swap rule in
+  [design rules](design-rules.md)).
 
 **Collapsed**, the pill is 33 px high (`RESTING_HEIGHT`, plus 3 px of bottom padding) and at least 150 px wide
 (`RESTING_MIN_WIDTH`), except the empty idle pill below, and one of four things fills it:
@@ -62,7 +66,7 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
 
 - **Clock:** at the left edge, 12 px from it, 14 pt Medium Geist (`clock.rs`).
 - **Group:** one run anchored to the right edge, left to right: the badges by `header_status_rank` (lowest first: music
-  wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5), then the battery ring, then the dot column. The ring and
+  wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5, rain 6), then the battery ring, then the dot column. The ring and
   the dots are not ranked; they are always the right end. A new item joins between the clock and the items already
   there, so nothing right of it moves (`pill_row.rs`). The rank list is in [design-rules.md](design-rules.md#collapsed-pill).
 - **Badges:** timer, event and prayer draw an icon and text; the wave, muted and Caps Lock draw an icon only. With two or
@@ -150,7 +154,7 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
   window in front has stopped covering the screen for 500 ms (`WINDOW_REVEAL_DELAY_MILLISECONDS` in
   `host/notch/hiding.rs`), so switching between two maximized windows does not flash it. A screenshot overlay in front
   (`ScreenMode::Capture`) hides the notch entirely, banners included, and the pointer does not open it, whatever the
-  settings say; it comes back through the same 500 ms wait. The music wave badge keeps the pill up under Hide when idle but does not count as an activity over a maximized window.
+  settings say; it comes back through the same 500 ms wait. In every mode only a transient or a banner counts as an activity: other badges and dots (muted, Caps Lock, a countdown, the camera and microphone dots) never keep a hiding pill up, so the privacy dot is not visible while the notch is hidden. Music (a claiming page or the music wave) keeps the pill up under Hide when idle (`Notch::is_hidden` in `host/notch/hiding.rs`).
 
 **Where to change what:**
 
@@ -164,7 +168,7 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
 | the springs of every row item and of the clocks | `crates/notch/src/host/notch/row_motion.rs` |
 | the open header's items: the gear, the icons and what a click on them does | `crates/notch/src/host/notch/header_row.rs` |
 | which page shows, swiping, hover, the springs, hiding | `crates/notch/src/host/notch/` (`animation.rs`, `hover.rs`, `hiding.rs`, `layout.rs`) |
-| maximized, full-screen and screenshot-overlay detection | `crates/notch/src/host/screen_mode.rs` |
+| maximized, full-screen and screenshot-overlay detection | `crates/notch/src/host/screen_mode.rs` (the hooks), `crates/notch/src/host/screen_mode/classify.rs` (the rules) |
 | the tray menu | `crates/notch/src/host/tray.rs` (the items), `crates/notch/src/host/window.rs` (what they do) |
 | the settings window | `crates/settings/src/sections/` (one file per section), `crates/settings/src/field.rs` (toggles and text fields); [add a setting](../how-to/add-a-setting.md) |
 | start with Windows | `crates/notch/src/host/startup.rs` (the tray item), `crates/settings/src/startup.rs` (the window's switch), `installer/notch.iss` (the installer's choice) |

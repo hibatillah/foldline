@@ -21,7 +21,7 @@ next start, or at once if something posts that message.
 | Key | Values | Meaning |
 | --- | --- | --- |
 | `pages` | comma-separated page ids | which pages are on (see above) |
-| `media.lyrics` | `on`, `off` | show lyrics on the media page (the speech-bubble button changes this too) |
+| `media.lyrics` | `on`, `off` | show lyrics on the media page; only the speech-bubble button on the media page changes it (the settings window has no field for it) |
 | `timer.focus_minutes` | 5 to 120 | length of a focus session (default 25); the timer page changes it in steps of 5 |
 | `timer.short_break_minutes`, `timer.long_break_minutes` | minutes | break lengths (default 5 and 15) |
 | `timer.state`, `timer.completed` | written by the notch | the running timer and the focus sessions finished in this round, so a restart keeps them |
@@ -36,15 +36,15 @@ next start, or at once if something posts that message.
 | `shalat.hanafi` | `on`, `off` | off by default (Shafi'i, Maliki and Hanbali Asr); on uses the Hanafi Asr |
 | `shalat.offset_fajr`, `_sunrise`, `_dhuhr`, `_asr`, `_maghrib`, `_isha` | minutes, -30 to 30 | added to that time (default 0) |
 | `shalat.message`, `shalat.badge` | `on`, `off` | on by default: a message when a prayer starts, and the next prayer in the collapsed pill for the last 30 minutes |
-| `weather.rain_alert` | `on`, `off` (default `on`) | a message in the collapsed pill 30 minutes before the next rain; the weather page itself is off until you add it. The place is the shared `location.*`. The **Rain alert** switch under Weather in the settings window sets it |
+| `weather.rain_alert` | `on`, `off` (default `on`) | a banner and then a countdown badge in the collapsed pill from 30 minutes before the next rain; the weather page itself is off until you add it. The place is the shared `location.*`. The **Rain alert** switch under Weather in the settings window sets it |
 | (none) | | the clipboard page has no settings key of its own: it is switched on and off in the Pages list (`navigation.disabled`), and its history is never saved |
 | `stats.disks` | drive names, comma-separated (`C:,G:`) | the disks the stats page shows, in that order, up to 3 (more are dropped); chosen with the checkboxes under System stats in the settings window, which writes the chosen drives in the known order. Without the key the page shows the first 3 fixed drives; an empty value shows none. A name that is no longer present is skipped and the others keep their order; if none is present the Disks card is empty |
 | `stats.gpus` | GPU names separated by `\|` (`RTX 4050\|Radeon 760M`); a list without `\|` splits at commas | the GPUs the stats page shows, in that order, up to 2; chosen under System stats in the settings window, which writes them joined with `\|`. Without the key the page shows the first 2; an empty value shows none and drops the GPU card. A name that is no longer present is skipped; with none present the GPU card is dropped |
 | `stats.known_disks` | drive names, comma-separated (`C:,G:`) | written by the notch when the stats page starts sampling (it is shown), only when the list changed: every fixed drive, in drive-letter order. The settings window offers these for `stats.disks`. Absent until the stats page has been shown once; leave it alone: the notch owns it |
 | `stats.known_gpus` | GPU names separated by `\|` (`RTX 4050\|Radeon 760M`) | written like `stats.known_disks`: every hardware GPU, in the order Windows lists them, by the short names `stats.gpus` uses. `\|` cannot appear in a name (the notch replaces it and line breaks with a space). An empty value means the machine has no hardware GPU; absent means the stats page was never shown |
-| `notch.hide_when_idle` | `on`, `off` | off by default: hide the notch when there is nothing to show until you point at the top of the screen |
-| `notch.hide_windows_volume_popup` | `on`, `off` | off by default: hide the volume flyout Windows shows above the taskbar each time it appears, while the notch runs (`host/volume_flyout.rs`). Applies without a restart; the flyout returns when the notch exits or crashes. See [hide Windows' own popups](../how-to/hide-windows-popups.md) |
-| `notch.hide_windows_notifications` | `on`, `off` | off by default: turn off Windows' notification banner for every app while the notch runs, by writing `ShowBanner=0` per app and saving the previous values in `%APPDATA%\notch\notification-banners.txt` (`host/notification_banners.rs`). Notifications stay in the notification center, so the notch still shows them. Applies without a restart; the values go back when it is switched off, when the notch quits, and at the next start after a crash. See [hide Windows' own popups](../how-to/hide-windows-popups.md) |
+| `notch.hide_when_idle` | `on`, `off` | off by default: hide the notch over regular windows until you point at the top of the screen; only playing music, a short message or a banner shows it, a lasting badge or dot (muted, Caps Lock, a countdown, the camera or microphone dot) does not |
+| `notch.hide_windows_volume_popup` | `on`, `off` | on by default: hide the volume flyout Windows shows above the taskbar each time it appears, while the notch runs (`host/volume_flyout.rs`). Applies without a restart; the flyout returns when the notch exits or crashes. See [hide Windows' own popups](../how-to/hide-windows-popups.md) |
+| `notch.hide_windows_notifications` | `on`, `off` | on by default: turn off Windows' notification banner for every app while the notch runs, by writing `ShowBanner=0` per app and saving the previous values in `%APPDATA%\notch\notification-banners.txt` (`host/notification_banners.rs`). Notifications stay in the notification center, so the notch still shows them. Applies without a restart; the values go back when it is switched off, when the notch quits, and at the next start after a crash. See [hide Windows' own popups](../how-to/hide-windows-popups.md) |
 | `notch.maximized`, `notch.fullscreen` | `hidden`, `activities`, `lyrics`, `music` | what the notch shows over a maximized window (default `lyrics`) and over a full-screen app (default `hidden`); the words are in [the next table](#what-the-notch-shows-over-another-window). A missing or unknown word uses the default |
 | `notch.hover_maximized`, `notch.hover_fullscreen` | `on`, `off` | on by default: pointing at the top edge opens the notch over a maximized window and over a full-screen app. Off stops the pointer from opening it there; short messages still follow `notch.maximized` and `notch.fullscreen`, and dragging files onto the shelf still opens it. Neither key applies over a screenshot overlay (Win+Shift+S, Snipping Tool, Game Bar): the notch is hidden there and the pointer never opens it |
 | `pages.known` | `id:Label,...`, with `:opt_in` after the label of an opt-in page | written by the notch at start, only when it changed: the pages the settings window lists (label is `Page::name`; an opt-in page shows as off until `navigation.disabled` is saved). Leave it alone: the notch owns it |
@@ -63,8 +63,8 @@ for anything the word leaves out.
 | Word | The notch shows |
 | --- | --- |
 | `hidden` | nothing, not even activities |
-| `activities` | notification banners, volume changes and badges |
-| `lyrics` | an activity, or music that is playing with lyrics |
+| `activities` | short messages and notification banners (a volume change, a timer alert); a lasting badge or dot (muted, Caps Lock, a countdown, the camera or microphone dot) does not keep the pill up |
+| `lyrics` | a message, or music that is playing with lyrics |
 | `music` | the same, plus the idle pill with nothing playing |
 
 Three older keys (`notch.hide_for_fullscreen`, `notch.show_over_maximized`, `notch.lyrics_over_maximized`) have no

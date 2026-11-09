@@ -1,6 +1,6 @@
 # Add an activity
 
-> **How-to.** Read when: you are adding something that shows in the collapsed pill: a volume change, a plug, a device turning on. Skip if: it belongs in the open notch; that is a page ([tutorial](../tutorials/add-a-page.md)).
+> **How-to.** Read when: you are adding something that shows in the collapsed pill: a volume change, a plug, a device turning on. Skip if: it belongs in the open notch; that is a page ([add a page](add-a-page.md)).
 
 An activity is something that happens while the notch is closed: a volume change, a charger being plugged in, the
 microphone turning on. A page is what you see when you open the notch; an activity is what you see in the collapsed

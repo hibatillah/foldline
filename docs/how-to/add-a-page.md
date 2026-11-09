@@ -1,6 +1,6 @@
-# Tutorial: build a page
+# Add a page
 
-> **Tutorial.** Read when: you are writing your first page and want one working example to copy. Skip if: you already know the `Page` trait; use [the page API reference](../reference/page-api.md) instead.
+> **How-to.** Read when: you are writing your first page and want one working example to copy. Skip if: you already know the `Page` trait; use [the page API reference](../reference/page-api.md) instead.
 
 You build a small greeting page that follows the time of day and switches between casual and formal wording on a click. Each step ends with something you can check.
 
@@ -132,10 +132,10 @@ What each part does:
   it. Read your keys again here; fall back to the current value, not the default, so a missing or unreadable line
   changes nothing. Never write settings from it.
 - `on_timer` runs when a timer from `context.set_timer` fires. Request a repaint when something visible changed.
-- `on_pointer` receives pointer events while your page is visible, including beside another page during a swipe.
-  The collapsed pill sends none to pages: a page whose `presence()` is a banner gets the pointer over it in
-  `on_presence_pointer`, and `context.request_open()` from there opens the notch on the page (the rain alert's Open
-  Weather button).
+- `on_pointer` receives pointer events while your page is the open one, including while it is still fading in after a switch; a page fading out gets none.
+  The collapsed pill sends none to pages: a page whose `presence()` is a banner or a badge gets the pointer over it in
+  `on_presence_pointer` (the rain alert's Dismiss and Open buttons, and a press on its badge; both call `context.request_open()`, which
+  opens the notch on the calling page).
 - A page that uses right-click answers `uses_right_click` for those points and then gets `PointerEvent::SecondaryReleased`; the shelf does this for its files. A right-click elsewhere does nothing.
   Positions are in the same space as its own shifted `frame.bounds`.
 - A page with a scrolling area answers `claims_scroll` for the points where the vertical wheel or a touchpad swipe scrolls it and then gets `PointerEvent::Scrolled { notches }` (positive moves toward later content, one wheel notch is 1.0); the calendar's event list does this. Elsewhere the wheel still switches pages, and a horizontal swipe always does.

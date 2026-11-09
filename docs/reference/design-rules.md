@@ -17,7 +17,7 @@ the marks of what is going on, then the battery ring, then the camera and microp
   has to say, so it is set larger than a mark.
 - **The group is right-anchored and its order is fixed, left to right:** music wave, Caps Lock, muted, timer, event, prayer,
   battery ring, dots. The pill and the open header use one order, `header_status_rank`: wave 0, Caps Lock 1, muted 2,
-  timer 3, event 4, prayer 5, with the lowest rank nearest the clock. The ring and the dots are not ranked; they stay at
+  timer 3, event 4, prayer 5, rain 6, with the lowest rank nearest the clock. The ring and the dots are not ranked; they stay at
   the right end. A fixed order puts each mark where the eye looks for it every time.
 - **A new item appears between the clock and the ring, and nothing right of it moves.** The right end stays still, so the
   marks the user has already read do not shift.
@@ -28,6 +28,13 @@ the marks of what is going on, then the battery ring, then the camera and microp
 - **Everything slides, nothing snaps.** Every item has its own spring (`host/notch/row_motion.rs`), so an item that joins
   or leaves, or a dot that flickers, moves its neighbours visibly and the user can tell what changed. The springs settle
   and stop, so the pill costs no CPU at rest.
+- **A page switch is a quick swap, never a slide of two pages.** The leaving page fades out in about 110 ms while it
+  drifts 12 px away; the arriving one starts 80 ms in, fades in and shifts 24 px into place from the side it comes from
+  (east for the next page), and is still about 420 ms after the switch (`host/page_swap.rs`, numbers in
+  `host/motion.rs`). The two pages are almost never visible together, and a switch always runs to its end, so the open
+  notch never rests between pages. The content finishes just after the pill's width and height are within 5 % of the
+  new page's size, so the pill has its new shape before the page is still. Content moves only sideways, keeps its own
+  height whatever the pill's height is, and is clipped below the header.
 - **The empty pill centers the clock.** A PC with nothing active shows only the time, centered, in a pill that hugs it
   with 28 px on each side (narrower than the 150 px minimum, which holds everywhere else). The clock glides to the left
   edge and the pill grows when anything appears.
@@ -100,7 +107,7 @@ the marks of what is going on, then the battery ring, then the camera and microp
 - A message that reports a percentage (Bluetooth device, charging, on battery, low battery) shows a 32 px ring around
   its icon, like the battery; that pill grows to 48 px.
 - A message's value takes its icon's color (the percentage, "25 min", "15:19"); the name stays white.
-- A notification opens the pill into a 400 px card: app icon, sender, two lines of the message. The two lines are
+- A notification opens the pill into a 340 px card: app icon, sender, two lines of the message. The two lines are
   clamped with an ellipsis, hovered or not; hover adds buttons and never grows the text, so the buttons do not move
   under the pointer.
 - The heading is the sender in white, then the app name in grey (`#8e8e99`, regular weight) with no separator, so a
@@ -109,7 +116,7 @@ the marks of what is going on, then the battery ring, then the camera and microp
 - Hover shows two buttons: Dismiss (secondary: translucent white fill, white text) and Open (primary: white fill,
   black text). A click on the card does nothing, so it never opens an app by accident. The card shows for 5 s, stays
   while the pointer is on it and goes 1.5 s after the pointer leaves; the rain alert's banner follows the same rules
-  with Dismiss and Open Weather.
+  with Dismiss and Open (it shows the weather page in the notch).
 - Open focuses the sending app and removes the notification, as a click on the native banner does; Dismiss only
   removes it. With the text hidden (privacy mode) Open still names the app.
 
@@ -268,7 +275,9 @@ The page is off until added and has no collapsed state; it reads Windows only wh
 ## Clipboard page
 
 Board `d2a7dd31` (`slim.html`). The page is opt-in, 508 x 179 px of content (540 x 229 px with the host padding and
-header; the page is taller than the 86 px of other pages).
+header) once it holds at least one copy. With an empty history it reports the default 86 px of content height like the
+other pages (508 x 86 px) and grows to 179 px as soon as one copy exists; it shrinks back when the last one is removed.
+The bar stays at the bottom of the page in both heights.
 
 - **Two columns 12 px apart.** The list is 214 px wide and shows the last 7 copies, newest on top, so it never scrolls:
   rows are 23 px high, 3 px apart, radius 8, 8 px of padding, a 14 px icon (`#8a8a96`, 1.8 px line) and 7 px before the
@@ -373,9 +382,8 @@ header; the page is taller than the 86 px of other pages).
   and "Last updated 13:40 · retrying on its own". No location: a `#4dabf7` pin, "Choose a city" and "Pick a location in
   Settings to see the weather". Both hug their content: the page is as wide as the row plus the notch's padding, never
   below the notch's minimum width (the timer page's). The design draws them in a 392 px notch; that is not a rule.
-- The rain alert starts 30 minutes before rain: a short message in the pill ("Rain in 30 min" and the time), then a
-  400 px banner (a blue 30 px tile with a rain icon, "Rain in 30 min" with "Weather" after it in grey, two lines of
-  text) that stays while the pointer is on it. Weather takes no place in the pill's group.
+- The rain alert starts 30 minutes before rain: a 340 px banner (the width of a notification card; a blue 30 px tile with a rain icon, "Rain in 30 min" with "Weather" after it in grey, two lines of text) for 9 s, held while the pointer is on it, with Dismiss and Open under the text. The banner is the only moment the alert takes the pill; after it the alert stays as a blue badge in the group (a 14 px cloud, 4 px, "Rain in 25 min"; "25m" when several badges share the pill) and as a cloud in the open header, rank 6 (after the prayer), until the rain starts, so the clock and the battery ring stay in view. A press on the badge in the collapsed pill opens the notch on the weather page. Dismiss removes the badge too. Open opens the notch on the weather page (no browser); a click on the header cloud does the same. Only data clicked on the weather page opens weather.com: an hour of the Today view opens `https://weather.com/weather/hourbyhour/l/<lat>,<lon>` and a day of the Week view opens `.../tenday/l/<lat>,<lon>` (coordinates trimmed to 4 decimals, numbers only; the site has no address for one hour or day, so the view lists them). The data still comes from MET Norway.
+- Each hour (Today) and each day (Week) is a button: a click opens the same table for that hour's or that day's date, and the cell under the pointer takes a faint white tint (`#ffffff` at 7 %), as the Today/Week pill takes its lighter fill. The notch sets no pointer cursor anywhere, so none is set here. The Today/Week pill is unchanged.
 
 ## Color and type
 
@@ -408,5 +416,5 @@ header; the page is taller than the 86 px of other pages).
   the cells show millimetres where the design shows percentages; the alert's pill message shows its time in grey and a
   plain cloud, not blue and a rain cloud (`ui::draw_message`).
 - Only Regular and Medium Geist are bundled, so the design's 600 weight draws as Medium (the prayer name, the todo
-  title, the offline title).
+  title, the offline title). Colors and text styles that several pages share are `ui/palette.rs` and `ui/type_styles.rs`; a page keeps only its own.
 - The percentage rings have not been checked against the code.

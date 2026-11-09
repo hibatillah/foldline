@@ -2,11 +2,11 @@
 
 > **How-to.** Read when: Windows shows its own volume box or notification banner next to the notch and you want only the notch. Skip if: you want Windows' popups as well.
 
-Both switches are under **Settings > General > Windows popups** and are off by default.
+Both switches are under **Settings > General > Windows popups** and are on by default (an unset key counts as on); switch one off to get that Windows popup back.
 
 ## The volume popup
 
-Turn on **Hide the Windows volume popup** (`notch.hide_windows_volume_popup`).
+**Hide the Windows volume popup** (`notch.hide_windows_volume_popup`).
 
 - Explorer draws the volume box in a window of class `XamlExplorerHostIslandWindow` (no title, never takes focus,
   centered above the taskbar). It shows that window again at every volume change, so the notch hides it each time:
@@ -34,7 +34,7 @@ if they use another window, it still shows.
 
 ## Notification banners
 
-Turn on **Hide Windows notification banners** (`notch.hide_windows_notifications`).
+**Hide Windows notification banners** (`notch.hide_windows_notifications`).
 
 The notch reads notifications from the notification center list (`UserNotificationListener`), so a notification
 reaches it as long as Windows keeps it in the notification center. The switch turns off only the banner, for every

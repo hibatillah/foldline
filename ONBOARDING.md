@@ -106,7 +106,7 @@ The agent does not commit unless you ask. `/group-commit` commits the working tr
 | --- | --- |
 | [docs/how-to/build-run-and-debug.md](docs/how-to/build-run-and-debug.md) | requirements, build, run, debug |
 | [docs/how-to/test-and-snapshot.md](docs/how-to/test-and-snapshot.md) | where the tests live, how to write one |
-| [docs/tutorials/add-a-page.md](docs/tutorials/add-a-page.md) | write, register and remove a page |
+| [docs/how-to/add-a-page.md](docs/how-to/add-a-page.md) | write, register and remove a page |
 | [docs/how-to/add-an-activity.md](docs/how-to/add-an-activity.md) | write, register and remove an activity |
 | [docs/reference/settings-keys.md](docs/reference/settings-keys.md) | every setting, its default and its environment variable |
 | [docs/explanation/architecture.md](docs/explanation/architecture.md) | how the code fits together, and why |
