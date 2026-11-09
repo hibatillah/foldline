@@ -31,6 +31,7 @@ paths:
 - Hiding Windows' own popups is reversible by design: the volume flyout is hidden by a hook on Explorer's show event
   (`host/volume_flyout.rs`) and returns when the notch exits; the banners are turned off per app with the previous
   values saved to `%APPDATA%\notch\notification-banners.txt` (`host/notification_banners/passes.rs`) and restored on
-  switch-off, on quit and at the next start after a crash. Keep both undoable before changing either.
+  switch-off, on quit and at the next start after a crash. Both settings are on by default (an unset key counts as on,
+  through `wants_hidden`), so the first start already saves the previous values. Keep both undoable before changing either.
 - The screen-mode hook follows the foreground window only (`host/screen_mode/location_hook.rs`), and `ScreenMode::Capture`
   hides the notch over the Win+Shift+S overlay (not yet verified in the real app).

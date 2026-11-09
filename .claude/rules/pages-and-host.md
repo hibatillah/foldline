@@ -12,7 +12,7 @@ paths:
 
 # Pages and host boundaries
 
-Read `docs/tutorials/add-a-page.md` before writing a page, `docs/how-to/add-an-activity.md` before writing an activity and
+Read `docs/how-to/add-a-page.md` before writing a page, `docs/how-to/add-an-activity.md` before writing an activity and
 `docs/explanation/architecture.md` before restructuring.
 
 ## Pages
@@ -63,8 +63,8 @@ Read `docs/tutorials/add-a-page.md` before writing a page, `docs/how-to/add-an-a
 Each is a file or folder of its own in `host/`; keep a new job of this kind out of `notch.rs`.
 
 - `volume_flyout` (with `hook_thread`) hides Windows' volume flyout; `notification_banners` (with `backup` and
-  `passes`) turns Windows' banners off and restores them; `screen_mode` (with `location_hook`) tracks the foreground
-  window; `settings_launcher` starts `notch-settings.exe`.
+  `passes`) turns Windows' banners off and restores them; `screen_mode` (with `location_hook` and the pure `classify`) tracks the foreground
+  window; `settings_launcher` starts `notch-settings.exe`. `window/focus.rs` holds the topmost and keyboard-focus calls.
 - The rows of the pill and header: `pill_row`, `claimed_row`, and in `host/notch/` `resting_row`, `header_row` and
   `row_motion` (one spring per item).
 - `host/settings.rs` reads and writes `settings.txt`; the Windows-popup keys are `notch.hide_windows_volume_popup` and

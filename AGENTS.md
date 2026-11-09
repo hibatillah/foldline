@@ -104,7 +104,7 @@ location), with the patched `salah` crate in
 
 | Work | Read |
 | --- | --- |
-| a page: first one, or looking up a hook or rule | `docs/tutorials/add-a-page.md`, `docs/reference/page-api.md` |
+| a page: first one, or looking up a hook or rule | `docs/how-to/add-a-page.md`, `docs/reference/page-api.md` |
 | an activity (volume, Caps Lock, notification banner) | `docs/how-to/add-an-activity.md`, `docs/reference/activities.md` |
 | a setting, a key, a control in the settings window | `docs/how-to/add-a-setting.md`, `docs/reference/settings-keys.md`, `docs/reference/settings-window.md` |
 | hiding Windows' own volume flyout or notification banners | `docs/how-to/hide-windows-popups.md` |

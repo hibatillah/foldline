@@ -14,7 +14,7 @@ check before writing or moving code.
   never add a job to a file that already has one.
 - `mod.rs` (or `name.rs` beside `name/`) declares children, holds the main type and the trait impl, and keeps no logic a
   child could hold. `Notch` follows this: its methods live one job per file in `host/notch/`.
-- State a job owns is a small struct defined beside that job's logic (`Springs` in `animation.rs`, `HoverState` in
+- State a job owns is a small struct defined beside that job's logic (`Springs` and `FrameTimer` in `animation.rs`, `ShownPresences` in `presences.rs`, `HoverState` in
   `hover.rs`) and held by the main type; a new job adds a field of its own struct, not loose fields.
 - Pure logic (layout math, rules, wording, parsing) never imports `windows::`; only the host, `platform` and `ui` call
   Windows.
