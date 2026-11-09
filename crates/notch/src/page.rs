@@ -152,6 +152,11 @@ pub trait Page {
         false
     }
 
+    /// Whether the page sits at the left padding when the open notch is wider than it, instead of centered.
+    fn is_left_aligned(&self) -> bool {
+        false
+    }
+
     /// Whether the vertical wheel at `point` scrolls something on this page instead of switching pages.
     fn claims_scroll(&self, _point: Point, _frame: &Frame) -> bool {
         false

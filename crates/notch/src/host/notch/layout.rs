@@ -59,8 +59,13 @@ impl Notch {
         let mut frame = self.page_frame(viewport);
         let width = self.pages[index].sizes().expanded.width;
         let center = frame.bounds.center_x() + center_offset * self.scale;
-        frame.bounds.left = center - width * self.scale / 2.0;
-        frame.bounds.right = center + width * self.scale / 2.0;
+        let left = if self.pages[index].is_left_aligned() {
+            frame.bounds.left + center_offset * self.scale
+        } else {
+            center - width * self.scale / 2.0
+        };
+        frame.bounds.left = left;
+        frame.bounds.right = left + width * self.scale;
         frame.expanded.width = width;
         frame
     }

@@ -159,6 +159,10 @@ impl Page for MediaPage {
         }
     }
 
+    fn is_left_aligned(&self) -> bool {
+        true
+    }
+
     fn sizes(&self) -> PageSizes {
         let width =
             if self.is_lyric_panel_visible() { layout::LYRICS_WIDTH } else { layout::plain_width(self.text_width) };

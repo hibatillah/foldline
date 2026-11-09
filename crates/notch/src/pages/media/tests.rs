@@ -150,3 +150,8 @@ fn a_rest_in_the_lyrics_keeps_the_collapsed_pill_in_lyric_mode() {
     assert!(page.follower.current().is_empty());
     assert!(page.claims_pill());
 }
+
+#[test]
+fn the_media_page_sits_at_the_left_padding_when_the_notch_is_wider() {
+    assert!(playing_page().is_left_aligned());
+}
