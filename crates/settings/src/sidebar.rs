@@ -88,7 +88,7 @@ fn item(
 ) -> AnyElement {
     let foreground = cx.theme().foreground;
     let color = if selected { foreground } else { foreground.opacity(0.78) };
-    let fill = palette::selected_item(cx);
+    let fill = palette::wash(cx);
     h_flex()
         .id(gpui::ElementId::Name(id.into()))
         .h(px(ITEM_HEIGHT))
@@ -141,33 +141,26 @@ pub fn render(
     on_select: SelectHandler,
     cx: &App,
 ) -> AnyElement {
+    let nav_item = |index: usize| {
+        let entry = &entries[index];
+        let on_select = on_select.clone();
+        item(
+            format!("nav-{}", entry.page.title),
+            Icon::default().path(entry.icon),
+            entry.page.title,
+            index == selected,
+            move |_event, _window, cx| on_select(index, cx),
+            cx,
+        )
+    };
     let groups = grouped(entries).into_iter().map(|(group, indexes)| {
-        let items = indexes.into_iter().map(|index| {
-            let entry = &entries[index];
-            let on_select = on_select.clone();
-            item(
-                format!("nav-{}", entry.page.title),
-                Icon::default().path(entry.icon),
-                entry.page.title,
-                index == selected,
-                move |_event, _window, cx| on_select(index, cx),
-                cx,
-            )
-        });
-        v_flex().gap_0p5().child(group_label(group.label(), cx)).children(items)
+        v_flex().gap_0p5().child(group_label(group.label(), cx)).children(indexes.into_iter().map(nav_item))
     });
-    let footer =
-        entries.iter().enumerate().filter(|(_, entry)| entry.group == NavGroup::Footer).map(|(index, entry)| {
-            let on_select = on_select.clone();
-            item(
-                format!("nav-{}", entry.page.title),
-                Icon::default().path(entry.icon),
-                entry.page.title,
-                index == selected,
-                move |_event, _window, cx| on_select(index, cx),
-                cx,
-            )
-        });
+    let footer = entries
+        .iter()
+        .enumerate()
+        .filter(|(_, entry)| entry.group == NavGroup::Footer)
+        .map(|(index, _)| nav_item(index));
     v_flex()
         .h_full()
         .flex_none()
@@ -216,9 +209,9 @@ mod tests {
 
     #[test]
     fn the_tile_sits_about_as_far_from_the_top_as_from_the_left_edge() {
-        let top_gap = BRAND_TOP_PADDING + (BRAND_HEIGHT - BRAND_TOP_PADDING - crate::LOGO_SIZE) / 2.0;
-        let left_gap = SIDEBAR_PADDING + BRAND_PADDING_X;
-        assert!((left_gap - top_gap).abs() <= 1.0);
+        const TOP_GAP: f32 = BRAND_TOP_PADDING + (BRAND_HEIGHT - BRAND_TOP_PADDING - crate::LOGO_SIZE) / 2.0;
+        const LEFT_GAP: f32 = SIDEBAR_PADDING + BRAND_PADDING_X;
+        const { assert!((LEFT_GAP - TOP_GAP).abs() <= 1.0) };
     }
 
     #[test]

@@ -23,7 +23,7 @@ pub fn page() -> Page {
     });
     Page::new(
         "General",
-        "Startup, your location, notifications, Windows popups, music and the focus timer.",
+        "Startup, your location, notifications, Windows popups and the focus timer.",
         vec![
             Group::titled(
                 "Startup",
@@ -59,27 +59,20 @@ pub fn page() -> Page {
             Group::titled(
                 "Windows popups",
                 vec![
-                    Item::new("Hide the Windows volume popup", field::toggle("notch.hide_windows_volume_popup", false))
+                    Item::new("Hide the Windows volume popup", field::toggle("notch.hide_windows_volume_popup", true))
                         .description(
                             "Keeps the volume box Windows shows above the taskbar away while the notch runs, so only \
                              the notch shows the volume. It comes back when the notch closes.",
                         ),
                     Item::new(
                         "Hide Windows notification banners",
-                        field::toggle("notch.hide_windows_notifications", false),
+                        field::toggle("notch.hide_windows_notifications", true),
                     )
                     .description(
                         "Turns off the banner Windows shows at the bottom right for every app while the notch runs, so \
                          only the notch shows notifications; they stay in the notification center. Each app's own \
                          choice comes back when this is off or the notch closes.",
                     ),
-                ],
-            ),
-            Group::titled(
-                "Music",
-                vec![
-                    Item::new("Show lyrics", field::toggle("media.lyrics", true))
-                        .description("Shows synced lyrics on the media page."),
                 ],
             ),
             Group::titled(

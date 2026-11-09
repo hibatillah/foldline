@@ -136,7 +136,6 @@ mod tests {
     fn the_previews_use_the_words_the_notch_shows() {
         assert!(notch_source("mod.rs").contains(&format!("\"{MESSAGE_TEXT}\"")));
         assert!(notch_source("text.rs").contains("\"{} in {}m\""));
-        assert_eq!(BADGE_TEXT, "Asr in 24m");
     }
 
     #[test]

@@ -19,7 +19,7 @@ const RESULT_LIMIT: usize = 5;
 const FIELD_WIDTH: f32 = 260.0;
 
 /// The saved city as the field shows it ("Pekanbaru, ID"), or nothing until one is chosen.
-pub fn current_label(settings: &Settings) -> String {
+fn current_label(settings: &Settings) -> String {
     Location::read(&|key| settings.get_string(key).map(str::to_owned))
         .map(|location| location.label)
         .unwrap_or_default()

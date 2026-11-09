@@ -17,7 +17,7 @@ pub fn on_off(enabled: bool) -> &'static str {
     if enabled { "on" } else { "off" }
 }
 
-pub fn parse_whole_number(input: &str, range: &RangeInclusive<u32>) -> Option<u32> {
+fn parse_whole_number(input: &str, range: &RangeInclusive<u32>) -> Option<u32> {
     input.trim().parse::<u32>().ok().filter(|number| range.contains(number))
 }
 

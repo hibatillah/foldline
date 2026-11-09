@@ -69,15 +69,7 @@ impl Settings {
         if let Some(directory) = path.parent() {
             let _ = fs::create_dir_all(directory);
         }
-        let text: String = values
-            .iter()
-            .map(|(key, value)| {
-                format!(
-                    "{key}={value}
-"
-                )
-            })
-            .collect();
+        let text: String = values.iter().map(|(key, value)| format!("{key}={value}\n")).collect();
         let mut temporary_name = path.clone().into_os_string();
         temporary_name.push(format!(".{}.tmp", std::process::id()));
         let temporary_path = PathBuf::from(temporary_name);

@@ -12,7 +12,7 @@ pub type Handler = Rc<dyn Fn(&mut Window, &mut App)>;
 
 const TILE_SIZE: f32 = 48.0;
 const PILL_HEIGHT: f32 = 32.0;
-pub const COMING_SOON: &str = "Coming soon";
+const COMING_SOON: &str = "Coming soon";
 
 /// A dark rounded button with a thin border and an optional icon. Without a handler it is dimmed and "Coming soon"
 /// stands to its left.

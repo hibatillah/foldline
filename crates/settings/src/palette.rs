@@ -134,13 +134,8 @@ pub fn input_border(cx: &App) -> Hsla {
     color(current(cx).input_border)
 }
 
-/// The fill of the selected sidebar item and of a hovered one: a faint wash over the translucent frame.
-pub fn selected_item(cx: &App) -> Hsla {
-    if cx.theme().is_dark() { gpui::white().opacity(0.08) } else { gpui::black().opacity(0.06) }
-}
-
-/// The fill of a hovered window button.
-pub fn hover_fill(cx: &App) -> Hsla {
+/// A faint wash over the translucent frame: the selected and hovered sidebar item and a hovered window button.
+pub fn wash(cx: &App) -> Hsla {
     if cx.theme().is_dark() { gpui::white().opacity(0.08) } else { gpui::black().opacity(0.06) }
 }
 

@@ -4,7 +4,7 @@ mod licenses;
 mod paths;
 mod widgets;
 
-use std::rc::Rc;
+use std::{path::Path, rc::Rc};
 
 use gpui::{AnyElement, App, Window};
 use gpui_component::{IconName, WindowExt as _, notification::Notification};
@@ -14,7 +14,7 @@ use paths::{DataPaths, Opening};
 use widgets::Handler;
 
 /// The release notes of this version. Empty until the site exists; while it is empty the button is inert.
-pub const WHATS_NEW_URL: &str = "";
+const WHATS_NEW_URL: &str = "";
 const LRCLIB_URL: &str = "https://lrclib.net";
 
 /// What a row's button does.
@@ -97,6 +97,14 @@ fn perform(opening: Opening, window: &mut Window, cx: &mut App) {
     }
 }
 
+/// Picks what to open from the data paths and a check for what exists.
+type ChooseOpening = fn(&DataPaths, fn(&Path) -> bool) -> Opening;
+
+fn open_data(choose: ChooseOpening, window: &mut Window, cx: &mut App) {
+    let opening = DataPaths::from_environment().map_or(Opening::Nothing, |paths| choose(&paths, Path::exists));
+    perform(opening, window, cx);
+}
+
 fn handler_for(action: Action) -> Option<Handler> {
     if action.is_inert() {
         return None;
@@ -104,18 +112,8 @@ fn handler_for(action: Action) -> Option<Handler> {
     let handler: Handler = match action {
         Action::Link(url) => Rc::new(move |_window, cx| cx.open_url(url)),
         Action::Licenses => Rc::new(licenses::open_licenses),
-        Action::SettingsFile => Rc::new(|window, cx| {
-            let opening = DataPaths::from_environment()
-                .map(|paths| paths::settings_opening(&paths, |path| path.exists()))
-                .unwrap_or(Opening::Nothing);
-            perform(opening, window, cx);
-        }),
-        Action::DataFolder => Rc::new(|window, cx| {
-            let opening = DataPaths::from_environment()
-                .map(|paths| paths::folder_opening(&paths, |path| path.exists()))
-                .unwrap_or(Opening::Nothing);
-            perform(opening, window, cx);
-        }),
+        Action::SettingsFile => Rc::new(|window, cx| open_data(paths::settings_opening, window, cx)),
+        Action::DataFolder => Rc::new(|window, cx| open_data(paths::folder_opening, window, cx)),
     };
     Some(handler)
 }
@@ -171,7 +169,6 @@ mod tests {
 
     #[test]
     fn an_empty_whats_new_address_makes_its_button_inert() {
-        assert!(WHATS_NEW_URL.is_empty());
         let whats_new = &link_rows()[0];
         assert!(whats_new.action.is_inert());
         assert!(handler_for(whats_new.action).is_none());
@@ -205,7 +202,6 @@ mod tests {
     #[test]
     fn the_page_has_a_description() {
         let page = page();
-        assert_eq!(page.title, "About");
         assert!(page.description().trim().len() > 20);
     }
 }

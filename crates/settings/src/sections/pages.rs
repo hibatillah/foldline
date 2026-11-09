@@ -113,7 +113,6 @@ impl Render for DragPreview {
     }
 }
 
-/// Two columns of dots, the usual sign that a row can be dragged.
 fn page_description(id: &str) -> Option<&'static str> {
     match id {
         "media" => Some("Music player with synced lyrics."),
@@ -128,6 +127,7 @@ fn page_description(id: &str) -> Option<&'static str> {
     }
 }
 
+/// Two columns of dots, the usual sign that a row can be dragged.
 fn grip(cx: &App) -> AnyElement {
     let color = cx.theme().muted_foreground;
     let column =

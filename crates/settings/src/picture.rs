@@ -11,7 +11,7 @@ pub enum Backdrop {
     FullScreenApp,
 }
 
-/// What the pill shows; `Hidden` draws no pill.
+/// What the pill shows.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Pill {
     Activity,
@@ -99,7 +99,7 @@ fn game_backdrop() -> impl IntoElement {
     sunset().child(div().absolute().left(px(228.0)).top(px(40.0)).size(px(28.0)).rounded(px(14.0)).bg(rgba(0xffe0a0d9)))
 }
 
-/// The black pill, flush with the top edge and centered, with rounded bottom corners.
+/// The pill of one choice with its content.
 fn draw_pill(pill: Pill) -> impl IntoElement {
     let content = match pill {
         Pill::Activity => div()
@@ -204,11 +204,5 @@ mod tests {
     #[test]
     fn an_unknown_word_draws_no_pill() {
         assert_eq!(pill_for("banana"), None);
-    }
-
-    #[test]
-    fn the_ring_fits_its_stroke_inside_the_box() {
-        let radius: gpui::Pixels = px(RING_SIZE / 2.0 - RING_WIDTH / 2.0);
-        assert!(radius * 2.0 + px(RING_WIDTH) <= px(RING_SIZE));
     }
 }

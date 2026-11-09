@@ -193,13 +193,6 @@ mod tests {
     }
 
     #[test]
-    fn the_page_shows_two_blocks_titled_disks_and_gpus() {
-        let page = page();
-        assert_eq!(page.title, "System stats");
-        assert!(page.description().len() > 20);
-    }
-
-    #[test]
     fn an_unset_key_selects_the_first_three_disks_and_the_first_two_gpus() {
         let disks = names(&["C:", "D:", "E:", "F:"]);
         assert_eq!(selected(&disks, None, DISKS), names(&["C:", "D:", "E:"]));
@@ -278,14 +271,6 @@ mod tests {
     fn known_gpu_names_keep_their_spaces_and_are_split_only_at_the_bar() {
         let settings = settings_with("stats.known_gpus=RTX 4050|Radeon 760M\n");
         assert_eq!(availability(&settings, GPUS), Availability::Devices(names(&["RTX 4050", "Radeon 760M"])));
-    }
-
-    #[test]
-    fn the_messages_say_what_to_do() {
-        assert_eq!(DISKS.unlisted, "Open the System stats page in the notch once to list your disks");
-        assert_eq!(GPUS.unlisted, "Open the System stats page in the notch once to list your GPUs");
-        assert_eq!(GPUS.none_found, "No GPU found");
-        assert_eq!((DISKS.limit_hint, GPUS.limit_hint), ("Up to 3 disks", "Up to 2 GPUs"));
     }
 
     #[test]

@@ -34,9 +34,9 @@ const DEFAULT_WINDOW_SIZE: (f32, f32) = (1040.0, 660.0);
 /// Space kept free around the window when the screen is smaller than the default size (taskbar and edges).
 const SCREEN_MARGIN: f32 = 80.0;
 const LOGO_SIZE: f32 = 28.0;
-// The notch's own font files (SIL Open Font License, assets/fonts/Geist-LICENSE.txt).
 /// The one scale knob: gpui-component's Root sets the window's rem size to this, so every rem-based size (text, `px_*`, `gap_*`, controls) follows it. 16 is the library default.
 const UI_FONT_SIZE: f32 = 14.7;
+// The notch's own font files (SIL Open Font License, assets/fonts/Geist-LICENSE.txt).
 const GEIST_FONTS: [&[u8]; 2] = [
     include_bytes!("../../../assets/fonts/Geist-Regular.ttf"),
     include_bytes!("../../../assets/fonts/Geist-Medium.ttf"),

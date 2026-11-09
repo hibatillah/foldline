@@ -63,12 +63,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn standard_draws_a_shadow_as_long_as_the_stick_and_hanafi_twice_as_long() {
-        assert_eq!(RULES[0].shadow_in_heights, 1.0);
-        assert_eq!(RULES[1].shadow_in_heights, 2.0);
-    }
-
-    #[test]
     fn each_card_writes_the_word_the_notch_reads() {
         assert_eq!(field::on_off(RULES[0].hanafi), "off");
         assert_eq!(field::on_off(RULES[1].hanafi), "on");

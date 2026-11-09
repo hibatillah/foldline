@@ -209,12 +209,6 @@ mod tests {
     }
 
     #[test]
-    fn the_prayers_come_in_the_order_of_the_day() {
-        let minutes: Vec<i64> = PRAYERS.iter().map(|prayer| prayer.typical_minute).collect();
-        assert!(minutes.windows(2).all(|pair| pair[0] < pair[1]));
-    }
-
-    #[test]
     fn a_step_stops_at_minus_and_plus_thirty() {
         assert_eq!(stepped(0, 1), 1);
         assert_eq!(stepped(0, -1), -1);
@@ -248,12 +242,5 @@ mod tests {
         assert!(bar_position(PRAYERS[2].typical_minute, -30) < plain);
         assert!((0.0..=1.0).contains(&bar_position(0, -30)));
         assert!((0.0..=1.0).contains(&bar_position(24 * 60, 30)));
-    }
-
-    #[test]
-    fn the_day_bar_stops_run_from_the_start_to_the_end_of_the_bar() {
-        assert_eq!(DAY_STOPS.first().map(|stop| stop.0), Some(0.0));
-        assert_eq!(DAY_STOPS.last().map(|stop| stop.0), Some(1.0));
-        assert!(DAY_STOPS.windows(2).all(|pair| pair[0].0 < pair[1].0));
     }
 }

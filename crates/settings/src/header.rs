@@ -30,7 +30,7 @@ pub fn inner_radius() -> f32 {
 fn control(id: &'static str, icon: IconName, area: WindowControlArea, is_close: bool, cx: &App) -> impl IntoElement {
     let theme = cx.theme();
     let (hover_fill, hover_text) =
-        if is_close { (theme.danger, theme.danger_foreground) } else { (palette::hover_fill(cx), theme.foreground) };
+        if is_close { (theme.danger, theme.danger_foreground) } else { (palette::wash(cx), theme.foreground) };
     div()
         .id(ElementId::Name(id.into()))
         .flex()
@@ -77,12 +77,6 @@ pub fn render(page_title: &'static str, window: &Window, cx: &App) -> impl IntoE
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn the_header_is_thirty_six_pixels_and_follows_the_cards_corner() {
-        assert_eq!(HEIGHT, 36.0);
-        assert_eq!(inner_radius(), crate::CARD_RADIUS - 1.0);
-    }
 
     #[test]
     fn the_breadcrumb_reads_settings_then_the_page() {

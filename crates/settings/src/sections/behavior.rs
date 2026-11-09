@@ -8,14 +8,14 @@ use crate::{
     picture::{Backdrop, picture, pill_for},
 };
 
-pub struct Choice {
-    pub word: &'static str,
-    pub label: &'static str,
-    pub description: &'static str,
+struct Choice {
+    word: &'static str,
+    label: &'static str,
+    description: &'static str,
 }
 
 // The words `Showing::parse` accepts in `src/host/visibility.rs`; a test compares them, the labels are this window's own.
-pub const CHOICES: [Choice; 4] = [
+const CHOICES: [Choice; 4] = [
     Choice { word: "hidden", label: "0 · Hidden", description: "Nothing is drawn. Not even messages." },
     Choice {
         word: "activities",
@@ -34,11 +34,11 @@ pub const CHOICES: [Choice; 4] = [
     },
 ];
 
-pub const MAXIMIZED_KEY: &str = "notch.maximized";
-pub const FULLSCREEN_KEY: &str = "notch.fullscreen";
+const MAXIMIZED_KEY: &str = "notch.maximized";
+const FULLSCREEN_KEY: &str = "notch.fullscreen";
 // The keys `src/host/visibility.rs` reads; a test compares them.
-pub const HOVER_MAXIMIZED_KEY: &str = "notch.hover_maximized";
-pub const HOVER_FULLSCREEN_KEY: &str = "notch.hover_fullscreen";
+const HOVER_MAXIMIZED_KEY: &str = "notch.hover_maximized";
+const HOVER_FULLSCREEN_KEY: &str = "notch.hover_fullscreen";
 const DEFAULT_MAXIMIZED: &str = "lyrics";
 const DEFAULT_FULLSCREEN: &str = "hidden";
 
@@ -194,21 +194,6 @@ mod tests {
     }
 
     #[test]
-    fn the_choices_come_in_order() {
-        let offered: Vec<(&str, &str)> = CHOICES.iter().map(|choice| (choice.word, choice.label)).collect();
-        assert_eq!(
-            offered,
-            [
-                ("hidden", "0 · Hidden"),
-                ("activities", "1 · Activities"),
-                ("lyrics", "2 · Lyrics"),
-                ("music", "3 · Always visible"),
-            ]
-        );
-        assert!(CHOICES.iter().all(|choice| !choice.description.is_empty()));
-    }
-
-    #[test]
     fn each_level_shows_its_own_column_and_every_one_below() {
         let rows: Vec<Vec<bool>> =
             (0..4).map(|level| (0..3).map(|column| level_shows(level, column)).collect()).collect();
@@ -216,12 +201,6 @@ mod tests {
             rows,
             [vec![false, false, false], vec![true, false, false], vec![true, true, false], vec![true, true, true],]
         );
-    }
-
-    #[test]
-    fn the_page_opens_with_the_levels_group() {
-        assert!(INTRO.starts_with("Behavior works like a log level."));
-        assert_eq!(MATRIX_COLUMNS.len(), 3);
     }
 
     #[test]

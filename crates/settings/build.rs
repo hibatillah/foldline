@@ -11,7 +11,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let manifest_directory = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
     let workspace_root = Path::new(&manifest_directory).join("../..");
     let version = release_version::current(&workspace_root);
-    // The sidebar shows the full version (0.5.0-alpha.1) through `version.rs`.
     if let Some(version) = &version {
         println!("cargo:rustc-env=NOTCH_RELEASE_VERSION={version}");
     }

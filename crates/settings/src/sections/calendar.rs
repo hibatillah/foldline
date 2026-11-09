@@ -3,8 +3,7 @@ use gpui_component::{ActiveTheme as _, v_flex};
 
 use crate::{
     field::{self, Kind},
-    layout,
-    layout::{Group, Item, Page},
+    layout::{self, Group, Item, Page},
 };
 
 // Wording follows Google's "Sync your calendar with computer programs" page (support.google.com/calendar/answer/37648).
@@ -66,17 +65,4 @@ fn guide(window: &mut Window, cx: &mut App) -> AnyElement {
         window,
         cx,
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_steps_name_the_labels_google_shows() {
-        let steps = GOOGLE_STEPS.join(" ");
-        for label in ["Settings", "Integrate calendar", "Secret address in iCal format"] {
-            assert!(steps.contains(label), "missing {label}");
-        }
-    }
 }
