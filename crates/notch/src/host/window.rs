@@ -5,7 +5,7 @@ use std::{
 
 use windows::{
     Win32::{
-        Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM},
+        Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM},
         System::{
             LibraryLoader::GetModuleHandleW,
             Performance::QueryPerformanceFrequency,
@@ -21,7 +21,7 @@ use windows::{
             },
             Input::{
                 GetCurrentInputMessageSource, IMDT_TOUCHPAD, INPUT_MESSAGE_SOURCE,
-                KeyboardAndMouse::{GetKeyState, SetFocus, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent, VK_CONTROL},
+                KeyboardAndMouse::{GetKeyState, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent, VK_CONTROL},
             },
             WindowsAndMessaging::*,
         },
@@ -44,6 +44,10 @@ use crate::{
     log,
     page::{Page, WM_PAGE_NOTIFY},
 };
+
+mod focus;
+
+pub(super) use focus::{give_back_keyboard, raise_topmost, restore_topmost, take_keyboard};
 
 // Not exported under WindowsAndMessaging by the windows crate.
 const WM_MOUSELEAVE: u32 = 0x02A3;
@@ -106,68 +110,7 @@ fn track_mouse_leave(window: HWND) {
         hwndTrack: window,
         dwHoverTime: 0,
     };
-    unsafe {
-        let _ = TrackMouseEvent(&mut tracking);
-    }
-}
-
-/// Moves the window to the top of the topmost band; another topmost window can sit above it with the flag still set.
-pub(super) fn raise_topmost(window: HWND) {
-    let result = unsafe {
-        SetWindowPos(
-            window,
-            Some(HWND_TOPMOST),
-            0,
-            0,
-            0,
-            0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER,
-        )
-    };
-    if let Err(error) = result {
-        log::debug(&format!("could not raise topmost: {error}"));
-    }
-}
-
-pub(super) fn restore_topmost(window: HWND) {
-    if unsafe { GetWindowLongW(window, GWL_EXSTYLE) } as u32 & WS_EX_TOPMOST.0 != 0 {
-        return;
-    }
-    match unsafe {
-        SetWindowPos(
-            window,
-            Some(HWND_TOPMOST),
-            0,
-            0,
-            0,
-            0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER,
-        )
-    } {
-        Ok(()) => log::debug("restored topmost"),
-        Err(error) => log::debug(&format!("could not restore topmost: {error}")),
-    }
-}
-
-/// Brings the notch to the front so it receives typing; returns the window that had the keyboard.
-pub fn take_keyboard(window: HWND) -> Option<HWND> {
-    let previous = unsafe { GetForegroundWindow() };
-    if unsafe { SetForegroundWindow(window) }.as_bool() {
-        if let Err(error) = unsafe { SetFocus(Some(window)) } {
-            log::debug(&format!("could not focus the notch: {error}"));
-        }
-    } else {
-        log::debug("could not bring the notch to the front for typing");
-    }
-    (!previous.is_invalid() && previous != window).then_some(previous)
-}
-
-/// Hands the keyboard back to the window that had it, when that window still exists.
-pub fn give_back_keyboard(previous: Option<HWND>) {
-    let Some(previous) = previous else { return };
-    if unsafe { IsWindow(Some(previous)) }.as_bool() && !unsafe { SetForegroundWindow(previous) }.as_bool() {
-        log::debug("could not give the keyboard back");
-    }
+    let _ = unsafe { TrackMouseEvent(&mut tracking) };
 }
 
 extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
@@ -320,41 +263,50 @@ fn on_screen_mode(mode: ScreenMode) {
     with_notch(|notch| notch.set_screen_mode(mode));
 }
 
+/// Returns the class icons, which must stay alive while the window runs.
+fn register_window_class(scale: f32, instance: HINSTANCE) -> Result<(Icon, Icon)> {
+    let dpi = (scale * 96.0).round() as u32;
+    let large_icon = Icon::load(unsafe { GetSystemMetricsForDpi(SM_CXICON, dpi) })?;
+    let small_icon = Icon::load(unsafe { GetSystemMetricsForDpi(SM_CXSMICON, dpi) })?;
+    let class = WNDCLASSEXW {
+        cbSize: size_of::<WNDCLASSEXW>() as u32,
+        lpfnWndProc: Some(window_procedure),
+        hInstance: instance,
+        hCursor: unsafe { LoadCursorW(None, IDC_ARROW) }?,
+        hIcon: large_icon.handle(),
+        hIconSm: small_icon.handle(),
+        lpszClassName: w!("NotchWindow"),
+        ..Default::default()
+    };
+    unsafe { RegisterClassExW(&class) };
+    Ok((large_icon, small_icon))
+}
+
+/// `NOTCH_TOP` or the `notch.top` setting shifts the window down in pixels, so it can be compared next to another notch app.
+fn top_offset() -> i32 {
+    std::env::var("NOTCH_TOP")
+        .ok()
+        .or_else(|| Settings::load().get_string("notch.top").map(str::to_owned))
+        .and_then(|value| value.trim().parse().ok())
+        .unwrap_or(0)
+}
+
 pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Result<()> {
-    unsafe {
-        let _ = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-        RoInitialize(RO_INIT_MULTITHREADED)?;
+    let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
+    unsafe { RoInitialize(RO_INIT_MULTITHREADED) }?;
 
-        let scale = display::system_scale();
-        let instance = GetModuleHandleW(None)?;
-        let dpi = (scale * 96.0).round() as u32;
-        let large_icon = Icon::load(GetSystemMetricsForDpi(SM_CXICON, dpi))?;
-        let small_icon = Icon::load(GetSystemMetricsForDpi(SM_CXSMICON, dpi))?;
-        let class = WNDCLASSEXW {
-            cbSize: size_of::<WNDCLASSEXW>() as u32,
-            lpfnWndProc: Some(window_procedure),
-            hInstance: instance.into(),
-            hCursor: LoadCursorW(None, IDC_ARROW)?,
-            hIcon: large_icon.handle(),
-            hIconSm: small_icon.handle(),
-            lpszClassName: w!("NotchWindow"),
-            ..Default::default()
-        };
-        RegisterClassExW(&class);
-        TASKBAR_CREATED_MESSAGE.store(RegisterWindowMessageW(w!("TaskbarCreated")), Ordering::Relaxed);
+    let scale = display::system_scale();
+    let instance: HINSTANCE = unsafe { GetModuleHandleW(None) }?.into();
+    let _class_icons = register_window_class(scale, instance)?;
+    TASKBAR_CREATED_MESSAGE.store(unsafe { RegisterWindowMessageW(w!("TaskbarCreated")) }, Ordering::Relaxed);
 
-        let width = (WINDOW_WIDTH * scale).round() as i32;
-        let height = (WINDOW_HEIGHT * scale).round() as i32;
-        // NOTCH_TOP or the notch.top setting shifts the window down in pixels, so it can be compared next to another notch app.
-        let top_offset = std::env::var("NOTCH_TOP")
-            .ok()
-            .or_else(|| Settings::load().get_string("notch.top").map(str::to_owned))
-            .and_then(|value| value.trim().parse().ok())
-            .unwrap_or(0);
-        let screen_position = POINT { x: (GetSystemMetrics(SM_CXSCREEN) - width) / 2, y: top_offset };
-        // A previous instance is asked to close only after this one is visible, so a rebuild swaps without a gap.
-        let previous_window = FindWindowW(w!("NotchWindow"), None).ok();
-        let window = CreateWindowExW(
+    let width = (WINDOW_WIDTH * scale).round() as i32;
+    let height = (WINDOW_HEIGHT * scale).round() as i32;
+    let screen_position = POINT { x: (unsafe { GetSystemMetrics(SM_CXSCREEN) } - width) / 2, y: top_offset() };
+    // A previous instance is asked to close only after this one is visible, so a rebuild swaps without a gap.
+    let previous_window = unsafe { FindWindowW(w!("NotchWindow"), None) }.ok();
+    let window = unsafe {
+        CreateWindowExW(
             WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
             w!("NotchWindow"),
             w!("Notch"),
@@ -365,52 +317,52 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
             height,
             None,
             None,
-            Some(instance.into()),
+            Some(instance),
             None,
-        )?;
+        )
+    }?;
 
-        drop_target::start(window, scale, screen_position.x + width / 2, screen_position.y);
+    drop_target::start(window, scale, screen_position.x + width / 2, screen_position.y);
 
-        let mut ticks_per_second = 0;
-        QueryPerformanceFrequency(&mut ticks_per_second)?;
+    let mut ticks_per_second = 0;
+    unsafe { QueryPerformanceFrequency(&mut ticks_per_second) }?;
 
-        let settings = Settings::load();
-        let pages = registry::enabled_pages(pages, &settings);
-        let notch = Notch::new(NotchParts {
-            window,
-            scale,
-            screen_position,
-            surface: Surface::new(width, height)?,
-            fonts: Fonts::new(scale)?,
-            settings,
-            pages,
-            activities,
-            ticks_per_second,
-        });
-        NOTCH.with(|cell| *cell.borrow_mut() = Some(notch));
-        match WTSRegisterSessionNotification(window, NOTIFY_FOR_THIS_SESSION) {
-            Ok(()) => SESSION_NOTIFICATIONS_REGISTERED.store(true, Ordering::Relaxed),
-            Err(error) => {
-                log::debug(&format!("session notifications unavailable; foreground recovery remains active: {error}"))
-            }
+    let settings = Settings::load();
+    let pages = registry::enabled_pages(pages, &settings);
+    let notch = Notch::new(NotchParts {
+        window,
+        scale,
+        screen_position,
+        surface: Surface::new(width, height)?,
+        fonts: Fonts::new(scale)?,
+        settings,
+        pages,
+        activities,
+        ticks_per_second,
+    });
+    NOTCH.with(|cell| *cell.borrow_mut() = Some(notch));
+    match unsafe { WTSRegisterSessionNotification(window, NOTIFY_FOR_THIS_SESSION) } {
+        Ok(()) => SESSION_NOTIFICATIONS_REGISTERED.store(true, Ordering::Relaxed),
+        Err(error) => {
+            log::debug(&format!("session notifications unavailable; foreground recovery remains active: {error}"))
         }
-        with_notch(|notch| notch.start());
-
-        let _ = ShowWindow(window, SW_SHOWNOACTIVATE);
-        screen_mode::start(on_screen_mode);
-        if let Err(error) = tray::add(window) {
-            log::debug(&format!("tray icon unavailable: {error}"));
-        }
-        if let Some(previous_window) = previous_window {
-            let _ = PostMessageW(Some(previous_window), WM_CLOSE, WPARAM(0), LPARAM(0));
-        }
-
-        let mut message = MSG::default();
-        while GetMessageW(&mut message, None, 0, 0).as_bool() {
-            let _ = TranslateMessage(&message);
-            DispatchMessageW(&message);
-        }
-        notification_banners::release_at_exit(window);
     }
+    with_notch(|notch| notch.start());
+
+    let _ = unsafe { ShowWindow(window, SW_SHOWNOACTIVATE) };
+    screen_mode::start(on_screen_mode);
+    if let Err(error) = tray::add(window) {
+        log::debug(&format!("tray icon unavailable: {error}"));
+    }
+    if let Some(previous_window) = previous_window {
+        let _ = unsafe { PostMessageW(Some(previous_window), WM_CLOSE, WPARAM(0), LPARAM(0)) };
+    }
+
+    let mut message = MSG::default();
+    while unsafe { GetMessageW(&mut message, None, 0, 0) }.as_bool() {
+        let _ = unsafe { TranslateMessage(&message) };
+        unsafe { DispatchMessageW(&message) };
+    }
+    notification_banners::release_at_exit(window);
     Ok(())
 }

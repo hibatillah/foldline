@@ -1,5 +1,3 @@
-//! ICS parsing and repeat expansion.
-
 use super::super::dates::{SECONDS_PER_DAY, days_from_civil};
 
 use super::*;

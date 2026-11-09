@@ -1,7 +1,7 @@
 use super::{screen_mode::ScreenMode, settings::Settings};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Showing {
+pub(super) enum Showing {
     Hidden,
     ActivitiesOnly,
     MusicWithLyrics,
@@ -9,13 +9,13 @@ pub enum Showing {
 }
 
 /// Matches the old defaults: lyrics stay visible over maximized windows, full-screen windows hide the notch.
-pub const DEFAULT_MAXIMIZED: Showing = Showing::MusicWithLyrics;
-pub const DEFAULT_FULLSCREEN: Showing = Showing::Hidden;
+pub(super) const DEFAULT_MAXIMIZED: Showing = Showing::MusicWithLyrics;
+pub(super) const DEFAULT_FULLSCREEN: Showing = Showing::Hidden;
 
-pub const MAXIMIZED_KEY: &str = "notch.maximized";
-pub const FULLSCREEN_KEY: &str = "notch.fullscreen";
-pub const HOVER_MAXIMIZED_KEY: &str = "notch.hover_maximized";
-pub const HOVER_FULLSCREEN_KEY: &str = "notch.hover_fullscreen";
+pub(super) const MAXIMIZED_KEY: &str = "notch.maximized";
+pub(super) const FULLSCREEN_KEY: &str = "notch.fullscreen";
+pub(super) const HOVER_MAXIMIZED_KEY: &str = "notch.hover_maximized";
+pub(super) const HOVER_FULLSCREEN_KEY: &str = "notch.hover_fullscreen";
 
 const OLD_HIDE_FOR_FULLSCREEN_KEY: &str = "notch.hide_for_fullscreen";
 const OLD_SHOW_OVER_MAXIMIZED_KEY: &str = "notch.show_over_maximized";
@@ -42,7 +42,7 @@ impl Showing {
     }
 }
 
-pub fn showing_for(mode: ScreenMode, maximized: Showing, fullscreen: Showing) -> Option<Showing> {
+pub(super) fn showing_for(mode: ScreenMode, maximized: Showing, fullscreen: Showing) -> Option<Showing> {
     match mode {
         ScreenMode::Normal => None,
         ScreenMode::Maximized => Some(maximized),
@@ -63,12 +63,12 @@ fn openness(showing: Option<Showing>) -> u8 {
 }
 
 /// Whether going from `from` to `to` may show what was hidden; such a change waits, a hiding one applies at once.
-pub fn reveals_more(from: Option<Showing>, to: Option<Showing>) -> bool {
+pub(super) fn reveals_more(from: Option<Showing>, to: Option<Showing>) -> bool {
     openness(to) > openness(from)
 }
 
 /// Whether the pointer may open the notch; a regular window always allows it.
-pub fn opens_on_hover(mode: ScreenMode, over_maximized: bool, over_fullscreen: bool) -> bool {
+pub(super) fn opens_on_hover(mode: ScreenMode, over_maximized: bool, over_fullscreen: bool) -> bool {
     match mode {
         ScreenMode::Normal => true,
         ScreenMode::Maximized => over_maximized,
@@ -78,7 +78,7 @@ pub fn opens_on_hover(mode: ScreenMode, over_maximized: bool, over_fullscreen: b
 }
 
 /// Writes a new key only when it is absent and an old key exists; with no old key the default already matches.
-pub fn migrate(settings: &mut Settings) {
+pub(super) fn migrate(settings: &mut Settings) {
     if settings.get_string(FULLSCREEN_KEY).is_none() && settings.get_string(OLD_HIDE_FOR_FULLSCREEN_KEY).is_some() {
         let hides = settings.get_bool(OLD_HIDE_FOR_FULLSCREEN_KEY, true);
         settings.set_string(FULLSCREEN_KEY, if hides { Showing::Hidden } else { Showing::Music }.as_text());
@@ -99,7 +99,7 @@ pub fn migrate(settings: &mut Settings) {
 
 /// An activity (a notification banner, a volume change) shows in every mode except Hidden; Music keeps the pill up
 /// even with nothing playing, so the idle clock stays visible.
-pub fn allows(showing: Showing, has_activity: bool, is_playing: bool, has_lyrics: bool) -> bool {
+pub(super) fn allows(showing: Showing, has_activity: bool, is_playing: bool, has_lyrics: bool) -> bool {
     match showing {
         Showing::Hidden => false,
         Showing::ActivitiesOnly => has_activity,

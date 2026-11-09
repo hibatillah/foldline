@@ -1,14 +1,17 @@
 //! Reusable widgets for pages, so every page looks and behaves the same way.
 
 mod banner_buttons;
+mod bitmap_square;
 mod hud;
 mod icon_button;
 mod icons;
 mod outline;
+pub mod palette;
 mod pill_button;
 mod ring;
 mod svg_icon;
 mod text_field;
+pub mod type_styles;
 
 pub use banner_buttons::{BANNER_BUTTONS_HEIGHT, BannerButton, BannerButtons};
 pub use hud::{LEVEL_WIDTH, draw_level, draw_message, message_width};

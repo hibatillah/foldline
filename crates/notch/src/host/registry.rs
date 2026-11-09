@@ -3,7 +3,7 @@ use crate::{log, page::Page};
 
 /// Keeps the pages named by the `NOTCH_PAGES` environment variable or the `pages` setting (comma-separated page ids);
 /// with neither set, every registered page stays on.
-pub fn enabled_pages(pages: Vec<Box<dyn Page>>, settings: &Settings) -> Vec<Box<dyn Page>> {
+pub(super) fn enabled_pages(pages: Vec<Box<dyn Page>>, settings: &Settings) -> Vec<Box<dyn Page>> {
     let wanted = std::env::var("NOTCH_PAGES").ok().or_else(|| settings.get_string("pages").map(str::to_owned));
     filter_pages(pages, wanted.as_deref())
 }

@@ -1,5 +1,3 @@
-//! What the media page shows collapsed and open.
-
 use crate::{
     activity::Presence,
     page::{Mode, Page, Priority},

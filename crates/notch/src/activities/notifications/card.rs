@@ -1,13 +1,15 @@
 //! The notification card: its size, its words and its drawing.
 
 use super::items::{Item, app_color, app_letter, body_text, heading, open_label};
+use crate::ui::palette::{CARD_APP_NAME_TEXT, CARD_BODY_TEXT};
+use crate::ui::type_styles::{MEDIUM_14, REGULAR_13, REGULAR_14};
 use crate::{
     gfx::{Align, Canvas, Color, FontStyle, Fonts, ImageData, Rect, UI_FONT, Weight, clamp_lines},
     page::PointerEvent,
     ui::{BANNER_BUTTONS_HEIGHT, BannerButton, BannerButtons},
 };
 
-pub const WIDTH: f32 = 400.0;
+pub const WIDTH: f32 = 340.0;
 const PADDING: f32 = 20.0;
 const TOP_PADDING: f32 = 12.0;
 const BOTTOM_PADDING: f32 = 16.0;
@@ -24,13 +26,7 @@ const TITLE_GAP: f32 = 8.0;
 const APP_NAME_SHARE: f32 = 0.5;
 const MIN_HEIGHT: f32 = TOP_PADDING + TILE_SIZE + BOTTOM_PADDING;
 
-const LEAD: FontStyle = FontStyle::new(UI_FONT, 14.0, Weight::Medium, Align::Leading);
-const APP_NAME: FontStyle = FontStyle::new(UI_FONT, 14.0, Weight::Regular, Align::Leading);
-const BODY: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Regular, Align::Leading);
 const TILE_LETTER: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Medium, Align::Center);
-
-const APP_NAME_COLOR: Color = Color::rgb(0.557, 0.557, 0.6);
-const BODY_COLOR: Color = Color::rgb(0.678, 0.678, 0.722);
 
 /// The card's height in DIP for `body_lines` lines of text, with or without the buttons.
 pub fn card_height(body_lines: usize, shows_buttons: bool) -> f32 {
@@ -58,11 +54,12 @@ impl Words {
         let fit = |style: &FontStyle, text: &str, room: f32| {
             clamp_lines(text, 1, room, |text| fonts.measure(style, text)).pop().unwrap_or_default()
         };
-        let app = heading.app.map(|app| fit(&APP_NAME, &app, width * APP_NAME_SHARE));
-        let app_room = app.as_deref().map_or(0.0, |app| fonts.measure(&APP_NAME, app) + TITLE_GAP);
-        let lead = fit(&LEAD, &heading.lead, width - app_room);
-        let lead_width = fonts.measure(&LEAD, &lead);
-        let body = clamp_lines(&body_text(item, shows_text), BODY_LINES, width, |text| fonts.measure(&BODY, text));
+        let app = heading.app.map(|app| fit(&REGULAR_14, &app, width * APP_NAME_SHARE));
+        let app_room = app.as_deref().map_or(0.0, |app| fonts.measure(&REGULAR_14, app) + TITLE_GAP);
+        let lead = fit(&MEDIUM_14, &heading.lead, width - app_room);
+        let lead_width = fonts.measure(&MEDIUM_14, &lead);
+        let body =
+            clamp_lines(&body_text(item, shows_text), BODY_LINES, width, |text| fonts.measure(&REGULAR_13, text));
         Self { lead, lead_width, app, body }
     }
 }
@@ -106,18 +103,18 @@ impl Card {
         let left = tile.right + TILE_GAP * scale;
         let right = area.right - PADDING * scale;
         let heading = Rect::new(left, tile.top, right, tile.top + HEADING_HEIGHT * scale);
-        canvas.text(&LEAD, &self.words.lead, heading, Color::WHITE.faded(opacity));
+        canvas.text(&MEDIUM_14, &self.words.lead, heading, Color::WHITE.faded(opacity));
         if let Some(app) = &self.words.app {
             let app_left = left + (self.words.lead_width + TITLE_GAP) * scale;
-            canvas.text(&APP_NAME, app, Rect { left: app_left, ..heading }, APP_NAME_COLOR.faded(opacity));
+            canvas.text(&REGULAR_14, app, Rect { left: app_left, ..heading }, CARD_APP_NAME_TEXT.faded(opacity));
         }
         for (index, line) in self.words.body.iter().enumerate() {
             let top = heading.bottom + (HEADING_GAP + index as f32 * BODY_LINE_HEIGHT) * scale;
             canvas.text(
-                &BODY,
+                &REGULAR_13,
                 line,
                 Rect::new(left, top, right, top + BODY_LINE_HEIGHT * scale),
-                BODY_COLOR.faded(opacity),
+                CARD_BODY_TEXT.faded(opacity),
             );
         }
         if shows_buttons {
@@ -204,5 +201,24 @@ mod tests {
         let open = Point::new(right - 10.0, area.bottom - BOTTOM_PADDING - 10.0);
         card.on_pointer(PointerEvent::Pressed(open), area, 1.0);
         assert_eq!(card.on_pointer(PointerEvent::Released(open), area, 1.0).0, Some(BannerButton::Open));
+    }
+
+    #[test]
+    fn a_long_app_name_keeps_both_buttons_inside_the_card_padding() {
+        let fonts = Fonts::new(1.0).unwrap();
+        let mut long = item("Rafi", "Deploy is green.");
+        long.app = "A very long application name from a store package".to_owned();
+        let card = Card::new(&long, true, &fonts);
+        let area = Rect::new(0.0, 0.0, WIDTH, card.height(true));
+        let (right, top) = card.buttons_origin(area, 1.0);
+        let [(_, dismiss), _] = card.buttons.rects(right, top, 1.0);
+        assert!(dismiss.left >= PADDING, "Dismiss starts at {}", dismiss.left);
+    }
+
+    #[test]
+    fn the_message_keeps_room_for_about_thirty_five_characters_a_line() {
+        let fonts = Fonts::new(1.0).unwrap();
+        let words = Words::new(&item("Rafi", "Can you check the hover state on the"), true, &fonts);
+        assert_eq!(words.body.len(), 1);
     }
 }

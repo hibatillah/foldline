@@ -13,6 +13,7 @@ use std::{
 use windows::{
     Win32::{
         Foundation::{HWND, LPARAM, LRESULT, POINT, POINTL, RECT, S_OK, WPARAM},
+        Graphics::Gdi::ClientToScreen,
         System::{
             Com::{DVASPECT_CONTENT, FORMATETC, IDataObject, STGMEDIUM, TYMED_HGLOBAL},
             LibraryLoader::GetModuleHandleW,
@@ -32,11 +33,11 @@ use windows::{
 
 use crate::log;
 
-pub const WM_DRAG_ENTERED: u32 = WM_APP + 10;
-pub const WM_DRAG_LEFT: u32 = WM_APP + 11;
-pub const WM_DRAG_DROPPED: u32 = WM_APP + 12;
+pub(super) const WM_DRAG_ENTERED: u32 = WM_APP + 10;
+pub(super) const WM_DRAG_LEFT: u32 = WM_APP + 11;
+pub(super) const WM_DRAG_DROPPED: u32 = WM_APP + 12;
 /// Relative to the notch; not a mouse message, so it must not arm leave tracking on the notch.
-pub const WM_POINTER_MOVED: u32 = WM_APP + 13;
+pub(super) const WM_POINTER_MOVED: u32 = WM_APP + 13;
 
 const MESSAGE_HOVERING: u32 = WM_APP + 20;
 const MESSAGE_RESTING_AREA: u32 = WM_APP + 21;
@@ -71,7 +72,7 @@ thread_local! {
     static IS_SUPPRESSED: Cell<bool> = const { Cell::new(false) };
 }
 
-pub fn start(notch_window: HWND, scale: f32, center_x: i32, top: i32) {
+pub(super) fn start(notch_window: HWND, scale: f32, center_x: i32, top: i32) {
     let placement = Placement { notch_window: notch_window.0 as isize, scale, center_x, top };
     std::thread::Builder::new()
         .name("drop-target".into())
@@ -83,19 +84,19 @@ pub fn start(notch_window: HWND, scale: f32, center_x: i32, top: i32) {
         .ok();
 }
 
-pub fn set_hovering(is_hovering: bool) {
+pub(super) fn set_hovering(is_hovering: bool) {
     post(MESSAGE_HOVERING, WPARAM(usize::from(is_hovering)));
 }
 
-pub fn set_suppressed(is_suppressed: bool) {
+pub(super) fn set_suppressed(is_suppressed: bool) {
     post(MESSAGE_SUPPRESSED, WPARAM(usize::from(is_suppressed)));
 }
 
-pub fn reset_interaction() {
+pub(super) fn reset_interaction() {
     post(MESSAGE_RESET_INTERACTION, WPARAM(0));
 }
 
-pub fn set_resting_area(area: RECT) {
+pub(super) fn set_resting_area(area: RECT) {
     let Ok(mut current) = RESTING_AREA.lock() else { return };
     let unchanged = matches!(*current, Some(old) if (old.left, old.top, old.right, old.bottom) == (area.left, area.top, area.right, area.bottom));
     if unchanged {
@@ -106,41 +107,37 @@ pub fn set_resting_area(area: RECT) {
     post(MESSAGE_RESTING_AREA, WPARAM(0));
 }
 
-pub fn take_dropped_paths() -> Vec<PathBuf> {
+pub(super) fn take_dropped_paths() -> Vec<PathBuf> {
     DROPPED_PATHS.lock().map(|mut paths| std::mem::take(&mut *paths)).unwrap_or_default()
 }
 
 fn post(message: u32, wparam: WPARAM) {
     let window = TARGET_WINDOW.load(Ordering::Relaxed);
     if window != 0 {
-        unsafe {
-            let _ = PostMessageW(Some(HWND(window as *mut _)), message, wparam, LPARAM(0));
-        }
+        let _ = unsafe { PostMessageW(Some(HWND(window as *mut _)), message, wparam, LPARAM(0)) };
     }
 }
 
 fn post_to_notch(message: u32) {
     if let Some(placement) = PLACEMENT.get() {
-        unsafe {
-            let _ = PostMessageW(Some(placement.notch_window()), message, WPARAM(0), LPARAM(0));
-        }
+        let _ = unsafe { PostMessageW(Some(placement.notch_window()), message, WPARAM(0), LPARAM(0)) };
     }
 }
 
 fn run(placement: Placement) -> Result<()> {
-    unsafe {
-        OleInitialize(None)?;
-        PLACEMENT.set(Some(placement));
-        let instance = GetModuleHandleW(None)?;
-        let class = WNDCLASSEXW {
-            cbSize: size_of::<WNDCLASSEXW>() as u32,
-            lpfnWndProc: Some(window_procedure),
-            hInstance: instance.into(),
-            lpszClassName: w!("NotchDropTarget"),
-            ..Default::default()
-        };
-        RegisterClassExW(&class);
-        let window = CreateWindowExW(
+    unsafe { OleInitialize(None) }?;
+    PLACEMENT.set(Some(placement));
+    let instance = unsafe { GetModuleHandleW(None) }?;
+    let class = WNDCLASSEXW {
+        cbSize: size_of::<WNDCLASSEXW>() as u32,
+        lpfnWndProc: Some(window_procedure),
+        hInstance: instance.into(),
+        lpszClassName: w!("NotchDropTarget"),
+        ..Default::default()
+    };
+    unsafe { RegisterClassExW(&class) };
+    let window = unsafe {
+        CreateWindowExW(
             WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
             w!("NotchDropTarget"),
             w!("Notch drop target"),
@@ -153,19 +150,19 @@ fn run(placement: Placement) -> Result<()> {
             None,
             Some(instance.into()),
             None,
-        )?;
-        // Nearly transparent but not fully, because a fully transparent layered window is skipped by hit testing.
-        SetLayeredWindowAttributes(window, Default::default(), 1, LWA_ALPHA)?;
-        let target: IDropTarget = FileDropTarget.into();
-        RegisterDragDrop(window, &target)?;
-        TARGET_WINDOW.store(window.0 as isize, Ordering::Relaxed);
-        log::debug("drop target ready");
+        )
+    }?;
+    // Nearly transparent but not fully, because a fully transparent layered window is skipped by hit testing.
+    unsafe { SetLayeredWindowAttributes(window, Default::default(), 1, LWA_ALPHA) }?;
+    let target: IDropTarget = FileDropTarget.into();
+    unsafe { RegisterDragDrop(window, &target) }?;
+    TARGET_WINDOW.store(window.0 as isize, Ordering::Relaxed);
+    log::debug("drop target ready");
 
-        let mut message = MSG::default();
-        while GetMessageW(&mut message, None, 0, 0).as_bool() {
-            let _ = TranslateMessage(&message);
-            DispatchMessageW(&message);
-        }
+    let mut message = MSG::default();
+    while unsafe { GetMessageW(&mut message, None, 0, 0) }.as_bool() {
+        let _ = unsafe { TranslateMessage(&message) };
+        unsafe { DispatchMessageW(&message) };
     }
     Ok(())
 }
@@ -187,22 +184,14 @@ fn arrange(window: HWND) {
     } else {
         RESTING_AREA.lock().ok().and_then(|area| *area)
     };
-    unsafe {
-        match area {
-            Some(area) => {
-                let _ = SetWindowPos(
-                    window,
-                    Some(HWND_TOPMOST),
-                    area.left,
-                    area.top,
-                    area.right - area.left,
-                    (area.bottom - area.top).max(4),
-                    SWP_NOACTIVATE | SWP_SHOWWINDOW,
-                );
-            }
-            None => {
-                let _ = ShowWindow(window, SW_HIDE);
-            }
+    match area {
+        Some(area) => {
+            let (width, height) = (area.right - area.left, (area.bottom - area.top).max(4));
+            let flags = SWP_NOACTIVATE | SWP_SHOWWINDOW;
+            let _ = unsafe { SetWindowPos(window, Some(HWND_TOPMOST), area.left, area.top, width, height, flags) };
+        }
+        None => {
+            let _ = unsafe { ShowWindow(window, SW_HIDE) };
         }
     }
 }
@@ -210,10 +199,8 @@ fn arrange(window: HWND) {
 fn forward(window: HWND, message: u32, lparam: LPARAM) {
     let Some(placement) = PLACEMENT.get() else { return };
     let (mut origin, mut bounds) = (POINT::default(), RECT::default());
-    unsafe {
-        let _ = windows::Win32::Graphics::Gdi::ClientToScreen(window, &mut origin);
-        let _ = GetWindowRect(placement.notch_window(), &mut bounds);
-    }
+    let _ = unsafe { ClientToScreen(window, &mut origin) };
+    let _ = unsafe { GetWindowRect(placement.notch_window(), &mut bounds) };
     let x = i32::from((lparam.0 & 0xFFFF) as u16 as i16) + origin.x;
     let y = i32::from(((lparam.0 >> 16) & 0xFFFF) as u16 as i16) + origin.y;
     // Only the notch's own area counts as pointing at it; the target may be a little larger than the pill.
@@ -221,9 +208,7 @@ fn forward(window: HWND, message: u32, lparam: LPARAM) {
         return;
     }
     let relative = (((y - bounds.top) as u32 & 0xFFFF) << 16) | ((x - bounds.left) as u32 & 0xFFFF);
-    unsafe {
-        let _ = PostMessageW(Some(placement.notch_window()), message, WPARAM(0), LPARAM(relative as isize));
-    }
+    let _ = unsafe { PostMessageW(Some(placement.notch_window()), message, WPARAM(0), LPARAM(relative as isize)) };
 }
 
 extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {

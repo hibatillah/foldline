@@ -1,9 +1,11 @@
 //! Prayer times for a city, calculated on this PC: the next prayer and today's times, a mark in the collapsed pill
 //! before a prayer, and a short message when it starts.
 
+use crate::ui::palette::{MINT_GREEN, TEXT_MUTED};
+use crate::ui::type_styles::{MEDIUM_13, MEDIUM_14, REGULAR_11};
 use crate::{
     activity::{Flash, Presence},
-    gfx::{Align, Canvas, Color, FontStyle, Fonts, Point, Rect, Size, UI_FONT, Weight},
+    gfx::{Canvas, Color, Fonts, Point, Rect, Size},
     host::Settings,
     page::{Context, DEFAULT_CONTENT_HEIGHT, Frame, Mode, Page, PageSizes, Priority, TimerId},
     ui::{self, Icon},
@@ -35,25 +37,11 @@ const BADGE_ICON_GAP: f32 = 4.0;
 
 const REFRESH_TIMER: TimerId = TimerId(1);
 
-const SMALL: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Leading);
-
-const COUNTDOWN: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Medium, Align::Leading);
-
-const BADGE: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Medium, Align::Leading);
-
-const EMPTY_TITLE: FontStyle = FontStyle::new(UI_FONT, 14.0, Weight::Medium, Align::Leading);
-
-const GRAY: Color = Color::rgb(0.604, 0.604, 0.651);
-
-const DIM: Color = Color::rgb(0.431, 0.431, 0.478);
-
 const LIGHT: Color = Color::rgb(0.9, 0.9, 0.92);
-
-const GREEN: Color = Color::rgb(0.388, 0.902, 0.745);
 
 /// The moon, a gap and `text`.
 fn badge_width(fonts: &Fonts, widest_text: &str) -> f32 {
-    BADGE_ICON_SIZE + BADGE_ICON_GAP + fonts.measure(&BADGE, widest_text).ceil()
+    BADGE_ICON_SIZE + BADGE_ICON_GAP + fonts.measure(&MEDIUM_13, widest_text).ceil()
 }
 
 pub struct ShalatPage {
@@ -156,16 +144,16 @@ impl ShalatPage {
 
     fn draw_badge(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32, text: &str) {
         let icon_center = Point::new(area.left + BADGE_ICON_SIZE * scale / 2.0, area.center_y());
-        Icon::Moon.draw(canvas, icon_center, BADGE_ICON_SIZE * scale, GREEN, opacity);
+        Icon::Moon.draw(canvas, icon_center, BADGE_ICON_SIZE * scale, MINT_GREEN, opacity);
         let text_area =
             Rect::new(area.left + (BADGE_ICON_SIZE + BADGE_ICON_GAP) * scale, area.top, area.right, area.bottom);
-        canvas.text(&BADGE, text, text_area, GREEN.faded(opacity));
+        canvas.text(&MEDIUM_13, text, text_area, MINT_GREEN.faded(opacity));
     }
 
     fn draw_empty(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
         let (bounds, scale) = (frame.bounds, frame.scale);
         let center = crate::gfx::Point::new(bounds.left + 22.0 * scale, bounds.center_y());
-        Icon::Clock.draw(canvas, center, 22.0 * scale, GREEN, opacity);
+        Icon::Clock.draw(canvas, center, 22.0 * scale, MINT_GREEN, opacity);
         let left = bounds.left + 52.0 * scale;
         let title = Rect::new(left, bounds.center_y() - 20.0 * scale, bounds.right, bounds.center_y());
         let (headline, hint_text) = if self.config.place.is_some() {
@@ -173,9 +161,9 @@ impl ShalatPage {
         } else {
             ("Choose your city", "Open the gear in the header and search for it. Times are worked out on this PC.")
         };
-        canvas.text(&EMPTY_TITLE, headline, title, Color::WHITE.faded(opacity));
+        canvas.text(&MEDIUM_14, headline, title, Color::WHITE.faded(opacity));
         let hint = Rect::new(left, bounds.center_y() + 2.0 * scale, bounds.right, bounds.center_y() + 20.0 * scale);
-        canvas.text(&SMALL, hint_text, hint, GRAY.faded(opacity));
+        canvas.text(&REGULAR_11, hint_text, hint, TEXT_MUTED.faded(opacity));
     }
 }
 
@@ -214,7 +202,7 @@ impl Page for ShalatPage {
             return;
         }
         let center = Point::new(area.center_x(), area.center_y());
-        Icon::Moon.draw(canvas, center, Icon::Moon.size() * scale, GREEN, opacity);
+        Icon::Moon.draw(canvas, center, Icon::Moon.size() * scale, MINT_GREEN, opacity);
     }
 
     fn header_status_page(&self) -> Option<&'static str> {
@@ -246,7 +234,7 @@ impl Page for ShalatPage {
 
     fn draw_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
         if self.alert.is_visible() {
-            ui::draw_message(canvas, area, opacity, Icon::Moon, GREEN, &self.alert_title, Some(&self.alert_value));
+            ui::draw_message(canvas, area, opacity, Icon::Moon, MINT_GREEN, &self.alert_title, Some(&self.alert_value));
         } else if let Some(text) = &self.badge {
             self.draw_badge(canvas, area, scale, opacity, text);
         }

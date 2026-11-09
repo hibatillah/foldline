@@ -4,23 +4,23 @@
 //! column. A new item joins between the clock and the items already there, so nothing right of it moves.
 
 /// The least room between the idle clock and the group.
-pub const GAP: f32 = 24.0;
+pub(super) const GAP: f32 = 24.0;
 /// Between two items of the idle group.
-pub const ITEM_GAP: f32 = 8.0;
-pub const PILL_EDGE: f32 = 12.0;
+pub(super) const ITEM_GAP: f32 = 8.0;
+pub(super) const PILL_EDGE: f32 = 12.0;
 /// Room on each side of the clock in the empty pill, which hugs the clock instead of keeping the usual minimum.
-pub const EMPTY_SIDE: f32 = 28.0;
+pub(super) const EMPTY_SIDE: f32 = 28.0;
 /// Between two items of the open header's group, and between the group and the gear.
-pub const HEADER_ITEM_GAP: f32 = 10.0;
+pub(super) const HEADER_ITEM_GAP: f32 = 10.0;
 /// The least room between the header clock and the nearest icon; icons nearer than this are dropped.
-pub const HEADER_CLOCK_GAP: f32 = 14.0;
+pub(super) const HEADER_CLOCK_GAP: f32 = 14.0;
 /// The least room between the page dots and the header clock.
-pub const PAGE_DOTS_CLOCK_GAP: f32 = 12.0;
-pub const GEAR_SIZE: f32 = 14.0;
+pub(super) const PAGE_DOTS_CLOCK_GAP: f32 = 12.0;
+pub(super) const GEAR_SIZE: f32 = 14.0;
 /// Edge of the square a click on a header icon lands in; neighbours 10 apart never overlap it.
-pub const HIT_SIZE: f32 = 24.0;
+pub(super) const HIT_SIZE: f32 = 24.0;
 
-pub struct RowInput<'a> {
+pub(super) struct RowInput<'a> {
     pub clock_width: f32,
     /// Left to right: badges lowest rank first, then the battery ring, then the dot column.
     pub group_widths: &'a [f32],
@@ -29,7 +29,7 @@ pub struct RowInput<'a> {
 
 /// Offsets are from the pill's left edge.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Row {
+pub(super) struct Row {
     pub width: f32,
     pub clock_left: f32,
     /// In the order of `RowInput::group_widths`.
@@ -55,7 +55,7 @@ fn lefts_ending_at(right: f32, widths: &[f32], gap: f32) -> Vec<f32> {
 
 /// The idle row. With a group: the clock at the left edge and the group right-anchored, in a pill of at least
 /// `minimum_width`. Without one: the clock in the middle of a pill that hugs it with `EMPTY_SIDE` on each side.
-pub fn idle_row(input: &RowInput) -> Row {
+pub(super) fn idle_row(input: &RowInput) -> Row {
     if input.group_widths.is_empty() {
         return Row { width: input.clock_width + 2.0 * EMPTY_SIDE, clock_left: EMPTY_SIDE, group_lefts: Vec::new() };
     }
@@ -64,7 +64,7 @@ pub fn idle_row(input: &RowInput) -> Row {
     Row { width, clock_left: PILL_EDGE, group_lefts: lefts_ending_at(width - PILL_EDGE, input.group_widths, ITEM_GAP) }
 }
 
-pub struct HeaderInput<'a> {
+pub(super) struct HeaderInput<'a> {
     /// The header's left and right edge.
     pub left: f32,
     pub right: f32,
@@ -77,7 +77,7 @@ pub struct HeaderInput<'a> {
 
 /// Positions in the coordinates of the edges it was given.
 #[derive(Clone, Debug, PartialEq)]
-pub struct HeaderRow {
+pub(super) struct HeaderRow {
     pub clock_center: f32,
     /// How many icons, counted from the clock side, have no room and are not shown.
     pub dropped_icons: usize,
@@ -89,7 +89,7 @@ pub struct HeaderRow {
 /// The open header: the clock alone in the exact middle, the gear at the right edge with the group
 /// `HEADER_ITEM_GAP` before it. Icons that would come nearer the clock than `HEADER_CLOCK_GAP` are dropped, nearest
 /// the clock first, so the clock never moves.
-pub fn header_row(input: &HeaderInput) -> HeaderRow {
+pub(super) fn header_row(input: &HeaderInput) -> HeaderRow {
     let gear_left = input.right - GEAR_SIZE;
     let clock_center = (input.left + input.right) / 2.0;
     let nearest_allowed = clock_center + input.clock_width / 2.0 + HEADER_CLOCK_GAP;
@@ -107,7 +107,7 @@ pub fn header_row(input: &HeaderInput) -> HeaderRow {
 
 /// The least width the header's content needs with the clock in the middle: the page dots and their gap on one
 /// side, the end items (battery ring, dot column) and the gear on the other, whichever is wider, on both sides.
-pub fn header_content_width(page_dots_width: f32, clock_width: f32, end_widths: &[f32]) -> f32 {
+pub(super) fn header_content_width(page_dots_width: f32, clock_width: f32, end_widths: &[f32]) -> f32 {
     let page_dots_room = if page_dots_width > 0.0 { page_dots_width + PAGE_DOTS_CLOCK_GAP } else { 0.0 };
     let end_run = if end_widths.is_empty() { 0.0 } else { run_width(end_widths, HEADER_ITEM_GAP) + HEADER_ITEM_GAP };
     let end_room = HEADER_CLOCK_GAP + end_run + GEAR_SIZE;
@@ -116,7 +116,7 @@ pub fn header_content_width(page_dots_width: f32, clock_width: f32, end_widths: 
 
 /// The item whose `HIT_SIZE` wide area holds `x`; where areas meet, the nearer item wins.
 /// `items` are `(left, width)` pairs.
-pub fn hit_item(items: &[(f32, f32)], x: f32) -> Option<usize> {
+pub(super) fn hit_item(items: &[(f32, f32)], x: f32) -> Option<usize> {
     items
         .iter()
         .enumerate()

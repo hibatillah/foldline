@@ -1,12 +1,12 @@
 use std::time::Instant;
 
-use super::{Notch, Source};
+use super::{Notch, Source, badge_pointer::BadgeDelivery};
 use windows::Win32::{
     Foundation::{POINT, RECT},
     UI::WindowsAndMessaging::GetCursorPos,
 };
 
-use crate::host::motion::WHEEL_NOTCH;
+use crate::host::{chrome, motion::WHEEL_NOTCH};
 use crate::{gfx::Point, log, page::PointerEvent};
 
 impl Notch {
@@ -93,7 +93,7 @@ impl Notch {
         if !frame.is_open() || !frame.bounds.contains(point) {
             return;
         }
-        let in_content = crate::host::chrome::content_rect(frame.bounds, self.scale).contains(point);
+        let in_content = chrome::content_rect(frame.bounds, self.scale).contains(point);
         if in_content && self.page_uses_right_click(point) {
             self.route_pointer(PointerEvent::SecondaryReleased(point));
         }
@@ -156,9 +156,10 @@ impl Notch {
 
     pub(super) fn route_pointer(&mut self, event: PointerEvent) {
         let viewport = self.frame();
-        // A collapsed notch shows no page, so its input belongs to the banner on it, or to nothing.
+        // A collapsed notch shows no page, so its input belongs to the banner on it, a page badge under it, or nothing.
         if self.springs.expansion.target == 0.0 && !viewport.is_open() {
             if let Some((source, area)) = self.banner_area(&viewport) {
+                self.leave_badge();
                 let scale = self.scale;
                 match source {
                     Source::Activity(index) => {
@@ -168,19 +169,33 @@ impl Notch {
                         self.with_page(index, |page, context| page.on_presence_pointer(event, area, scale, context))
                     }
                 }
+            } else {
+                // Badges draw only while no message takes over the pill and the pill is not hidden.
+                let shows_badges = self.springs.activity_blend.target == 0.0 && !self.is_hidden();
+                let badges = if shows_badges { self.page_badge_areas(&viewport) } else { Vec::new() };
+                for delivery in self.badge_pointer.route(event, &badges).into_iter().flatten() {
+                    self.deliver_to_badge(delivery);
+                }
             }
             return;
         }
-        if let Some(pages) = self.visible_page_frames(&viewport) {
-            for (index, frame, _) in pages {
-                self.with_page(index, |page, context| page.on_pointer(event, &frame, context));
-            }
-            return;
-        }
+        self.leave_badge();
+        // During a swap only the arriving page takes input, at the place it is moving to.
         let Some(index) = self.expanded_index else { return };
-        let index = if self.navigable.len() < 2 { index } else { self.page_at(self.track.position) };
         let frame = self.natural_page_frame(index, &viewport, 0.0);
         self.with_page(index, |page, context| page.on_pointer(event, &frame, context));
+    }
+
+    fn leave_badge(&mut self) {
+        if let Some(delivery) = self.badge_pointer.leave() {
+            self.deliver_to_badge(delivery);
+        }
+    }
+
+    fn deliver_to_badge(&mut self, delivery: BadgeDelivery) {
+        let BadgeDelivery { page_index, event, area } = delivery;
+        let scale = self.scale;
+        self.with_page(page_index, |page, context| page.on_presence_pointer(event, area, scale, context));
     }
 
     pub(super) fn pointer_is_over_window(&self) -> bool {
@@ -190,9 +205,7 @@ impl Notch {
 
     pub(super) fn pointer_and_window_bounds(&self) -> (POINT, RECT) {
         let mut cursor = POINT::default();
-        unsafe {
-            let _ = GetCursorPos(&mut cursor);
-        }
+        let _ = unsafe { GetCursorPos(&mut cursor) };
         let region = self.pill_region(&self.frame(), false);
         let bounds = RECT {
             left: self.screen_position.x + region.left,

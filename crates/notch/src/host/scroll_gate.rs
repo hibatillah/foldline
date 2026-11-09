@@ -5,7 +5,7 @@ use std::time::Instant;
 use super::motion::{GESTURE_QUIET_TIME, PAGE_SWITCH_COOLDOWN, SWIPE_SWITCH_THRESHOLD};
 
 #[derive(Default)]
-pub struct ScrollGate {
+pub(super) struct ScrollGate {
     accumulated: f32,
     last_smooth_event: Option<Instant>,
     last_switch: Option<Instant>,

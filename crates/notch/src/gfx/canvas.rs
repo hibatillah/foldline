@@ -16,7 +16,8 @@ use super::{
     color::Color,
     fonts::{FontStyle, Fonts},
     geometry::{Point, Rect},
-    image::{self, ImageBrush, ImageCache, ImageData},
+    image_brush::{self, ImageBrush, ImageCache},
+    image_data::ImageData,
     raster::Mask,
 };
 
@@ -29,6 +30,12 @@ pub struct Canvas<'a> {
     images: &'a ImageCache,
     fonts: &'a Fonts,
     scale: f32,
+}
+
+impl From<Rect> for D2D_RECT_F {
+    fn from(rect: Rect) -> Self {
+        D2D_RECT_F { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }
+    }
 }
 
 #[derive(Clone, Copy, Hash)]
@@ -66,11 +73,11 @@ impl<'a> Canvas<'a> {
     pub fn cached_image(&self, key: impl Hash, build: impl FnOnce() -> ImageData) -> Option<Rc<ImageBrush>> {
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
-        self.images.get_or_insert(hasher.finish(), || image::upload(self.target, &build()).ok())
+        self.images.get_or_insert(hasher.finish(), || image_brush::upload(self.target, &build()).ok())
     }
 
     pub fn upload(&self, image: &ImageData) -> Option<ImageBrush> {
-        image::upload(self.target, image).ok()
+        image_brush::upload(self.target, image).ok()
     }
 
     /// Concave top fillets, cached as images to avoid the initial 10 MB cost of Direct2D geometry.

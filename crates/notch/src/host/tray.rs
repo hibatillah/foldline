@@ -16,22 +16,22 @@ use windows::{
 
 use super::icon::Icon;
 
-pub const WM_TRAY: u32 = WM_APP + 2;
+pub(super) const WM_TRAY: u32 = WM_APP + 2;
 const TRAY_ICON_ID: u32 = 1;
 const TOOLTIP: &str = "Notch";
 const MENU_COMMAND_QUIT: usize = 1;
 const MENU_COMMAND_START_WITH_WINDOWS: usize = 3;
 const MENU_COMMAND_OPEN_SETTINGS: usize = 7;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MenuChoice {
+pub(super) enum MenuChoice {
     OpenSettings,
     ToggleStartWithWindows,
     Quit,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct MenuState {
-    pub starts_with_windows: bool,
+pub(super) struct MenuState {
+    pub(super) starts_with_windows: bool,
 }
 
 /// The choice a menu command stands for; `None` when the menu was dismissed or the command is unknown.
@@ -54,7 +54,7 @@ fn notify_data(window: HWND) -> NOTIFYICONDATAW {
 }
 
 /// Adds the notch's icon to the notification area; also called again if Explorer restarts.
-pub fn add(window: HWND) -> Result<()> {
+pub(super) fn add(window: HWND) -> Result<()> {
     let dpi = unsafe { GetDpiForWindow(window) };
     let size = unsafe { GetSystemMetricsForDpi(SM_CXSMICON, dpi) };
     let icon = Icon::load(size)?;
@@ -70,11 +70,9 @@ pub fn add(window: HWND) -> Result<()> {
 }
 
 /// Removes the icon; without this a stale icon stays in the tray until the pointer hovers it.
-pub fn remove(window: HWND) {
+pub(super) fn remove(window: HWND) {
     let data = notify_data(window);
-    unsafe {
-        let _ = Shell_NotifyIconW(NIM_DELETE, &data);
-    }
+    let _ = unsafe { Shell_NotifyIconW(NIM_DELETE, &data) };
 }
 
 /// Undocumented uxtheme ordinals; resolve them at runtime so unsupported Windows versions still work.
@@ -100,24 +98,23 @@ fn follow_system_theme() {
     }
 }
 
-pub fn show_context_menu(window: HWND, state: MenuState) -> Option<MenuChoice> {
+pub(super) fn show_context_menu(window: HWND, state: MenuState) -> Option<MenuChoice> {
     // Each time, so a change of theme while the notch runs shows in the next menu.
     follow_system_theme();
-    unsafe {
-        let Ok(menu) = CreatePopupMenu() else { return None };
-        let startup_flags = if state.starts_with_windows { MF_STRING | MF_CHECKED } else { MF_STRING };
-        let _ = AppendMenuW(menu, startup_flags, MENU_COMMAND_START_WITH_WINDOWS, w!("Start with Windows"));
-        let _ = AppendMenuW(menu, MF_STRING, MENU_COMMAND_OPEN_SETTINGS, w!("Settings"));
-        let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
-        let _ = AppendMenuW(menu, MF_STRING, MENU_COMMAND_QUIT, w!("Quit Notch"));
-        let mut cursor = POINT::default();
-        let _ = GetCursorPos(&mut cursor);
-        // A popup menu needs a foreground owner to dismiss correctly when clicking elsewhere.
-        let _ = SetForegroundWindow(window);
-        let command = TrackPopupMenu(menu, TPM_RIGHTBUTTON | TPM_RETURNCMD, cursor.x, cursor.y, None, window, None);
-        let _ = DestroyMenu(menu);
-        choice_for_command(command.0 as usize)
-    }
+    let Ok(menu) = (unsafe { CreatePopupMenu() }) else { return None };
+    let startup_flags = if state.starts_with_windows { MF_STRING | MF_CHECKED } else { MF_STRING };
+    let _ = unsafe { AppendMenuW(menu, startup_flags, MENU_COMMAND_START_WITH_WINDOWS, w!("Start with Windows")) };
+    let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_OPEN_SETTINGS, w!("Settings")) };
+    let _ = unsafe { AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null()) };
+    let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_QUIT, w!("Quit Notch")) };
+    let mut cursor = POINT::default();
+    let _ = unsafe { GetCursorPos(&mut cursor) };
+    // A popup menu needs a foreground owner to dismiss correctly when clicking elsewhere.
+    let _ = unsafe { SetForegroundWindow(window) };
+    let flags = TPM_RIGHTBUTTON | TPM_RETURNCMD;
+    let command = unsafe { TrackPopupMenu(menu, flags, cursor.x, cursor.y, None, window, None) };
+    let _ = unsafe { DestroyMenu(menu) };
+    choice_for_command(command.0 as usize)
 }
 
 #[cfg(test)]

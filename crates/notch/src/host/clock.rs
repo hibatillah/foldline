@@ -5,7 +5,7 @@ use windows::Win32::System::SystemInformation::GetLocalTime;
 use crate::gfx::{Align, Canvas, Color, FontStyle, Fonts, Point, Rect, UI_FONT, Weight, lerp};
 
 /// The collapsed pill never gets narrower than this, so the time sits in the middle of a pill of a steady size.
-pub const RESTING_WIDTH: f32 = crate::page::RESTING_MIN_WIDTH;
+pub(super) const RESTING_WIDTH: f32 = crate::page::RESTING_MIN_WIDTH;
 
 const TIME: FontStyle = FontStyle::new(UI_FONT, 14.0, Weight::Medium, Align::Center);
 
@@ -13,29 +13,29 @@ fn time_text(hour: u16, minute: u16) -> String {
     format!("{hour:02}:{minute:02}")
 }
 
-pub const HALF_WIDTH: f32 = 50.0;
+pub(super) const HALF_WIDTH: f32 = 50.0;
 
 /// Keep the clock visible through its move; fade it only when page content occupies the collapsed pill.
-pub fn opacity(is_shown_collapsed: bool, collapsed_visibility: f32, expanded_opacity: f32) -> f32 {
+pub(super) fn opacity(is_shown_collapsed: bool, collapsed_visibility: f32, expanded_opacity: f32) -> f32 {
     let collapsed = if is_shown_collapsed { collapsed_visibility } else { 0.0 };
     collapsed.max(expanded_opacity)
 }
 
-pub fn center(collapsed: Point, open: Point, amount: f32) -> Point {
+pub(super) fn center(collapsed: Point, open: Point, amount: f32) -> Point {
     Point::new(lerp(collapsed.x, open.x, amount), lerp(collapsed.y, open.y, amount))
 }
 
 /// Width the layout reserves for the time; a fixed sample keeps the row steady while the digits change.
-pub fn layout_width(fonts: &Fonts) -> f32 {
+pub(super) fn layout_width(fonts: &Fonts) -> f32 {
     fonts.measure(&TIME, "00:00")
 }
 
-pub fn draw_time(canvas: &Canvas, area: Rect, opacity: f32) {
+pub(super) fn draw_time(canvas: &Canvas, area: Rect, opacity: f32) {
     let time = unsafe { GetLocalTime() };
     canvas.text(&TIME, &time_text(time.wHour, time.wMinute), area, Color::WHITE.faded(opacity));
 }
 
-pub fn milliseconds_until_next_minute() -> u32 {
+pub(super) fn milliseconds_until_next_minute() -> u32 {
     let time = unsafe { GetLocalTime() };
     until_next_minute(time.wSecond, time.wMilliseconds)
 }

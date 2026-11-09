@@ -168,11 +168,11 @@ fn reloading_settings_hides_a_switched_off_activity_and_starts_a_switched_on_one
     notch.reload_settings();
     assert_eq!(starts.get(), 1);
     assert_eq!(settings_changes.get(), 2);
-    assert_eq!(notch.shown_badges.len(), 1);
+    assert_eq!(notch.presences.badges.len(), 1);
 
     fs::write(&settings_file.0, "activity.counting=off\n").unwrap();
     notch.reload_settings();
-    assert!(notch.shown_badges.is_empty());
+    assert!(notch.presences.badges.is_empty());
     assert_eq!(starts.get(), 1);
     assert_eq!(settings_changes.get(), 3, "a started activity still hears about changes");
 }

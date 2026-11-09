@@ -1,29 +1,26 @@
 //! A `Notch` on an offscreen window, shared by the behavior tests and the image snapshots.
 
-use std::{fs, path::PathBuf};
+use std::{cell::Cell, fs, path::PathBuf, rc::Rc};
 
 use windows::{
     Win32::{
-        Foundation::RECT,
+        Foundation::{HWND, POINT, RECT},
         UI::WindowsAndMessaging::{CreateWindowExW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP},
     },
     core::w,
 };
 
-use std::{cell::Cell, rc::Rc};
-
-use windows::Win32::Foundation::{HWND, POINT};
-
 use super::*;
 use crate::{
     activity::{Activity, Presence, Slot},
-    gfx::{Canvas, Color, Fonts, Rect, Surface},
+    gfx::{Canvas, Color, Fonts, Point, Rect, Surface},
     host::{chrome, navigation::PageList, screen_mode::ScreenMode, settings::Settings, visibility::Showing},
     page::{Context, RESTING_HEIGHT},
     pages::{SampleOptions, samples},
     ui::{self, Icon},
 };
 
+mod badge_input;
 mod clipboard_states;
 mod header_row;
 mod hiding_rules;
@@ -91,6 +88,7 @@ pub(super) fn settle(notch: &mut Notch) {
             spring.snap_to_target();
         }
         notch.springs.expansion.snap_to_target();
+        notch.page_swap.finish();
     }
 }
 
@@ -106,6 +104,12 @@ pub(super) fn close(notch: &mut Notch) {
     notch.hover.is_hovering = false;
     notch.springs.expansion.target = 0.0;
     settle(notch);
+}
+
+impl Notch {
+    pub(super) fn page_at(&self, position: f32) -> usize {
+        self.navigable[(position.round() as i64).rem_euclid(self.navigable.len() as i64) as usize]
+    }
 }
 
 pub(super) struct SettingsFile(PathBuf);
@@ -153,7 +157,7 @@ impl Mark {
 
 fn draw_disc(canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
     let size = area.width().min(14.0 * scale);
-    let disc = Rect::around(crate::gfx::Point::new(area.center_x(), area.center_y()), size / 2.0, size / 2.0);
+    let disc = Rect::around(Point::new(area.center_x(), area.center_y()), size / 2.0, size / 2.0);
     canvas.fill_rounded_rect(disc, size / 2.0, Color::WHITE.faded(opacity));
 }
 

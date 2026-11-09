@@ -52,7 +52,7 @@ fn the_clock_glides_to_the_left_edge_when_the_first_item_appears_and_back_when_t
     assert_eq!(notch.row_motion.clock_left.target, pill_row::PILL_EDGE);
     assert_eq!(notch.row_motion.clock_left.position, pill_row::EMPTY_SIDE, "nothing jumps when the dot appears");
     assert_eq!(notch.springs.resting_width.target, crate::page::RESTING_MIN_WIDTH);
-    assert!(notch.is_animating);
+    assert!(notch.frame_timer.is_running);
     for _ in 0..12 {
         notch.advance_by(1.0 / 60.0);
     }
@@ -135,7 +135,7 @@ fn several_badges_with_text_take_their_short_form_and_a_lone_one_keeps_the_long_
     let mut several = rig(SampleOptions { timer: true, calendar: true, shalat_mark: 1, ..SampleOptions::default() });
     settle(&mut several);
     assert!(several.resting_row.uses_short_badges);
-    for &(source, width) in &several.shown_badges {
+    for &(source, width) in &several.presences.badges {
         let Source::Page(index) = source else { continue };
         if let Some(short) = several.pages[index].short_presence_width() {
             assert_eq!(width, short, "{} takes its short form", several.pages[index].id());
@@ -148,7 +148,7 @@ fn music_without_a_lyric_line_is_a_wave_badge_and_does_not_claim_the_pill() {
     let mut notch = playing(false);
     settle(&mut notch);
     assert_eq!(notch.resting_index, None);
-    assert_eq!(notch.shown_badges.len(), 1);
+    assert_eq!(notch.presences.badges.len(), 1);
     assert!(notch.has_music_badge());
 }
 
@@ -228,7 +228,7 @@ fn a_dot_appearing_in_the_lyric_pill_widens_it_and_slides_the_line_while_the_gro
     notch.refresh_layout();
     assert_eq!(notch.springs.resting_width.target, before_width + dot_room);
     assert_eq!(notch.springs.claim_lead_gap.position, claimed_row::CONTENT_GAP, "the line has not jumped");
-    assert!(notch.is_animating);
+    assert!(notch.frame_timer.is_running);
     settle(&mut notch);
     assert_eq!(notch.springs.claim_lead_gap.position, claimed_row::CONTENT_GAP + dot_room);
     assert_eq!(resting_inset(&notch, countdown), Some(before_inset), "the group stays at the right end");

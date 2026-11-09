@@ -1,4 +1,4 @@
-use super::{HIDE_WHEN_IDLE_SETTING, Notch, activity_setting_key, read_showing};
+use super::{Notch, activity_setting_key};
 use crate::host::{notification_banners, visibility, volume_flyout};
 
 impl Notch {
@@ -9,7 +9,7 @@ impl Notch {
         // A hand-edited old key still migrates while the notch runs.
         visibility::migrate(&mut self.settings);
         let was_suppressed = self.is_suppressed();
-        self.hiding.hides_when_idle = self.settings.get_bool(HIDE_WHEN_IDLE_SETTING, self.hiding.hides_when_idle);
+        self.hiding.reload(&self.settings);
         volume_flyout::set_hidden(self.settings.get_bool(volume_flyout::SETTING_KEY, volume_flyout::is_hidden()));
         let hides_banners = notification_banners::is_hidden();
         let wants_banners_hidden = self.settings.get_bool(notification_banners::SETTING_KEY, hides_banners);
@@ -17,14 +17,6 @@ impl Notch {
         if wants_banners_hidden != hides_banners {
             notification_banners::set_hidden(wants_banners_hidden);
         }
-        self.hiding.maximized_showing =
-            read_showing(&self.settings, visibility::MAXIMIZED_KEY, self.hiding.maximized_showing);
-        self.hiding.fullscreen_showing =
-            read_showing(&self.settings, visibility::FULLSCREEN_KEY, self.hiding.fullscreen_showing);
-        self.hiding.opens_on_hover_over_maximized =
-            self.settings.get_bool(visibility::HOVER_MAXIMIZED_KEY, self.hiding.opens_on_hover_over_maximized);
-        self.hiding.opens_on_hover_over_fullscreen =
-            self.settings.get_bool(visibility::HOVER_FULLSCREEN_KEY, self.hiding.opens_on_hover_over_fullscreen);
         let navigable_before = self.navigable.clone();
         self.reload_page_list();
         for index in 0..self.pages.len() {

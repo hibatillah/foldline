@@ -11,6 +11,7 @@ mod motion;
 mod navigation;
 mod notch;
 mod notification_banners;
+mod page_swap;
 mod pill_row;
 mod registry;
 mod screen_mode;

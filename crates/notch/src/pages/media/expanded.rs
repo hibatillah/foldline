@@ -1,10 +1,10 @@
 use super::{MediaPage, controls, layout::Layout, lyric_panel, styles};
+use crate::ui::palette::TEXT_MUTED;
 use crate::{
     gfx::{Canvas, Color},
     page::Frame,
 };
 
-const GRAY: Color = Color::rgb(0.604, 0.604, 0.651);
 const BADGE_TILE: Color = Color::gray(0.047);
 
 pub fn draw(page: &MediaPage, canvas: &Canvas, frame: &Frame, opacity: f32) {
@@ -28,7 +28,7 @@ pub fn draw(page: &MediaPage, canvas: &Canvas, frame: &Frame, opacity: f32) {
     for (index, line) in page.title_lines.iter().enumerate() {
         canvas.text(&styles::TITLE, line, layout.title_line(index), Color::WHITE.faded(opacity));
     }
-    canvas.text(&styles::DETAIL, page.displayed_detail(), layout.detail(), GRAY.faded(opacity));
+    canvas.text(&styles::DETAIL, page.displayed_detail(), layout.detail(), TEXT_MUTED.faded(opacity));
 
     controls::draw(page, canvas, &layout, opacity);
 

@@ -16,14 +16,14 @@ fn run_command(executable: &Path) -> String {
     format!("\"{}\"", executable.display())
 }
 
-pub fn is_enabled() -> bool {
+pub(super) fn is_enabled() -> bool {
     let mut bytes = 0u32;
     let status =
         unsafe { RegGetValueW(HKEY_CURRENT_USER, RUN_KEY, VALUE_NAME, RRF_RT_REG_SZ, None, None, Some(&mut bytes)) };
     status.is_ok() && bytes > 0
 }
 
-pub fn set_enabled(is_enabled: bool) {
+pub(super) fn set_enabled(is_enabled: bool) {
     if !is_enabled {
         let _ = unsafe { RegDeleteKeyValueW(HKEY_CURRENT_USER, RUN_KEY, VALUE_NAME) };
         return;

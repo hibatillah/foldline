@@ -1,7 +1,7 @@
-use crate::gfx::{Canvas, Color, Mask, Path, Point, Rect};
+use super::bitmap_square::bitmap_square;
+use crate::gfx::{Canvas, Color, ImageData, Mask, Path, Point};
 
 const LINE_WIDTH: f32 = 2.0;
-const MARGIN: u32 = 1;
 const STEPS: u32 = 48;
 const POINTS_PER_TURN: f32 = 96.0;
 const TRACK_ALPHA: f32 = 0.22;
@@ -14,34 +14,31 @@ pub struct Ring {
 
 impl Ring {
     pub fn draw(&self, canvas: &Canvas, fraction: f32, color: Color, opacity: f32) {
-        let side = self.diameter.ceil() as u32 + 2 * MARGIN;
-        let radius = (self.diameter - LINE_WIDTH * self.diameter / 16.0) / 2.0;
-        let half_width = LINE_WIDTH * self.diameter / 16.0 / 2.0;
+        let (side, area) = bitmap_square(self.center, self.diameter);
+        let stroke_width = LINE_WIDTH * self.diameter / 16.0;
+        let radius = (self.diameter - stroke_width) / 2.0;
+        let half_width = stroke_width / 2.0;
         let step = step_for(fraction);
-        let left = (self.center.x - side as f32 / 2.0).round();
-        let top = (self.center.y - side as f32 / 2.0).round();
-        let area = Rect::new(left, top, left + side as f32, top + side as f32);
 
         let track_key = ("ring-track", side);
-        if let Some(track) = canvas.cached_image(track_key, || {
-            let middle = Point::new(side as f32 / 2.0, side as f32 / 2.0);
-            let figures = Path::polyline(&arc_points(middle, radius, 1.0)).flatten();
-            Mask::stroke(side, side, &figures, half_width).tinted(1.0, 1.0, 1.0)
-        }) {
+        if let Some(track) = canvas.cached_image(track_key, || arc_image(side, radius, half_width, 1.0, Color::WHITE)) {
             canvas.image(&track, area, 0.0, opacity * TRACK_ALPHA);
         }
         if step == 0 {
             return;
         }
         let arc_key = ("ring-arc", side, step, color.rgb_bytes());
-        if let Some(arc) = canvas.cached_image(arc_key, || {
-            let middle = Point::new(side as f32 / 2.0, side as f32 / 2.0);
-            let figures = Path::polyline(&arc_points(middle, radius, step as f32 / STEPS as f32)).flatten();
-            Mask::stroke(side, side, &figures, half_width).tinted(color.r, color.g, color.b)
-        }) {
+        let arc_fraction = step as f32 / STEPS as f32;
+        if let Some(arc) = canvas.cached_image(arc_key, || arc_image(side, radius, half_width, arc_fraction, color)) {
             canvas.image(&arc, area, 0.0, opacity * color.a);
         }
     }
+}
+
+fn arc_image(side: u32, radius: f32, half_width: f32, fraction: f32, color: Color) -> ImageData {
+    let middle = Point::new(side as f32 / 2.0, side as f32 / 2.0);
+    let figures = Path::polyline(&arc_points(middle, radius, fraction)).flatten();
+    Mask::stroke(side, side, &figures, half_width).tinted(color.r, color.g, color.b)
 }
 
 fn step_for(fraction: f32) -> u32 {

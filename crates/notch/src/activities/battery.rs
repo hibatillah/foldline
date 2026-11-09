@@ -2,6 +2,7 @@
 
 use windows::core::GUID;
 
+use crate::ui::palette::SUCCESS_GREEN;
 use crate::{
     activity::{Activity, Flash, Presence, Slot, SystemMessage},
     gfx::{Canvas, Color, Point, Rect},
@@ -16,7 +17,6 @@ const ON_BATTERY: u32 = 1;
 // Lowest first so crossing both thresholds reports the more urgent warning.
 const LOW_LEVELS: [u32; 2] = [10, 20];
 const SHOW_MILLISECONDS: u32 = 3000;
-const CHARGING_GREEN: Color = Color::rgb(0.19, 0.82, 0.35);
 const LOW_RED: Color = Color::rgb(1.0, 0.27, 0.23);
 const IDLE_GREEN: Color = Color::rgb(0.18, 0.62, 0.27);
 /// Diameter of the ring beside the clock, which is also the width it asks for.
@@ -59,7 +59,7 @@ impl Tracker {
 /// Charging wins over low; the low color needs the battery to be the source.
 fn ring_color(percent: u32, is_on_battery: Option<bool>) -> Color {
     match is_on_battery {
-        Some(false) => CHARGING_GREEN,
+        Some(false) => SUCCESS_GREEN,
         Some(true) if percent <= LOW_LEVELS[LOW_LEVELS.len() - 1] => LOW_RED,
         _ => IDLE_GREEN,
     }
@@ -131,7 +131,7 @@ impl Activity for BatteryActivity {
             return;
         }
         let (icon, tint) = match self.event {
-            Event::PluggedIn => (Icon::Bolt, CHARGING_GREEN),
+            Event::PluggedIn => (Icon::Bolt, SUCCESS_GREEN),
             Event::Unplugged => (Icon::Battery, Color::WHITE),
             Event::Low(_) => (Icon::BatteryLow, LOW_RED),
         };
@@ -179,14 +179,14 @@ mod tests {
     fn the_ring_is_green_while_idle_and_bright_green_while_charging() {
         assert_eq!(ring_color(80, None), IDLE_GREEN);
         assert_eq!(ring_color(80, Some(true)), IDLE_GREEN);
-        assert_eq!(ring_color(80, Some(false)), CHARGING_GREEN);
+        assert_eq!(ring_color(80, Some(false)), SUCCESS_GREEN);
     }
 
     #[test]
     fn the_ring_turns_red_at_the_low_threshold_only_on_battery() {
         assert_eq!(ring_color(20, Some(true)), LOW_RED);
         assert_eq!(ring_color(21, Some(true)), IDLE_GREEN);
-        assert_eq!(ring_color(10, Some(false)), CHARGING_GREEN);
+        assert_eq!(ring_color(10, Some(false)), SUCCESS_GREEN);
     }
 
     #[test]

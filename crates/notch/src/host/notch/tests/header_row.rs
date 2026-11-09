@@ -1,5 +1,4 @@
-//! The open header: the page dots at the left, the clock alone in the middle, the group and the gear at the right,
-//! and the clicks.
+//! The open header's dots, clock, group and gear, and the clicks on them.
 
 use super::*;
 use crate::gfx::Point;

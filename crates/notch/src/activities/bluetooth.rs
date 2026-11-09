@@ -20,6 +20,7 @@ use windows::{
     core::{IInspectable, Ref, Result},
 };
 
+use crate::ui::palette::ACCENT_BLUE;
 use crate::{
     activity::{Activity, Flash, Presence},
     gfx::{Canvas, Color, Rect},
@@ -33,7 +34,6 @@ const SHOW_MILLISECONDS: u32 = 3000;
 const SETTLE_TIME: Duration = Duration::from_secs(4);
 const BATTERY_DELAY: Duration = Duration::from_secs(2);
 const MAX_NAME_CHARACTERS: usize = 22;
-const CONNECTED_BLUE: Color = Color::rgb(0.302, 0.671, 0.969);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Change {
@@ -158,7 +158,7 @@ impl Activity for BluetoothActivity {
 
     fn draw(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
         let Some(change) = &self.current else { return };
-        let tint = if change.is_connected { CONNECTED_BLUE } else { Color::gray(0.7) };
+        let tint = if change.is_connected { ACCENT_BLUE } else { Color::gray(0.7) };
         ui::draw_message(
             canvas,
             area,

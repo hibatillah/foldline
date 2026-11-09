@@ -1,5 +1,6 @@
 //! A one-line text field for pages that hold the keyboard; the caret is steady, so editing runs no timer.
 
+use crate::ui::palette::TEXT_DIM;
 use crate::{
     gfx::{Canvas, Color, FontStyle, Rect},
     page::KeyInput,
@@ -8,7 +9,6 @@ use crate::{
 const CARET_WIDTH: f32 = 1.5;
 const CARET_INSET: f32 = 3.0;
 const CARET: Color = Color::rgb(0.251, 0.561, 1.0);
-const PLACEHOLDER: Color = Color::rgb(0.431, 0.431, 0.478);
 
 /// How a field's text looks: its font, color and the hint shown while it is empty.
 pub struct FieldLook<'a> {
@@ -107,7 +107,7 @@ impl TextField {
         let (scale, style) = (canvas.scale(), look.style);
         canvas.clipped(area, || {
             if self.text.is_empty() {
-                canvas.text(style, look.placeholder, area, PLACEHOLDER.faded(opacity));
+                canvas.text(style, look.placeholder, area, TEXT_DIM.faded(opacity));
             }
             let caret_x = canvas.measure(style, &self.text[..self.caret]) * scale;
             let shift = (caret_x - area.width() + CARET_INSET * scale).max(0.0);

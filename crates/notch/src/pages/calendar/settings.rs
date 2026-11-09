@@ -1,5 +1,3 @@
-//! The refresh interval and the link setting.
-
 use super::{CalendarPage, REFRESH_SETTING};
 use crate::page::Context;
 

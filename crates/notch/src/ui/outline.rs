@@ -7,10 +7,15 @@ enum Direction {
     Corner,
 }
 
+/// A corner cannot be rounder than half the shorter side.
+fn clamped_radius(rect: Rect, radius: f32) -> f32 {
+    radius.min(rect.width() / 2.0).min(rect.height() / 2.0).max(0.0)
+}
+
 /// The point at `distance` along the outline of a rounded rectangle, walking clockwise from the start of the top
 /// edge, and how the outline runs there. `distance` wraps around the full length.
 fn point_at(rect: Rect, radius: f32, distance: f32) -> (Point, Direction) {
-    let radius = radius.min(rect.width() / 2.0).min(rect.height() / 2.0).max(0.0);
+    let radius = clamped_radius(rect, radius);
     let (straight_width, straight_height) = (rect.width() - 2.0 * radius, rect.height() - 2.0 * radius);
     let quarter = std::f32::consts::FRAC_PI_2 * radius;
     let length = 2.0 * (straight_width + straight_height) + 4.0 * quarter;
@@ -63,7 +68,7 @@ enum Dash {
 }
 
 fn dashes(rect: Rect, radius: f32, thickness: f32, dash: f32, gap: f32) -> Vec<Dash> {
-    let radius = radius.min(rect.width() / 2.0).min(rect.height() / 2.0).max(0.0);
+    let radius = clamped_radius(rect, radius);
     let length =
         2.0 * (rect.width() - 2.0 * radius + rect.height() - 2.0 * radius) + 2.0 * std::f32::consts::PI * radius;
     let period = dash + gap;
@@ -121,11 +126,11 @@ mod tests {
     const RECT: Rect = Rect::new(0.0, 0.0, 100.0, 60.0);
 
     fn on_the_outline(point: Point) -> bool {
-        let eps = 0.01;
-        let on_vertical =
-            (point.x.abs() < eps || (point.x - 100.0).abs() < eps) && (-eps..=60.0 + eps).contains(&point.y);
-        let on_horizontal =
-            (point.y.abs() < eps || (point.y - 60.0).abs() < eps) && (-eps..=100.0 + eps).contains(&point.x);
+        let tolerance = 0.01;
+        let on_vertical = (point.x.abs() < tolerance || (point.x - 100.0).abs() < tolerance)
+            && (-tolerance..=60.0 + tolerance).contains(&point.y);
+        let on_horizontal = (point.y.abs() < tolerance || (point.y - 60.0).abs() < tolerance)
+            && (-tolerance..=100.0 + tolerance).contains(&point.x);
         on_vertical || on_horizontal
     }
 

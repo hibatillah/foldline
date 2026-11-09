@@ -3,8 +3,6 @@ use std::{
     collections::HashMap,
 };
 
-use super::text_cache::{TextCache, TextKey};
-
 use windows::{
     Win32::Graphics::DirectWrite::{
         DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_FEATURE, DWRITE_FONT_FEATURE_TAG_TABULAR_FIGURES,
@@ -18,6 +16,8 @@ use windows::{
     },
     core::{HSTRING, Interface, Result, w},
 };
+
+use super::text_cache::{TextCache, TextKey};
 
 /// Bundled under the SIL Open Font License; see assets/fonts/Geist-LICENSE.txt.
 pub const UI_FONT: &str = "Geist";
@@ -206,8 +206,8 @@ impl Fonts {
             (None, UI_FONT) => (FALLBACK_FONT, None),
             (_, family) => (family, None),
         };
-        unsafe {
-            let format = self.factory.CreateTextFormat(
+        let format = unsafe {
+            self.factory.CreateTextFormat(
                 &HSTRING::from(family),
                 collection.as_ref(),
                 weight,
@@ -215,20 +215,19 @@ impl Fonts {
                 DWRITE_FONT_STRETCH_NORMAL,
                 style.size * self.scale,
                 w!("en-us"),
-            )?;
+            )
+        }?;
+        let word_wrapping = if style.wrap { DWRITE_WORD_WRAPPING_WRAP } else { DWRITE_WORD_WRAPPING_NO_WRAP };
+        let trimming =
+            DWRITE_TRIMMING { granularity: DWRITE_TRIMMING_GRANULARITY_CHARACTER, delimiter: 0, delimiterCount: 0 };
+        unsafe {
             format.SetTextAlignment(alignment)?;
             format.SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER)?;
-            format.SetWordWrapping(if style.wrap {
-                DWRITE_WORD_WRAPPING_WRAP
-            } else {
-                DWRITE_WORD_WRAPPING_NO_WRAP
-            })?;
-            let trimming =
-                DWRITE_TRIMMING { granularity: DWRITE_TRIMMING_GRANULARITY_CHARACTER, delimiter: 0, delimiterCount: 0 };
+            format.SetWordWrapping(word_wrapping)?;
             let ellipsis = self.factory.CreateEllipsisTrimmingSign(&format)?;
             format.SetTrimming(&trimming, &ellipsis)?;
-            Ok(format)
         }
+        Ok(format)
     }
 }
 
@@ -243,6 +242,7 @@ fn load_bundled_fonts(factory: &IDWriteFactory) -> Result<IDWriteFontCollection1
         factory.RegisterFontFileLoader(&loader)?;
         let builder = factory.CreateFontSetBuilder()?;
         for data in BUNDLED_FONT_FILES {
+            // SAFETY: the bundled bytes are `static`, so they outlive every reference the loader keeps.
             let file = loader.CreateInMemoryFontFileReference(
                 &factory,
                 data.as_ptr().cast(),
@@ -263,9 +263,9 @@ mod tests {
     fn the_bundled_font_loads_and_is_what_text_is_measured_in() {
         let fonts = Fonts::new(1.0).unwrap();
         assert!(fonts.bundled.is_some(), "Geist should load from the executable");
-        let inter = FontStyle::new(UI_FONT, 14.0, Weight::Regular, Align::Leading);
+        let bundled = FontStyle::new(UI_FONT, 14.0, Weight::Regular, Align::Leading);
         let system = FontStyle::new(FALLBACK_FONT, 14.0, Weight::Regular, Align::Leading);
-        assert_ne!(fonts.measure(&inter, "Notification"), fonts.measure(&system, "Notification"));
+        assert_ne!(fonts.measure(&bundled, "Notification"), fonts.measure(&system, "Notification"));
     }
 
     #[test]

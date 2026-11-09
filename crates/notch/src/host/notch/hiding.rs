@@ -37,10 +37,21 @@ impl HidingState {
             is_revealed: false,
         }
     }
+
+    /// A missing or unreadable value keeps the current choice.
+    pub(super) fn reload(&mut self, settings: &Settings) {
+        self.hides_when_idle = settings.get_bool(HIDE_WHEN_IDLE_SETTING, self.hides_when_idle);
+        self.maximized_showing = read_showing(settings, visibility::MAXIMIZED_KEY, self.maximized_showing);
+        self.fullscreen_showing = read_showing(settings, visibility::FULLSCREEN_KEY, self.fullscreen_showing);
+        self.opens_on_hover_over_maximized =
+            settings.get_bool(visibility::HOVER_MAXIMIZED_KEY, self.opens_on_hover_over_maximized);
+        self.opens_on_hover_over_fullscreen =
+            settings.get_bool(visibility::HOVER_FULLSCREEN_KEY, self.opens_on_hover_over_fullscreen);
+    }
 }
 
 /// A missing key or an unknown word gives `fallback`: the default at start, the current choice on reload.
-pub(super) fn read_showing(settings: &Settings, key: &str, fallback: Showing) -> Showing {
+fn read_showing(settings: &Settings, key: &str, fallback: Showing) -> Showing {
     settings.get_string(key).and_then(Showing::parse).unwrap_or(fallback)
 }
 
@@ -58,17 +69,16 @@ impl Notch {
         if self.hiding.is_revealed || self.springs.expansion.target != 0.0 {
             return false;
         }
-        let has_activity = !self.shown_transients.is_empty()
-            || self.shown_banner.is_some()
-            || self.shown_badges.iter().any(|&(source, _)| !self.is_music_badge(source))
-            || !self.resting_row.dots.is_empty();
+        // In every mode only a message counts as activity; a lasting mark (muted, Caps Lock, a countdown, a privacy
+        // dot) is state and would keep the pill up for as long as it lasts.
+        let has_message = !self.presences.transients.is_empty() || self.presences.banner.is_some();
         match self.current_showing() {
-            None => self.hiding.hides_when_idle && !has_activity && !self.has_resting_content,
+            None => self.hiding.hides_when_idle && !has_message && !self.has_resting_content,
             // The suppressed window draws nothing; a full-size layout avoids a strip growing back when it returns.
             Some(Showing::Hidden) => false,
             Some(showing) => {
                 let has_lyrics = self.resting_index.is_some_and(|index| self.pages[index].shows_live_text());
-                !visibility::allows(showing, has_activity, self.has_resting_content, has_lyrics)
+                !visibility::allows(showing, has_message, self.has_resting_content, has_lyrics)
             }
         }
     }
@@ -103,9 +113,7 @@ impl Notch {
             != Some(Showing::Hidden)
         {
             crate::host::window::raise_topmost(self.window);
-            unsafe {
-                SetTimer(Some(self.window), RAISE_TIMER_ID, RAISE_DELAY_MILLISECONDS, None);
-            }
+            unsafe { SetTimer(Some(self.window), RAISE_TIMER_ID, RAISE_DELAY_MILLISECONDS, None) };
         }
         if mode == self.hiding.screen_mode {
             self.cancel_window_reveal();
@@ -115,9 +123,7 @@ impl Notch {
         if visibility::reveals_more(self.current_showing(), showing) {
             if self.hiding.pending_screen_mode != Some(mode) {
                 self.hiding.pending_screen_mode = Some(mode);
-                unsafe {
-                    SetTimer(Some(self.window), WINDOW_REVEAL_TIMER_ID, WINDOW_REVEAL_DELAY_MILLISECONDS, None);
-                }
+                unsafe { SetTimer(Some(self.window), WINDOW_REVEAL_TIMER_ID, WINDOW_REVEAL_DELAY_MILLISECONDS, None) };
             }
             return;
         }
@@ -136,9 +142,7 @@ impl Notch {
 
     fn cancel_window_reveal(&mut self) {
         if self.hiding.pending_screen_mode.take().is_some() {
-            unsafe {
-                let _ = KillTimer(Some(self.window), WINDOW_REVEAL_TIMER_ID);
-            }
+            let _ = unsafe { KillTimer(Some(self.window), WINDOW_REVEAL_TIMER_ID) };
         }
     }
 
@@ -156,9 +160,7 @@ impl Notch {
         self.cancel_close();
         self.scroll_gate.reset();
         for timer_key in [REVEAL_TIMER_ID, EXPAND_TIMER_ID, HOVER_WATCH_TIMER_ID] {
-            unsafe {
-                let _ = KillTimer(Some(self.window), timer_key);
-            }
+            let _ = unsafe { KillTimer(Some(self.window), timer_key) };
         }
         self.route_pointer(PointerEvent::CaptureLost);
         self.springs.expansion.jump_to(0.0);
@@ -174,13 +176,9 @@ impl Notch {
         log::debug(&format!("suppressed={is_suppressed}"));
         if is_suppressed {
             self.set_hovering(false);
-            unsafe {
-                let _ = ShowWindow(self.window, SW_HIDE);
-            }
+            let _ = unsafe { ShowWindow(self.window, SW_HIDE) };
         } else {
-            unsafe {
-                let _ = ShowWindow(self.window, SW_SHOWNOACTIVATE);
-            }
+            let _ = unsafe { ShowWindow(self.window, SW_SHOWNOACTIVATE) };
             // A reload can release the window while a maximized or full-screen window sits above it.
             crate::host::window::raise_topmost(self.window);
         }

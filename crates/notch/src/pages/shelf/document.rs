@@ -4,6 +4,7 @@ use std::path::Path;
 
 use super::items::{extension, tile_color, tile_label};
 use crate::gfx::{Align, Canvas, Color, FontStyle, Point, Rect, UI_FONT, Weight};
+use crate::ui::type_styles::MEDIUM_11_CENTER;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum DocumentKind {
@@ -46,7 +47,6 @@ const ZIPPER_STRIPE: f32 = 2.0;
 
 /// The design asks for 600; only Regular and Medium are bundled.
 const TAG: FontStyle = FontStyle::new(UI_FONT, 8.0, Weight::Medium, Align::Center);
-const BADGE: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Medium, Align::Center);
 
 const SHEET: Color = Color::WHITE;
 const PDF_RED: Color = Color::rgb(0.878, 0.192, 0.192);
@@ -152,7 +152,7 @@ impl Box40<'_> {
         self.fill(9.0, 5.0, 30.0, 28.0, SHEET_RADIUS, SHEET);
         self.fill(17.0, 3.0, 14.0, 22.0, 0.0, STRIP_GREEN);
         self.fill(1.0, 19.0, 18.0, 18.0, 3.0, EXCEL_GREEN);
-        self.canvas.text(&BADGE, "X", self.rect(1.0, 19.0, 18.0, 18.0), Color::WHITE.faded(self.opacity));
+        self.canvas.text(&MEDIUM_11_CENTER, "X", self.rect(1.0, 19.0, 18.0, 18.0), Color::WHITE.faded(self.opacity));
     }
 }
 

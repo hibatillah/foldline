@@ -1,19 +1,15 @@
-//! When the page wakes: every minute while shown or while a reminder counts down, otherwise only when it must change.
-//!
-//! The collapsed reminder (pill badge, header icon, countdown) and its data outlive the shown page, so a hidden page
-//! keeps one timer for the next reminder window and keeps fetching at the refresh interval: without the fetch an
-//! event added to the calendar would never raise a reminder in a notch that never shows this page.
+//! When the page wakes: every minute while shown or counting down, otherwise only for the next reminder window.
+//! A hidden page keeps fetching too, or an event added later would never raise a reminder.
 
 use super::{
     CalendarPage, FETCH_TIMER, MINUTE_TIMER,
     agenda::REMINDER_LEAD_SECONDS,
     dates::{SECONDS_PER_DAY, SECONDS_PER_MINUTE},
     ics::Occurrence,
-    local_time::local_now,
+    local_time::{local_milliseconds_into_minute, local_now},
 };
 use crate::page::Context;
 use std::time::{Duration, Instant};
-use windows::Win32::System::SystemInformation::GetLocalTime;
 
 const WAKE_MARGIN_MILLISECONDS: i64 = 50;
 
@@ -34,9 +30,7 @@ pub(super) fn is_fetch_due(last_fetch: Option<Instant>, now: Instant, interval_m
 }
 
 fn milliseconds_to_next_minute() -> i64 {
-    let time = unsafe { GetLocalTime() };
-    let milliseconds_into_minute = i64::from(time.wSecond) * 1000 + i64::from(time.wMilliseconds);
-    SECONDS_PER_MINUTE * 1000 - milliseconds_into_minute + WAKE_MARGIN_MILLISECONDS
+    SECONDS_PER_MINUTE * 1000 - local_milliseconds_into_minute() + WAKE_MARGIN_MILLISECONDS
 }
 
 impl CalendarPage {

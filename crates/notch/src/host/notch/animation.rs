@@ -45,6 +45,20 @@ impl Springs {
     }
 }
 
+/// The Windows timer that steps the springs while anything moves.
+pub(super) struct FrameTimer {
+    pub(super) is_running: bool,
+    last_tick: i64,
+    ticks_per_second: i64,
+    interval_milliseconds: u32,
+}
+
+impl FrameTimer {
+    pub(super) fn new(ticks_per_second: i64, interval_milliseconds: u32) -> Self {
+        Self { is_running: false, last_tick: 0, ticks_per_second, interval_milliseconds }
+    }
+}
+
 /// Every size spring shares one response and lead-in, so width and height of a move start and settle together.
 pub(super) fn size_spring(position: f32) -> Spring {
     Spring::new(position, motion::SIZE_RESPONSE.0, motion::SIZE_RESPONSE.1).with_lead_in(motion::SIZE_LEAD_IN)
@@ -68,34 +82,29 @@ pub(super) fn ramp(expansion: f32, range: (f32, f32)) -> f32 {
 
 impl Notch {
     pub(super) fn start_animation(&mut self) {
-        if self.is_animating {
+        if self.frame_timer.is_running {
             return;
         }
-        self.is_animating = true;
+        self.frame_timer.is_running = true;
         log::debug("frame timer started");
-        unsafe {
-            timeBeginPeriod(1);
-            let _ = QueryPerformanceCounter(&mut self.last_tick);
-            SetTimer(Some(self.window), ANIMATION_TIMER_ID, self.frame_interval_milliseconds, None);
-        }
+        unsafe { timeBeginPeriod(1) };
+        let _ = unsafe { QueryPerformanceCounter(&mut self.frame_timer.last_tick) };
+        unsafe { SetTimer(Some(self.window), ANIMATION_TIMER_ID, self.frame_timer.interval_milliseconds, None) };
     }
 
     pub(super) fn stop_animation(&mut self) {
-        self.is_animating = false;
+        self.frame_timer.is_running = false;
         log::debug("frame timer stopped");
-        unsafe {
-            let _ = KillTimer(Some(self.window), ANIMATION_TIMER_ID);
-            timeEndPeriod(1);
-        }
+        let _ = unsafe { KillTimer(Some(self.window), ANIMATION_TIMER_ID) };
+        unsafe { timeEndPeriod(1) };
     }
 
     pub(super) fn advance_animation(&mut self) {
         let mut now = 0;
-        unsafe {
-            let _ = QueryPerformanceCounter(&mut now);
-        }
-        let elapsed_seconds = ((now - self.last_tick) as f32 / self.ticks_per_second as f32).clamp(0.0, 0.05);
-        self.last_tick = now;
+        let _ = unsafe { QueryPerformanceCounter(&mut now) };
+        let elapsed_seconds =
+            ((now - self.frame_timer.last_tick) as f32 / self.frame_timer.ticks_per_second as f32).clamp(0.0, 0.05);
+        self.frame_timer.last_tick = now;
         self.advance_by(elapsed_seconds);
     }
 
@@ -106,7 +115,7 @@ impl Notch {
             spring.step(elapsed_seconds);
         }
         let is_settled = self.springs.expansion.is_settled() && self.layout_springs().all(|spring| spring.is_settled());
-        let mut pages_busy = false;
+        let mut pages_busy = self.page_swap.advance(elapsed_seconds);
         for page in &mut self.pages {
             pages_busy |= page.animate(elapsed_seconds);
         }
@@ -116,6 +125,7 @@ impl Notch {
             for spring in self.layout_springs() {
                 spring.snap_to_target();
             }
+            self.page_swap.finish();
             self.stop_animation();
         }
         self.paint();
@@ -181,7 +191,7 @@ mod tests {
     use super::{super::*, *};
 
     #[test]
-    pub(super) fn width_and_height_share_one_open_amount_so_they_arrive_together() {
+    fn width_and_height_share_one_open_amount_so_they_arrive_together() {
         for amount in [0.0, 0.3, 0.5, 1.0, 1.1] {
             let width_progress = (sized(100.0, 500.0, amount) - 100.0) / 400.0;
             let height_progress = (sized(30.0, 210.0, amount) - 30.0) / 180.0;
@@ -189,18 +199,18 @@ mod tests {
         }
     }
     #[test]
-    pub(super) fn a_size_goes_past_both_ends_when_the_spring_overshoots() {
+    fn a_size_goes_past_both_ends_when_the_spring_overshoots() {
         assert!(sized(96.0, 280.0, 1.05) > 280.0);
         assert!(sized(96.0, 280.0, -0.05) < 96.0);
     }
     #[test]
-    pub(super) fn an_overshooting_size_stays_inside_the_window_and_above_the_collapsed_floor() {
+    fn an_overshooting_size_stays_inside_the_window_and_above_the_collapsed_floor() {
         assert_eq!(bounded(900.0, 100.0, 800.0), 800.0);
         assert_eq!(bounded(10.0, 100.0, 800.0), 75.0);
         assert_eq!(bounded(300.0, 100.0, 800.0), 300.0);
     }
     #[test]
-    pub(super) fn the_tallest_open_page_overshoots_without_leaving_the_window() {
+    fn the_tallest_open_page_overshoots_without_leaving_the_window() {
         let notch = crate::host::notch::tests::rig(crate::pages::SampleOptions::default());
         let (room_width, room_height) = notch.size_room();
         assert!(room_width < notch.surface.width as f32 && room_height < notch.surface.height as f32);
@@ -222,20 +232,20 @@ mod tests {
         (highest - 1.0, settled_at.expect("the spring settles"))
     }
     #[test]
-    pub(super) fn the_size_spring_overshoots_about_ten_percent_and_settles_so_the_frame_timer_can_stop() {
+    fn the_size_spring_overshoots_about_ten_percent_and_settles_so_the_frame_timer_can_stop() {
         let (overshoot, seconds_to_settle) = measure(size_spring(0.0));
         assert!((0.08..0.12).contains(&overshoot), "overshoot {overshoot}");
         assert!(seconds_to_settle < 1.6, "settled after {seconds_to_settle}");
     }
     #[test]
-    pub(super) fn the_size_spring_settles_one_and_a_third_to_one_and_a_half_times_slower_than_the_old_one() {
+    fn the_size_spring_settles_one_and_a_third_to_one_and_a_half_times_slower_than_the_old_one() {
         let (_, old_seconds) = measure(Spring::new(0.0, 420.0, 21.0));
         let (_, new_seconds) = measure(size_spring(0.0));
         let ratio = new_seconds / old_seconds;
         assert!((1.3..1.5).contains(&ratio), "ratio {ratio} ({old_seconds} -> {new_seconds})");
     }
     #[test]
-    pub(super) fn a_size_move_starts_gently_instead_of_at_full_speed() {
+    fn a_size_move_starts_gently_instead_of_at_full_speed() {
         let (mut eased, mut plain) =
             (size_spring(0.0), Spring::new(0.0, motion::SIZE_RESPONSE.0, motion::SIZE_RESPONSE.1));
         (eased.target, plain.target) = (1.0, 1.0);
@@ -250,7 +260,7 @@ mod tests {
         assert!(eased.position > 0.5, "the move is under way after a third of a second");
     }
     #[test]
-    pub(super) fn width_and_height_springs_of_different_distances_reach_their_targets_on_the_same_frame() {
+    fn width_and_height_springs_of_different_distances_reach_their_targets_on_the_same_frame() {
         let (mut width, mut height) = (size_spring(300.0), size_spring(100.0));
         (width.target, height.target) = (500.0, 180.0);
         let mut arrival_frames = (None, None);
@@ -272,14 +282,14 @@ mod tests {
         notch.start_animation();
         for frame in 0..(limit_seconds / frame_seconds) as usize {
             notch.advance_by(frame_seconds);
-            if !notch.is_animating {
+            if !notch.frame_timer.is_running {
                 return Some(frame + 1);
             }
         }
         None
     }
     #[test]
-    pub(super) fn the_frame_timer_stops_after_every_open_and_close_at_any_frame_rate() {
+    fn the_frame_timer_stops_after_every_open_and_close_at_any_frame_rate() {
         for frame_seconds in [1.0 / 60.0, 1.0 / 144.0] {
             let mut notch = crate::host::notch::tests::rig(crate::pages::SampleOptions::default());
             crate::host::notch::tests::settle(&mut notch);
@@ -298,7 +308,7 @@ mod tests {
         }
     }
     #[test]
-    pub(super) fn the_frame_timer_stops_after_hover_cycles_that_reverse_a_move_before_it_settles() {
+    fn the_frame_timer_stops_after_hover_cycles_that_reverse_a_move_before_it_settles() {
         let mut notch = crate::host::notch::tests::rig(crate::pages::SampleOptions::default());
         crate::host::notch::tests::settle(&mut notch);
         let mut jitter = 0x2545_f491_u32;
@@ -319,7 +329,7 @@ mod tests {
                 notch.refresh_layout();
                 notch.start_animation();
                 let mut held = 0.0;
-                while held < hold_seconds && notch.is_animating {
+                while held < hold_seconds && notch.frame_timer.is_running {
                     let frame_seconds = next_frame_seconds();
                     notch.advance_by(frame_seconds);
                     held += frame_seconds;
@@ -327,12 +337,12 @@ mod tests {
             }
         }
         let mut waited = 0.0;
-        while notch.is_animating && waited < 4.0 {
+        while notch.frame_timer.is_running && waited < 4.0 {
             let frame_seconds = next_frame_seconds();
             notch.advance_by(frame_seconds);
             waited += frame_seconds;
         }
-        assert!(!notch.is_animating, "still running after {waited} s: {}", describe_springs(&mut notch));
+        assert!(!notch.frame_timer.is_running, "still running after {waited} s: {}", describe_springs(&mut notch));
     }
     fn describe_springs(notch: &mut Notch) -> String {
         let expansion = (notch.springs.expansion.position, notch.springs.expansion.target);
@@ -341,9 +351,8 @@ mod tests {
         format!("expansion {expansion:?}, layout {layout:?}")
     }
     #[test]
-    pub(super) fn the_header_shows_before_the_page_content_and_the_collapsed_content_is_gone_first() {
-        assert!(RESTING_FADE_END <= HEADER_FADE.0 + 0.1);
-        assert!(HEADER_FADE.1 <= CONTENT_FADE.0);
+    fn the_header_shows_before_the_page_content_and_the_collapsed_content_is_gone_first() {
+        const { assert!(RESTING_FADE_END <= HEADER_FADE.0 + 0.1 && HEADER_FADE.1 <= CONTENT_FADE.0) };
         assert_eq!(ramp(HEADER_STAGE, HEADER_FADE), 1.0);
         assert_eq!(ramp(HEADER_STAGE, CONTENT_FADE), 0.0);
         assert_eq!(ramp(1.0, CONTENT_FADE), 1.0);

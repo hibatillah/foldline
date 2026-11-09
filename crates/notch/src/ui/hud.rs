@@ -1,7 +1,8 @@
 //! Collapsed activity layouts for level bars and short messages.
 
 use super::Icon;
-use crate::gfx::{Align, Canvas, Color, FontStyle, Fonts, Rect, UI_FONT, Weight};
+use crate::gfx::{Align, Canvas, Color, FontStyle, Fonts, Point, Rect, UI_FONT, Weight};
+use crate::ui::type_styles::MEDIUM_13;
 
 pub const LEVEL_WIDTH: f32 = 176.0;
 
@@ -11,12 +12,11 @@ const GAP: f32 = 10.0;
 const LEVEL_VALUE_WIDTH: f32 = 24.0;
 const BAR_THICKNESS: f32 = 4.0;
 const TRACK_ALPHA: f32 = 0.22;
-const MESSAGE: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Medium, Align::Leading);
 const VALUE: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Regular, Align::Trailing);
 
 pub fn message_width(fonts: &Fonts, message: &str, value: Option<&str>) -> f32 {
     let value_span = value.map_or(0.0, |value| GAP + fonts.measure(&VALUE, value).ceil());
-    PADDING + ICON_SIZE + GAP + fonts.measure(&MESSAGE, message).ceil() + value_span + PADDING
+    PADDING + ICON_SIZE + GAP + fonts.measure(&MEDIUM_13, message).ceil() + value_span + PADDING
 }
 
 pub fn draw_message(
@@ -33,7 +33,7 @@ pub fn draw_message(
     let text_left = area.left + (PADDING + ICON_SIZE + GAP) * scale;
     let text_right = area.right - PADDING * scale;
     canvas.text(
-        &MESSAGE,
+        &MEDIUM_13,
         message,
         Rect::new(text_left, area.top, text_right, area.bottom),
         Color::WHITE.faded(opacity),
@@ -68,7 +68,7 @@ pub fn draw_level(canvas: &Canvas, area: Rect, opacity: f32, icon: Icon, fractio
 
 fn draw_icon(canvas: &Canvas, area: Rect, opacity: f32, icon: Icon, tint: Color) {
     let scale = canvas.scale();
-    let center = crate::gfx::Point::new(area.left + (PADDING + ICON_SIZE / 2.0) * scale, area.center_y());
+    let center = Point::new(area.left + (PADDING + ICON_SIZE / 2.0) * scale, area.center_y());
     icon.draw(canvas, center, ICON_SIZE * scale, tint, opacity);
 }
 

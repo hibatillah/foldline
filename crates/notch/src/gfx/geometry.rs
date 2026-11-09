@@ -1,5 +1,3 @@
-use windows::Win32::Graphics::Direct2D::Common::D2D_RECT_F;
-
 pub fn lerp(from: f32, to: f32, amount: f32) -> f32 {
     from + (to - from) * amount
 }
@@ -63,12 +61,6 @@ impl Rect {
 
     pub fn contains(&self, point: Point) -> bool {
         point.x >= self.left && point.x <= self.right && point.y >= self.top && point.y <= self.bottom
-    }
-}
-
-impl From<Rect> for D2D_RECT_F {
-    fn from(rect: Rect) -> Self {
-        D2D_RECT_F { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }
     }
 }
 

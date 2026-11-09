@@ -1,10 +1,10 @@
-//! Draws the tiles and the whole-page messages.
-
 use super::{
     layout::{self, MESSAGE_BADGE_DIAMETER, MESSAGE_ICON_SIZE},
     model::{Device, Prepared, Tone},
     ring::{self, Fill},
 };
+use crate::ui::palette::{LIGHT_GRAY, MINT_GREEN, SURFACE_BADGE, SURFACE_BORDER, TEXT_DIM, TEXT_MUTED};
+use crate::ui::type_styles::{MEDIUM_15, REGULAR_10_CENTER, REGULAR_12};
 use crate::{
     gfx::{Align, Canvas, Color, FontStyle, Point, Rect, UI_FONT, Weight},
     ui::Icon,
@@ -17,22 +17,11 @@ const BOLT_GAP: f32 = 1.0;
 
 const PERCENT: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Medium, Align::Center).tabular();
 const PERCENT_LEADING: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Medium, Align::Leading).tabular();
-const NAME: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Center);
-/// The design asks for semibold; only regular and medium Geist are bundled.
-const TITLE: FontStyle = FontStyle::new(UI_FONT, 15.0, Weight::Medium, Align::Leading);
-const DETAIL: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Leading);
-
 const IDLE_GREEN: Color = Color::rgb(0.184, 0.620, 0.267);
 const CHARGING_GREEN: Color = Color::rgb(0.188, 0.820, 0.345);
 const LOW_RED: Color = Color::rgb(1.0, 0.271, 0.227);
-const ICON_GRAY: Color = Color::rgb(0.769, 0.769, 0.800);
 const OFF_ICON: Color = Color::rgb(0.333, 0.333, 0.373);
-const OFF_TEXT: Color = Color::rgb(0.431, 0.431, 0.478);
-const NAME_GRAY: Color = Color::rgb(0.604, 0.604, 0.651);
-const BLUETOOTH_ON: Color = Color::rgb(0.388, 0.902, 0.745);
 const BLUETOOTH_OFF: Color = Color::rgb(0.541, 0.541, 0.588);
-const BADGE_FILL: Color = Color::rgb(0.090, 0.090, 0.110);
-const BADGE_BORDER: Color = Color::rgb(0.149, 0.149, 0.176);
 
 pub(super) fn tone_color(tone: Tone) -> Color {
     match tone {
@@ -59,17 +48,17 @@ fn draw_tile(canvas: &Canvas, device: &Device, percent_text: &str, cell: Rect, o
         None => Fill::Dashed,
     };
     ring::draw(canvas, layout::ring_center(cell, scale), &fill, opacity);
-    let icon_color = if device.is_connected { ICON_GRAY } else { OFF_ICON };
+    let icon_color = if device.is_connected { LIGHT_GRAY } else { OFF_ICON };
     device.kind.icon().draw(canvas, layout::icon_center(cell, scale), ICON_SIZE * scale, icon_color, opacity);
     draw_percent(canvas, device, percent_text, cell, opacity);
-    canvas.text(&NAME, &device.name, layout::name_line(cell, scale), NAME_GRAY.faded(opacity));
+    canvas.text(&REGULAR_10_CENTER, &device.name, layout::name_line(cell, scale), TEXT_MUTED.faded(opacity));
 }
 
 fn draw_percent(canvas: &Canvas, device: &Device, text: &str, cell: Rect, opacity: f32) {
     let scale = canvas.scale();
     let line = layout::percent_line(cell, scale);
     let color = match (device.is_connected, device.battery_percent) {
-        (false, _) => OFF_TEXT,
+        (false, _) => TEXT_DIM,
         (true, None) => Color::WHITE,
         (true, Some(_)) if device.tone() == Tone::Low => LOW_RED,
         (true, Some(_)) => Color::WHITE,
@@ -102,15 +91,15 @@ pub(super) fn draw_message(
     opacity: f32,
 ) {
     let scale = canvas.scale();
-    let text_width = canvas.measure(&TITLE, title).max(canvas.measure(&DETAIL, detail)).ceil();
+    let text_width = canvas.measure(&MEDIUM_15, title).max(canvas.measure(&REGULAR_12, detail)).ceil();
     let (icon, title_line, detail_line) = layout::message_lines(bounds, scale, text_width);
     let radius = MESSAGE_BADGE_DIAMETER / 2.0 * scale;
-    canvas.fill_circle(icon, radius, BADGE_BORDER.faded(opacity));
-    canvas.fill_circle(icon, radius - scale, BADGE_FILL.faded(opacity));
-    let tint = if is_bluetooth_off { BLUETOOTH_OFF } else { BLUETOOTH_ON };
+    canvas.fill_circle(icon, radius, SURFACE_BORDER.faded(opacity));
+    canvas.fill_circle(icon, radius - scale, SURFACE_BADGE.faded(opacity));
+    let tint = if is_bluetooth_off { BLUETOOTH_OFF } else { MINT_GREEN };
     Icon::Bluetooth.draw(canvas, icon, MESSAGE_ICON_SIZE * scale, tint, opacity);
-    canvas.text(&TITLE, title, title_line, Color::WHITE.faded(opacity));
-    canvas.text(&DETAIL, detail, detail_line, NAME_GRAY.faded(opacity));
+    canvas.text(&MEDIUM_15, title, title_line, Color::WHITE.faded(opacity));
+    canvas.text(&REGULAR_12, detail, detail_line, TEXT_MUTED.faded(opacity));
 }
 
 #[cfg(test)]
@@ -122,9 +111,9 @@ mod tests {
     fn a_long_receiver_name_is_cut_with_an_ellipsis_inside_the_name_width() {
         let fonts = Fonts::new(1.0).unwrap();
         // The text style does not wrap, so DirectWrite trims what passes the line's right edge with an ellipsis.
-        const { assert!(!NAME.wrap) };
+        const { assert!(!REGULAR_10_CENTER.wrap) };
         let long_name = "Logitech Wireless Mouse M330 Silent Plus";
-        assert!(fonts.measure(&NAME, long_name) > 76.0, "the sample really is wider than the tile's name");
+        assert!(fonts.measure(&REGULAR_10_CENTER, long_name) > 76.0, "the sample really is wider than the tile's name");
         for scale in [1.0, 1.5, 2.0] {
             let cell = layout::cell(Rect::new(0.0, 0.0, 440.0 * scale, 86.0 * scale), 0, 5, scale);
             assert!(layout::name_line(cell, scale).width() <= 76.0 * scale + 0.01);

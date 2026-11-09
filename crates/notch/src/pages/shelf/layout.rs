@@ -1,11 +1,11 @@
 //! Where the shelf's places, previews and remove buttons sit, and what a press hits.
 
 use super::{
-    EXPANDED_WIDTH, FILE_GAP, FILE_WIDTH, MAX_FILES, NAME, NAME_LINE_HEIGHT, NAME_TOP, ROW_GAP, SLOTS_PER_ROW,
-    ZONE_PADDING,
+    EXPANDED_WIDTH, FILE_GAP, FILE_WIDTH, MAX_FILES, NAME_LINE_HEIGHT, NAME_TOP, ROW_GAP, SLOTS_PER_ROW, ZONE_PADDING,
 };
 use crate::gfx::{Fonts, Point, Rect, clamp_lines};
 use crate::page::DEFAULT_CONTENT_HEIGHT;
+use crate::ui::type_styles::REGULAR_10_CENTER;
 use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
@@ -83,7 +83,7 @@ pub(super) fn target_at(point: Point, bounds: Rect, scale: f32, count: usize) ->
 }
 
 pub(super) fn name_lines(name: &str, fonts: &Fonts) -> Vec<String> {
-    clamp_lines(name, NAME_LINES, NAME_WIDTH, |text| fonts.measure(&NAME, text))
+    clamp_lines(name, NAME_LINES, NAME_WIDTH, |text| fonts.measure(&REGULAR_10_CENTER, text))
 }
 
 pub(super) fn is_double_click(
@@ -208,7 +208,7 @@ mod tests {
         let lines = name_lines("a-very-long-file-name-for-the-quarterly-budget-review.xlsx", &fonts);
         assert_eq!(lines.len(), NAME_LINES);
         assert!(lines[NAME_LINES - 1].ends_with('\u{2026}'));
-        assert!(lines.iter().all(|line| fonts.measure(&NAME, line) <= NAME_WIDTH + 0.5));
+        assert!(lines.iter().all(|line| fonts.measure(&REGULAR_10_CENTER, line) <= NAME_WIDTH + 0.5));
     }
 
     #[test]

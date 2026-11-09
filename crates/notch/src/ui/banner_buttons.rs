@@ -1,9 +1,10 @@
 //! The Dismiss and Open buttons a banner shows while the pointer is on it, right-aligned under its text.
 
+use super::svg_icon::{Stroke, draw_strokes};
+use crate::ui::type_styles::MEDIUM_13;
 use crate::{
-    gfx::{Align, Canvas, Color, FontStyle, Fonts, Point, Rect, UI_FONT, Weight, clamp_lines},
+    gfx::{Canvas, Color, Fonts, Point, Rect, clamp_lines},
     page::PointerEvent,
-    ui::{Stroke, draw_strokes},
 };
 
 /// The space the buttons add under a banner's text, in DIP: the gap above them and their height.
@@ -16,10 +17,10 @@ const PADDING: f32 = 14.0;
 const OPEN_RIGHT_PADDING: f32 = 12.0;
 const ICON_SIZE: f32 = 12.0;
 const ICON_GAP: f32 = 6.0;
-const MAX_OPEN_LABEL_WIDTH: f32 = 200.0;
+/// Keeps Dismiss and the longest Open inside a 340 DIP notification card's 20 DIP padding.
+const MAX_OPEN_LABEL_WIDTH: f32 = 160.0;
 const DISMISS_LABEL: &str = "Dismiss";
 
-const LABEL: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Medium, Align::Leading);
 const DISMISS_FILL: Color = Color::WHITE.with_alpha(0.14);
 const DISMISS_FILL_HOVERED: Color = Color::WHITE.with_alpha(0.22);
 const OPEN_FILL_HOVERED: Color = Color::gray(0.86);
@@ -45,11 +46,11 @@ pub struct BannerButtons {
 impl BannerButtons {
     /// `open_label` is cut with an ellipsis so a long app name cannot push Dismiss off the banner.
     pub fn new(fonts: &Fonts, open_label: &str) -> Self {
-        let open_label = clamp_lines(open_label, 1, MAX_OPEN_LABEL_WIDTH, |text| fonts.measure(&LABEL, text))
+        let open_label = clamp_lines(open_label, 1, MAX_OPEN_LABEL_WIDTH, |text| fonts.measure(&MEDIUM_13, text))
             .pop()
             .unwrap_or_default();
-        let dismiss_width = 2.0 * PADDING + fonts.measure(&LABEL, DISMISS_LABEL);
-        let open_width = PADDING + fonts.measure(&LABEL, &open_label) + ICON_GAP + ICON_SIZE + OPEN_RIGHT_PADDING;
+        let dismiss_width = 2.0 * PADDING + fonts.measure(&MEDIUM_13, DISMISS_LABEL);
+        let open_width = PADDING + fonts.measure(&MEDIUM_13, &open_label) + ICON_GAP + ICON_SIZE + OPEN_RIGHT_PADDING;
         Self { open_label, dismiss_width, open_width, hovered: None, pressed: None }
     }
 
@@ -111,13 +112,18 @@ impl BannerButtons {
                 BannerButton::Dismiss => {
                     let fill = if is_hovered { DISMISS_FILL_HOVERED } else { DISMISS_FILL };
                     canvas.fill_rounded_rect(rect, radius, fill.faded(opacity));
-                    canvas.text(&LABEL, DISMISS_LABEL, Rect { left: label_left, ..rect }, Color::WHITE.faded(opacity));
+                    canvas.text(
+                        &MEDIUM_13,
+                        DISMISS_LABEL,
+                        Rect { left: label_left, ..rect },
+                        Color::WHITE.faded(opacity),
+                    );
                 }
                 BannerButton::Open => {
                     let fill = if is_hovered { OPEN_FILL_HOVERED } else { Color::WHITE };
                     canvas.fill_rounded_rect(rect, radius, fill.faded(opacity));
                     canvas.text(
-                        &LABEL,
+                        &MEDIUM_13,
                         &self.open_label,
                         Rect { left: label_left, ..rect },
                         Color::BLACK.faded(opacity),

@@ -1,6 +1,6 @@
 //! Rasterize small shapes on the CPU to avoid the initial 10 MB cost of Direct2D geometry.
 
-use super::{color::Color, geometry::Point, image::ImageData, path::Figure};
+use super::{color::Color, geometry::Point, image_data::ImageData, path::Figure};
 
 pub struct Mask {
     width: u32,

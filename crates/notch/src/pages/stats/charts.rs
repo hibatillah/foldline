@@ -1,7 +1,8 @@
 //! The load charts (a dotted baseline with two bars at its right end) and the disk bars.
 
-use super::{DISK_GREEN, TRACK};
+use super::DISK_GREEN;
 use crate::gfx::{Canvas, Color, Rect};
+use crate::ui::palette::SURFACE_BORDER;
 
 const BASELINE_LEFT: f32 = 12.0;
 const BASELINE_RIGHT: f32 = 118.0;
@@ -80,7 +81,7 @@ pub(super) fn disk_bar_track(card: Rect, scale: f32, row_top: f32) -> Rect {
 
 pub(super) fn draw_disk_bar(canvas: &Canvas, track: Rect, percent: f32, opacity: f32) {
     let half = track.height() / 2.0;
-    canvas.fill_rounded_rect(track, half, TRACK.faded(opacity));
+    canvas.fill_rounded_rect(track, half, SURFACE_BORDER.faded(opacity));
     let fill_right = track.left + track.width() * (percent / 100.0).clamp(0.0, 1.0);
     if fill_right - track.left > half {
         canvas.fill_rounded_rect(Rect { right: fill_right, ..track }, half, DISK_GREEN.faded(opacity));

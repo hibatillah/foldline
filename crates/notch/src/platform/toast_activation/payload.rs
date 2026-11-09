@@ -39,7 +39,8 @@ pub fn toast_launch(payload: &str) -> ToastLaunch {
     ToastLaunch { arguments: value("launch").unwrap_or_default(), kind }
 }
 
-/// A protocol toast opens its URI; a background one has nothing to show, so it only starts the app.
+/// A protocol toast opens its URI; a background one has nothing to show, so it only starts the app. A toast without
+/// arguments (Discord's) skips the activator: it can name no target, and Electron's answers it with success and nothing.
 pub fn routes(launch: &ToastLaunch) -> Vec<Route> {
     let arguments = launch.arguments.trim();
     match launch.kind {
@@ -47,18 +48,23 @@ pub fn routes(launch: &ToastLaunch) -> Vec<Route> {
             vec![Route::OpenUri(arguments.to_owned()), Route::StartApp]
         }
         ActivationKind::Protocol | ActivationKind::Background => vec![Route::StartApp],
+        ActivationKind::Foreground if arguments.is_empty() => vec![Route::StartApp],
         ActivationKind::Foreground => {
             let mut routes = vec![Route::Activator(arguments.to_owned())];
             if uri_scheme(arguments).is_some() {
                 routes.push(Route::OpenUri(arguments.to_owned()));
             }
-            if !arguments.is_empty() {
-                routes.push(Route::LaunchWithArguments(arguments.to_owned()));
-            }
+            routes.push(Route::LaunchWithArguments(arguments.to_owned()));
             routes.push(Route::StartApp);
             routes
         }
     }
+}
+
+/// A route that reports success proves it only when another window than the notch's, or the one in front at the
+/// click, comes to the front; window handles are compared as integers.
+pub fn came_forward(window_at_click: isize, window_now: isize, window_now_is_the_notch: bool) -> bool {
+    window_now != 0 && window_now != window_at_click && !window_now_is_the_notch
 }
 
 /// The scheme of a URI such as `ms-phone:messages?...`; two letters at least, so a drive letter is no scheme.
@@ -234,9 +240,34 @@ mod tests {
     }
 
     #[test]
-    fn a_toast_with_no_arguments_still_reaches_its_activator_and_the_app() {
-        let launch = ToastLaunch { arguments: String::new(), kind: ActivationKind::Foreground };
-        assert_eq!(routes(&launch), vec![Route::Activator(String::new()), Route::StartApp]);
+    fn a_discord_toast_without_arguments_starts_the_app_instead_of_asking_its_activator() {
+        let launch = toast_launch(
+            r#"<toast><visual><binding template="ToastGeneric"><text>raul</text></binding></visual></toast>"#,
+        );
+        assert_eq!(routes(&launch), vec![Route::StartApp]);
+    }
+
+    #[test]
+    fn every_route_list_ends_by_starting_the_app() {
+        let kinds = [ActivationKind::Foreground, ActivationKind::Background, ActivationKind::Protocol];
+        for kind in kinds {
+            for arguments in ["", "chat=42", "ms-phone:messages?threadid=82"] {
+                let launch = ToastLaunch { arguments: arguments.to_owned(), kind };
+                assert_eq!(routes(&launch).last(), Some(&Route::StartApp), "{kind:?} with {arguments:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn an_app_came_forward_only_when_another_window_than_the_one_at_the_click_is_in_front() {
+        assert!(came_forward(10, 20, false));
+        assert!(!came_forward(10, 10, false));
+        assert!(!came_forward(10, 0, false));
+    }
+
+    #[test]
+    fn the_notch_itself_in_front_is_not_the_app_coming_forward() {
+        assert!(!came_forward(10, 30, true));
     }
 
     #[test]

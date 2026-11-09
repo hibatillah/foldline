@@ -13,9 +13,9 @@ use windows::{
         UI::{
             Accessibility::{HWINEVENTHOOK, SetWinEventHook, UnhookWinEvent},
             WindowsAndMessaging::{
-                EVENT_OBJECT_SHOW, FindWindowExW, GWL_EXSTYLE, GetClassNameW, GetShellWindow, GetWindowLongW,
-                GetWindowRect, GetWindowTextLengthW, GetWindowThreadProcessId, IsWindowVisible, OBJID_WINDOW, SW_HIDE,
-                ShowWindow, WINEVENT_OUTOFCONTEXT,
+                EVENT_OBJECT_SHOW, FindWindowExW, GWL_EXSTYLE, GetShellWindow, GetWindowLongW, GetWindowRect,
+                GetWindowTextLengthW, GetWindowThreadProcessId, IsWindowVisible, OBJID_WINDOW, SW_HIDE, ShowWindow,
+                WINEVENT_OUTOFCONTEXT,
             },
         },
     },
@@ -23,11 +23,16 @@ use windows::{
 };
 
 use super::screen_mode::Bounds;
-use crate::log;
+use crate::{log, platform::window_info};
 use hook_thread::Command;
 use identity::{FLYOUT_CLASS, WindowFacts, is_volume_flyout};
 
-pub const SETTING_KEY: &str = "notch.hide_windows_volume_popup";
+pub(super) const SETTING_KEY: &str = "notch.hide_windows_volume_popup";
+
+/// On until the user switches it off.
+pub(super) fn wants_hidden(settings: &store::Settings) -> bool {
+    settings.get_bool(SETTING_KEY, true)
+}
 
 static IS_ON: AtomicBool = AtomicBool::new(false);
 static SHOW_HOOK: AtomicIsize = AtomicIsize::new(0);
@@ -35,11 +40,11 @@ static FLYOUT_WINDOW: AtomicIsize = AtomicIsize::new(0);
 /// The thread the hook listens to; 0 while it listens to all of Explorer, looking for the flyout.
 static HOOKED_THREAD: AtomicU32 = AtomicU32::new(0);
 
-pub fn is_hidden() -> bool {
+pub(super) fn is_hidden() -> bool {
     IS_ON.load(Ordering::Relaxed)
 }
 
-pub fn set_hidden(is_hidden: bool) {
+pub(super) fn set_hidden(is_hidden: bool) {
     if IS_ON.swap(is_hidden, Ordering::Relaxed) == is_hidden {
         return;
     }
@@ -47,7 +52,7 @@ pub fn set_hidden(is_hidden: bool) {
 }
 
 /// Explorer restarted (`TaskbarCreated`): its old flyout and thread are gone.
-pub fn explorer_restarted() {
+pub(super) fn explorer_restarted() {
     if is_hidden() {
         hook_thread::send(Command::FollowNewExplorer);
     }
@@ -163,9 +168,7 @@ unsafe extern "system" fn on_show(
 }
 
 fn is_flyout(window: HWND) -> bool {
-    let mut class_buffer = [0u16; 64];
-    let length = unsafe { GetClassNameW(window, &mut class_buffer) }.max(0) as usize;
-    let class_name = String::from_utf16_lossy(&class_buffer[..length]);
+    let class_name = window_info::class_name(window);
     if class_name != FLYOUT_CLASS {
         return false;
     }
@@ -195,4 +198,35 @@ fn monitor_bounds(window: HWND) -> Option<Bounds> {
     }
     let area = info.rcMonitor;
     Some(Bounds { left: area.left, top: area.top, right: area.right, bottom: area.bottom })
+}
+
+#[cfg(test)]
+mod default_tests {
+    use super::*;
+
+    fn settings_with(name: &str, text: Option<&str>) -> store::Settings {
+        let path = std::env::temp_dir().join(format!("notch-{name}-{}.txt", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        if let Some(text) = text {
+            std::fs::write(&path, text).unwrap();
+        }
+        let settings = store::Settings::at(Some(path.clone()));
+        let _ = std::fs::remove_file(&path);
+        settings
+    }
+
+    #[test]
+    fn an_unset_key_hides_the_popup() {
+        assert!(wants_hidden(&settings_with("volume_flyout-unset", None)));
+    }
+
+    #[test]
+    fn an_explicit_off_shows_the_popup() {
+        assert!(!wants_hidden(&settings_with("volume_flyout-off", Some("notch.hide_windows_volume_popup=off\n"))));
+    }
+
+    #[test]
+    fn an_explicit_false_shows_the_popup() {
+        assert!(!wants_hidden(&settings_with("volume_flyout-false", Some("notch.hide_windows_volume_popup=false\n"))));
+    }
 }

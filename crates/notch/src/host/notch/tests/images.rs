@@ -73,12 +73,7 @@ fn snapshots_of_every_open_page() {
         save(&notch, &format!("open-{id}"), WINDOW_HEIGHT);
     }
     open(&mut notch, "media");
-    for (name, progress) in [("swipe-long-short-25", 0.25), ("swipe-long-short-50", 0.5), ("swipe-long-short-75", 0.75)]
-    {
-        notch.track.jump_to(progress);
-        notch.refresh_layout();
-        save(&notch, name, 260.0);
-    }
+    save_swap_frames(&mut notch, "calendar", "swap-media-calendar");
     let mut plain = rig(SampleOptions { media: Some(false), ..options });
     open(&mut plain, "media");
     save(&plain, "open-media-plain", 260.0);
@@ -100,6 +95,22 @@ fn snapshots_of_every_open_page() {
     save(&dragged_over, "open-shelf-drag", 260.0);
 }
 
+/// Frames of a swap from the open page to `page_id`, stepped like the frame timer so size and content move together.
+fn save_swap_frames(notch: &mut Notch, page_id: &str, name: &str) {
+    let target = notch.pages.iter().position(|page| page.id() == page_id).unwrap();
+    notch.go_to_page(target);
+    notch.flush();
+    let mut elapsed = 0.0;
+    for milliseconds in [0, 40, 80, 120, 160, 220, 300, 420] {
+        while elapsed + 0.0005 < milliseconds as f32 / 1000.0 {
+            notch.advance_by(1.0 / 240.0);
+            elapsed += 1.0 / 240.0;
+        }
+        save(notch, &format!("{name}-{milliseconds:03}ms"), WINDOW_HEIGHT);
+    }
+    settle(notch);
+}
+
 #[test]
 #[ignore = "writes images to target/snapshots; run on purpose"]
 fn snapshots_of_the_devices_page_states() {
@@ -114,7 +125,7 @@ fn snapshots_of_the_devices_page_states() {
 #[test]
 #[ignore = "writes images to target/snapshots; run on purpose"]
 fn snapshots_of_the_collapsed_pill() {
-    let scenarios: [(&str, SampleOptions); 10] = [
+    let scenarios: [(&str, SampleOptions); 11] = [
         ("resting-idle", SampleOptions::default()),
         ("resting-idle-with-timer", SampleOptions { timer: true, ..SampleOptions::default() }),
         ("resting-idle-with-calendar", SampleOptions { calendar: true, ..SampleOptions::default() }),
@@ -143,6 +154,7 @@ fn snapshots_of_the_collapsed_pill() {
         ("resting-media-with-timer", SampleOptions { media: Some(false), timer: true, ..SampleOptions::default() }),
         ("resting-shalat-mark", SampleOptions { shalat_mark: 1, ..SampleOptions::default() }),
         ("resting-shalat-message", SampleOptions { shalat_mark: 2, ..SampleOptions::default() }),
+        ("resting-weather-rain-badge", SampleOptions { weather: 5, ..SampleOptions::default() }),
     ];
     for (name, options) in scenarios {
         let mut notch = rig(options);

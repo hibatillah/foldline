@@ -1,29 +1,35 @@
-//! The weather for the saved location: now and the next hours, or the next days, with an optional rain alert.
-//! The forecast comes from MET Norway (Locationforecast); the page asks for it at start and every half hour.
-
 mod alert;
+mod badge;
+mod click;
 mod draw;
 mod fetch;
 mod forecast;
+mod input;
+mod link;
 mod message;
 mod picture;
+mod refresh;
+#[cfg(test)]
+mod sample;
 mod symbol;
+#[cfg(test)]
+mod tests;
 
 use std::sync::{Arc, Mutex};
 
 use places::Location;
-use salah::{DateTime, Duration, Local, Utc};
+use salah::{DateTime, Utc};
 
 use self::{
-    alert::{Alert, STAGE_TIMER, body_text},
-    fetch::{Failure, Outcome, place_key},
+    alert::{Alert, BADGE_TIMER},
+    fetch::Outcome,
     forecast::Forecast,
 };
 use crate::{
     activity::{FLASH_TIMER, Presence},
-    gfx::{Canvas, Rect, Size},
-    log,
+    gfx::{Canvas, Point, Rect, Size},
     page::{Context, Frame, Mode, Page, PageSizes, PointerEvent, Priority, TimerId},
+    ui::{Icon, palette::ACCENT_BLUE_LIGHT},
 };
 
 const CONTENT_WIDTH: f32 = 508.0;
@@ -47,9 +53,10 @@ pub struct WeatherPage {
     /// The request failed for a reason other than the network (a bad status or an unreadable answer).
     is_service_error: bool,
     /// The pill reads "Week" and the cells show the days; otherwise it reads "Today" and they show the hours.
-    /// Kept while the notch runs, as before.
     shows_days: bool,
     is_toggle_hovered: bool,
+    /// The hour or day cell under the pointer.
+    hovered_cell: Option<usize>,
     /// The content width of the message on show, so the page hugs it; `None` while the forecast shows.
     message_width: Option<f32>,
     rain_alert: bool,
@@ -69,6 +76,7 @@ impl WeatherPage {
             is_service_error: false,
             shows_days: false,
             is_toggle_hovered: false,
+            hovered_cell: None,
             message_width: None,
             rain_alert: true,
             alerted_for: None,
@@ -78,132 +86,8 @@ impl WeatherPage {
         }
     }
 
-    #[cfg(test)]
-    pub fn sample(shows_days: bool) -> Self {
-        let now = DateTime::parse_from_rfc3339("2026-11-05T09:05:00Z").unwrap().with_timezone(&Utc);
-        let skies = ["partlycloudy_day", "partlycloudy_day", "rain", "heavyrainandthunder", "rain", "cloudy"];
-        let hours: Vec<String> = (0..24)
-            .map(|offset| {
-                let (code, rain) = if (2..5).contains(&offset) { (skies[offset % 6], 1.4) } else { (skies[offset % 2], 0.0) };
-                let time = (now + Duration::hours(offset as i64 - 1)).format("%Y-%m-%dT%H:00:00Z").to_string();
-                format!(
-                    r#"{{"time":"{time}","data":{{"instant":{{"details":{{"air_temperature":{},"apparent_air_temperature":36.0}}}},"next_1_hours":{{"summary":{{"symbol_code":"{code}"}},"details":{{"precipitation_amount":{rain}}}}},"next_6_hours":{{"summary":{{"symbol_code":"{code}"}},"details":{{"precipitation_amount":{rain}}}}}}}}}"#,
-                    31 - (offset as i32 - 2).abs()
-                )
-            })
-            .collect();
-        let body = format!(r#"{{"properties":{{"timeseries":[{}]}}}}"#, hours.join(","));
-        let mut page = Self::new();
-        page.location = Some(Location {
-            label: "Pekanbaru, ID".to_owned(),
-            country: "ID".to_owned(),
-            latitude: 0.517,
-            longitude: 101.442,
-        });
-        page.forecast = Forecast::parse(&body, now);
-        page.shows_days = shows_days;
-        page.fixed_now = Some(now);
-        page
-    }
-
-    #[cfg(test)]
-    pub fn sample_alert(fonts: &crate::gfx::Fonts) -> Self {
-        let mut page = Self::sample(false);
-        page.alert = Alert::sample_banner(fonts);
-        page
-    }
-
-    #[cfg(test)]
-    pub fn sample_offline(fonts: &crate::gfx::Fonts) -> Self {
-        let mut page = Self::sample(false);
-        page.is_offline = true;
-        page.refresh_message_width(fonts);
-        page
-    }
-
-    #[cfg(test)]
-    pub fn sample_no_location(fonts: &crate::gfx::Fonts) -> Self {
-        let mut page = Self::new();
-        page.refresh_message_width(fonts);
-        page
-    }
-
     fn now(&self) -> DateTime<Utc> {
         self.fixed_now.unwrap_or_else(Utc::now)
-    }
-
-    fn read_settings(&mut self, context: &Context) {
-        let read = |key: &str| context.settings.get_string(key).map(str::to_owned);
-        self.location = Location::read(&read);
-        self.rain_alert = context.settings.get_bool(RAIN_ALERT_KEY, true);
-    }
-
-    fn start_fetch(&self, context: &Context) {
-        if let Some(location) = &self.location {
-            fetch::start(location.latitude, location.longitude, Arc::clone(&self.outcome), context.notifier());
-        }
-    }
-
-    /// Takes what the request found: a forecast, or "offline" with a sooner retry.
-    fn apply_outcome(&mut self, context: &mut Context) {
-        let Some((place, result)) = self.outcome.lock().ok().and_then(|mut slot| slot.take()) else { return };
-        let expected = self.location.as_ref().map(|location| place_key(location.latitude, location.longitude));
-        if expected != Some(place) {
-            return;
-        }
-        let parsed = match result {
-            Ok(body) => {
-                let parsed = Forecast::parse(&body, self.now());
-                if parsed.is_none() {
-                    log::debug(&format!("weather: the response is not a forecast ({} bytes)", body.len()));
-                }
-                self.is_service_error = parsed.is_none();
-                parsed
-            }
-            Err(failure) => {
-                log::debug(&format!("weather: request failed: {}", failure.reason()));
-                self.is_service_error = matches!(failure, Failure::Service(_));
-                None
-            }
-        };
-        self.is_offline = parsed.is_none();
-        if let Some(forecast) = parsed {
-            self.forecast = Some(forecast);
-        }
-        self.refresh_message_width(context.fonts());
-        let minutes = if self.is_offline { RETRY_MINUTES } else { REFRESH_MINUTES };
-        context.set_timer(REFRESH_TIMER, minutes * 60 * 1000);
-        self.arm_alert(context);
-        context.request_repaint();
-    }
-
-    /// Shows the rain message when rain is under the lead time away, or waits until it is.
-    fn arm_alert(&mut self, context: &mut Context) {
-        context.kill_timer(ALERT_TIMER);
-        let now = self.now();
-        let Some(hour) = self
-            .forecast
-            .as_ref()
-            .filter(|_| self.rain_alert)
-            .and_then(|forecast| forecast.upcoming_rain(now, RAIN_WINDOW_HOURS))
-        else {
-            return;
-        };
-        if self.alerted_for == Some(hour.time) {
-            return;
-        }
-        let due = hour.time - Duration::minutes(RAIN_ALERT_LEAD_MINUTES);
-        if due <= now {
-            let minutes = (hour.time - now).num_minutes().max(1);
-            self.alerted_for = Some(hour.time);
-            let time = hour.time.with_timezone(&Local).format("%H:%M").to_string();
-            let place = self.location.as_ref().map(|location| location.label.as_str()).unwrap_or_default();
-            let body = body_text(hour.symbol.label(), &time, place);
-            self.alert.show(context, format!("Rain in {minutes} min"), time, &body);
-        } else {
-            let wait = (due - now).num_milliseconds().clamp(1000, MAX_ALERT_WAIT_MILLISECONDS);
-            context.set_timer(ALERT_TIMER, wait as u32);
-        }
     }
 }
 
@@ -247,11 +131,43 @@ impl Page for WeatherPage {
     }
 
     fn presence(&self) -> Option<Presence> {
-        self.alert.presence()
+        self.alert.presence(self.now())
     }
 
     fn draw_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-        self.alert.draw(canvas, area, scale, opacity);
+        self.alert.draw(canvas, area, scale, opacity, self.now());
+    }
+
+    fn short_presence_width(&self) -> Option<f32> {
+        self.alert.short_badge_width(self.now())
+    }
+
+    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+        self.alert.draw_short_badge(canvas, area, scale, opacity, self.now());
+    }
+
+    /// Lowest rank sits nearest the clock: wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5, rain 6.
+    fn header_status_rank(&self) -> u8 {
+        6
+    }
+
+    fn header_status_width(&self) -> Option<f32> {
+        self.alert.has_badge(self.now()).then(|| Icon::Cloud.size())
+    }
+
+    fn header_status_page(&self) -> Option<&'static str> {
+        self.alert.has_badge(self.now()).then_some(self.id())
+    }
+
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+        if self.alert.has_badge(self.now()) {
+            let center = Point::new(area.center_x(), area.center_y());
+            Icon::Cloud.draw(canvas, center, Icon::Cloud.size() * scale, ACCENT_BLUE_LIGHT, opacity);
+        }
+    }
+
+    fn countdown_seconds(&self) -> Option<u64> {
+        self.alert.countdown_seconds(self.now())
     }
 
     fn on_hover_changed(&mut self, is_hovering: bool, context: &mut Context) {
@@ -259,7 +175,7 @@ impl Page for WeatherPage {
     }
 
     fn on_presence_pointer(&mut self, event: PointerEvent, area: Rect, scale: f32, context: &mut Context) {
-        self.alert.on_pointer(event, area, scale, context);
+        self.alert.on_pointer(event, area, scale, self.now(), context);
     }
 
     fn on_start(&mut self, context: &mut Context) {
@@ -273,14 +189,19 @@ impl Page for WeatherPage {
         self.read_settings(context);
         if self.location != previous {
             self.forecast = None;
+            self.hovered_cell = None;
+            self.alert.clear(context);
             self.is_offline = false;
             self.is_service_error = false;
             self.alerted_for = None;
             self.refresh_message_width(context.fonts());
             self.start_fetch(context);
             context.request_repaint();
-        } else {
+        } else if self.rain_alert {
             self.arm_alert(context);
+        } else {
+            context.kill_timer(ALERT_TIMER);
+            self.alert.clear(context);
         }
     }
 
@@ -289,57 +210,15 @@ impl Page for WeatherPage {
     }
 
     fn on_pointer(&mut self, event: PointerEvent, frame: &Frame, context: &mut Context) {
-        let is_available = self.forecast.is_some() && !self.is_offline;
-        let toggle = Self::toggle_area(frame.bounds, frame.scale);
-        match event {
-            PointerEvent::Moved(point) => {
-                let is_hovered = is_available && toggle.contains(point);
-                if is_hovered != self.is_toggle_hovered {
-                    self.is_toggle_hovered = is_hovered;
-                    context.request_repaint();
-                }
-            }
-            PointerEvent::Pressed(point) if frame.is_open() && is_available && toggle.contains(point) => {
-                self.shows_days = !self.shows_days;
-                context.request_repaint();
-            }
-            PointerEvent::Left | PointerEvent::CaptureLost if std::mem::take(&mut self.is_toggle_hovered) => {
-                context.request_repaint();
-            }
-            _ => {}
-        }
+        self.handle_pointer(event, frame, context);
     }
 
     fn on_timer(&mut self, timer: TimerId, context: &mut Context) {
         match timer {
             REFRESH_TIMER => self.start_fetch(context),
             ALERT_TIMER => self.arm_alert(context),
-            FLASH_TIMER | STAGE_TIMER => self.alert.on_timer(timer, context),
+            FLASH_TIMER | BADGE_TIMER => self.alert.on_timer(timer, self.now(), context),
             _ => {}
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{draw::COLUMNS, forecast::rain_line, *};
-
-    #[test]
-    fn the_weather_is_a_page_to_add_with_no_collapsed_state() {
-        let page = WeatherPage::new();
-        assert!(page.is_opt_in());
-        assert_eq!(page.priority(Mode::Resting), None);
-        assert!(page.priority(Mode::Expanded).is_some());
-        assert_eq!(page.presence(), None);
-    }
-
-    #[test]
-    fn the_sample_has_a_current_hour_days_and_rain_ahead() {
-        let page = WeatherPage::sample(false);
-        let forecast = page.forecast.as_ref().unwrap();
-        assert!(forecast.hours.len() >= COLUMNS);
-        assert!(!forecast.days.is_empty());
-        assert!(forecast.upcoming_rain(page.now(), RAIN_WINDOW_HOURS).is_some());
-        assert!(rain_line(forecast, page.now()).starts_with("Rain from "));
     }
 }

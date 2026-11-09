@@ -23,6 +23,7 @@ use self::{
     rows::{draw_disks, draw_gpus},
     sampler::{Sample, Sampler},
 };
+use crate::ui::palette::SURFACE_ROW;
 use crate::{
     gfx::{Align, Canvas, Color, FontStyle, Size, UI_FONT, Weight},
     page::{Context, Frame, Mode, Page, PageSizes, Priority, TimerId},
@@ -44,16 +45,11 @@ const SAMPLE_TIMER: TimerId = TimerId(0);
 const FIRST_SAMPLE_MILLISECONDS: u32 = 600;
 const SAMPLE_INTERVAL_MILLISECONDS: u32 = 1000;
 
-const LABEL: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Leading);
 const VALUE: FontStyle = FontStyle::new(UI_FONT, 20.0, Weight::Medium, Align::Leading).tabular();
 const RATE: FontStyle = FontStyle::new(UI_FONT, 14.0, Weight::Medium, Align::Leading).tabular();
-const LIST_NAME: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Leading);
 /// The board asks for 600; only Regular and Medium are bundled, so Medium stands in.
 const LIST_PERCENT: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Medium, Align::Trailing).tabular();
 
-const TILE: Color = Color::rgb(0.078, 0.078, 0.094);
-const TRACK: Color = Color::rgb(0.149, 0.149, 0.176);
-const GRAY: Color = Color::rgb(0.604, 0.604, 0.651);
 const UPLOAD_GRAY: Color = Color::rgb(0.549, 0.549, 0.580);
 const DISK_GREEN: Color = Color::rgb(0.188, 0.820, 0.345);
 const CPU_ACCENT: Accent = Accent { base: Color::rgb(0.302, 0.671, 0.969), light: Color::rgb(0.455, 0.753, 0.988) };
@@ -202,12 +198,12 @@ impl Page for StatsPage {
         let scale = frame.scale;
         let (Some(sample), Some(readout)) = (&self.latest, &self.readout) else {
             for tile in card_rects(frame.bounds, scale, 4) {
-                canvas.fill_rounded_rect(tile, TILE_RADIUS * scale, TILE.faded(opacity));
+                canvas.fill_rounded_rect(tile, TILE_RADIUS * scale, SURFACE_ROW.faded(opacity));
             }
             return;
         };
         for (kind, rect) in readout.tiles.iter().zip(card_rects(frame.bounds, scale, readout.tiles.len())) {
-            canvas.fill_rounded_rect(rect, TILE_RADIUS * scale, TILE.faded(opacity));
+            canvas.fill_rounded_rect(rect, TILE_RADIUS * scale, SURFACE_ROW.faded(opacity));
             match kind {
                 Tile::Cpu => ChartCard::cpu(readout).draw(canvas, rect, scale, opacity),
                 Tile::Memory => ChartCard::memory(readout).draw(canvas, rect, scale, opacity),

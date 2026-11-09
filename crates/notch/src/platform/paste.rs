@@ -8,9 +8,7 @@ use windows::Win32::{
             INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT, KEYEVENTF_KEYUP, SendInput, VIRTUAL_KEY,
             VK_CONTROL, VK_V,
         },
-        WindowsAndMessaging::{
-            GetClassNameW, GetForegroundWindow, GetWindowThreadProcessId, IsWindow, SetForegroundWindow,
-        },
+        WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId, IsWindow, SetForegroundWindow},
     },
 };
 
@@ -29,22 +27,19 @@ pub fn paste_target() -> Option<isize> {
     if process == unsafe { GetCurrentProcessId() } {
         return None;
     }
-    let mut class = [0u16; 64];
-    let length = unsafe { GetClassNameW(window, &mut class) }.max(0) as usize;
-    let class = String::from_utf16_lossy(&class[..length.min(class.len())]);
+    let class = super::window_info::class_name(window);
     (!SHELL_CLASSES.contains(&class.as_str())).then_some(window.0 as isize)
 }
 
 /// Gives `target` the focus if it lost it, then types Ctrl+V into it. Returns false when the input was not accepted.
 pub fn send_paste(target: isize) -> bool {
     let window = HWND(target as *mut _);
-    unsafe {
-        if GetForegroundWindow() != window {
-            let _ = SetForegroundWindow(window);
-        }
-        let inputs = [key(VK_CONTROL, false), key(VK_V, false), key(VK_V, true), key(VK_CONTROL, true)];
-        SendInput(&inputs, size_of::<INPUT>() as i32) == inputs.len() as u32
+    if unsafe { GetForegroundWindow() } != window {
+        let _ = unsafe { SetForegroundWindow(window) };
     }
+    let inputs = [key(VK_CONTROL, false), key(VK_V, false), key(VK_V, true), key(VK_CONTROL, true)];
+    let sent = unsafe { SendInput(&inputs, size_of::<INPUT>() as i32) };
+    sent == inputs.len() as u32
 }
 
 fn key(code: VIRTUAL_KEY, is_release: bool) -> INPUT {

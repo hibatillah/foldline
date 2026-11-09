@@ -1,5 +1,3 @@
-//! What the shalat page reads, computes and shows.
-
 use self::config::HANAFI_KEY;
 use self::times::{Place, Prayer};
 use crate::page::Page;
@@ -105,9 +103,9 @@ fn the_prayer_badge_is_exactly_the_moon_a_gap_and_the_current_text() {
         page.set_badge(&fonts, prayer, minutes * 60);
         let Some(Presence::Badge { width }) = page.presence() else { panic!("the page has a badge") };
         let text = badge_text(prayer, minutes * 60).unwrap();
-        assert_eq!(width, BADGE_ICON_SIZE + 4.0 + fonts.measure(&BADGE, &text).ceil());
+        assert_eq!(width, BADGE_ICON_SIZE + 4.0 + fonts.measure(&MEDIUM_13, &text).ceil());
         let short = short_badge_text(prayer, minutes * 60).unwrap();
-        assert_eq!(page.short_presence_width(), Some(BADGE_ICON_SIZE + 4.0 + fonts.measure(&BADGE, &short).ceil()));
+        assert_eq!(page.short_presence_width(), Some(BADGE_ICON_SIZE + 4.0 + fonts.measure(&MEDIUM_13, &short).ceil()));
     }
 }
 
@@ -133,7 +131,7 @@ fn the_prayer_badge_text_ends_where_the_badge_does() {
     page.set_badge(&fonts, Prayer::Isha, 22 * 60);
     let Some(Presence::Badge { width }) = page.presence() else { panic!("the page has a badge") };
     let text_left = BADGE_ICON_SIZE + BADGE_ICON_GAP;
-    assert_eq!(text_left + fonts.measure(&BADGE, "Isha in 22m").ceil(), width);
+    assert_eq!(text_left + fonts.measure(&MEDIUM_13, "Isha in 22m").ceil(), width);
 }
 
 #[test]

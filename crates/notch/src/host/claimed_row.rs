@@ -3,14 +3,14 @@
 use super::pill_row::{ITEM_GAP, PILL_EDGE};
 
 /// Between the artwork (or the dots after it) and the page's line, and between the line and the group.
-pub const CONTENT_GAP: f32 = 24.0;
+pub(super) const CONTENT_GAP: f32 = 24.0;
 /// Between the artwork and the dot column beside it.
-pub const LEAD_DOTS_GAP: f32 = 10.0;
+pub(super) const LEAD_DOTS_GAP: f32 = 10.0;
 
 /// `[edge][lead][10][dots][24][content][24][group][edge]`. The dots and their 10 take room only while a dot shows.
 /// Without a lead the content starts at the pill's left edge and the dots end the row: `[group][8][dots][edge]`.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct ClaimedRow {
+pub(super) struct ClaimedRow {
     lead_width: f32,
     /// Zero while no dot shows.
     dots_width: f32,

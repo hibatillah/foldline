@@ -6,7 +6,7 @@ use windows::{
     core::{Result, w},
 };
 
-pub struct Icon(HICON);
+pub(super) struct Icon(HICON);
 
 impl Icon {
     pub fn load(size: i32) -> Result<Self> {

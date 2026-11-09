@@ -1,5 +1,4 @@
-//! The open header: the page dots at the left, the clock in the middle, the group (icons, battery ring, dots) and
-//! the gear at the right, and what a click on them does.
+//! The open header's icons and gear, and what a click on them does.
 
 use super::{Notch, Source, row_motion::RowItem};
 use crate::host::{

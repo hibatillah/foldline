@@ -63,7 +63,7 @@ fn fullscreen_activities_only_shows_a_banner_but_hides_the_idle_clock() {
     notch.set_screen_mode(ScreenMode::Fullscreen);
     assert!(!notch.is_suppressed());
     assert!(notch.is_hidden(), "the idle clock hides to the strip");
-    notch.shown_banner = Some((Source::Activity(0), 330.0, 70.0));
+    notch.presences.banner = Some((Source::Activity(0), 330.0, 70.0));
     assert!(!notch.is_hidden());
     let mut playing_notch = playing(true);
     playing_notch.hiding.fullscreen_showing = Showing::ActivitiesOnly;
@@ -80,14 +80,14 @@ fn leaving_full_screen_with_default_settings_keeps_the_pill_at_full_size_without
     // Settling snaps the springs but leaves the rig's start-up frame timer running.
     notch.stop_animation();
     notch.set_screen_mode(ScreenMode::Fullscreen);
-    assert!(!notch.is_animating, "entering full screen starts no strip animation");
+    assert!(!notch.frame_timer.is_running, "entering full screen starts no strip animation");
     assert!(notch.is_suppressed());
     assert!(!notch.is_hidden(), "a suppressed notch keeps its full-size layout");
     assert_eq!(notch.springs.resting_height.target, RESTING_PILL_HEIGHT);
     notch.set_screen_mode(ScreenMode::Normal);
     notch.timer_fired(WINDOW_REVEAL_TIMER_ID);
     assert_eq!(notch.springs.resting_height.target, RESTING_PILL_HEIGHT);
-    assert!(!notch.is_animating);
+    assert!(!notch.frame_timer.is_running);
 }
 
 #[test]
@@ -107,7 +107,7 @@ fn fullscreen_hidden_suppresses_the_window() {
     notch.hiding.fullscreen_showing = Showing::Hidden;
     notch.set_screen_mode(ScreenMode::Fullscreen);
     assert!(notch.is_suppressed());
-    notch.shown_banner = Some((Source::Activity(0), 330.0, 70.0));
+    notch.presences.banner = Some((Source::Activity(0), 330.0, 70.0));
     assert!(notch.is_suppressed(), "hidden hides even an activity");
     notch.set_screen_mode(ScreenMode::Normal);
     notch.timer_fired(WINDOW_REVEAL_TIMER_ID);
@@ -126,7 +126,7 @@ fn a_screenshot_overlay_hides_everything_and_hover_never_opens_the_notch() {
     notch.hiding.opens_on_hover_over_fullscreen = true;
     notch.set_screen_mode(ScreenMode::Capture);
     assert!(notch.is_suppressed());
-    notch.shown_banner = Some((Source::Activity(0), 330.0, 70.0));
+    notch.presences.banner = Some((Source::Activity(0), 330.0, 70.0));
     assert!(notch.is_suppressed(), "a banner stays hidden over the overlay");
     assert!(!notch.opens_on_hover());
     notch.set_hovering(true);
@@ -206,11 +206,53 @@ fn pointing_at_a_collapsed_banner_reaches_its_activity_and_makes_room_for_the_bu
 fn a_banner_or_a_short_message_still_shows_over_a_maximized_window() {
     let mut notch = rig(SampleOptions::default());
     notch.hiding.screen_mode = ScreenMode::Maximized;
-    notch.shown_banner = Some((Source::Activity(0), 330.0, 70.0));
+    notch.presences.banner = Some((Source::Activity(0), 330.0, 70.0));
     assert!(!notch.is_hidden());
-    notch.shown_banner = None;
-    notch.shown_transients = vec![(Source::Activity(0), 100.0)];
+    notch.presences.banner = None;
+    notch.presences.transients = vec![(Source::Activity(0), 100.0)];
     assert!(!notch.is_hidden());
+}
+
+/// A hiding notch over each kind of window: a regular one with Hide when idle, then maximized and full screen.
+fn hiding_in_every_mode(notch: &mut Notch) -> Vec<(ScreenMode, Showing)> {
+    notch.hiding.hides_when_idle = true;
+    let mut modes = vec![(ScreenMode::Normal, Showing::ActivitiesOnly)];
+    for showing in [Showing::ActivitiesOnly, Showing::MusicWithLyrics] {
+        modes.push((ScreenMode::Maximized, showing));
+        modes.push((ScreenMode::Fullscreen, showing));
+    }
+    modes
+}
+
+#[test]
+fn a_muted_speaker_or_a_privacy_dot_does_not_keep_the_notch_up_over_any_window() {
+    let mut notch = rig(SampleOptions::default());
+    notch.presences.badges = vec![(Source::Activity(0), 16.0)];
+    notch.resting_row.dots = vec![(Source::Activity(1), 6.0)];
+    for (mode, showing) in hiding_in_every_mode(&mut notch) {
+        notch.hiding.maximized_showing = showing;
+        notch.hiding.fullscreen_showing = showing;
+        notch.hiding.screen_mode = mode;
+        assert!(notch.is_hidden(), "{showing:?} over {mode:?}");
+    }
+}
+
+#[test]
+fn a_short_message_or_a_banner_shows_a_hiding_notch_over_any_window() {
+    let mut notch = rig(SampleOptions::default());
+    notch.presences.badges = vec![(Source::Activity(0), 16.0)];
+    for (mode, showing) in hiding_in_every_mode(&mut notch) {
+        notch.hiding.maximized_showing = showing;
+        notch.hiding.fullscreen_showing = showing;
+        notch.hiding.screen_mode = mode;
+        notch.presences.transients = vec![(Source::Activity(0), 60.0)];
+        assert!(!notch.is_hidden(), "a message over {mode:?} with {showing:?}");
+        notch.presences.transients.clear();
+        notch.presences.banner = Some((Source::Activity(0), 330.0, 70.0));
+        assert!(!notch.is_hidden(), "a banner over {mode:?} with {showing:?}");
+        notch.presences.banner = None;
+        assert!(notch.is_hidden(), "the notch hides again over {mode:?} once the message ends");
+    }
 }
 
 #[test]

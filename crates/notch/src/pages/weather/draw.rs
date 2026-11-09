@@ -1,12 +1,19 @@
 //! Where the weather page puts its left column, its six cells and its messages, and how they look.
 
-use salah::{Duration, Local};
+use salah::Local;
 
 use super::{
     WeatherPage,
     forecast::{Forecast, rain_line},
     message::{Message, MessageKind},
     picture::draw_symbol,
+};
+use crate::ui::palette::{
+    ACCENT_BLUE, ACCENT_BLUE_LIGHT, SURFACE_BADGE, SURFACE_BORDER, SURFACE_BUTTON_BORDER, SURFACE_HOVER, TEXT_DIM,
+    TEXT_LIGHT, TEXT_MUTED,
+};
+use crate::ui::type_styles::{
+    MEDIUM_11_CENTER, MEDIUM_12, MEDIUM_15, REGULAR_10, REGULAR_10_CENTER, REGULAR_11, REGULAR_12, REGULAR_12_CENTER,
 };
 use crate::{
     gfx::{Align, Canvas, Color, FontStyle, Point, Rect, UI_FONT, Weight},
@@ -46,36 +53,22 @@ const TOGGLE_HEIGHT: f32 = 22.0;
 /// The room kept between the place name and the toggle.
 const TOGGLE_GAP: f32 = 6.0;
 
-const EYEBROW: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Leading);
 const TEMPERATURE: FontStyle = FontStyle::new(UI_FONT, 28.0, Weight::Medium, Align::Leading).tabular();
-const CONDITION: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Leading);
-const RAIN: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Medium, Align::Leading);
-const NOW_LABEL: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Medium, Align::Center);
 const LABEL: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Center);
 const HOUR_TEMPERATURE: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Regular, Align::Center).tabular();
 const DAY_HIGH: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Medium, Align::Center).tabular();
 const DAY_LOW: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Center).tabular();
-const SUB: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Center);
 const TITLE: FontStyle = FontStyle::new(UI_FONT, 14.0, Weight::Medium, Align::Center);
 /// The design asks for 600; only Regular and Medium are bundled.
-pub(super) const MESSAGE_TITLE: FontStyle = FontStyle::new(UI_FONT, 15.0, Weight::Medium, Align::Leading);
-pub(super) const MESSAGE_DETAIL: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Leading);
-const DETAIL: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Center);
-const TOGGLE_LABEL: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Medium, Align::Center);
+pub(super) const MESSAGE_TITLE: FontStyle = MEDIUM_15;
+pub(super) const MESSAGE_DETAIL: FontStyle = REGULAR_12;
 
-const GRAY: Color = Color::rgb(0.604, 0.604, 0.651);
-const DIM: Color = Color::rgb(0.431, 0.431, 0.478);
-const BLUE: Color = Color::rgb(0.455, 0.753, 0.988);
 const NOW_FILL: Color = Color::rgb(0.169, 0.137, 0.071);
 const NOW_TEXT: Color = Color::rgb(1.0, 0.753, 0.471);
-const LIGHT: Color = Color::rgb(0.902, 0.902, 0.922);
-const OFFLINE_FILL: Color = Color::rgb(0.09, 0.09, 0.11);
-const OFFLINE_BORDER: Color = Color::rgb(0.149, 0.149, 0.176);
 const OFFLINE_ICON: Color = Color::rgb(1.0, 0.753, 0.471);
-const PIN_ICON: Color = Color::rgb(0.302, 0.671, 0.969);
-const TOGGLE_FILL: Color = Color::rgb(0.11, 0.11, 0.133);
 const TOGGLE_FILL_HOVERED: Color = Color::rgb(0.165, 0.165, 0.2);
-const TOGGLE_BORDER: Color = Color::rgb(0.173, 0.173, 0.204);
+/// A faint lift over a cell the pointer is on, as the Today/Week pill has.
+const CELL_HOVER: Color = Color::WHITE.with_alpha(0.07);
 const PIN: &str = "M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z";
 const PIN_HOLE: &str = "M9.5 10a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0";
 const CLOUD_OFF: &str = "M3 3l18 18";
@@ -104,7 +97,7 @@ impl WeatherPage {
         let title_area = Rect::new(bounds.left, middle - 22.0 * scale, bounds.right, middle);
         let detail_area = Rect::new(bounds.left, middle + 2.0 * scale, bounds.right, middle + 22.0 * scale);
         canvas.text(&TITLE, title, title_area, Color::WHITE.faded(opacity));
-        canvas.text(&DETAIL, detail, detail_area, GRAY.faded(opacity));
+        canvas.text(&REGULAR_12_CENTER, detail, detail_area, TEXT_MUTED.faded(opacity));
     }
 
     /// A round badge on the left and a left-aligned title and detail on the right, the whole row centered.
@@ -114,13 +107,13 @@ impl WeatherPage {
         let left = bounds.center_x() - (MESSAGE_BADGE + MESSAGE_GAP + text_width) * scale / 2.0;
         let center = Point::new(left + MESSAGE_BADGE * scale / 2.0, bounds.center_y());
         let radius = MESSAGE_BADGE * scale / 2.0;
-        canvas.fill_circle(center, radius, OFFLINE_BORDER.faded(opacity));
-        canvas.fill_circle(center, radius - scale, OFFLINE_FILL.faded(opacity));
+        canvas.fill_circle(center, radius, SURFACE_BORDER.faded(opacity));
+        canvas.fill_circle(center, radius - scale, SURFACE_BADGE.faded(opacity));
         let size = ICON_SIZE * scale;
         match message.kind {
             MessageKind::NoLocation => draw_strokes(
                 canvas,
-                &[Stroke::new(PIN, PIN_ICON), Stroke::new(PIN_HOLE, PIN_ICON)],
+                &[Stroke::new(PIN, ACCENT_BLUE), Stroke::new(PIN_HOLE, ACCENT_BLUE)],
                 center,
                 size,
                 2.0,
@@ -147,7 +140,7 @@ impl WeatherPage {
         canvas.text(&MESSAGE_TITLE, &message.title, title_area, Color::WHITE.faded(opacity));
         let detail_top = title_area.bottom + MESSAGE_LINE_GAP * scale;
         let detail_area = Rect { top: detail_top, bottom: detail_top + MESSAGE_DETAIL_HEIGHT * scale, ..title_area };
-        canvas.text(&MESSAGE_DETAIL, &message.detail, detail_area, GRAY.faded(opacity));
+        canvas.text(&MESSAGE_DETAIL, &message.detail, detail_area, TEXT_MUTED.faded(opacity));
     }
 
     /// The pill on the first line of the left column, at its right end, level with the place name.
@@ -163,12 +156,12 @@ impl WeatherPage {
     pub(super) fn draw_toggle(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         let scale = canvas.scale();
         let radius = area.height() / 2.0;
-        let fill = if self.is_toggle_hovered { TOGGLE_FILL_HOVERED } else { TOGGLE_FILL };
-        canvas.fill_rounded_rect(area, radius, TOGGLE_BORDER.faded(opacity));
+        let fill = if self.is_toggle_hovered { TOGGLE_FILL_HOVERED } else { SURFACE_HOVER };
+        canvas.fill_rounded_rect(area, radius, SURFACE_BUTTON_BORDER.faded(opacity));
         let inner = Rect::new(area.left + scale, area.top + scale, area.right - scale, area.bottom - scale);
         canvas.fill_rounded_rect(inner, radius - scale, fill.faded(opacity));
         let label = if self.shows_days { "Week" } else { "Today" };
-        canvas.text(&TOGGLE_LABEL, label, area, LIGHT.faded(opacity));
+        canvas.text(&MEDIUM_11_CENTER, label, area, TEXT_LIGHT.faded(opacity));
     }
 
     pub(super) fn draw_left(&self, canvas: &Canvas, forecast: &Forecast, area: Rect, scale: f32, opacity: f32) {
@@ -195,12 +188,12 @@ impl WeatherPage {
         let eyebrow_top = toggle.center_y() - EYEBROW_HEIGHT * scale / 2.0;
         let eyebrow =
             Rect::new(area.left, eyebrow_top, toggle.left - TOGGLE_GAP * scale, eyebrow_top + EYEBROW_HEIGHT * scale);
-        canvas.text(&EYEBROW, place, eyebrow, DIM.faded(opacity));
+        canvas.text(&REGULAR_10, place, eyebrow, TEXT_DIM.faded(opacity));
         let lines: [(&FontStyle, String, Color); 4] = [
-            (&EYEBROW, String::new(), DIM),
+            (&REGULAR_10, String::new(), TEXT_DIM),
             (&TEMPERATURE, format!("{temperature:.0}\u{b0}"), Color::WHITE),
-            (&CONDITION, condition, GRAY),
-            (&RAIN, rain, BLUE),
+            (&REGULAR_11, condition, TEXT_MUTED),
+            (&MEDIUM_12, rain, ACCENT_BLUE_LIGHT),
         ];
         for ((style, text, color), height) in lines.into_iter().zip(LEFT_HEIGHTS) {
             let line = Rect::new(area.left, top, area.right, top + height * scale);
@@ -211,7 +204,7 @@ impl WeatherPage {
 
     pub(super) fn draw_columns(&self, canvas: &Canvas, forecast: &Forecast, bounds: Rect, scale: f32, opacity: f32) {
         let now = self.now();
-        let first_hour = forecast.hours.iter().position(|hour| hour.time + Duration::hours(1) > now).unwrap_or(0);
+        let first_hour = forecast.first_hour_index(now);
         for column in 0..COLUMNS {
             let area = Self::column_area(bounds, scale, column);
             let is_now = column == 0;
@@ -228,6 +221,9 @@ impl WeatherPage {
             if is_now {
                 canvas.fill_rounded_rect(area, CELL_RADIUS * scale, NOW_FILL.faded(opacity));
             }
+            if self.hovered_cell == Some(column) {
+                canvas.fill_rounded_rect(area, CELL_RADIUS * scale, CELL_HOVER.faded(opacity));
+            }
             let (gap, heights): (f32, &[f32]) = if self.shows_days {
                 (DAYS_GAP, &[LABEL_HEIGHT, ICON_SIZE, TEMPERATURE_LINE + LOW_LINE])
             } else {
@@ -239,26 +235,31 @@ impl WeatherPage {
                 top = row.bottom + gap * scale;
                 row
             };
-            let (label_style, label_color) = if is_now { (&NOW_LABEL, NOW_TEXT) } else { (&LABEL, GRAY) };
+            let (label_style, label_color) = if is_now { (&MEDIUM_11_CENTER, NOW_TEXT) } else { (&LABEL, TEXT_MUTED) };
             canvas.text(label_style, &label, next_row(LABEL_HEIGHT), label_color.faded(opacity));
             let icon_row = next_row(ICON_SIZE);
             let icon_center = Point::new(icon_row.center_x(), icon_row.center_y());
             draw_symbol(canvas, symbol, icon_center, ICON_SIZE * scale, is_now, opacity);
-            let high_color = if is_now { Color::WHITE } else { LIGHT };
+            let high_color = if is_now { Color::WHITE } else { TEXT_LIGHT };
             match low {
                 Some(low) => {
                     let row = next_row(TEMPERATURE_LINE + LOW_LINE);
                     let high_row = Rect { bottom: row.top + TEMPERATURE_LINE * scale, ..row };
                     let low_row = Rect { top: high_row.bottom, ..row };
                     canvas.text(&DAY_HIGH, &format!("{high:.0}\u{b0}"), high_row, high_color.faded(opacity));
-                    canvas.text(&DAY_LOW, &format!("{low:.0}\u{b0}"), low_row, DIM.faded(opacity));
+                    canvas.text(&DAY_LOW, &format!("{low:.0}\u{b0}"), low_row, TEXT_DIM.faded(opacity));
                 }
                 None => {
                     let row = next_row(TEMPERATURE_LINE);
                     canvas.text(&HOUR_TEMPERATURE, &format!("{high:.0}\u{b0}"), row, high_color.faded(opacity));
                     let sub = next_row(SUB_HEIGHT);
                     if rain >= 0.1 {
-                        canvas.text(&SUB, &format!("{rain:.1} mm"), sub, BLUE.faded(opacity));
+                        canvas.text(
+                            &REGULAR_10_CENTER,
+                            &format!("{rain:.1} mm"),
+                            sub,
+                            ACCENT_BLUE_LIGHT.faded(opacity),
+                        );
                     }
                 }
             }

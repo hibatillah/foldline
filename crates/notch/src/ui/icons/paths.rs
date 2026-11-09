@@ -1,84 +1,17 @@
-use crate::gfx::{Canvas, Color, ImageData, Mask, Path, Point, Rect};
+use super::{GRID, Icon};
+use crate::gfx::{Path, Point};
 
-const GRID: f32 = 24.0;
-const LINE_WIDTH: f32 = 2.0;
 const CORNER_RADIUS: f32 = 1.8;
-const SIZE: f32 = 18.0;
-const LARGE_SIZE: f32 = 22.0;
-const MARGIN: u32 = 1;
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Icon {
-    Lyrics,
-    Previous,
-    Play,
-    Pause,
-    Next,
-    Speaker,
-    SpeakerMuted,
-    Sun,
-    Bolt,
-    Battery,
-    BatteryLow,
-    Microphone,
-    Camera,
-    Copy,
-    Bell,
-    Clock,
-    Folder,
-    Calendar,
-    Moon,
-    Cloud,
-    Bluetooth,
-    CapsLock,
-    Gear,
-    Mouse,
-    Keyboard,
-    Headphones,
-    Gamepad,
-    Pen,
-    CircleCheck,
-}
 
 #[derive(Debug, PartialEq)]
-enum Paint {
+pub(super) enum Paint {
     Fill,
     Line,
 }
 
 impl Icon {
-    /// Preferred edge length in device-independent pixels.
-    pub fn size(self) -> f32 {
-        match self {
-            Icon::Play | Icon::Pause => LARGE_SIZE,
-            _ => SIZE,
-        }
-    }
-
-    /// Center and size are device pixels.
-    pub fn draw(self, canvas: &Canvas, center: Point, size: f32, color: Color, opacity: f32) {
-        let side = size.ceil() as u32 + 2 * MARGIN;
-        let key = ("icon", self as u8, side, color.rgb_bytes());
-        let Some(brush) = canvas.cached_image(key, || self.render(size, side, color)) else { return };
-        let left = (center.x - side as f32 / 2.0).round();
-        let top = (center.y - side as f32 / 2.0).round();
-        let rect = Rect::new(left, top, left + side as f32, top + side as f32);
-        canvas.image(&brush, rect, 0.0, opacity * color.a);
-    }
-
-    fn render(self, size: f32, side: u32, color: Color) -> ImageData {
-        let middle = side as f32 / 2.0;
-        let (path, paint) = self.path(Point::new(middle, middle), size);
-        let figures = path.flatten();
-        let mask = match paint {
-            Paint::Fill => Mask::fill(side, side, &figures),
-            Paint::Line => Mask::stroke(side, side, &figures, LINE_WIDTH * size / GRID / 2.0),
-        };
-        mask.tinted(color.r, color.g, color.b)
-    }
-
     /// One path per icon, so overlapping parts are painted once and fade evenly.
-    fn path(self, center: Point, size: f32) -> (Path, Paint) {
+    pub(super) fn path(self, center: Point, size: f32) -> (Path, Paint) {
         let unit = size / GRID;
         let at = |x: f32, y: f32| Point::new(center.x + (x - GRID / 2.0) * unit, center.y + (y - GRID / 2.0) * unit);
         let line = |points: &[(f32, f32)]| Path::polyline(&points.iter().map(|&(x, y)| at(x, y)).collect::<Vec<_>>());
@@ -191,7 +124,7 @@ impl Icon {
                 (line(&[(7.0, 8.0), (17.0, 16.0), (12.0, 20.5), (12.0, 3.5), (17.0, 8.0), (7.0, 16.0)]), Paint::Line)
             }
             Icon::Moon => {
-                // Lucide "moon-star" (ISC license, https://lucide.dev): the crescent as two arcs joined by two short curves, and a plus.
+                // Lucide "moon-star" (ISC license, https://lucide.dev).
                 let outer = arc((12.0, 12.0), 9.0, 3.1, 266.9, 24);
                 let inner = arc((17.0, 7.0), 6.0, 212.0, 58.0, 12);
                 let mut crescent = Path::new().move_to(at(20.985, 12.486));
@@ -207,14 +140,14 @@ impl Icon {
                 (join(crescent, star), Paint::Line)
             }
             Icon::Cloud => {
-                // Lucide "cloud" (ISC license, https://lucide.dev): the base, the big bump on the left, a step, the small bump.
+                // Lucide "cloud" (ISC license, https://lucide.dev).
                 let points: Vec<(f32, f32)> = std::iter::once((17.5, 19.0))
                     .chain(arc((9.0, 12.0), 7.0, 90.0, 343.4, 24))
                     .chain(arc((17.5, 14.5), 4.5, 270.0, 450.0, 14))
                     .collect();
                 (line(&points), Paint::Line)
             }
-            // Lucide "copy" (ISC license, https://lucide.dev): a sheet with another behind it.
+            // Lucide "copy" (ISC license, https://lucide.dev).
             Icon::Copy => {
                 let front = solid(&[(8.0, 8.0), (22.0, 8.0), (22.0, 22.0), (8.0, 22.0)], 2.0);
                 let back = Path::new()
@@ -234,7 +167,6 @@ impl Icon {
                 (join(arrow, line(&[(8.5, 20.5), (15.5, 20.5)])), Paint::Line)
             }
             Icon::Gear => {
-                // A hex nut, as the design draws it: a pointy-top hexagon of circumradius 9.5 around a ring of 3.
                 const CIRCUMRADIUS: f32 = 9.5;
                 const RING_RADIUS: f32 = 3.0;
                 let corners: Vec<(f32, f32)> = (0..6)
@@ -269,7 +201,7 @@ impl Icon {
                 let right = solid(&[(17.0, 14.0), (21.0, 14.0), (21.0, 20.0), (17.0, 20.0)], 1.5);
                 (join(join(line(&band), left), right), Paint::Line)
             }
-            // Lucide "gamepad" (ISC license, https://lucide.dev): a body with two grips, a plus on the left.
+            // Lucide "gamepad" (ISC license, https://lucide.dev).
             Icon::Gamepad => {
                 let body = Path::new()
                     .move_to(at(6.0, 8.0))
@@ -335,126 +267,4 @@ fn circle(center: Point, radius: f32) -> Path {
 fn join(mut first: Path, second: Path) -> Path {
     first.append(second);
     first
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const ALL: [Icon; 29] = [
-        Icon::Lyrics,
-        Icon::Previous,
-        Icon::Play,
-        Icon::Pause,
-        Icon::Next,
-        Icon::Speaker,
-        Icon::SpeakerMuted,
-        Icon::Sun,
-        Icon::Bolt,
-        Icon::Battery,
-        Icon::BatteryLow,
-        Icon::Microphone,
-        Icon::Camera,
-        Icon::Copy,
-        Icon::Bell,
-        Icon::Clock,
-        Icon::Folder,
-        Icon::Calendar,
-        Icon::Moon,
-        Icon::Cloud,
-        Icon::Bluetooth,
-        Icon::CapsLock,
-        Icon::Gear,
-        Icon::Mouse,
-        Icon::Keyboard,
-        Icon::Headphones,
-        Icon::Gamepad,
-        Icon::Pen,
-        Icon::CircleCheck,
-    ];
-
-    #[test]
-    fn every_icon_stays_inside_its_square() {
-        let (center, size) = (Point::new(100.0, 50.0), 40.0);
-        for icon in ALL {
-            let (path, _) = icon.path(center, size);
-            for point in path.points() {
-                assert!(
-                    (point.x - center.x).abs() <= size / 2.0 && (point.y - center.y).abs() <= size / 2.0,
-                    "{point:?}"
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn solid_icons_are_filled_and_line_icons_are_stroked() {
-        let paint = |icon: Icon| icon.path(Point::default(), 24.0).1;
-        for icon in [Icon::Play, Icon::Pause, Icon::Previous, Icon::Next, Icon::Bolt] {
-            assert_eq!(paint(icon), Paint::Fill);
-        }
-        for icon in ALL
-            .into_iter()
-            .filter(|icon| ![Icon::Play, Icon::Pause, Icon::Previous, Icon::Next, Icon::Bolt].contains(icon))
-        {
-            assert_eq!(paint(icon), Paint::Line);
-        }
-    }
-
-    #[test]
-    fn muting_the_speaker_replaces_its_waves_with_a_cross() {
-        let count = |icon: Icon| icon.path(Point::default(), 24.0).0.points().count();
-        assert_ne!(count(Icon::Speaker), count(Icon::SpeakerMuted));
-    }
-
-    #[test]
-    fn a_low_battery_shows_fewer_bars_than_a_battery() {
-        let count = |icon: Icon| icon.path(Point::default(), 24.0).0.points().count();
-        assert!(count(Icon::BatteryLow) < count(Icon::Battery));
-    }
-
-    #[test]
-    fn the_gear_is_a_pointy_top_hexagon_around_a_ring_drawn_as_a_line() {
-        let (path, paint) = Icon::Gear.path(Point::default(), 24.0);
-        assert_eq!(paint, Paint::Line);
-        let (top, bottom) =
-            path.points().fold((f32::MAX, f32::MIN), |(low, high), point| (low.min(point.y), high.max(point.y)));
-        assert!(top < -9.0 && bottom > 9.0, "the hexagon keeps a vertex at the top and the bottom: {top} {bottom}");
-        let farthest = path.points().map(|point| point.x.hypot(point.y)).fold(0.0, f32::max);
-        assert!(farthest <= 10.01, "the hexagon stays inside the square with room for the stroke");
-        let ring: Vec<f32> =
-            path.points().map(|point| point.x.hypot(point.y)).filter(|&distance| distance < 5.0).collect();
-        let on_curve = ring.iter().filter(|&&distance| (distance - 3.0).abs() < 0.01).count();
-        assert!(on_curve >= 4, "the ring of radius 3 sits at the center: {ring:?}");
-    }
-
-    #[test]
-    fn the_moon_is_a_crescent_with_a_plus_shaped_star_at_its_top_right() {
-        let (path, paint) = Icon::Moon.path(Point::default(), 24.0);
-        assert_eq!(paint, Paint::Line);
-        let figures = path.flatten();
-        assert_eq!(figures.len(), 3, "the crescent and the two bars of the star");
-        for bar in &figures[1..] {
-            assert!(bar.points.iter().all(|point| point.x >= 5.0 && point.y <= -5.0), "{bar:?}");
-        }
-        let crescent = &figures[0].points;
-        let left = crescent.iter().map(|point| point.x).fold(f32::MAX, f32::min);
-        let bottom = crescent.iter().map(|point| point.y).fold(f32::MIN, f32::max);
-        assert!(left <= -8.9 && bottom >= 8.9, "the crescent keeps the big circle: {left} {bottom}");
-        let first = crescent.first().expect("a start");
-        let last = crescent.last().expect("an end");
-        assert!((first.x - last.x).hypot(first.y - last.y) < 0.01, "the crescent ends where it starts");
-    }
-
-    #[test]
-    fn next_mirrors_previous() {
-        let (previous, _) = Icon::Previous.path(Point::default(), 24.0);
-        let (next, _) = Icon::Next.path(Point::default(), 24.0);
-        let (previous_extent, next_extent) = (extent(&previous), extent(&next));
-        assert!((previous_extent.0 + next_extent.1).abs() < 1.0, "{previous_extent:?} {next_extent:?}");
-    }
-
-    fn extent(path: &Path) -> (f32, f32) {
-        path.points().fold((f32::MAX, f32::MIN), |(low, high), point| (low.min(point.x), high.max(point.x)))
-    }
 }

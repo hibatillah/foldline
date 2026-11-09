@@ -1,13 +1,16 @@
-//! Drawing the places of the shelf.
-
-use super::document::draw_document;
 use super::{
-    GRAY, NAME, NAME_COLOR, NAME_LINE_HEIGHT, NAME_TOP, ShelfPage, Target, fitted, preview_rect, remove_center,
+    ACCENT_FILL_ALPHA, BORDER, BORDER_WIDTH, DASH, DASH_GAP, FULL_BORDER, FULL_FILL, FULL_FILL_ALPHA, NAME_COLOR,
+    NAME_LINE_HEIGHT, NAME_TOP, ShelfPage, Target, ZONE_RADIUS, fitted, preview_rect, remove_center, shown_count,
     slot_rect,
 };
+use super::{document::draw_document, empty::draw_empty_row};
+use crate::ui::palette::{ACCENT_BLUE, ACCENT_BLUE_LIGHT, SOFT_RED, TEXT_MUTED};
+use crate::ui::palette::{LIGHT_GRAY, REMOVE_BUTTON_FILL};
+use crate::ui::type_styles::{REGULAR_10_CENTER, REGULAR_12_CENTER};
 use crate::{
     gfx::{Canvas, Color, Point, Rect},
-    ui::{Icon, Stroke, draw_strokes},
+    page::Frame,
+    ui::{Icon, Stroke, draw_dashed_outline, draw_strokes},
 };
 use std::path::Path;
 
@@ -18,9 +21,7 @@ pub(super) const REMOVE_RING: f32 = 2.0;
 const REMOVE_CROSS_SIZE: f32 = 8.0;
 const REMOVE_CROSS_WIDTH: f32 = 3.5;
 const REMOVE_CROSS: &str = "M6 6l12 12M18 6 6 18";
-const REMOVE_FILL: Color = Color::rgb(0.165, 0.165, 0.188);
 const REMOVE_FILL_PRESSED: Color = Color::rgb(0.3, 0.3, 0.34);
-const REMOVE_CROSS_COLOR: Color = Color::rgb(0.769, 0.769, 0.8);
 pub(super) const ARRIVAL_SCALE: f32 = 0.7;
 pub(super) const ARRIVAL_FALL: f32 = 12.0;
 pub(super) const WASH: Color = Color::rgb(1.0, 1.0, 1.0);
@@ -41,7 +42,7 @@ impl ShelfPage {
         }
         if path.is_dir() {
             canvas.fill_rounded_rect(area, PREVIEW_RADIUS * scale, Color::gray(0.16).faded(opacity));
-            Icon::Folder.draw(canvas, Point::new(area.center_x(), area.center_y()), 22.0 * scale, GRAY, opacity);
+            Icon::Folder.draw(canvas, Point::new(area.center_x(), area.center_y()), 22.0 * scale, TEXT_MUTED, opacity);
         } else {
             draw_document(canvas, path, area, opacity);
         }
@@ -50,10 +51,10 @@ impl ShelfPage {
     pub(super) fn draw_remove_button(&self, canvas: &Canvas, preview: Rect, is_pressed_target: bool, opacity: f32) {
         let scale = canvas.scale();
         let center = remove_center(preview, scale);
-        let fill = if is_pressed_target { REMOVE_FILL_PRESSED } else { REMOVE_FILL };
+        let fill = if is_pressed_target { REMOVE_FILL_PRESSED } else { REMOVE_BUTTON_FILL };
         canvas.fill_circle(center, (REMOVE_RADIUS + REMOVE_RING) * scale, Color::BLACK.faded(opacity));
         canvas.fill_circle(center, REMOVE_RADIUS * scale, fill.faded(opacity));
-        let cross = [Stroke::new(REMOVE_CROSS, REMOVE_CROSS_COLOR)];
+        let cross = [Stroke::new(REMOVE_CROSS, LIGHT_GRAY)];
         draw_strokes(canvas, &cross, center, REMOVE_CROSS_SIZE * scale, REMOVE_CROSS_WIDTH, opacity);
     }
 
@@ -92,10 +93,58 @@ impl ShelfPage {
         for (line, text) in self.names.get(position).into_iter().flatten().enumerate() {
             let top = name_top + line as f32 * NAME_LINE_HEIGHT * scale;
             let rect = Rect::new(column.left, top, column.right, top + NAME_LINE_HEIGHT * scale);
-            canvas.text(&NAME, text, rect, name_color.faded(faded));
+            canvas.text(&REGULAR_10_CENTER, text, rect, name_color.faded(faded));
         }
         if is_hovered {
             self.draw_remove_button(canvas, preview, self.hovered == Some(Target::Remove(position)), opacity);
+        }
+    }
+}
+
+impl ShelfPage {
+    pub(super) fn draw_zone(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
+        let (bounds, scale) = (frame.bounds, frame.scale);
+        let is_refusing = self.is_drag_over && self.shelf.is_full();
+        if self.is_drag_over {
+            let (fill, alpha) =
+                if is_refusing { (FULL_FILL, FULL_FILL_ALPHA) } else { (ACCENT_BLUE, ACCENT_FILL_ALPHA) };
+            canvas.fill_rounded_rect(bounds, ZONE_RADIUS * scale, fill.with_alpha(alpha * opacity));
+        }
+        let border = match (self.is_drag_over, is_refusing) {
+            (false, _) => BORDER,
+            (true, false) => ACCENT_BLUE,
+            (true, true) => FULL_BORDER,
+        };
+        draw_dashed_outline(
+            canvas,
+            bounds,
+            ZONE_RADIUS * scale,
+            BORDER_WIDTH * scale,
+            DASH * scale,
+            DASH_GAP * scale,
+            border.faded(opacity),
+        );
+        let message_area =
+            Rect::new(bounds.left, bounds.center_y() - 8.0 * scale, bounds.right, bounds.center_y() + 8.0 * scale);
+        if is_refusing {
+            canvas.text(
+                &REGULAR_12_CENTER,
+                "The shelf is full. Remove a file to add more.",
+                message_area,
+                SOFT_RED.faded(opacity),
+            );
+            return;
+        }
+        if self.shelf.len() == 0 {
+            if self.is_drag_over {
+                canvas.text(&REGULAR_12_CENTER, "Release to hold them", message_area, ACCENT_BLUE_LIGHT.faded(opacity));
+            } else {
+                draw_empty_row(canvas, bounds, scale, opacity);
+            }
+            return;
+        }
+        for position in 0..shown_count(self.shelf.len()) {
+            self.draw_slot(canvas, position, bounds, opacity);
         }
     }
 }

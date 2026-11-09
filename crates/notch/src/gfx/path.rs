@@ -60,11 +60,7 @@ impl Path {
             let after = toward(corner, points[(index + 1) % count], radius);
             path = if index == 0 { path.move_to(before) } else { path.line_to(before) };
             // A quadratic curve with the corner as its control point, written as the equivalent cubic.
-            let first_control =
-                Point::new(before.x + (corner.x - before.x) * 2.0 / 3.0, before.y + (corner.y - before.y) * 2.0 / 3.0);
-            let second_control =
-                Point::new(after.x + (corner.x - after.x) * 2.0 / 3.0, after.y + (corner.y - after.y) * 2.0 / 3.0);
-            path = path.curve_to(first_control, second_control, after);
+            path = path.curve_to(two_thirds(before, corner), two_thirds(after, corner), after);
         }
         path.close()
     }
@@ -127,6 +123,11 @@ impl Path {
     }
 }
 
+/// The point two thirds of the way from `from` to `to`.
+fn two_thirds(from: Point, to: Point) -> Point {
+    Point::new(from.x + (to.x - from.x) * 2.0 / 3.0, from.y + (to.y - from.y) * 2.0 / 3.0)
+}
+
 fn cubic_point(start: Point, first: Point, second: Point, end: Point, amount: f32) -> Point {
     let remaining = 1.0 - amount;
     let weights =
@@ -159,6 +160,11 @@ mod tests {
         for point in Path::rounded_polygon(&square, 3.0).points() {
             assert!((0.0..=10.0).contains(&point.x) && (0.0..=10.0).contains(&point.y));
         }
+    }
+
+    #[test]
+    fn a_point_two_thirds_of_the_way_lands_two_thirds_along_the_segment() {
+        assert_eq!(two_thirds(Point::new(0.0, 3.0), Point::new(6.0, 6.0)), Point::new(4.0, 5.0));
     }
 
     #[test]

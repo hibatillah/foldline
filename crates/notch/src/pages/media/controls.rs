@@ -1,11 +1,11 @@
 use super::{MediaPage, layout::Layout};
+use crate::ui::palette::TEXT_DIM;
 use crate::{
     gfx::{Canvas, Color, Point},
     ui::{Icon, IconButton},
 };
 
 const ACCENT: Color = Color::rgb(0.118, 0.843, 0.376);
-const INACTIVE: Color = Color::rgb(0.431, 0.431, 0.478);
 const INACTIVE_HOVERED: Color = Color::gray(0.85);
 /// Icon edge in DIP; the lyrics icon is drawn 2 px larger than the transport icons.
 const ICON_SIZE: f32 = 14.0;
@@ -37,7 +37,7 @@ fn lyrics_color(is_on: bool, has_lyrics: bool, is_hovered: bool) -> Color {
         (true, _) => ACCENT,
         (false, true) => Color::WHITE,
         (false, false) if is_hovered => INACTIVE_HOVERED,
-        (false, false) => INACTIVE,
+        (false, false) => TEXT_DIM,
     }
 }
 
@@ -55,7 +55,7 @@ pub fn draw(page: &MediaPage, canvas: &Canvas, layout: &Layout, opacity: f32) {
         };
         let is_hovered = page.hovered_control == Some(control);
         let color = match is_on {
-            _ if !page.info.available => INACTIVE,
+            _ if !page.info.available => TEXT_DIM,
             Some(is_on) => lyrics_color(is_on, page.has_lyrics(), is_hovered),
             None => Color::WHITE,
         };
@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn the_lyrics_button_is_gray_when_the_song_has_no_lyrics() {
-        assert_eq!(lyrics_color(false, false, false), INACTIVE);
+        assert_eq!(lyrics_color(false, false, false), TEXT_DIM);
         assert_eq!(lyrics_color(false, false, true), INACTIVE_HOVERED);
     }
 }

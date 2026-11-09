@@ -128,21 +128,22 @@ pub fn write_dib_v5(owner: HWND, dib: &[u8]) -> bool {
 }
 
 fn write(owner: HWND, format: u32, bytes: &[u8]) -> bool {
-    let written = with_clipboard(Some(owner), || unsafe {
-        if EmptyClipboard().is_err() {
+    let written = with_clipboard(Some(owner), || {
+        if unsafe { EmptyClipboard() }.is_err() {
             return false;
         }
-        let Ok(memory) = GlobalAlloc(GMEM_MOVEABLE, bytes.len()) else { return false };
-        let target = GlobalLock(memory);
+        let Ok(memory) = (unsafe { GlobalAlloc(GMEM_MOVEABLE, bytes.len()) }) else { return false };
+        let target = unsafe { GlobalLock(memory) };
         if target.is_null() {
-            let _ = GlobalFree(Some(memory));
+            let _ = unsafe { GlobalFree(Some(memory)) };
             return false;
         }
-        std::ptr::copy_nonoverlapping(bytes.as_ptr(), target.cast::<u8>(), bytes.len());
-        let _ = GlobalUnlock(memory);
+        // SAFETY: the locked block was allocated with `bytes.len()` bytes.
+        unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(), target.cast::<u8>(), bytes.len()) };
+        let _ = unsafe { GlobalUnlock(memory) };
         // On success the system owns the memory; on failure it is still ours to free.
-        if SetClipboardData(format, Some(HANDLE(memory.0))).is_err() {
-            let _ = GlobalFree(Some(memory));
+        if unsafe { SetClipboardData(format, Some(HANDLE(memory.0))) }.is_err() {
+            let _ = unsafe { GlobalFree(Some(memory)) };
             return false;
         }
         true
@@ -171,21 +172,20 @@ fn with_clipboard<R>(owner: Option<HWND>, work: impl FnOnce() -> R) -> Option<R>
 
 /// The bytes of one format, or `None` when it is missing or larger than `limit`. The clipboard must be open.
 fn read_bytes(format: u32, limit: usize) -> Option<Vec<u8>> {
-    unsafe {
-        let handle = GetClipboardData(format).ok()?;
-        let memory = HGLOBAL(handle.0);
-        let size = GlobalSize(memory);
-        if size == 0 || size > limit {
-            return None;
-        }
-        let source = GlobalLock(memory);
-        if source.is_null() {
-            return None;
-        }
-        let bytes = std::slice::from_raw_parts(source.cast::<u8>(), size).to_vec();
-        let _ = GlobalUnlock(memory);
-        Some(bytes)
+    let handle = unsafe { GetClipboardData(format) }.ok()?;
+    let memory = HGLOBAL(handle.0);
+    let size = unsafe { GlobalSize(memory) };
+    if size == 0 || size > limit {
+        return None;
     }
+    let source = unsafe { GlobalLock(memory) };
+    if source.is_null() {
+        return None;
+    }
+    // SAFETY: the block stays locked and holds `size` bytes until GlobalUnlock.
+    let bytes = unsafe { std::slice::from_raw_parts(source.cast::<u8>(), size) }.to_vec();
+    let _ = unsafe { GlobalUnlock(memory) };
+    Some(bytes)
 }
 
 /// UTF-16 up to the first NUL; a lone half of a surrogate pair becomes U+FFFD.

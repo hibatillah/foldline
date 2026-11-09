@@ -5,31 +5,50 @@ use std::time::Duration;
 /// Spring (stiffness, damping) of every size change: open, close, page width and height, badge room.
 /// Damping ratio is `16.7 / (2 * sqrt(215))` = 0.57, which overshoots a move by about 10 percent (11 percent without the lead-in) and settles in
 /// about 1.45 times the time of the earlier (420, 21) spring.
-pub const SIZE_RESPONSE: (f32, f32) = (215.0, 16.7);
+pub(super) const SIZE_RESPONSE: (f32, f32) = (215.0, 16.7);
 
 /// The pull of a size spring grows from nothing over this long when a move starts at rest, so it begins gently.
-pub const SIZE_LEAD_IN: f32 = 0.09;
+pub(super) const SIZE_LEAD_IN: f32 = 0.09;
 
-/// Spring (stiffness, damping) of the page row sliding between pages; critically damped so the pages never cross over.
-pub const PAGE_SLIDE_RESPONSE: (f32, f32) = (650.0, 51.0);
+/// Spring (stiffness, damping) of the page dots' long mark moving to the open page; critically damped so it never passes it.
+pub(super) const PAGE_SLIDE_RESPONSE: (f32, f32) = (650.0, 51.0);
+
+/// Seconds the leaving page takes to fade out (eased out, so most of it is gone in the first half).
+pub(super) const PAGE_SWAP_OUT_SECONDS: f32 = 0.11;
+
+/// DIP the leaving page drifts away from the arriving one while it fades.
+pub(super) const PAGE_SWAP_OUT_SHIFT: f32 = 12.0;
+
+/// Seconds after a swap starts before the arriving page begins to show, so the leaving one is nearly gone.
+pub(super) const PAGE_SWAP_IN_DELAY: f32 = 0.08;
+
+/// Seconds the arriving page takes to shift into place; with the delay it ends just after a size spring is within
+/// 5 percent of its move (about 0.40 s), so the pill has nearly its new size before the content is still.
+pub(super) const PAGE_SWAP_IN_SECONDS: f32 = 0.34;
+
+/// DIP the arriving page starts away from its place, on the side it comes from (east for the next page).
+pub(super) const PAGE_SWAP_IN_SHIFT: f32 = 24.0;
+
+/// Share of the arriving page's move over which it fades in; the rest of the move is at full opacity.
+pub(super) const PAGE_SWAP_IN_FADE_SHARE: f32 = 0.6;
 
 /// The open pill may shrink to this fraction of its collapsed size when a spring undershoots.
-pub const MIN_SIZE_FRACTION: f32 = 0.75;
+pub(super) const MIN_SIZE_FRACTION: f32 = 0.75;
 
 /// Furthest the open amount (1.0 is fully open) may extrapolate on either side while the spring overshoots.
-pub const EXPANSION_OVERSHOOT_LIMIT: (f32, f32) = (-0.25, 1.3);
+pub(super) const EXPANSION_OVERSHOOT_LIMIT: (f32, f32) = (-0.25, 1.3);
 
 /// A wheel notch reports this many units; smaller deltas come from precision wheels and touchpads.
-pub const WHEEL_NOTCH: i32 = 120;
+pub(super) const WHEEL_NOTCH: i32 = 120;
 
 /// Scroll input is ignored for this long after a page switch, so one scroll moves one page.
-pub const PAGE_SWITCH_COOLDOWN: Duration = Duration::from_millis(300);
+pub(super) const PAGE_SWITCH_COOLDOWN: Duration = Duration::from_millis(300);
 
 /// A touchpad or precision-wheel gesture ends when no scroll event arrives for this long.
-pub const GESTURE_QUIET_TIME: Duration = Duration::from_millis(150);
+pub(super) const GESTURE_QUIET_TIME: Duration = Duration::from_millis(150);
 
 /// Accumulated scroll units in one gesture that switch a page.
-pub const SWIPE_SWITCH_THRESHOLD: f32 = 120.0;
+pub(super) const SWIPE_SWITCH_THRESHOLD: f32 = 120.0;
 
 #[cfg(test)]
 mod tests {

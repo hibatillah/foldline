@@ -3,6 +3,7 @@
 use salah::{DateTime, Utc};
 
 use crate::gfx::{Canvas, Color, ImageData, Mask, Path, Point, Rect};
+use crate::ui::palette::{MINT_GREEN, SURFACE_OUTLINE};
 
 /// Where each of the five prayers sits on the arc, in DIP from the top of the 86 high page.
 const POINT_HEIGHTS: [f32; 5] = [50.0, 14.0, 23.4, 40.3, 50.0];
@@ -15,8 +16,6 @@ pub(super) const PRAYER_SLOTS: [usize; PRAYER_COUNT] = [0, 2, 3, 4, 5];
 const LINE_WIDTH: f32 = 2.0;
 const GLOW_RADIUS: f32 = 11.0;
 const GLOW_ALPHA: f32 = 0.55;
-const FUTURE_LINE: Color = Color::rgb(0.227, 0.227, 0.267);
-const GREEN: Color = Color::rgb(0.388, 0.902, 0.745);
 const FUTURE_FILL: Color = Color::WHITE;
 const PAST_FILL_ALPHA: f32 = 0.30;
 const FUTURE_FILL_ALPHA: f32 = 0.07;
@@ -151,10 +150,10 @@ pub(super) fn progress_x(position: Position, width: f32) -> Option<f32> {
 fn draw_marker(canvas: &Canvas, center: Point, marker: Marker, opacity: f32) {
     let scale = canvas.scale();
     match marker {
-        Marker::Passed => canvas.fill_circle(center, 3.5 * scale, GREEN.faded(opacity)),
+        Marker::Passed => canvas.fill_circle(center, 3.5 * scale, MINT_GREEN.faded(opacity)),
         Marker::Next => {
-            canvas.fill_circle(center, 7.0 * scale, GREEN.with_alpha(0.18).faded(opacity));
-            canvas.fill_circle(center, 4.5 * scale, GREEN.faded(opacity));
+            canvas.fill_circle(center, 7.0 * scale, MINT_GREEN.with_alpha(0.18).faded(opacity));
+            canvas.fill_circle(center, 4.5 * scale, MINT_GREEN.faded(opacity));
         }
         Marker::Ahead => {
             canvas.fill_circle(center, 4.25 * scale, AHEAD_RING.faded(opacity));
@@ -180,9 +179,9 @@ pub(super) fn draw(canvas: &Canvas, chart: Rect, position: Position, markers: [M
         }
         let build = || match kind {
             0 => fill_image(width, height, scale, FUTURE_FILL, FUTURE_FILL_ALPHA),
-            1 => fill_image(width, height, scale, GREEN, PAST_FILL_ALPHA),
-            2 => line_image(width, height, scale, FUTURE_LINE),
-            _ => line_image(width, height, scale, GREEN),
+            1 => fill_image(width, height, scale, MINT_GREEN, PAST_FILL_ALPHA),
+            2 => line_image(width, height, scale, SURFACE_OUTLINE),
+            _ => line_image(width, height, scale, MINT_GREEN),
         };
         let Some(brush) = canvas.cached_image(key(kind), build) else { continue };
         canvas.clipped(clip, || canvas.image(&brush, rect, 0.0, opacity));
@@ -262,9 +261,9 @@ mod tests {
         let height = (86.0 * scale) as u32;
         let started = std::time::Instant::now();
         fill_image(WIDTH, height, scale, FUTURE_FILL, FUTURE_FILL_ALPHA);
-        fill_image(WIDTH, height, scale, GREEN, PAST_FILL_ALPHA);
-        line_image(WIDTH, height, scale, FUTURE_LINE);
-        line_image(WIDTH, height, scale, GREEN);
+        fill_image(WIDTH, height, scale, MINT_GREEN, PAST_FILL_ALPHA);
+        line_image(WIDTH, height, scale, SURFACE_OUTLINE);
+        line_image(WIDTH, height, scale, MINT_GREEN);
         glow_image(scale);
         let elapsed = started.elapsed();
         println!("arc first draw at scale 1.5: {elapsed:?}");

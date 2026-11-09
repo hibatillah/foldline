@@ -1,7 +1,5 @@
-//! The CPU, memory and network cards.
-
 use super::{
-    CPU_ACCENT, GRAY, LABEL, MEMORY_ACCENT, RATE, UPLOAD_GRAY, VALUE,
+    CPU_ACCENT, MEMORY_ACCENT, RATE, UPLOAD_GRAY, VALUE,
     charts::{Accent, draw_load},
     label_area, network_kind_area, network_row_area,
     readout::Readout,
@@ -9,6 +7,8 @@ use super::{
     sub_area, text, value_area,
 };
 use crate::gfx::{Canvas, Color, Rect};
+use crate::ui::palette::TEXT_MUTED;
+use crate::ui::type_styles::REGULAR_11;
 
 const BASELINE: f32 = 60.0;
 
@@ -44,10 +44,10 @@ impl<'a> ChartCard<'a> {
     }
 
     pub fn draw(&self, canvas: &Canvas, card: Rect, scale: f32, opacity: f32) {
-        text(canvas, &LABEL, self.name, label_area(card, scale), GRAY, opacity);
+        text(canvas, &REGULAR_11, self.name, label_area(card, scale), TEXT_MUTED, opacity);
         text(canvas, &VALUE, self.value, value_area(card, scale), Color::WHITE, opacity);
         draw_load(canvas, card, scale, BASELINE, self.load, self.accent, opacity);
-        text(canvas, &LABEL, self.sub, sub_area(card, scale), GRAY, opacity);
+        text(canvas, &REGULAR_11, self.sub, sub_area(card, scale), TEXT_MUTED, opacity);
     }
 }
 
@@ -60,8 +60,8 @@ pub(super) fn draw_network(
     kind: NetworkKind,
     opacity: f32,
 ) {
-    text(canvas, &LABEL, "Network", label_area(card, scale), GRAY, opacity);
+    text(canvas, &REGULAR_11, "Network", label_area(card, scale), TEXT_MUTED, opacity);
     text(canvas, &RATE, &readout.download_text, network_row_area(card, scale, 0), Color::WHITE, opacity);
     text(canvas, &RATE, &readout.upload_text, network_row_area(card, scale, 1), UPLOAD_GRAY, opacity);
-    text(canvas, &LABEL, kind.label(), network_kind_area(card, scale), GRAY, opacity);
+    text(canvas, &REGULAR_11, kind.label(), network_kind_area(card, scale), TEXT_MUTED, opacity);
 }

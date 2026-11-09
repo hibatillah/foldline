@@ -1,11 +1,8 @@
-//! The shelf stores paths; adding, dragging, and removing entries never moves or deletes the originals.
-
 use self::items::{MAX_FILES, Shelf, added_text};
 use crate::{
     activity::{FLASH_TIMER, Flash, Presence},
-    gfx::{Align, Canvas, Color, FontStyle, ImageBrush, ImageData, Point, Rect, Size, Spring, UI_FONT, Weight},
+    gfx::{Canvas, Color, ImageBrush, ImageData, Point, Rect, Size, Spring},
     page::{Context, Frame, Mode, Page, PageSizes, PointerEvent, Priority, TimerId},
-    platform,
     ui::{self, Icon},
 };
 use layout::{
@@ -24,71 +21,42 @@ mod actions;
 mod document;
 mod draw;
 mod empty;
-mod layout;
-
+mod input;
 mod items;
+mod layout;
+#[cfg(test)]
+mod sample;
+#[cfg(test)]
+mod tests;
 
 const EXPANDED_WIDTH: f32 =
     2.0 * ZONE_PADDING + SLOTS_PER_ROW as f32 * FILE_WIDTH + (SLOTS_PER_ROW - 1) as f32 * FILE_GAP;
-
 const RESTING_WIDTH: f32 = 150.0;
-
 const ZONE_RADIUS: f32 = 14.0;
-
 const BORDER_WIDTH: f32 = 1.5;
-
 const DASH: f32 = 10.0;
-
 const DASH_GAP: f32 = 6.0;
-
 const ZONE_PADDING: f32 = 9.5;
-
 const FILE_WIDTH: f32 = 78.0;
-
 const FILE_GAP: f32 = 4.0;
-
 const NAME_TOP: f32 = 3.0;
-
 const NAME_LINE_HEIGHT: f32 = 12.0;
 
 /// Files in a row; the seventh starts a second row.
 const SLOTS_PER_ROW: usize = 6;
-
 const ROW_GAP: f32 = 6.0;
-
 const DRAG_START_DISTANCE: f32 = 5.0;
 
 /// Pixels asked of Explorer for each preview; enough for a 40 px tile on a screen scaled to 200 %.
 const PREVIEW_PIXELS: i32 = 96;
-
 const ARRIVAL_RESPONSE: (f32, f32) = (200.0, 19.0);
-
 const ARRIVAL_STAGGER: f32 = 0.18;
-
-const NAME: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Center);
-
-const MESSAGE: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Center);
-
 const BORDER: Color = Color::rgb(0.353, 0.353, 0.408);
-
 const FULL_BORDER: Color = Color::rgb(0.839, 0.271, 0.239);
-
 const FULL_FILL: Color = Color::rgb(1.0, 0.271, 0.227);
-
-const FULL_TEXT: Color = Color::rgb(1.0, 0.42, 0.42);
-
-const ACCENT: Color = Color::rgb(0.302, 0.671, 0.969);
-
-const ACCENT_TEXT: Color = Color::rgb(0.455, 0.753, 0.988);
-
 const ACCENT_FILL_ALPHA: f32 = 0.12;
-
 const FULL_FILL_ALPHA: f32 = 0.08;
-
 const NAME_COLOR: Color = Color::rgb(0.839, 0.839, 0.871);
-
-const GRAY: Color = Color::rgb(0.604, 0.604, 0.651);
-
 #[derive(Clone, Copy, Debug)]
 struct Press {
     target: Target,
@@ -149,52 +117,6 @@ impl ShelfPage {
             inbox: Arc::default(),
         }
     }
-
-    #[cfg(test)]
-    pub fn sample(
-        directory: &std::path::Path,
-        fonts: &crate::gfx::Fonts,
-        file_count: usize,
-        is_drag_over: bool,
-    ) -> Self {
-        let mut page = Self::new();
-        page.storage = None;
-        page.is_drag_over = is_drag_over;
-        const NAMES: [&str; 12] = [
-            "Report Q3.pdf",
-            "Hero shot.png",
-            "Invoice 0412.pdf",
-            "Notes.txt",
-            "release.zip",
-            "Review.fig",
-            "Budget 27.xlsx",
-            "Contract.docx",
-            "wallpaper-1440p.jpg",
-            "Deck.pptx",
-            "tasks.md",
-            "Backup of a very long file name.zip",
-        ];
-        let files: Vec<PathBuf> = NAMES
-            .iter()
-            .take(file_count)
-            .map(|name| {
-                let path = directory.join(name);
-                let _ = std::fs::write(&path, "x");
-                path
-            })
-            .collect();
-        page.shelf.add(files);
-        page.refresh_names(fonts);
-        for path in page.shelf.items().iter().take(MAX_FILES) {
-            if !items::has_thumbnail(path) {
-                continue;
-            }
-            if let Some(image) = platform::file_preview(path, PREVIEW_PIXELS) {
-                page.previews.get_mut().insert(path.clone(), Preview::new(image));
-            }
-        }
-        page
-    }
 }
 
 impl Preview {
@@ -226,50 +148,7 @@ impl Page for ShelfPage {
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}
 
     fn draw_expanded(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
-        let (bounds, scale) = (frame.bounds, frame.scale);
-        let is_refusing = self.is_drag_over && self.shelf.is_full();
-        if self.is_drag_over {
-            let (fill, alpha) = if is_refusing { (FULL_FILL, FULL_FILL_ALPHA) } else { (ACCENT, ACCENT_FILL_ALPHA) };
-            canvas.fill_rounded_rect(bounds, ZONE_RADIUS * scale, fill.with_alpha(alpha * opacity));
-        }
-        let border = match (self.is_drag_over, is_refusing) {
-            (false, _) => BORDER,
-            (true, false) => ACCENT,
-            (true, true) => FULL_BORDER,
-        };
-        ui::draw_dashed_outline(
-            canvas,
-            bounds,
-            ZONE_RADIUS * scale,
-            BORDER_WIDTH * scale,
-            DASH * scale,
-            DASH_GAP * scale,
-            border.faded(opacity),
-        );
-
-        if is_refusing {
-            let area =
-                Rect::new(bounds.left, bounds.center_y() - 8.0 * scale, bounds.right, bounds.center_y() + 8.0 * scale);
-            canvas.text(&MESSAGE, "The shelf is full. Remove a file to add more.", area, FULL_TEXT.faded(opacity));
-            return;
-        }
-        if self.shelf.len() == 0 {
-            if self.is_drag_over {
-                let area = Rect::new(
-                    bounds.left,
-                    bounds.center_y() - 8.0 * scale,
-                    bounds.right,
-                    bounds.center_y() + 8.0 * scale,
-                );
-                canvas.text(&MESSAGE, "Release to hold them", area, ACCENT_TEXT.faded(opacity));
-            } else {
-                empty::draw_empty_row(canvas, bounds, scale, opacity);
-            }
-            return;
-        }
-        for position in 0..shown_count(self.shelf.len()) {
-            self.draw_slot(canvas, position, bounds, opacity);
-        }
+        self.draw_zone(canvas, frame, opacity);
     }
 
     fn presence(&self) -> Option<Presence> {
@@ -340,68 +219,7 @@ impl Page for ShelfPage {
     }
 
     fn on_pointer(&mut self, event: PointerEvent, frame: &Frame, context: &mut Context) {
-        let (bounds, scale, count) = (frame.bounds, frame.scale, self.shelf.len());
-        match event {
-            PointerEvent::Moved(point) => {
-                let hovered = target_at(point, bounds, scale, count);
-                if hovered != self.hovered {
-                    self.hovered = hovered;
-                    context.request_repaint();
-                }
-                let Some(press) = self.press else { return };
-                let Target::Slot(position) = press.target else { return };
-                let moved = (point.x - press.origin.x).hypot(point.y - press.origin.y);
-                if moved >= DRAG_START_DISTANCE * scale
-                    && let Some(index) = file_index(position, count)
-                {
-                    self.press = None;
-                    self.begin_drag(index, context);
-                }
-            }
-            PointerEvent::Pressed(point) if frame.is_open() => {
-                self.press = target_at(point, bounds, scale, count).map(|target| Press { target, origin: point });
-            }
-            PointerEvent::Released(point) => {
-                let Some(press) = self.press.take() else { return };
-                if !frame.is_open() || target_at(point, bounds, scale, count) != Some(press.target) {
-                    return;
-                }
-                match press.target {
-                    Target::Remove(position) => {
-                        if let Some(index) = file_index(position, count) {
-                            self.remove(index, context);
-                        }
-                    }
-                    Target::Slot(position) => {
-                        let Some(index) = file_index(position, count) else { return };
-                        let path = self.shelf.items()[index].clone();
-                        let (now, limit) = (Instant::now(), platform::double_click_time());
-                        if is_double_click(self.last_click.as_ref(), &path, now, limit) {
-                            self.last_click = None;
-                            platform::open(&path.display().to_string());
-                        } else {
-                            self.last_click = Some((path, now));
-                        }
-                    }
-                }
-            }
-            PointerEvent::SecondaryReleased(point) if frame.is_open() => {
-                let Some(Target::Slot(position) | Target::Remove(position)) = target_at(point, bounds, scale, count)
-                else {
-                    return;
-                };
-                if let Some(index) = file_index(position, count) {
-                    self.remove(index, context);
-                }
-            }
-            PointerEvent::Left | PointerEvent::CaptureLost => {
-                self.press = None;
-                if self.hovered.take().is_some() {
-                    context.request_repaint();
-                }
-            }
-            _ => {}
-        }
+        self.handle_pointer(event, frame, context);
     }
 
     fn uses_right_click(&self, point: Point, frame: &Frame) -> bool {
@@ -420,33 +238,5 @@ impl Page for ShelfPage {
         }
         self.arrivals.retain(|_, spring| !spring.is_settled());
         !self.arrivals.is_empty()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_shelf_is_a_page_to_open_that_takes_drops() {
-        let page = ShelfPage::new();
-        assert!(page.accepts_drops());
-        assert_eq!(page.priority(Mode::Resting), None);
-        assert!(page.priority(Mode::Expanded).is_some());
-        assert_eq!(page.presence(), None);
-    }
-
-    #[test]
-    fn a_new_file_arrives_and_then_the_page_stops_animating() {
-        let mut page = ShelfPage::new();
-        let mut spring = Spring::new(0.0, ARRIVAL_RESPONSE.0, ARRIVAL_RESPONSE.1);
-        spring.target = 1.0;
-        page.arrivals.insert(PathBuf::from("a.txt"), spring);
-        assert!(page.animate(0.016));
-        for _ in 0..200 {
-            page.animate(0.016);
-        }
-        assert!(!page.animate(0.016));
-        assert!(page.arrivals.is_empty());
     }
 }

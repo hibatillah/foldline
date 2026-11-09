@@ -9,7 +9,7 @@ fn seconds_until_the_timer_stops(notch: &mut Notch) -> Option<f32> {
     let frame_seconds = 1.0 / 60.0;
     for frame in 0..240 {
         notch.advance_by(frame_seconds);
-        if !notch.is_animating {
+        if !notch.frame_timer.is_running {
             return Some((frame + 1) as f32 * frame_seconds);
         }
     }

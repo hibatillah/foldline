@@ -1,5 +1,3 @@
-//! The system's local time, for the day boundaries.
-
 use super::{dates::seconds_from_civil, ics::Clock};
 use windows::Win32::{
     Foundation::FILETIME,
@@ -43,6 +41,11 @@ pub(super) fn local_now() -> i64 {
         u32::from(time.wMinute),
         u32::from(time.wSecond),
     )
+}
+
+pub(super) fn local_milliseconds_into_minute() -> i64 {
+    let time = unsafe { GetLocalTime() };
+    i64::from(time.wSecond) * 1000 + i64::from(time.wMilliseconds)
 }
 
 #[cfg(test)]

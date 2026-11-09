@@ -1,3 +1,7 @@
+use std::time::Instant;
+
+use super::item::Content;
+
 use super::{
     sample::{COPIED, EMPTY, IMAGE_SELECTED, PASTED, REMOVED, SKIPPED, TEXT_SELECTED},
     *,
@@ -23,8 +27,33 @@ fn the_page_is_opt_in_and_asks_for_the_designed_size() {
     assert!(page.is_opt_in());
     assert_eq!(page.id(), "clipboard");
     let sizes = page.sizes();
-    assert_eq!((sizes.expanded.width, sizes.expanded.height), (508.0, 179.0));
+    assert_eq!(sizes.expanded.width, 508.0);
     assert_eq!(sizes.resting_width, RESTING_MIN_WIDTH);
+}
+
+#[test]
+fn an_empty_history_asks_for_the_default_height() {
+    let page = ClipboardPage::sample(EMPTY);
+    assert_eq!(page.sizes().expanded.height, DEFAULT_CONTENT_HEIGHT);
+    assert_eq!(page.sizes().expanded.width, CONTENT_WIDTH);
+}
+
+#[test]
+fn a_single_item_grows_the_page_to_the_content_height() {
+    let mut page = ClipboardPage::sample(EMPTY);
+    page.history.push(Content::Text("one".to_owned()), Instant::now());
+    assert_eq!(page.sizes().expanded.height, CONTENT_HEIGHT);
+    assert_eq!(ClipboardPage::sample(TEXT_SELECTED).sizes().expanded.height, CONTENT_HEIGHT);
+}
+
+#[test]
+fn removing_the_last_item_returns_to_the_default_height() {
+    let mut page = ClipboardPage::sample(EMPTY);
+    page.history.push(Content::Text("one".to_owned()), Instant::now());
+    page.history.remove(0);
+    assert_eq!(page.sizes().expanded.height, DEFAULT_CONTENT_HEIGHT);
+    assert!(page.history.undo());
+    assert_eq!(page.sizes().expanded.height, CONTENT_HEIGHT);
 }
 
 #[test]

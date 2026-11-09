@@ -1,5 +1,4 @@
-//! The idle pill's row (clock, group, battery ring, dots) and the claimed pill's row; the open header's is in
-//! `header_row.rs`.
+//! The idle pill's row and the claimed pill's row; the open header's is in `header_row.rs`.
 
 use std::cmp::Reverse;
 
@@ -85,7 +84,7 @@ impl Notch {
     }
 
     pub(super) fn has_music_badge(&self) -> bool {
-        self.shown_badges.iter().any(|&(source, _)| self.is_music_badge(source))
+        self.presences.badges.iter().any(|&(source, _)| self.is_music_badge(source))
     }
 
     pub(super) fn countdown_of(&self, source: Source) -> Option<u64> {
@@ -114,7 +113,7 @@ impl Notch {
 
     /// The idle group left to right: badges by rank, the battery ring, the dot column.
     pub(super) fn idle_items(&self) -> Vec<(RowItem, f32)> {
-        let badges = self.shown_badges.iter().map(|&(source, width)| (RowItem::Source(source), width));
+        let badges = self.presences.badges.iter().map(|&(source, width)| (RowItem::Source(source), width));
         badges.chain(self.resting_row.right_end()).collect()
     }
 
@@ -138,7 +137,26 @@ impl Notch {
         self.resting_row.claim = ClaimedRow::new(lead_width, self.resting_row.dots_width(), &claimed_widths);
     }
 
-    /// Draws `badges` at the places their springs hold, measured from the pill's right edge.
+    /// The rect a badge draws into: the place its spring holds, measured from the pill's right edge.
+    fn badge_rect(&self, bounds: Rect, source: Source, width: f32) -> Option<Rect> {
+        let inset = self.row_motion.resting.position(RowItem::Source(source))?;
+        let left = bounds.right - inset * self.scale;
+        Some(Rect::new(left, bounds.top, left + width * self.scale, bounds.top + RESTING_HEIGHT * self.scale))
+    }
+
+    /// The page badges the collapsed pill draws now, as `(page_index, area)`; their pointer input is measured there.
+    pub(super) fn page_badge_areas(&self, frame: &Frame) -> Vec<(usize, Rect)> {
+        let badges =
+            if self.resting_index.is_some() { &self.resting_row.claimed_group } else { &self.presences.badges };
+        badges
+            .iter()
+            .filter_map(|&(source, width)| match source {
+                Source::Page(index) => self.badge_rect(frame.bounds, source, width).map(|area| (index, area)),
+                Source::Activity(_) => None,
+            })
+            .collect()
+    }
+
     fn draw_badges_at_springs(
         &self,
         canvas: &Canvas,
@@ -147,18 +165,16 @@ impl Notch {
         short: bool,
         opacity: f32,
     ) {
-        let (bounds, scale) = (frame.bounds, self.scale);
-        let (top, bottom) = (bounds.top, bounds.top + RESTING_HEIGHT * scale);
         for &(source, width) in badges {
-            let Some(inset) = self.row_motion.resting.position(RowItem::Source(source)) else { continue };
-            let left = bounds.right - inset * scale;
-            self.draw_badge(source, canvas, Rect::new(left, top, left + width * scale, bottom), short, opacity);
+            if let Some(area) = self.badge_rect(frame.bounds, source, width) {
+                self.draw_badge(source, canvas, area, short, opacity);
+            }
         }
     }
 
     /// The idle group's badges; the ring and the dots travel to the header, so `draw_row` draws them.
     pub(super) fn draw_group(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
-        self.draw_badges_at_springs(canvas, frame, &self.shown_badges, self.resting_row.uses_short_badges, opacity);
+        self.draw_badges_at_springs(canvas, frame, &self.presences.badges, self.resting_row.uses_short_badges, opacity);
     }
 
     /// The claimed pill's group, each badge in its long form.

@@ -25,7 +25,10 @@ use self::{
 use crate::{
     activity::SystemMessage,
     gfx::{Canvas, Point, Size},
-    page::{Context, Frame, Mode, Page, PageSizes, PointerEvent, Priority, RESTING_MIN_WIDTH, TimerId},
+    page::{
+        Context, DEFAULT_CONTENT_HEIGHT, Frame, Mode, Page, PageSizes, PointerEvent, Priority, RESTING_MIN_WIDTH,
+        TimerId,
+    },
 };
 
 const BAR_TIMER: TimerId = TimerId(0);
@@ -82,7 +85,8 @@ impl Page for ClipboardPage {
     }
 
     fn sizes(&self) -> PageSizes {
-        PageSizes { resting_width: RESTING_MIN_WIDTH, expanded: Size::new(CONTENT_WIDTH, CONTENT_HEIGHT) }
+        let height = if self.history.is_empty() { DEFAULT_CONTENT_HEIGHT } else { CONTENT_HEIGHT };
+        PageSizes { resting_width: RESTING_MIN_WIDTH, expanded: Size::new(CONTENT_WIDTH, height) }
     }
 
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}

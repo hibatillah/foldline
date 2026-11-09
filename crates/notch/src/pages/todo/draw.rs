@@ -1,5 +1,3 @@
-//! How the todo page looks: the toolbar, the rows and the empty page.
-
 use super::{
     TodoPage,
     layout::{
@@ -7,6 +5,11 @@ use super::{
         empty_area,
     },
 };
+use crate::ui::palette::{
+    LIGHT_GRAY, REMOVE_BUTTON_FILL, SOFT_RED, SUCCESS_GREEN, SURFACE_BORDER, SURFACE_BUTTON_BORDER, SURFACE_HOVER,
+    SURFACE_ROW, TEXT_DIM, TEXT_LIGHT, TEXT_MUTED,
+};
+use crate::ui::type_styles::{MEDIUM_12, MEDIUM_13, REGULAR_12, REGULAR_13, REGULAR_14};
 use crate::{
     gfx::{Align, Canvas, Color, FontStyle, Point, Rect, UI_FONT, Weight},
     ui::{FieldLook, Stroke, draw_strokes},
@@ -27,31 +30,10 @@ const MESSAGE_ICON_GAP: f32 = 8.0;
 const MESSAGE_HEIGHT: f32 = 18.0;
 
 const TITLE: FontStyle = FontStyle::new(UI_FONT, 20.0, Weight::Medium, Align::Leading);
-const COUNT: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Leading);
-const ROW_TEXT: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Regular, Align::Leading);
 const PLUS: FontStyle = FontStyle::new(UI_FONT, 15.0, Weight::Regular, Align::Center);
-const ADD_PLUS: FontStyle = FontStyle::new(UI_FONT, 14.0, Weight::Regular, Align::Leading);
 const HINT: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Trailing);
-const MESSAGE: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Medium, Align::Leading);
-/// The design asks for 600; only Regular and Medium are bundled.
-const BUTTON: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Medium, Align::Leading);
 
-const GRAY: Color = Color::rgb(0.604, 0.604, 0.651);
-const DIM: Color = Color::rgb(0.431, 0.431, 0.478);
-const ROW: Color = Color::rgb(0.078, 0.078, 0.094);
-const ROW_HOVERED: Color = Color::rgb(0.11, 0.11, 0.133);
-const DELETE_FILL: Color = Color::rgb(0.165, 0.165, 0.188);
-const DELETE_CROSS: Color = Color::rgb(0.769, 0.769, 0.8);
 const FIELD_BORDER: Color = Color::rgb(0.251, 0.561, 1.0);
-const DONE_GREEN: Color = Color::rgb(0.19, 0.82, 0.35);
-const MESSAGE_COLOR: Color = Color::rgb(0.769, 0.769, 0.8);
-const CLEAR_FILL: Color = Color::rgb(0.11, 0.11, 0.133);
-const CLEAR_FILL_HOVERED: Color = Color::rgb(0.149, 0.149, 0.176);
-const CLEAR_BORDER: Color = Color::rgb(0.173, 0.173, 0.204);
-const CLEAR_TEXT: Color = Color::rgb(0.902, 0.902, 0.922);
-const TRASH_RED: Color = Color::rgb(1.0, 0.42, 0.42);
-const ADD_FILL_DIMMED: Color = Color::rgb(0.149, 0.149, 0.176);
-const ADD_TEXT_DIMMED: Color = Color::rgb(0.431, 0.431, 0.478);
 const CLOSE: &str = "M6 6l12 12M18 6 6 18";
 const CHECK: &str = "m5 12 5 5 9-10";
 const TRASH: &str = "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3";
@@ -77,7 +59,7 @@ impl TodoPage {
             bounds.right,
             count_middle + COUNT_HEIGHT * scale / 2.0,
         );
-        canvas.text(&COUNT, &self.count_text, count_area, GRAY.faded(opacity));
+        canvas.text(&REGULAR_12, &self.count_text, count_area, TEXT_MUTED.faded(opacity));
         if !self.list.is_empty() {
             self.draw_clear_button(canvas, clear_button(bounds, scale), scale, opacity);
         }
@@ -86,44 +68,44 @@ impl TodoPage {
 
     fn draw_clear_button(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
         let radius = BUTTON_HEIGHT * scale / 2.0;
-        let fill = if self.is_clear_hovered { CLEAR_FILL_HOVERED } else { CLEAR_FILL };
-        canvas.fill_rounded_rect(area, radius, CLEAR_BORDER.faded(opacity));
+        let fill = if self.is_clear_hovered { SURFACE_BORDER } else { SURFACE_HOVER };
+        canvas.fill_rounded_rect(area, radius, SURFACE_BUTTON_BORDER.faded(opacity));
         let inner = Rect::new(area.left + scale, area.top + scale, area.right - scale, area.bottom - scale);
         canvas.fill_rounded_rect(inner, radius - scale, fill.faded(opacity));
-        let text_width = canvas.measure(&BUTTON, "Clear all") * scale;
+        let text_width = canvas.measure(&MEDIUM_12, "Clear all") * scale;
         let content = (TRASH_SIZE + BUTTON_CONTENT_GAP) * scale + text_width;
         let left = area.center_x() - content / 2.0;
         let icon_center = Point::new(left + TRASH_SIZE * scale / 2.0, area.center_y());
-        draw_strokes(canvas, &[Stroke::new(TRASH, TRASH_RED)], icon_center, TRASH_SIZE * scale, 2.0, opacity);
+        draw_strokes(canvas, &[Stroke::new(TRASH, SOFT_RED)], icon_center, TRASH_SIZE * scale, 2.0, opacity);
         let label = Rect { left: left + (TRASH_SIZE + BUTTON_CONTENT_GAP) * scale, right: area.right, ..area };
-        canvas.text(&BUTTON, "Clear all", label, CLEAR_TEXT.faded(opacity));
+        canvas.text(&MEDIUM_12, "Clear all", label, TEXT_LIGHT.faded(opacity));
     }
 
     fn draw_add_button(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
         let is_dimmed = self.list.is_full();
         let fill = match (is_dimmed, self.is_add_hovered) {
-            (true, _) => ADD_FILL_DIMMED,
+            (true, _) => SURFACE_BORDER,
             (false, true) => Color::gray(0.85),
             (false, false) => Color::WHITE,
         };
-        let text = if is_dimmed { ADD_TEXT_DIMMED } else { Color::BLACK };
+        let text = if is_dimmed { TEXT_DIM } else { Color::BLACK };
         canvas.fill_rounded_rect(area, area.height() / 2.0, fill.faded(opacity));
-        let plus_width = canvas.measure(&ADD_PLUS, "+") * scale;
-        let content = plus_width + BUTTON_CONTENT_GAP * scale + canvas.measure(&BUTTON, "Add") * scale;
+        let plus_width = canvas.measure(&REGULAR_14, "+") * scale;
+        let content = plus_width + BUTTON_CONTENT_GAP * scale + canvas.measure(&MEDIUM_12, "Add") * scale;
         let left = area.center_x() - content / 2.0;
-        canvas.text(&ADD_PLUS, "+", Rect { left, right: left + plus_width + scale, ..area }, text.faded(opacity));
+        canvas.text(&REGULAR_14, "+", Rect { left, right: left + plus_width + scale, ..area }, text.faded(opacity));
         let label = Rect { left: left + plus_width + BUTTON_CONTENT_GAP * scale, right: area.right, ..area };
-        canvas.text(&BUTTON, "Add", label, text.faded(opacity));
+        canvas.text(&MEDIUM_12, "Add", label, text.faded(opacity));
     }
 
     /// "All clear" with its check mark, centered under the toolbar.
     pub(super) fn draw_empty(&self, canvas: &Canvas, bounds: Rect, scale: f32, opacity: f32) {
         let area = empty_area(bounds, scale);
-        let text_width = canvas.measure(&MESSAGE, "All clear") * scale;
+        let text_width = canvas.measure(&MEDIUM_13, "All clear") * scale;
         let total = (MESSAGE_ICON_SIZE + MESSAGE_ICON_GAP) * scale + text_width;
         let left = area.center_x() - total / 2.0;
         let icon_center = Point::new(left + MESSAGE_ICON_SIZE * scale / 2.0, area.center_y());
-        let layers = [Stroke::new(ALL_CLEAR_RING, DIM), Stroke::new(ALL_CLEAR_CHECK, DIM)];
+        let layers = [Stroke::new(ALL_CLEAR_RING, TEXT_DIM), Stroke::new(ALL_CLEAR_CHECK, TEXT_DIM)];
         draw_strokes(canvas, &layers, icon_center, MESSAGE_ICON_SIZE * scale, 1.6, opacity);
         let text_area = Rect::new(
             left + (MESSAGE_ICON_SIZE + MESSAGE_ICON_GAP) * scale,
@@ -131,27 +113,27 @@ impl TodoPage {
             area.right,
             area.center_y() + MESSAGE_HEIGHT * scale / 2.0,
         );
-        canvas.text(&MESSAGE, "All clear", text_area, MESSAGE_COLOR.faded(opacity));
+        canvas.text(&MEDIUM_13, "All clear", text_area, LIGHT_GRAY.faded(opacity));
     }
 
     pub(super) fn draw_row(&self, canvas: &Canvas, row: Row, rect: Rect, position: usize, opacity: f32) {
         let scale = canvas.scale();
         let text_area = Rect { left: rect.left + TEXT_LEFT * scale, right: rect.right - 36.0 * scale, ..rect };
         let is_hovered = self.hovered_row == Some(position);
-        let fill = if is_hovered { ROW_HOVERED } else { ROW };
+        let fill = if is_hovered { SURFACE_HOVER } else { SURFACE_ROW };
         match row {
             Row::Field => {
                 canvas.fill_rounded_rect(rect, ROW_RADIUS * scale, FIELD_BORDER.faded(opacity));
                 let border = FIELD_BORDER_WIDTH * scale;
                 let inner = Rect::new(rect.left + border, rect.top + border, rect.right - border, rect.bottom - border);
-                canvas.fill_rounded_rect(inner, (ROW_RADIUS - FIELD_BORDER_WIDTH) * scale, ROW.faded(opacity));
+                canvas.fill_rounded_rect(inner, (ROW_RADIUS - FIELD_BORDER_WIDTH) * scale, SURFACE_ROW.faded(opacity));
                 canvas.text(&PLUS, "+", check_rect(rect, scale), FIELD_BORDER.faded(opacity));
                 let field_area = Rect { right: rect.right - (HINT_WIDTH + ROW_PADDING) * scale, ..text_area };
-                let look = FieldLook { style: &ROW_TEXT, color: Color::WHITE, placeholder: "What needs doing?" };
+                let look = FieldLook { style: &REGULAR_13, color: Color::WHITE, placeholder: "What needs doing?" };
                 self.field.draw(canvas, field_area, &look, self.has_keyboard, opacity);
                 let hint_area =
                     Rect { left: rect.right - HINT_WIDTH * scale, right: rect.right - ROW_PADDING * scale, ..rect };
-                canvas.text(&HINT, "Enter to add", hint_area, DIM.faded(opacity));
+                canvas.text(&HINT, "Enter to add", hint_area, TEXT_DIM.faded(opacity));
             }
             Row::Item(index) => {
                 let Some(item) = self.list.item(index) else { return };
@@ -162,36 +144,36 @@ impl TodoPage {
                 let center = Point::new(check.center_x(), check.center_y());
                 let half = CHECK_SIZE * scale / 2.0;
                 if item.is_done {
-                    canvas.fill_circle(center, half, DONE_GREEN.faded(opacity));
+                    canvas.fill_circle(center, half, SUCCESS_GREEN.faded(opacity));
                     let mark = [Stroke::new(CHECK, Color::BLACK)];
                     draw_strokes(canvas, &mark, center, 9.0 * scale, 3.5, opacity);
                 } else {
-                    canvas.fill_circle(center, half, DIM.faded(opacity));
+                    canvas.fill_circle(center, half, TEXT_DIM.faded(opacity));
                     canvas.fill_circle(center, half - 1.5 * scale, fill.faded(opacity));
                 }
-                let color = if item.is_done { DIM } else { Color::WHITE };
-                canvas.text(&ROW_TEXT, &item.text, text_area, color.faded(opacity));
+                let color = if item.is_done { TEXT_DIM } else { Color::WHITE };
+                canvas.text(&REGULAR_13, &item.text, text_area, color.faded(opacity));
                 if item.is_done {
-                    let width = (canvas.measure(&ROW_TEXT, &item.text) * scale).min(text_area.width());
+                    let width = (canvas.measure(&REGULAR_13, &item.text) * scale).min(text_area.width());
                     let line_y = rect.center_y();
                     let line =
                         Rect::new(text_area.left, line_y - 0.5 * scale, text_area.left + width, line_y + 0.5 * scale);
-                    canvas.fill_rounded_rect(line, 0.5 * scale, DIM.faded(opacity));
+                    canvas.fill_rounded_rect(line, 0.5 * scale, TEXT_DIM.faded(opacity));
                 }
                 if is_hovered {
                     let delete = delete_rect(rect, scale);
-                    canvas.fill_rounded_rect(delete, delete.height() / 2.0, DELETE_FILL.faded(opacity));
+                    canvas.fill_rounded_rect(delete, delete.height() / 2.0, REMOVE_BUTTON_FILL.faded(opacity));
                     let center = Point::new(delete.center_x(), delete.center_y());
-                    let cross = [Stroke::new(CLOSE, DELETE_CROSS)];
+                    let cross = [Stroke::new(CLOSE, LIGHT_GRAY)];
                     draw_strokes(canvas, &cross, center, 10.0 * scale, 2.5, opacity);
                 }
             }
             Row::More(_) => {
                 canvas.text(
-                    &COUNT,
+                    &REGULAR_12,
                     &self.more_text,
                     Rect { left: rect.left + ROW_PADDING * scale, ..rect },
-                    DIM.faded(opacity),
+                    TEXT_DIM.faded(opacity),
                 );
             }
         }

@@ -84,10 +84,6 @@ impl Notch {
         self.start_animation();
     }
 
-    pub(super) fn page_at(&self, position: f32) -> usize {
-        self.navigable[(position.round() as i64).rem_euclid(self.navigable.len() as i64) as usize]
-    }
-
     pub(super) fn wrap_track(&mut self) {
         let count = self.navigable.len() as f32;
         if self.track.is_settled() && count > 0.0 {

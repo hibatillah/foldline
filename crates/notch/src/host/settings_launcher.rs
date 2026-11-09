@@ -14,7 +14,7 @@ fn settings_program_path(notch_exe: &Path) -> PathBuf {
 }
 
 /// Starts the settings program without waiting; it shows its existing window when one is already open.
-pub fn open_settings_window() {
+pub(super) fn open_settings_window() {
     let result = std::env::current_exe()
         .and_then(|notch_exe| Command::new(settings_program_path(&notch_exe)).creation_flags(CREATE_NO_WINDOW).spawn());
     if let Err(error) = result {

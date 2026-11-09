@@ -1,5 +1,3 @@
-//! Draws the list, the preview, the action row, the bar and the empty page.
-
 use std::time::Instant;
 
 use super::{

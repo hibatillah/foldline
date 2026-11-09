@@ -19,15 +19,15 @@ use windows::{
 };
 
 use super::privacy::{Device, DotRow, Privacy};
+use crate::ui::palette::SUCCESS_GREEN;
 use crate::{
     activity::{Activity, Presence},
-    gfx::{Canvas, Color, Rect},
+    gfx::{Canvas, Rect},
     log,
     page::{Context, Notifier, TimerId},
     ui::Icon,
 };
 
-const GREEN: Color = Color::rgb(0.19, 0.82, 0.35);
 const CHANNEL: windows::core::PCWSTR = w!("Microsoft-Windows-MF-FrameServer/Camera_FrameServer");
 /// Only the watchdog events about streams: event 11 is logged when a stream operation begins.
 const QUERY: windows::core::PCWSTR = w!("*[System[EventID=11] and EventData[Data[@Name='TimerScope']='2']]");
@@ -122,7 +122,12 @@ pub struct CameraActivity {
 impl CameraActivity {
     pub fn new() -> Self {
         Self {
-            privacy: Privacy::new(Device { name: "Camera", icon: Icon::Camera, color: GREEN, row: DotRow::Top }),
+            privacy: Privacy::new(Device {
+                name: "Camera",
+                icon: Icon::Camera,
+                color: SUCCESS_GREEN,
+                row: DotRow::Top,
+            }),
             is_in_use: Arc::new(AtomicBool::new(false)),
             subscription: None,
         }

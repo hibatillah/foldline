@@ -80,6 +80,11 @@ impl Forecast {
         })
     }
 
+    /// The index of the hour shown first, the one whose hour is still running at `now`.
+    pub(super) fn first_hour_index(&self, now: DateTime<Utc>) -> usize {
+        self.hours.iter().position(|hour| hour.time + salah::Duration::hours(1) > now).unwrap_or(0)
+    }
+
     /// The hour whose weather is happening at `now`.
     pub(super) fn current(&self, now: DateTime<Utc>) -> Option<&Hour> {
         self.hours.iter().rev().find(|hour| hour.time <= now).or_else(|| self.hours.first())

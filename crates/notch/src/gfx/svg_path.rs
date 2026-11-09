@@ -137,8 +137,9 @@ impl Path {
                     path = path.line_to(at(x, y));
                 }
                 'C' => {
-                    let Some([x1, y1, x2, y2, next_x, next_y]) = cursor.numbers() else { break };
-                    let (first, second) = ((offset_x + x1, offset_y + y1), (offset_x + x2, offset_y + y2));
+                    let Some([first_x, first_y, second_x, second_y, next_x, next_y]) = cursor.numbers() else { break };
+                    let (first, second) =
+                        ((offset_x + first_x, offset_y + first_y), (offset_x + second_x, offset_y + second_y));
                     path = path.curve_to(
                         at(first.0, first.1),
                         at(second.0, second.1),
@@ -148,10 +149,10 @@ impl Path {
                     control = Some(second);
                 }
                 'S' => {
-                    let Some([x2, y2, next_x, next_y]) = cursor.numbers() else { break };
+                    let Some([second_x, second_y, next_x, next_y]) = cursor.numbers() else { break };
                     let first = last_control
                         .map_or((x, y), |(control_x, control_y)| (2.0 * x - control_x, 2.0 * y - control_y));
-                    let second = (offset_x + x2, offset_y + y2);
+                    let second = (offset_x + second_x, offset_y + second_y);
                     path = path.curve_to(
                         at(first.0, first.1),
                         at(second.0, second.1),
@@ -213,10 +214,13 @@ fn arc_curves(
         radius_x *= grow;
         radius_y *= grow;
     }
-    let (rx2, ry2) = (radius_x * radius_x, radius_y * radius_y);
-    let (x2, y2) = (rotated.0 * rotated.0, rotated.1 * rotated.1);
-    let numerator = (rx2 * ry2 - rx2 * y2 - ry2 * x2).max(0.0);
-    let denominator = rx2 * y2 + ry2 * x2;
+    let (radius_x_squared, radius_y_squared) = (radius_x * radius_x, radius_y * radius_y);
+    let (rotated_x_squared, rotated_y_squared) = (rotated.0 * rotated.0, rotated.1 * rotated.1);
+    let numerator = (radius_x_squared * radius_y_squared
+        - radius_x_squared * rotated_y_squared
+        - radius_y_squared * rotated_x_squared)
+        .max(0.0);
+    let denominator = radius_x_squared * rotated_y_squared + radius_y_squared * rotated_x_squared;
     let sign = if is_large == is_sweep { -1.0 } else { 1.0 };
     let factor = if denominator == 0.0 { 0.0 } else { sign * (numerator / denominator).sqrt() };
     let center_rotated = (factor * radius_x * rotated.1 / radius_y, -factor * radius_y * rotated.0 / radius_x);

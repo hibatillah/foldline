@@ -70,10 +70,15 @@ fn clamp_rest(
     max_width: f32,
     measure: &dyn Fn(&str) -> f32,
 ) -> Vec<String> {
-    let remaining = std::iter::once(rest).filter(|part| !part.is_empty()).chain(words.iter().copied());
-    let tail = remaining.collect::<Vec<_>>().join(" ");
+    let tail = join_words(rest, words);
     lines.extend(clamp(&tail, max_lines - lines.len(), max_width, measure));
     lines
+}
+
+/// The unfinished word (when not empty) followed by the remaining words, space separated.
+fn join_words(rest_of_word: &str, words: &[&str]) -> String {
+    let parts = std::iter::once(rest_of_word).filter(|part| !part.is_empty()).chain(words.iter().copied());
+    parts.collect::<Vec<_>>().join(" ")
 }
 
 /// Ellipsize the last line only when text remains.
@@ -84,8 +89,7 @@ fn finish(
     max_width: f32,
     measure: &dyn Fn(&str) -> f32,
 ) -> Vec<String> {
-    let overflow = std::iter::once(rest_of_word).filter(|part| !part.is_empty()).chain(following.iter().copied());
-    let overflow = overflow.collect::<Vec<_>>().join(" ");
+    let overflow = join_words(rest_of_word, following);
     if overflow.is_empty() {
         return lines;
     }

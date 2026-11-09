@@ -137,9 +137,9 @@ fn a_banner_still_shows_over_an_activities_only_window_while_the_reveal_waits() 
     assert!(notch.is_hidden());
     notch.set_screen_mode(ScreenMode::Normal);
     assert!(notch.is_hidden(), "the idle pill stays hidden during the wait");
-    notch.shown_banner = Some((Source::Activity(0), 330.0, 70.0));
+    notch.presences.banner = Some((Source::Activity(0), 330.0, 70.0));
     assert!(!notch.is_hidden(), "an activity shows as it did over the maximized window");
-    notch.shown_banner = None;
+    notch.presences.banner = None;
     notch.timer_fired(WINDOW_REVEAL_TIMER_ID);
     assert!(!notch.is_hidden());
 }

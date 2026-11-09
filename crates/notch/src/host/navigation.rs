@@ -3,20 +3,12 @@
 use super::motion::PAGE_SLIDE_RESPONSE;
 use crate::{gfx::Spring, page::Priority};
 
-pub fn page_transition(position: f32) -> Spring {
+/// The position of the page dots' long mark along the row of pages; whole numbers are pages.
+pub(super) fn page_transition(position: f32) -> Spring {
     Spring::new(position, PAGE_SLIDE_RESPONSE.0, PAGE_SLIDE_RESPONSE.1)
 }
 
-pub struct PageLayout {
-    pub center_offsets: [f32; 2],
-}
-
-pub fn page_layout(first_width: f32, next_width: f32, progress: f32, gap: f32) -> PageLayout {
-    let center_distance = (first_width + next_width) / 2.0 + gap;
-    PageLayout { center_offsets: [-progress * center_distance, (1.0 - progress) * center_distance] }
-}
-
-pub struct PageList {
+pub(super) struct PageList {
     order: Vec<usize>,
     enabled: Vec<bool>,
 }
@@ -94,7 +86,7 @@ impl PageList {
 }
 
 /// The `id:Label[:opt_in]` list the settings window reads as `pages.known`; it lists pages without linking to the notch.
-pub fn known_pages_text(ids: &[&str], labels: &[&str], opt_in: &[bool]) -> String {
+pub(super) fn known_pages_text(ids: &[&str], labels: &[&str], opt_in: &[bool]) -> String {
     debug_assert!(ids.len() == labels.len() && ids.len() == opt_in.len());
     ids.iter()
         .zip(labels)
@@ -105,8 +97,8 @@ pub fn known_pages_text(ids: &[&str], labels: &[&str], opt_in: &[bool]) -> Strin
 }
 
 /// Urgent pages override selection; otherwise retain an available selection before falling back to priority.
-pub fn choose(selected: Option<usize>, priorities: &[Option<Priority>]) -> Option<usize> {
-    if let Some(index) = highest(priorities, Priority::URGENT) {
+pub(super) fn choose(selected: Option<usize>, priorities: &[Option<Priority>]) -> Option<usize> {
+    if let Some(index) = highest(priorities.iter().copied(), Priority::URGENT) {
         return Some(index);
     }
     if let Some(index) = selected
@@ -114,13 +106,14 @@ pub fn choose(selected: Option<usize>, priorities: &[Option<Priority>]) -> Optio
     {
         return Some(index);
     }
-    highest(priorities, Priority::BACKGROUND)
+    highest(priorities.iter().copied(), Priority::BACKGROUND)
 }
 
-fn highest(priorities: &[Option<Priority>], lowest: Priority) -> Option<usize> {
+/// The first page with the highest priority of at least `lowest`.
+pub(super) fn highest(priorities: impl IntoIterator<Item = Option<Priority>>, lowest: Priority) -> Option<usize> {
     let mut best: Option<(usize, Priority)> = None;
-    for (index, priority) in priorities.iter().enumerate() {
-        let Some(priority) = *priority else { continue };
+    for (index, priority) in priorities.into_iter().enumerate() {
+        let Some(priority) = priority else { continue };
         if priority >= lowest && best.is_none_or(|(_, best_priority)| priority > best_priority) {
             best = Some((index, priority));
         }
@@ -148,7 +141,7 @@ mod tests {
     fn pages_are_reached_in_the_users_order_and_switched_off_ones_are_skipped() {
         let mut list = PageList::load(&IDS[..3], &[false; 3], Some("timer"), None);
         assert_eq!(list.navigable(&[LOW, LOW, LOW]), vec![2, 0, 1]);
-        list.set_enabled(0, false);
+        list.enabled[0] = false;
         assert_eq!(list.navigable(&[LOW, LOW, LOW]), vec![2, 1]);
         assert_eq!(list.effective(&[LOW, LOW, LOW]), vec![None, LOW, LOW]);
     }
@@ -156,19 +149,19 @@ mod tests {
     #[test]
     fn the_saved_order_and_choices_come_back_by_id() {
         let mut list = PageList::load(&IDS, &[false; 4], Some("clock,stats"), None);
-        list.set_enabled(2, false);
+        list.enabled[2] = false;
         let (order, disabled) = (list.order_text(&IDS), list.disabled_text(&IDS));
         assert_eq!(order, "clock,stats,media,timer");
         assert_eq!(disabled, "timer");
         let restored = PageList::load(&IDS, &[false; 4], Some(&order), Some(&disabled));
-        assert_eq!(restored.order(), list.order());
+        assert_eq!(restored.order, list.order);
         assert!(!restored.is_enabled(2) && restored.is_enabled(3));
     }
 
     #[test]
     fn unknown_and_repeated_ids_are_ignored_and_missing_pages_go_last() {
         let list = PageList::load(&IDS, &[false; 4], Some("timer, nope, timer, clock"), None);
-        assert_eq!(list.order(), &[2, 0, 1, 3]);
+        assert_eq!(list.order, [2, 0, 1, 3]);
     }
 
     #[test]
@@ -211,19 +204,21 @@ mod tests {
     }
 
     #[test]
-    fn unequal_page_widths_share_one_gap() {
-        for progress in [0.0, 0.25, 0.5, 0.75, 1.0] {
-            let layout = page_layout(600.0, 300.0, progress, 24.0);
-            let first_right = layout.center_offsets[0] + 300.0;
-            let next_left = layout.center_offsets[1] - 150.0;
-            assert_eq!(next_left - first_right, 24.0);
-        }
-        let quarter = page_layout(600.0, 300.0, 0.25, 24.0);
-        let next_left = quarter.center_offsets[1] - 150.0;
-        assert!(
-            next_left < 600.0 * 0.75 / 2.0 + 300.0 * 0.25 / 2.0,
-            "the shorter next page is already visible at 25 percent"
-        );
+    fn no_page_wants_to_show() {
+        assert_eq!(highest([None, None], Priority::BACKGROUND), None);
+        assert_eq!(highest(Vec::new(), Priority::BACKGROUND), None);
+    }
+
+    #[test]
+    fn the_highest_priority_wins_and_the_earliest_page_wins_a_tie() {
+        assert_eq!(highest([LOW, HIGH, LOW], Priority::BACKGROUND), Some(1));
+        assert_eq!(highest([HIGH, HIGH], Priority::BACKGROUND), Some(0));
+    }
+
+    #[test]
+    fn pages_with_nothing_to_show_or_below_the_floor_are_skipped() {
+        assert_eq!(highest([None, LOW, None], Priority::BACKGROUND), Some(1));
+        assert_eq!(highest([LOW, HIGH], Priority::URGENT), None);
     }
 
     #[test]

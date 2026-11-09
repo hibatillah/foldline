@@ -5,6 +5,7 @@ use std::f32::consts::{FRAC_PI_2, TAU};
 use crate::gfx::{Canvas, Color, Mask, Path, Point, Rect};
 
 use super::layout::RING_DIAMETER;
+use crate::ui::palette::SURFACE_OUTLINE;
 
 const RING_RADIUS: f32 = 25.0;
 const STROKE: f32 = 4.0;
@@ -18,7 +19,7 @@ const DASH_ARC_POINTS: u32 = 4;
 
 pub(super) const TRACK: Color = Color::rgb(0.173, 0.173, 0.188);
 /// The ring of a device without a level: solid when it is on and does not report, dashed when it is off.
-pub(super) const NO_LEVEL: Color = Color::rgb(0.227, 0.227, 0.267);
+pub(super) const NO_LEVEL: Color = SURFACE_OUTLINE;
 
 pub(super) enum Fill {
     Level {

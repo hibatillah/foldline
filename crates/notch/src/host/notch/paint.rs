@@ -17,7 +17,6 @@ const BANNER_RADIUS_RANGE: f32 = 20.0;
 const EXPANDED_RADIUS: f32 = 22.0;
 const SHADOW_LAYER_ALPHA: f32 = 0.028;
 const HIDDEN_ALPHA: f32 = 0.006;
-const PAGE_FADE_PER_PAGE: f32 = 0.5;
 
 impl Notch {
     pub fn paint(&self) {
@@ -101,7 +100,7 @@ impl Notch {
                         self.draw_row(canvas, &frame, &opacity);
                     }
                     if activity_opacity > 0.01 {
-                        if self.shown_banner.is_some() {
+                        if self.presences.banner.is_some() {
                             self.draw_banner(canvas, &frame, activity_opacity);
                         } else {
                             self.draw_transients(canvas, &frame, activity_opacity);
@@ -121,33 +120,23 @@ impl Notch {
         }
     }
 
-    /// Backdrops crossfade in place while page content slides.
+    /// Backdrops cross-fade in place while the page content shifts.
     pub(super) fn draw_backdrops(&self, canvas: &Canvas, frame: &Frame, radius: f32, opacity: f32) {
-        let Some(expanded_index) = self.expanded_index else { return };
-        if let Some(pages) = self.visible_page_frames(frame) {
-            for (index, _, distance) in pages {
-                let page_frame = self.natural_page_frame(index, frame, 0.0);
-                self.pages[index].draw_backdrop(canvas, &page_frame, frame.bounds, radius, opacity * (1.0 - distance));
-            }
-            return;
+        for (index, _, page_opacity) in self.swap_page_frames(frame).into_iter().flatten() {
+            let page_frame = self.natural_page_frame(index, frame, 0.0);
+            self.pages[index].draw_backdrop(canvas, &page_frame, frame.bounds, radius, opacity * page_opacity);
         }
-        let index = if self.navigable.len() < 2 { expanded_index } else { self.page_at(self.track.position) };
-        let page_frame = self.natural_page_frame(index, frame, 0.0);
-        self.pages[index].draw_backdrop(canvas, &page_frame, frame.bounds, radius, opacity);
     }
 
+    /// Pages draw below the header only, so a page entering a pill that is still growing never covers the header.
     pub(super) fn draw_open_pages(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
-        let Some(expanded_index) = self.expanded_index else { return };
-        if let Some(pages) = self.visible_page_frames(frame) {
-            for (index, page_frame, distance) in pages {
-                let fade = (1.0 - distance * PAGE_FADE_PER_PAGE).clamp(0.0, 1.0);
-                self.pages[index].draw_expanded(canvas, &page_frame, opacity * fade);
+        canvas.clipped(chrome::page_clip_rect(frame.bounds, self.scale), || {
+            for (index, page_frame, page_opacity) in self.swap_page_frames(frame).into_iter().flatten() {
+                if page_opacity > 0.001 {
+                    self.pages[index].draw_expanded(canvas, &page_frame, opacity * page_opacity);
+                }
             }
-            return;
-        }
-        let index = if self.navigable.len() < 2 { expanded_index } else { self.page_at(self.track.position) };
-        let page_frame = self.natural_page_frame(index, frame, 0.0);
-        self.pages[index].draw_expanded(canvas, &page_frame, opacity);
+        });
     }
 
     pub(super) fn draw_shadow(&self, canvas: &Canvas, bounds: Rect, radius: f32, strength: f32) {
@@ -176,13 +165,14 @@ impl Notch {
 
     pub(super) fn draw_transients(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
         let scale = self.scale;
-        let widths: Vec<f32> = self.shown_transients.iter().map(|&(_, width)| width).collect();
-        let offsets = activity_layout::offsets(&widths);
-        let total = activity_layout::total_width(&widths) * scale;
+        let widths = || self.presences.transients.iter().map(|&(_, width)| width);
+        let total = activity_layout::total_width(widths()) * scale;
         let first_left = frame.bounds.left + (frame.bounds.width() - total) / 2.0;
         let (top, bottom) = (frame.bounds.top, frame.bounds.top + RESTING_HEIGHT * scale);
-        for (position, &(source, width)) in self.shown_transients.iter().enumerate() {
-            let left = first_left + offsets[position] * scale;
+        for (position, (&(source, width), offset)) in
+            self.presences.transients.iter().zip(activity_layout::offsets(widths())).enumerate()
+        {
+            let left = first_left + offset * scale;
             let area = Rect::new(left, top, left + width * scale, bottom);
             self.draw_source(source, canvas, area, opacity);
             if position > 0 {
@@ -199,7 +189,7 @@ impl Notch {
 
     /// The banner's owner and the rect it draws into, which is also where its pointer input is measured.
     pub(super) fn banner_area(&self, frame: &Frame) -> Option<(Source, Rect)> {
-        let (source, _, _) = self.shown_banner?;
+        let (source, _, _) = self.presences.banner?;
         let bounds = frame.bounds;
         Some((source, Rect { bottom: bounds.bottom - RESTING_BOTTOM_PADDING * self.scale, ..bounds }))
     }

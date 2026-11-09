@@ -1,11 +1,11 @@
 //! Newer transients take priority; older ones wait for space.
 
 /// Transients on screen at once; older ones wait until a newer one ends.
-pub const MAX_TRANSIENTS: usize = 2;
-pub const DIVIDER_WIDTH: f32 = 1.0;
+pub(super) const MAX_TRANSIENTS: usize = 2;
+pub(super) const DIVIDER_WIDTH: f32 = 1.0;
 
 /// Keeps `order` as the activation order of the activities in `active`: ended ones leave, new ones join at the end.
-pub fn track_order<T: Copy + PartialEq>(order: &mut Vec<T>, active: &[T]) {
+pub(super) fn track_order<T: Copy + PartialEq>(order: &mut Vec<T>, active: &[T]) {
     order.retain(|item| active.contains(item));
     for &item in active {
         if !order.contains(&item) {
@@ -15,28 +15,26 @@ pub fn track_order<T: Copy + PartialEq>(order: &mut Vec<T>, active: &[T]) {
 }
 
 /// The newest transients that fit on screen, oldest first.
-pub fn newest<T>(order: &[T]) -> &[T] {
+pub(super) fn newest<T>(order: &[T]) -> &[T] {
     &order[order.len().saturating_sub(MAX_TRANSIENTS)..]
 }
 
-pub fn total_width(widths: &[f32]) -> f32 {
-    widths.iter().sum::<f32>() + DIVIDER_WIDTH * widths.len().saturating_sub(1) as f32
+pub(super) fn total_width(widths: impl IntoIterator<Item = f32>) -> f32 {
+    let (sum, count) = widths.into_iter().fold((0.0, 0usize), |(sum, count), width| (sum + width, count + 1));
+    sum + DIVIDER_WIDTH * count.saturating_sub(1) as f32
 }
 
-pub fn offsets(widths: &[f32]) -> Vec<f32> {
-    let mut left = 0.0;
-    widths
-        .iter()
-        .map(|width| {
-            let start = left;
-            left += width + DIVIDER_WIDTH;
-            start
-        })
-        .collect()
+/// The left edge of each transient from the first one's, lazily so a paint allocates nothing.
+pub(super) fn offsets(widths: impl IntoIterator<Item = f32>) -> impl Iterator<Item = f32> {
+    widths.into_iter().scan(0.0, |left, width| {
+        let start = *left;
+        *left += width + DIVIDER_WIDTH;
+        Some(start)
+    })
 }
 
 /// The debug-log line naming what the collapsed pill shows, so a wake nobody asked for can be traced to its source.
-pub fn presence_summary(transients: &[&str], badges: &[&str], banner: Option<&str>) -> String {
+pub(super) fn presence_summary(transients: &[&str], badges: &[&str], banner: Option<&str>) -> String {
     format!(
         "pill shows transients=[{}] badges=[{}] banner={}",
         transients.join(","),
@@ -85,13 +83,13 @@ mod tests {
 
     #[test]
     fn dividers_sit_between_transients_only() {
-        assert_eq!(total_width(&[100.0]), 100.0);
-        assert_eq!(total_width(&[100.0, 50.0]), 100.0 + DIVIDER_WIDTH + 50.0);
-        assert_eq!(total_width(&[]), 0.0);
+        assert_eq!(total_width([100.0]), 100.0);
+        assert_eq!(total_width([100.0, 50.0]), 100.0 + DIVIDER_WIDTH + 50.0);
+        assert_eq!(total_width([]), 0.0);
     }
 
     #[test]
     fn each_transient_starts_after_the_previous_one_and_its_divider() {
-        assert_eq!(offsets(&[100.0, 50.0]), vec![0.0, 100.0 + DIVIDER_WIDTH]);
+        assert_eq!(offsets([100.0, 50.0]).collect::<Vec<_>>(), vec![0.0, 100.0 + DIVIDER_WIDTH]);
     }
 }

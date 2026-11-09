@@ -3,12 +3,14 @@
 use salah::{DateTime, Utc};
 
 use super::{
-    COUNTDOWN, DIM, GRAY, GREEN, LIGHT, ShalatPage,
+    LIGHT, ShalatPage,
     arc::{self, Marker, PRAYER_COUNT, PRAYER_SLOTS},
     schedule::Schedule,
     text::{clock_text, remaining_text},
     times::PRAYERS,
 };
+use crate::ui::palette::{MINT_GREEN, TEXT_DIM, TEXT_MUTED};
+use crate::ui::type_styles::{MEDIUM_11_CENTER, MEDIUM_12, REGULAR_10, REGULAR_11};
 use crate::{
     gfx::{Align, Canvas, Color, FontStyle, Rect, UI_FONT, Weight},
     page::Frame,
@@ -28,11 +30,8 @@ const MARKER_LABEL_BOTTOM: f32 = 66.0;
 const MARKER_TIME_TOP: f32 = 70.0;
 const MARKER_TIME_BOTTOM: f32 = 84.0;
 
-const LABEL: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Leading);
 const NAME: FontStyle = FontStyle::new(UI_FONT, 26.0, Weight::Medium, Align::Leading);
-const CITY: FontStyle = FontStyle::new(UI_FONT, 10.0, Weight::Regular, Align::Leading);
 const MARKER_NAME: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Align::Center);
-const MARKER_NEXT_NAME: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Medium, Align::Center);
 const MARKER_TIME: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Center).tabular();
 
 /// "Next", or "Starts soon" in the last ten minutes, or "Tomorrow" once the day's prayers are over.
@@ -76,10 +75,10 @@ impl ShalatPage {
         let seconds_left = (time - now).num_seconds();
         let is_tomorrow = time > schedule.today[5];
         let lines: [(&FontStyle, String, Color, f32); 4] = [
-            (&LABEL, heading(is_tomorrow, seconds_left).to_owned(), GRAY, LABEL_HEIGHT),
+            (&REGULAR_11, heading(is_tomorrow, seconds_left).to_owned(), TEXT_MUTED, LABEL_HEIGHT),
             (&NAME, prayer.name().to_owned(), Color::WHITE, NAME_HEIGHT),
-            (&COUNTDOWN, remaining_text(seconds_left), GREEN, COUNTDOWN_HEIGHT),
-            (&CITY, self.config.city.clone(), DIM, CITY_HEIGHT),
+            (&MEDIUM_12, remaining_text(seconds_left), MINT_GREEN, COUNTDOWN_HEIGHT),
+            (&REGULAR_10, self.config.city.clone(), TEXT_DIM, CITY_HEIGHT),
         ];
         let total = lines.iter().map(|line| line.3).sum::<f32>() + LINE_GAP * 3.0 + CITY_GAP;
         let mut top = bounds.center_y() - total * scale / 2.0;
@@ -109,9 +108,9 @@ impl ShalatPage {
             };
             let slot = PRAYER_SLOTS[index];
             let (name_style, name_color, time_color) = match state {
-                Marker::Next => (&MARKER_NEXT_NAME, GREEN, Color::WHITE),
-                Marker::Passed => (&MARKER_NAME, DIM, DIM),
-                Marker::Ahead => (&MARKER_NAME, GRAY, LIGHT),
+                Marker::Next => (&MEDIUM_11_CENTER, MINT_GREEN, Color::WHITE),
+                Marker::Passed => (&MARKER_NAME, TEXT_DIM, TEXT_DIM),
+                Marker::Ahead => (&MARKER_NAME, TEXT_MUTED, LIGHT),
             };
             canvas.text(
                 name_style,

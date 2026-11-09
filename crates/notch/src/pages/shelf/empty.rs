@@ -1,8 +1,10 @@
 //! The empty shelf: a badge with a download mark, a title and a line, as one row in the middle of the dashed outline.
 
-use super::GRAY;
+use crate::ui::palette::TEXT_MUTED;
+use crate::ui::palette::{SURFACE_BADGE, SURFACE_BORDER};
+use crate::ui::type_styles::{MEDIUM_15, REGULAR_12};
 use crate::{
-    gfx::{Align, Canvas, Color, FontStyle, Point, Rect, UI_FONT, Weight},
+    gfx::{Canvas, Color, Point, Rect},
     ui::{Stroke, draw_strokes},
 };
 
@@ -13,12 +15,6 @@ const DETAIL_HEIGHT: f32 = 16.0;
 const LINE_GAP: f32 = 3.0;
 const ICON_SIZE: f32 = 20.0;
 
-/// The design asks for 600; only Regular and Medium are bundled.
-const TITLE: FontStyle = FontStyle::new(UI_FONT, 15.0, Weight::Medium, Align::Leading);
-const DETAIL: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Leading);
-
-const BADGE_FILL: Color = Color::rgb(0.09, 0.09, 0.11);
-const BADGE_BORDER: Color = Color::rgb(0.149, 0.149, 0.176);
 const DOWNLOAD_ARROW: &str = "M12 4v10M8 10l4 4 4-4";
 const DOWNLOAD_TRAY: &str = "M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3";
 
@@ -31,21 +27,21 @@ pub(super) fn row_width(title_width: f32, detail_width: f32) -> f32 {
 }
 
 pub(super) fn draw_empty_row(canvas: &Canvas, bounds: Rect, scale: f32, opacity: f32) {
-    let text_width = canvas.measure(&TITLE, TITLE_TEXT).max(canvas.measure(&DETAIL, DETAIL_TEXT));
+    let text_width = canvas.measure(&MEDIUM_15, TITLE_TEXT).max(canvas.measure(&REGULAR_12, DETAIL_TEXT));
     let left = bounds.center_x() - row_width(text_width, 0.0) * scale / 2.0;
     let center = Point::new(left + BADGE * scale / 2.0, bounds.center_y());
     let radius = BADGE * scale / 2.0;
-    canvas.fill_circle(center, radius, BADGE_BORDER.faded(opacity));
-    canvas.fill_circle(center, radius - scale, BADGE_FILL.faded(opacity));
-    let layers = [Stroke::new(DOWNLOAD_ARROW, GRAY), Stroke::new(DOWNLOAD_TRAY, GRAY)];
+    canvas.fill_circle(center, radius, SURFACE_BORDER.faded(opacity));
+    canvas.fill_circle(center, radius - scale, SURFACE_BADGE.faded(opacity));
+    let layers = [Stroke::new(DOWNLOAD_ARROW, TEXT_MUTED), Stroke::new(DOWNLOAD_TRAY, TEXT_MUTED)];
     draw_strokes(canvas, &layers, center, ICON_SIZE * scale, 2.0, opacity);
     let text_left = left + (BADGE + GAP) * scale;
     let top = bounds.center_y() - (TITLE_HEIGHT + LINE_GAP + DETAIL_HEIGHT) * scale / 2.0;
     let title = Rect::new(text_left, top, text_left + text_width * scale + 2.0, top + TITLE_HEIGHT * scale);
-    canvas.text(&TITLE, TITLE_TEXT, title, Color::WHITE.faded(opacity));
+    canvas.text(&MEDIUM_15, TITLE_TEXT, title, Color::WHITE.faded(opacity));
     let detail_top = title.bottom + LINE_GAP * scale;
     let detail = Rect { top: detail_top, bottom: detail_top + DETAIL_HEIGHT * scale, ..title };
-    canvas.text(&DETAIL, DETAIL_TEXT, detail, GRAY.faded(opacity));
+    canvas.text(&REGULAR_12, DETAIL_TEXT, detail, TEXT_MUTED.faded(opacity));
 }
 
 #[cfg(test)]
@@ -62,7 +58,7 @@ mod tests {
     #[test]
     fn the_row_fits_inside_the_shelf_page() {
         let fonts = Fonts::new(1.0).unwrap();
-        let width = row_width(fonts.measure(&TITLE, TITLE_TEXT), fonts.measure(&DETAIL, DETAIL_TEXT));
+        let width = row_width(fonts.measure(&MEDIUM_15, TITLE_TEXT), fonts.measure(&REGULAR_12, DETAIL_TEXT));
         assert!(width < super::super::EXPANDED_WIDTH - 2.0 * super::super::ZONE_PADDING);
     }
 }

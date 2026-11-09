@@ -6,6 +6,7 @@ use super::{
     display, navigation,
     navigation::PageList,
     notification_banners,
+    page_swap::PageSwap,
     scroll_gate::ScrollGate,
     settings::Settings,
     visibility::{self},
@@ -17,16 +18,19 @@ use crate::{
     log,
     page::{Page, RESTING_HEIGHT, Requests},
 };
-use animation::Springs;
+use animation::{FrameTimer, Springs};
+use badge_pointer::BadgePointer;
 use header_row::HeaderMarks;
-use hiding::{HidingState, read_showing};
+use hiding::HidingState;
 use hover::HoverState;
 use keyboard::KeyboardState;
 use pages::activity_setting_key;
+use presences::ShownPresences;
 use resting_row::RestingRow;
 use row_motion::RowMotion;
 
 mod animation;
+mod badge_pointer;
 mod header_row;
 mod hiding;
 mod hover;
@@ -35,6 +39,7 @@ mod keyboard;
 mod layout;
 mod pages;
 mod paint;
+mod presences;
 mod resting_row;
 mod row_motion;
 mod settings_reload;
@@ -43,9 +48,9 @@ mod timers;
 #[cfg(test)]
 mod tests;
 
-pub const WINDOW_WIDTH: f32 = 1200.0;
+pub(super) const WINDOW_WIDTH: f32 = 1200.0;
 /// Room for the tallest page (`page::MAX_CONTENT_HEIGHT`), its header, the drag growth and the shadow.
-pub const WINDOW_HEIGHT: f32 = 340.0;
+pub(super) const WINDOW_HEIGHT: f32 = 340.0;
 const RESTING_BOTTOM_PADDING: f32 = 3.0;
 const RESTING_PILL_HEIGHT: f32 = RESTING_HEIGHT + RESTING_BOTTOM_PADDING;
 const SHADOW_LAYERS: usize = 10;
@@ -69,7 +74,6 @@ const CLOSE_TIMER_ID: usize = 8;
 const RAISE_TIMER_ID: usize = 9;
 /// One-shot: a window that stopped covering the screen must stay so for a moment before the notch comes back.
 const WINDOW_REVEAL_TIMER_ID: usize = 10;
-const PAGE_GAP: f32 = 24.0;
 const LAST_PAGE_SETTING: &str = "navigation.page";
 const PAGE_ORDER_SETTING: &str = "navigation.order";
 const PAGES_OFF_SETTING: &str = "navigation.disabled";
@@ -86,7 +90,7 @@ struct ActivitySlot {
     is_started: bool,
 }
 
-pub struct Notch {
+pub(super) struct Notch {
     window: HWND,
     scale: f32,
     screen_position: POINT,
@@ -95,10 +99,7 @@ pub struct Notch {
     settings: Settings,
     pages: Vec<Box<dyn Page>>,
     activities: Vec<ActivitySlot>,
-    transient_order: Vec<Source>,
-    shown_transients: Vec<(Source, f32)>,
-    shown_banner: Option<(Source, f32, f32)>,
-    shown_badges: Vec<(Source, f32)>,
+    presences: ShownPresences,
     resting_row: RestingRow,
     header_marks: HeaderMarks,
     resting_index: Option<usize>,
@@ -108,6 +109,7 @@ pub struct Notch {
     page_list: PageList,
     navigable: Vec<usize>,
     track: Spring,
+    page_swap: PageSwap,
     scroll_gate: ScrollGate,
     pending: Requests,
     springs: Springs,
@@ -115,15 +117,13 @@ pub struct Notch {
     hiding: HidingState,
     has_resting_content: bool,
     hover: HoverState,
-    is_animating: bool,
+    badge_pointer: BadgePointer,
+    frame_timer: FrameTimer,
     keyboard: KeyboardState,
-    last_tick: i64,
-    ticks_per_second: i64,
-    frame_interval_milliseconds: u32,
     region_origin: Cell<(i32, i32)>,
 }
 
-pub struct NotchParts {
+pub(super) struct NotchParts {
     pub window: HWND,
     pub scale: f32,
     pub screen_position: POINT,
@@ -167,10 +167,7 @@ impl Notch {
             settings,
             pages,
             activities,
-            transient_order: Vec::new(),
-            shown_transients: Vec::new(),
-            shown_banner: None,
-            shown_badges: Vec::new(),
+            presences: ShownPresences::default(),
             resting_row: RestingRow::default(),
             header_marks: HeaderMarks::default(),
             resting_index: None,
@@ -180,6 +177,7 @@ impl Notch {
             page_list: PageList::new(0),
             navigable: Vec::new(),
             track: navigation::page_transition(0.0),
+            page_swap: PageSwap::default(),
             scroll_gate: ScrollGate::default(),
             pending: Requests::default(),
             springs: Springs::new(),
@@ -187,11 +185,9 @@ impl Notch {
             hiding,
             has_resting_content: false,
             hover: HoverState::default(),
-            is_animating: false,
+            badge_pointer: BadgePointer::default(),
+            frame_timer: FrameTimer::new(ticks_per_second, display::frame_interval_milliseconds()),
             keyboard: KeyboardState::default(),
-            last_tick: 0,
-            ticks_per_second,
-            frame_interval_milliseconds: display::frame_interval_milliseconds(),
             region_origin: Cell::new((0, 0)),
         }
     }
@@ -223,8 +219,8 @@ impl Notch {
                 self.start_activity(index);
             }
         }
-        volume_flyout::set_hidden(self.settings.get_bool(volume_flyout::SETTING_KEY, false));
-        notification_banners::set_hidden(self.settings.get_bool(notification_banners::SETTING_KEY, false));
+        volume_flyout::set_hidden(volume_flyout::wants_hidden(&self.settings));
+        notification_banners::set_hidden(notification_banners::wants_hidden(&self.settings));
         self.arm_clock_timer();
         self.refresh_layout();
         for spring in self.layout_springs() {

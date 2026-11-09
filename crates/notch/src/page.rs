@@ -1,4 +1,4 @@
-//! Host/page contracts; see docs/tutorials/add-a-page.md.
+//! Host/page contracts; see docs/how-to/add-a-page.md.
 
 use windows::{
     Win32::{
@@ -76,7 +76,7 @@ impl Frame {
 }
 
 /// Pointer input, delivered to visible open pages in their own shifted frames. Positions are device pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PointerEvent {
     Moved(Point),
     Pressed(Point),
@@ -197,8 +197,8 @@ pub trait Page {
     /// Draws what `presence` asked for into `area` (device pixels), faded by `opacity`.
     fn draw_presence(&self, _canvas: &Canvas, _area: Rect, _scale: f32, _opacity: f32) {}
 
-    /// Pointer input over this page's banner while the notch is collapsed; `area` and `scale` are what `draw_presence`
-    /// got. `PointerEvent::Left` means the pointer left the banner.
+    /// Pointer input over this page's banner or badge while the notch is collapsed; `area` and `scale` are what the
+    /// presence was drawn with. `PointerEvent::Left` means the pointer left it.
     fn on_presence_pointer(&mut self, _event: PointerEvent, _area: Rect, _scale: f32, _context: &mut Context) {}
 
     /// Width in DIP of the badge in its short form, used when several badges share the pill; `None` has no short form.

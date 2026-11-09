@@ -20,7 +20,12 @@ use crate::{
     platform::notification_settings::{SettingsWatch, Signal, Wake},
 };
 
-pub const SETTING_KEY: &str = "notch.hide_windows_notifications";
+pub(super) const SETTING_KEY: &str = "notch.hide_windows_notifications";
+
+/// On until the user switches it off; the first start with the key unset backs up the values before hiding.
+pub(super) fn wants_hidden(settings: &store::Settings) -> bool {
+    settings.get_bool(SETTING_KEY, true)
+}
 
 static WORKER: Mutex<Option<Worker>> = Mutex::new(None);
 
@@ -29,12 +34,12 @@ struct Worker {
     thread: JoinHandle<()>,
 }
 
-pub fn is_hidden() -> bool {
+pub(super) fn is_hidden() -> bool {
     WORKER.lock().is_ok_and(|worker| worker.is_some())
 }
 
 /// Off also puts back values a crashed notch left behind, so calling it at start cleans up.
-pub fn set_hidden(is_hidden: bool) {
+pub(super) fn set_hidden(is_hidden: bool) {
     if is_hidden {
         start();
     } else {
@@ -44,7 +49,7 @@ pub fn set_hidden(is_hidden: bool) {
 }
 
 /// At exit: a newer notch that replaced this one owns the saved values and keeps banners off.
-pub fn release_at_exit(own_window: HWND) {
+pub(super) fn release_at_exit(own_window: HWND) {
     stop();
     if is_another_notch_running(own_window) {
         log::debug("notification banners: a newer notch runs; leaving the banners to it");
@@ -54,7 +59,7 @@ pub fn release_at_exit(own_window: HWND) {
 }
 
 /// Windows is signing out or shutting down: every notch puts the values back.
-pub fn release_at_session_end() {
+pub(super) fn release_at_session_end() {
     stop();
     passes::restore_banners();
 }
@@ -111,4 +116,41 @@ fn is_another_notch_running(own_window: HWND) -> bool {
         after = Some(window);
     }
     false
+}
+
+#[cfg(test)]
+mod default_tests {
+    use super::*;
+
+    fn settings_with(name: &str, text: Option<&str>) -> store::Settings {
+        let path = std::env::temp_dir().join(format!("notch-{name}-{}.txt", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        if let Some(text) = text {
+            std::fs::write(&path, text).unwrap();
+        }
+        let settings = store::Settings::at(Some(path.clone()));
+        let _ = std::fs::remove_file(&path);
+        settings
+    }
+
+    #[test]
+    fn an_unset_key_hides_the_popup() {
+        assert!(wants_hidden(&settings_with("notification_banners-unset", None)));
+    }
+
+    #[test]
+    fn an_explicit_off_shows_the_popup() {
+        assert!(!wants_hidden(&settings_with(
+            "notification_banners-off",
+            Some("notch.hide_windows_notifications=off\n")
+        )));
+    }
+
+    #[test]
+    fn an_explicit_false_shows_the_popup() {
+        assert!(!wants_hidden(&settings_with(
+            "notification_banners-false",
+            Some("notch.hide_windows_notifications=false\n")
+        )));
+    }
 }

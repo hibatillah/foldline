@@ -1,13 +1,15 @@
 //! The GPU card (one GPU with a large value, or two rows with a chart each) and the disk card (one row per disk).
 
 use super::{
-    GPU_ACCENT, GRAY, LABEL, LIST_NAME, LIST_PERCENT, MAX_GPUS, TILE_PADDING_X, VALUE,
+    GPU_ACCENT, LIST_PERCENT, MAX_GPUS, TILE_PADDING_X, VALUE,
     charts::{disk_bar_track, draw_disk_bar, draw_load},
     inside, label_area,
     readout::Row,
     text, value_area,
 };
 use crate::gfx::{Canvas, Color, Rect};
+use crate::ui::palette::TEXT_MUTED;
+use crate::ui::type_styles::REGULAR_11;
 
 const LONE_GPU_BASELINE: f32 = 66.0;
 /// Top of each GPU row's name line and the baseline of its chart, for two GPUs.
@@ -32,7 +34,7 @@ pub(super) fn disk_row_tops(count: usize) -> &'static [f32] {
 fn name_and_percent(canvas: &Canvas, card: Rect, scale: f32, top: f32, row: &Row, name_width: f32, opacity: f32) {
     let line = inside(card, scale, TILE_PADDING_X, top, top + LINE_HEIGHT);
     let name_area = Rect { right: line.left + name_width * scale, ..line };
-    text(canvas, &LIST_NAME, &row.meter.name, name_area, GRAY, opacity);
+    text(canvas, &REGULAR_11, &row.meter.name, name_area, TEXT_MUTED, opacity);
     text(canvas, &LIST_PERCENT, &row.percent_text, line, Color::WHITE, opacity);
 }
 
@@ -43,12 +45,12 @@ pub(super) fn draw_gpus(canvas: &Canvas, card: Rect, scale: f32, gpus: &[Row], o
         [] => {}
         [gpu] => {
             let label = format!("GPU \u{b7} {}", gpu.meter.name);
-            text(canvas, &LABEL, &label, label_area(card, scale), GRAY, opacity);
+            text(canvas, &REGULAR_11, &label, label_area(card, scale), TEXT_MUTED, opacity);
             text(canvas, &VALUE, &gpu.percent_text, value_area(card, scale), Color::WHITE, opacity);
             draw_load(canvas, card, scale, LONE_GPU_BASELINE, gpu.load(), GPU_ACCENT, opacity);
         }
         _ => {
-            text(canvas, &LABEL, "GPU", label_area(card, scale), GRAY, opacity);
+            text(canvas, &REGULAR_11, "GPU", label_area(card, scale), TEXT_MUTED, opacity);
             for (index, gpu) in gpus.iter().take(MAX_GPUS).enumerate() {
                 let name_width = card_inner - PERCENT_WIDTH;
                 name_and_percent(canvas, card, scale, GPU_ROW_TOPS[index], gpu, name_width, opacity);
@@ -60,7 +62,7 @@ pub(super) fn draw_gpus(canvas: &Canvas, card: Rect, scale: f32, gpus: &[Row], o
 
 /// Each disk is one line: its name, a 56 x 4 bar and a percentage at the right.
 pub(super) fn draw_disks(canvas: &Canvas, card: Rect, scale: f32, disks: &[Row], opacity: f32) {
-    text(canvas, &LABEL, "Disks", label_area(card, scale), GRAY, opacity);
+    text(canvas, &REGULAR_11, "Disks", label_area(card, scale), TEXT_MUTED, opacity);
     for (disk, &top) in disks.iter().zip(disk_row_tops(disks.len())) {
         name_and_percent(canvas, card, scale, top, disk, DISK_NAME_WIDTH, opacity);
         draw_disk_bar(canvas, disk_bar_track(card, scale, top), disk.meter.percent.unwrap_or(0.0), opacity);

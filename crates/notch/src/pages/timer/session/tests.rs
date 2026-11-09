@@ -1,5 +1,3 @@
-//! What the timer does as time passes and as the user acts.
-
 use crate::host::Settings;
 
 use super::{

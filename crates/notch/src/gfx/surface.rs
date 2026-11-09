@@ -23,7 +23,8 @@ use windows::{
 use super::{
     canvas::Canvas,
     fonts::Fonts,
-    image::{self, ImageBrush, ImageCache, ImageData},
+    image_brush::{self, ImageBrush, ImageCache},
+    image_data::ImageData,
 };
 
 /// Off-screen premultiplied-alpha bitmap that Direct2D draws into and a layered window displays.
@@ -43,54 +44,54 @@ pub struct Surface {
 
 impl Surface {
     pub fn new(width: i32, height: i32) -> Result<Self> {
-        unsafe {
-            let factory: ID2D1Factory = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, None)?;
-            let properties = D2D1_RENDER_TARGET_PROPERTIES {
-                r#type: D2D1_RENDER_TARGET_TYPE_DEFAULT,
-                pixelFormat: D2D1_PIXEL_FORMAT {
-                    format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
-                },
-                // 96 dpi keeps one drawing unit equal to one pixel; callers apply display scaling themselves.
-                dpiX: 96.0,
-                dpiY: 96.0,
-                usage: D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE,
-                minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
-            };
-            let target = factory.CreateDCRenderTarget(&properties)?;
-            let brush = target.CreateSolidColorBrush(&D2D1_COLOR_F { r: 1.0, g: 1.0, b: 1.0, a: 1.0 }, None)?;
+        let factory: ID2D1Factory = unsafe { D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, None) }?;
+        let properties = D2D1_RENDER_TARGET_PROPERTIES {
+            r#type: D2D1_RENDER_TARGET_TYPE_DEFAULT,
+            pixelFormat: D2D1_PIXEL_FORMAT {
+                format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
+            },
+            // 96 dpi keeps one drawing unit equal to one pixel; callers apply display scaling themselves.
+            dpiX: 96.0,
+            dpiY: 96.0,
+            usage: D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE,
+            minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
+        };
+        let target = unsafe { factory.CreateDCRenderTarget(&properties) }?;
+        let brush = unsafe { target.CreateSolidColorBrush(&D2D1_COLOR_F { r: 1.0, g: 1.0, b: 1.0, a: 1.0 }, None) }?;
 
-            let memory_context = CreateCompatibleDC(None);
-            let bitmap_info = BITMAPINFO {
-                bmiHeader: BITMAPINFOHEADER {
-                    biSize: size_of::<BITMAPINFOHEADER>() as u32,
-                    biWidth: width,
-                    biHeight: -height,
-                    biPlanes: 1,
-                    biBitCount: 32,
-                    biCompression: BI_RGB.0,
-                    ..Default::default()
-                },
+        let memory_context = unsafe { CreateCompatibleDC(None) };
+        let bitmap_info = BITMAPINFO {
+            bmiHeader: BITMAPINFOHEADER {
+                biSize: size_of::<BITMAPINFOHEADER>() as u32,
+                biWidth: width,
+                // A negative height makes the rows run top-down, like Direct2D expects.
+                biHeight: -height,
+                biPlanes: 1,
+                biBitCount: 32,
+                biCompression: BI_RGB.0,
                 ..Default::default()
-            };
-            let mut pixel_pointer = std::ptr::null_mut();
-            let bitmap =
-                CreateDIBSection(Some(memory_context), &bitmap_info, DIB_RGB_COLORS, &mut pixel_pointer, None, 0)?;
-            let previous_object = SelectObject(memory_context, bitmap.into());
+            },
+            ..Default::default()
+        };
+        let mut pixel_pointer = std::ptr::null_mut();
+        let bitmap = unsafe {
+            CreateDIBSection(Some(memory_context), &bitmap_info, DIB_RGB_COLORS, &mut pixel_pointer, None, 0)
+        }?;
+        let previous_object = unsafe { SelectObject(memory_context, bitmap.into()) };
 
-            Ok(Self {
-                width,
-                height,
-                memory_context,
-                bitmap,
-                #[cfg(test)]
-                pixels: pixel_pointer.cast::<u8>(),
-                previous_object,
-                target,
-                brush,
-                image_cache: ImageCache::default(),
-            })
-        }
+        Ok(Self {
+            width,
+            height,
+            memory_context,
+            bitmap,
+            #[cfg(test)]
+            pixels: pixel_pointer.cast::<u8>(),
+            previous_object,
+            target,
+            brush,
+            image_cache: ImageCache::default(),
+        })
     }
 
     /// The pixels as last drawn, premultiplied BGRA; only used to render the notch off-screen for review.
@@ -101,7 +102,7 @@ impl Surface {
     }
 
     pub fn create_image_brush(&self, image: &ImageData) -> Result<ImageBrush> {
-        image::upload(&self.target, image)
+        image_brush::upload(&self.target, image)
     }
 
     /// Redraws only `region` of the bitmap, then shows just that region as the layered window.
@@ -115,30 +116,33 @@ impl Surface {
         scale: f32,
         draw: impl FnOnce(&Canvas),
     ) -> Result<()> {
+        let bounds = RECT { left: 0, top: 0, right: self.width, bottom: self.height };
+        let clip = D2D_RECT_F {
+            left: region.left as f32,
+            top: region.top as f32,
+            right: region.right as f32,
+            bottom: region.bottom as f32,
+        };
         unsafe {
-            let bounds = RECT { left: 0, top: 0, right: self.width, bottom: self.height };
             self.target.BindDC(self.memory_context, &bounds)?;
             self.target.BeginDraw();
-            self.target.PushAxisAlignedClip(
-                &D2D_RECT_F {
-                    left: region.left as f32,
-                    top: region.top as f32,
-                    right: region.right as f32,
-                    bottom: region.bottom as f32,
-                },
-                D2D1_ANTIALIAS_MODE_ALIASED,
-            );
+            self.target.PushAxisAlignedClip(&clip, D2D1_ANTIALIAS_MODE_ALIASED);
             self.target.Clear(Some(&D2D1_COLOR_F { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }));
-            draw(&Canvas::new(&self.target, &self.brush, &self.image_cache, fonts, scale));
+        }
+        draw(&Canvas::new(&self.target, &self.brush, &self.image_cache, fonts, scale));
+        unsafe {
             self.target.PopAxisAlignedClip();
             self.target.EndDraw(None, None)?;
+        }
 
-            let blend = BLENDFUNCTION {
-                BlendOp: AC_SRC_OVER as u8,
-                BlendFlags: 0,
-                SourceConstantAlpha: 255,
-                AlphaFormat: AC_SRC_ALPHA as u8,
-            };
+        let blend = BLENDFUNCTION {
+            BlendOp: AC_SRC_OVER as u8,
+            BlendFlags: 0,
+            SourceConstantAlpha: 255,
+            AlphaFormat: AC_SRC_ALPHA as u8,
+        };
+        // SAFETY: the memory context holds the bitmap drawn above and stays alive for the call.
+        unsafe {
             UpdateLayeredWindow(
                 window,
                 None,

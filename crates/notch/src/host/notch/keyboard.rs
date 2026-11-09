@@ -70,6 +70,17 @@ impl Notch {
         self.close_if_pointer_is_away();
     }
 
+    /// The notch lost activation to another window while a page was typing.
+    pub fn deactivated(&mut self) {
+        let Some(owner) = self.keyboard.owner.take() else { return };
+        self.keyboard.previous = None;
+        self.keyboard.pending_high_surrogate = None;
+        log::debug(&format!("keyboard lost by page {owner}"));
+        self.keyboard_lost_by(owner);
+        self.close_if_pointer_is_away();
+        self.flush();
+    }
+
     pub(super) fn keyboard_lost_by(&mut self, owner: usize) {
         self.with_page(owner, |page, context| page.on_keyboard_lost(context));
     }
@@ -113,12 +124,12 @@ mod tests {
     use super::*;
 
     #[test]
-    pub(super) fn pasted_text_lands_on_one_line_without_control_characters() {
+    fn pasted_text_lands_on_one_line_without_control_characters() {
         assert_eq!(single_line("Buy milk\r\nand\teggs\u{7}"), "Buy milk and eggs");
         assert_eq!(single_line("   "), "");
     }
     #[test]
-    pub(super) fn only_editing_keys_reach_a_text_field() {
+    fn only_editing_keys_reach_a_text_field() {
         use windows::Win32::UI::Input::KeyboardAndMouse::{VK_BACK, VK_ESCAPE, VK_F5, VK_RETURN};
         assert_eq!(key_input(VK_BACK.0, false), Some(KeyInput::Backspace));
         assert_eq!(key_input(VK_RETURN.0, false), Some(KeyInput::Enter));

@@ -2,13 +2,13 @@
 
 use crate::gfx::{Canvas, Color, Point, Rect};
 
-pub const PADDING_TOP: f32 = 10.0;
-pub const PADDING_SIDE: f32 = 16.0;
-pub const PADDING_BOTTOM: f32 = 14.0;
-pub const HEADER_HEIGHT: f32 = 16.0;
-pub const HEADER_GAP: f32 = 10.0;
-pub const WIDTH_EXTRA: f32 = 2.0 * PADDING_SIDE;
-pub const HEIGHT_EXTRA: f32 = PADDING_TOP + HEADER_HEIGHT + HEADER_GAP + PADDING_BOTTOM;
+pub(super) const PADDING_TOP: f32 = 10.0;
+pub(super) const PADDING_SIDE: f32 = 16.0;
+pub(super) const PADDING_BOTTOM: f32 = 14.0;
+pub(super) const HEADER_HEIGHT: f32 = 16.0;
+pub(super) const HEADER_GAP: f32 = 10.0;
+pub(super) const WIDTH_EXTRA: f32 = 2.0 * PADDING_SIDE;
+pub(super) const HEIGHT_EXTRA: f32 = PADDING_TOP + HEADER_HEIGHT + HEADER_GAP + PADDING_BOTTOM;
 
 const DOT_SIZE: f32 = 6.0;
 const ACTIVE_DOT_WIDTH: f32 = 16.0;
@@ -17,13 +17,19 @@ const DOT_HIT_SLACK: f32 = 5.0;
 const DOT_INACTIVE: Color = Color::rgb(0.227, 0.227, 0.267);
 const DOT_ACTIVE: Color = Color::rgb(0.9, 0.9, 0.92);
 
-pub fn content_rect(pill: Rect, scale: f32) -> Rect {
+pub(super) fn content_rect(pill: Rect, scale: f32) -> Rect {
     let left = pill.left + PADDING_SIDE * scale;
     let top = pill.top + (PADDING_TOP + HEADER_HEIGHT + HEADER_GAP) * scale;
     Rect::new(left, top, (pill.right - PADDING_SIDE * scale).max(left), (pill.bottom - PADDING_BOTTOM * scale).max(top))
 }
 
-pub fn header_rect(pill: Rect, scale: f32) -> Rect {
+/// The area page content may draw in: the pill below the header, padding included, so only the header is kept clear.
+pub(super) fn page_clip_rect(pill: Rect, scale: f32) -> Rect {
+    let top = content_rect(pill, scale).top.min(pill.bottom);
+    Rect { top, ..pill }
+}
+
+pub(super) fn header_rect(pill: Rect, scale: f32) -> Rect {
     Rect::new(
         pill.left + PADDING_SIDE * scale,
         pill.top + PADDING_TOP * scale,
@@ -43,7 +49,7 @@ fn stretch(position: usize, count: usize, track: f32) -> f32 {
     (1.0 - distance.min(count - distance)).clamp(0.0, 1.0)
 }
 
-pub fn dot_rects(count: usize, track: f32, pill: Rect, scale: f32) -> Vec<Rect> {
+pub(super) fn dot_rects(count: usize, track: f32, pill: Rect, scale: f32) -> Vec<Rect> {
     let center_y = header_center_y(pill, scale);
     let mut left = pill.left + PADDING_SIDE * scale;
     (0..count)
@@ -58,14 +64,14 @@ pub fn dot_rects(count: usize, track: f32, pill: Rect, scale: f32) -> Vec<Rect> 
 }
 
 /// Width of the page dots at rest, one of them stretched; zero when fewer than two pages show them.
-pub fn dots_width(count: usize) -> f32 {
+pub(super) fn dots_width(count: usize) -> f32 {
     if count < 2 {
         return 0.0;
     }
     (count - 1) as f32 * (DOT_SIZE + DOT_GAP) + ACTIVE_DOT_WIDTH
 }
 
-pub fn draw_dots(canvas: &Canvas, dots: &[Rect], track: f32, opacity: f32) {
+pub(super) fn draw_dots(canvas: &Canvas, dots: &[Rect], track: f32, opacity: f32) {
     for (position, rect) in dots.iter().enumerate() {
         let amount = stretch(position, dots.len(), track);
         let color = Color::rgb(
@@ -77,7 +83,7 @@ pub fn draw_dots(canvas: &Canvas, dots: &[Rect], track: f32, opacity: f32) {
     }
 }
 
-pub fn dot_at(dots: &[Rect], point: Point, scale: f32) -> Option<usize> {
+pub(super) fn dot_at(dots: &[Rect], point: Point, scale: f32) -> Option<usize> {
     let slack = DOT_HIT_SLACK * scale;
     dots.iter().position(|rect| {
         point.x >= rect.left - slack
@@ -107,6 +113,19 @@ mod tests {
         let pill = Rect::new(0.0, 0.0, width + WIDTH_EXTRA, height + HEIGHT_EXTRA);
         let content = content_rect(pill, 1.0);
         assert_eq!((content.width(), content.height()), (width, height));
+    }
+
+    #[test]
+    fn page_content_is_clipped_below_the_header_but_keeps_the_side_and_bottom_padding() {
+        let clip = page_clip_rect(PILL, 1.0);
+        assert_eq!(clip.top, header_rect(PILL, 1.0).bottom + HEADER_GAP);
+        assert_eq!((clip.left, clip.right, clip.bottom), (PILL.left, PILL.right, PILL.bottom));
+    }
+
+    #[test]
+    fn the_page_clip_is_empty_while_the_pill_is_shorter_than_the_header() {
+        let clip = page_clip_rect(Rect::new(0.0, 0.0, 200.0, 20.0), 1.0);
+        assert!(clip.height() <= 0.0);
     }
 
     #[test]

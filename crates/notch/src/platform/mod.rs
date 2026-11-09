@@ -9,10 +9,6 @@ use std::{
 use windows::{
     Win32::{
         Foundation::SIZE,
-        Graphics::Gdi::{
-            BITMAP, BITMAPINFO, BITMAPINFOHEADER, DIB_RGB_COLORS, DeleteObject, GetDC, GetDIBits, GetObjectW, HGDIOBJ,
-            ReleaseDC,
-        },
         System::{
             Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize, IBindCtx, IDataObject},
             Ole::{DROPEFFECT_COPY, DROPEFFECT_NONE, IDropSource, OleInitialize, OleUninitialize},
@@ -31,6 +27,7 @@ use windows::{
 };
 
 pub mod app_icon;
+mod bitmap;
 pub mod bluetooth_devices;
 pub mod clipboard;
 pub mod dongle_devices;
@@ -38,6 +35,7 @@ pub mod notification_settings;
 mod paste;
 mod power;
 pub mod toast_activation;
+pub(crate) mod window_info;
 
 pub use paste::{paste_target, send_paste};
 pub use power::has_system_battery;
@@ -79,68 +77,10 @@ impl Drop for ComApartment {
 /// Premultiplied BGRA; shell previews can be slow, so call off the UI thread.
 pub fn file_preview(path: &Path, pixels: i32) -> Option<ImageData> {
     let _apartment = ComApartment::enter();
-    unsafe {
-        let item: IShellItemImageFactory =
-            SHCreateItemFromParsingName(&HSTRING::from(path.as_os_str()), None::<&IBindCtx>).ok()?;
-        let bitmap = item.GetImage(SIZE { cx: pixels, cy: pixels }, SIIGBF_RESIZETOFIT).ok()?;
-        let handle = HGDIOBJ(bitmap.0);
-        let mut info = BITMAP::default();
-        let described = GetObjectW(handle, size_of::<BITMAP>() as i32, Some((&mut info as *mut BITMAP).cast()));
-        let (width, height) = (info.bmWidth, info.bmHeight);
-        let image = (described != 0 && width > 0 && height > 0)
-            .then(|| {
-                let mut header = BITMAPINFO {
-                    bmiHeader: BITMAPINFOHEADER {
-                        biSize: size_of::<BITMAPINFOHEADER>() as u32,
-                        biWidth: width,
-                        // Negative height: the rows run from the top.
-                        biHeight: -height,
-                        biPlanes: 1,
-                        biBitCount: 32,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                };
-                let mut bytes = vec![0u8; width as usize * height as usize * 4];
-                let device = GetDC(None);
-                let rows = GetDIBits(
-                    device,
-                    bitmap,
-                    0,
-                    height as u32,
-                    Some(bytes.as_mut_ptr().cast()),
-                    &mut header,
-                    DIB_RGB_COLORS,
-                );
-                ReleaseDC(None, device);
-                (rows != 0).then(|| {
-                    premultiplied(&mut bytes);
-                    ImageData::new(width as u32, height as u32, bytes)
-                })
-            })
-            .flatten();
-        let _ = DeleteObject(handle);
-        image
-    }
-}
-
-/// Shell bitmaps may lack alpha or use straight alpha; Direct2D needs premultiplied BGRA.
-fn premultiplied(bytes: &mut [u8]) {
-    let (pixels, _) = bytes.as_chunks_mut::<4>();
-    if pixels.iter().all(|pixel| pixel[3] == 0) {
-        pixels.iter_mut().for_each(|pixel| pixel[3] = 255);
-        return;
-    }
-    let is_premultiplied = pixels.iter().all(|pixel| pixel[..3].iter().all(|&channel| channel <= pixel[3]));
-    if is_premultiplied {
-        return;
-    }
-    for pixel in pixels {
-        let alpha = u32::from(pixel[3]);
-        for channel in &mut pixel[..3] {
-            *channel = ((u32::from(*channel) * alpha + 127) / 255) as u8;
-        }
-    }
+    let item: IShellItemImageFactory =
+        unsafe { SHCreateItemFromParsingName(&HSTRING::from(path.as_os_str()), None::<&IBindCtx>) }.ok()?;
+    let bitmap = unsafe { item.GetImage(SIZE { cx: pixels, cy: pixels }, SIIGBF_RESIZETOFIT) }.ok()?;
+    bitmap::take_pixels(bitmap)
 }
 
 /// Dragging needs its own STA thread. Returns false if it cannot start.
@@ -191,22 +131,20 @@ impl Drop for SharedInput {
 
 /// Offer only copying so a drop can never move or delete the original file.
 fn drag_out(path: &Path, notch_thread: u32) -> bool {
-    unsafe {
-        if OleInitialize(None).is_err() {
-            return false;
-        }
-        let input = SharedInput::attach(notch_thread);
-        let taken = (|| {
-            let item: IShellItem =
-                SHCreateItemFromParsingName(&HSTRING::from(path.as_os_str()), None::<&IBindCtx>).ok()?;
-            let data: IDataObject = item.BindToHandler(None::<&IBindCtx>, &BHID_DataObject).ok()?;
-            let effect = SHDoDragDrop(None, &data, None::<&IDropSource>, DROPEFFECT_COPY).ok()?;
-            Some(effect != DROPEFFECT_NONE)
-        })();
-        drop(input);
-        OleUninitialize();
-        taken.unwrap_or(false)
+    if unsafe { OleInitialize(None) }.is_err() {
+        return false;
     }
+    let input = SharedInput::attach(notch_thread);
+    let taken = (|| {
+        let item: IShellItem =
+            unsafe { SHCreateItemFromParsingName(&HSTRING::from(path.as_os_str()), None::<&IBindCtx>) }.ok()?;
+        let data: IDataObject = unsafe { item.BindToHandler(None::<&IBindCtx>, &BHID_DataObject) }.ok()?;
+        let effect = unsafe { SHDoDragDrop(None, &data, None::<&IDropSource>, DROPEFFECT_COPY) }.ok()?;
+        Some(effect != DROPEFFECT_NONE)
+    })();
+    drop(input);
+    unsafe { OleUninitialize() };
+    taken.unwrap_or(false)
 }
 
 /// The clipboard's text, or `None` when it holds no text or another program has it open.
@@ -244,27 +182,6 @@ pub fn clipboard_text() -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn pixels_with_no_alpha_become_opaque() {
-        let mut bytes = vec![10, 20, 30, 0, 40, 50, 60, 0];
-        premultiplied(&mut bytes);
-        assert_eq!(bytes, vec![10, 20, 30, 255, 40, 50, 60, 255]);
-    }
-
-    #[test]
-    fn pixels_already_multiplied_by_their_alpha_stay_as_they_are() {
-        let mut bytes = vec![10, 20, 30, 128, 0, 0, 0, 0];
-        premultiplied(&mut bytes);
-        assert_eq!(bytes, vec![10, 20, 30, 128, 0, 0, 0, 0]);
-    }
-
-    #[test]
-    fn pixels_brighter_than_their_alpha_are_multiplied() {
-        let mut bytes = vec![200, 100, 0, 128];
-        premultiplied(&mut bytes);
-        assert_eq!(bytes, vec![100, 50, 0, 128]);
-    }
 
     #[test]
     fn a_missing_file_has_no_preview() {

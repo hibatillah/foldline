@@ -30,21 +30,17 @@ impl Notch {
                 }
             }
             REVEAL_TIMER_ID => {
-                unsafe {
-                    let _ = KillTimer(Some(self.window), REVEAL_TIMER_ID);
-                    SetTimer(Some(self.window), EXPAND_TIMER_ID, EXPAND_DELAY_MILLISECONDS, None);
-                }
+                let _ = unsafe { KillTimer(Some(self.window), REVEAL_TIMER_ID) };
+                unsafe { SetTimer(Some(self.window), EXPAND_TIMER_ID, EXPAND_DELAY_MILLISECONDS, None) };
                 if self.hover.is_hovering && self.opens_on_hover() {
                     self.hiding.is_revealed = true;
                     self.flush();
                 }
             }
             EXPAND_TIMER_ID => {
-                unsafe {
-                    let _ = KillTimer(Some(self.window), EXPAND_TIMER_ID);
-                }
+                let _ = unsafe { KillTimer(Some(self.window), EXPAND_TIMER_ID) };
                 // The window in front can change to one that refuses hover while this timer runs.
-                if self.hover.is_hovering && self.shown_banner.is_none() && self.opens_on_hover() {
+                if self.hover.is_hovering && self.presences.banner.is_none() && self.opens_on_hover() {
                     self.begin_opening();
                     self.start_animation();
                     self.flush();
@@ -68,23 +64,17 @@ impl Notch {
                 }
             }
             RAISE_TIMER_ID => {
-                unsafe {
-                    let _ = KillTimer(Some(self.window), RAISE_TIMER_ID);
-                }
+                let _ = unsafe { KillTimer(Some(self.window), RAISE_TIMER_ID) };
                 if !self.is_suppressed() {
                     crate::host::window::raise_topmost(self.window);
                 }
             }
             WINDOW_REVEAL_TIMER_ID => {
-                unsafe {
-                    let _ = KillTimer(Some(self.window), WINDOW_REVEAL_TIMER_ID);
-                }
+                let _ = unsafe { KillTimer(Some(self.window), WINDOW_REVEAL_TIMER_ID) };
                 self.finish_window_reveal();
             }
             CLOSE_TIMER_ID => {
-                unsafe {
-                    let _ = KillTimer(Some(self.window), CLOSE_TIMER_ID);
-                }
+                let _ = unsafe { KillTimer(Some(self.window), CLOSE_TIMER_ID) };
                 self.hover.is_close_pending = false;
                 // The pointer may have come back without moving, which sends no message; a page that is typing keeps
                 // the notch open until it gives the keyboard back.
@@ -134,7 +124,7 @@ mod tests {
 
     fn run_animation_to_rest(notch: &mut Notch) {
         for _ in 0..600 {
-            if !notch.is_animating {
+            if !notch.frame_timer.is_running {
                 return;
             }
             notch.advance_by(1.0 / 60.0);
@@ -157,9 +147,9 @@ mod tests {
         let mut notch = rig(SampleOptions::default());
         crate::host::notch::tests::settle(&mut notch);
         run_animation_to_rest(&mut notch);
-        assert!(!notch.is_animating, "the notch settled before the tick");
+        assert!(!notch.frame_timer.is_running, "the notch settled before the tick");
         notch.timer_fired(super::CLOCK_TIMER_ID);
-        assert!(!notch.is_animating, "the frame timer started on the minute tick");
+        assert!(!notch.frame_timer.is_running, "the frame timer started on the minute tick");
         assert_eq!(armed_host_timers(&notch), Vec::<usize>::new());
     }
 

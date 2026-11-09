@@ -51,9 +51,9 @@ impl Layout {
         self.column(0.0, index as f32 * (ROW_HEIGHT + ROW_GAP), LIST_WIDTH, ROW_HEIGHT)
     }
 
-    /// Sits over the bottom of the list, covering the last row.
+    /// Sits over the bottom of the list, covering the last row; follows the page bottom, which is shorter when empty.
     pub fn bar(&self) -> Rect {
-        self.column(0.0, CONTENT_HEIGHT - BAR_HEIGHT, LIST_WIDTH, BAR_HEIGHT)
+        self.column(0.0, self.bounds.height() / self.scale - BAR_HEIGHT, LIST_WIDTH, BAR_HEIGHT)
     }
 
     fn undo_area(&self) -> Rect {
@@ -217,6 +217,13 @@ mod tests {
         let on_undo = Point::new(layout.bar().right - 10.0, layout.bar().center_y());
         assert_eq!(layout.hit(on_undo, 7, true, true), Some(Target::Undo));
         assert_eq!(layout.hit(on_undo, 7, true, false), None);
+    }
+
+    #[test]
+    fn the_bar_follows_the_page_bottom_when_the_page_is_short() {
+        let short = Layout::new(Rect::new(0.0, 0.0, CONTENT_WIDTH, 86.0), 1.0);
+        assert_eq!(short.bar().bottom, 86.0);
+        assert_eq!(layout().bar().bottom, 50.0 + CONTENT_HEIGHT);
     }
 
     #[test]
