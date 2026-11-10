@@ -60,7 +60,7 @@ pub struct PageSizes {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Frame {
-    /// Units, starting at zero; pointer input uses the same space.
+    /// Units, starting at zero (device pixels in `draw_backdrop`); pointer input uses the same space.
     pub bounds: Rect,
     /// 0 collapsed, 1 fully open; the spring can overshoot a little past 1.
     pub expansion: f32,

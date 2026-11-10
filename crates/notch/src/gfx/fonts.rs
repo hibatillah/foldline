@@ -159,7 +159,7 @@ impl Fonts {
         width
     }
 
-    /// Size is in device pixels. Recent layouts are reused, so redrawing the same text builds nothing.
+    /// Size is in the canvas's current space (device pixels, or units in a unit space). Recent layouts are reused, so redrawing the same text builds nothing.
     pub(super) fn layout(&self, style: &FontStyle, text: &str, width: f32, height: f32) -> Option<IDWriteTextLayout> {
         let key = text_key(style, width, height);
         if let Some(layout) = self.layouts.borrow().get(&key, text) {
