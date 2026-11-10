@@ -17,7 +17,7 @@ use crate::i18n::tr;
 use crate::{
     gfx::{Canvas, Point, Rect, Size},
     page::{Context, Frame, KeyInput, Mode, Page, PageSizes, PointerEvent, Priority},
-    ui::{FieldOutcome, TextField},
+    ui::{FieldOutcome, ScrollOffset, TextField},
 };
 
 const RESTING_WIDTH: f32 = 150.0;
@@ -34,7 +34,7 @@ pub struct TodoPage {
     /// The count under the title, rebuilt by `refresh_texts` when the list or the field changes.
     count_text: String,
     /// How far the rows are scrolled up, in DIP.
-    scroll: f32,
+    scroll: ScrollOffset,
 }
 
 impl TodoPage {
@@ -52,7 +52,7 @@ impl TodoPage {
             is_add_hovered: false,
             is_clear_hovered: false,
             count_text: String::new(),
-            scroll: 0.0,
+            scroll: ScrollOffset::default(),
         };
         page.refresh_texts();
         page
@@ -63,12 +63,12 @@ impl TodoPage {
             (open, 0) => tr!("todo.left", count = open).into_owned(),
             (open, done) => tr!("todo.left_done", open = open, done = done).into_owned(),
         };
-        self.scroll = self.scroll.clamp(0.0, max_scroll(self.rows().len()));
+        self.scroll.clamp_to(max_scroll(self.rows().len()));
     }
 
     /// Shows the last row, where the input is while typing.
     fn scroll_to_end(&mut self) {
-        self.scroll = max_scroll(self.rows().len());
+        self.scroll.jump_to_end(max_scroll(self.rows().len()));
     }
 
     #[cfg(test)]
@@ -119,7 +119,7 @@ impl TodoPage {
         if !empty_area(bounds, scale).contains(point) {
             return None;
         }
-        let scroll = self.scroll;
+        let scroll = self.scroll.value();
         self.rows()
             .into_iter()
             .enumerate()
@@ -185,7 +185,7 @@ impl Page for TodoPage {
         }
         canvas.clipped(empty_area(bounds, scale), || {
             for (position, row) in self.rows().into_iter().enumerate() {
-                self.draw_row(canvas, row, row_rect(bounds, scale, position, self.scroll), position, opacity);
+                self.draw_row(canvas, row, row_rect(bounds, scale, position, self.scroll.value()), position, opacity);
             }
         });
     }
@@ -223,7 +223,7 @@ impl Page for TodoPage {
                 if !self.list.is_empty() && clear_button(bounds, scale).contains(point) {
                     self.list.clear();
                     self.hovered_row = None;
-                    self.scroll = 0.0;
+                    self.scroll.reset();
                     self.refresh_texts();
                     context.request_repaint();
                     return;
@@ -231,7 +231,7 @@ impl Page for TodoPage {
                 let Some((position, row)) = self.row_at(bounds, scale, point) else { return };
                 match row {
                     Row::Item(index) => {
-                        let rect = row_rect(bounds, scale, position, self.scroll);
+                        let rect = row_rect(bounds, scale, position, self.scroll.value());
                         if self.hovered_row == Some(position) && delete_rect(rect, scale).contains(point) {
                             self.list.remove(index);
                             self.hovered_row = None;
@@ -245,9 +245,7 @@ impl Page for TodoPage {
                 }
             }
             PointerEvent::Scrolled { notches } => {
-                let scroll = (self.scroll + notches * WHEEL_NOTCH_DISTANCE).clamp(0.0, max_scroll(self.rows().len()));
-                if scroll != self.scroll {
-                    self.scroll = scroll;
+                if self.scroll.scroll_by(notches * WHEEL_NOTCH_DISTANCE, max_scroll(self.rows().len())) {
                     self.hovered_row = None;
                     context.request_repaint();
                 }
@@ -347,11 +345,11 @@ mod tests {
     #[test]
     fn scrolling_stops_at_the_last_row_and_a_cleared_list_returns_to_the_top() {
         let mut page = page_with(8, 0);
-        page.scroll = max_scroll(page.rows().len());
-        assert_eq!(page.scroll, 3.0 * WHEEL_NOTCH_DISTANCE);
+        page.scroll.jump_to_end(max_scroll(page.rows().len()));
+        assert_eq!(page.scroll.value(), 3.0 * WHEEL_NOTCH_DISTANCE);
         page.list.clear();
         page.refresh_texts();
-        assert_eq!(page.scroll, 0.0);
+        assert_eq!(page.scroll.value(), 0.0);
     }
 
     #[test]

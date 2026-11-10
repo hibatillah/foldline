@@ -130,7 +130,7 @@ impl CalendarPage {
         let viewport = events_area(bounds, scale, self.view);
         canvas.clipped(viewport, || {
             for (position, row) in self.agenda.rows.iter().enumerate() {
-                let area = row_rect(position, self.scroll, bounds, scale, self.view);
+                let area = row_rect(position, self.scroll.value(), bounds, scale, self.view);
                 if area.bottom > viewport.top && area.top < viewport.bottom {
                     self.draw_row(canvas, area, row, opacity);
                 }

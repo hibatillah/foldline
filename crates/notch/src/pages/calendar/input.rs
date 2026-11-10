@@ -24,7 +24,7 @@ impl CalendarPage {
                 if let Some(cell) = day_at(point, &self.grid, bounds, scale) {
                     let day = self.grid.first_day + (cell - self.grid.leading) as i64;
                     self.selected_day = (day != self.today).then_some(day);
-                    self.scroll = 0.0;
+                    self.scroll.reset();
                     self.refresh(context.fonts());
                     context.request_repaint();
                 } else if scroll_limit > 0.0 && events_area(bounds, scale, self.view).contains(point) {
@@ -46,9 +46,7 @@ impl CalendarPage {
     }
 
     fn scroll_by(&mut self, distance: f32, max_scroll: f32, context: &mut Context) {
-        let scroll = (self.scroll + distance).clamp(0.0, max_scroll);
-        if scroll != self.scroll {
-            self.scroll = scroll;
+        if self.scroll.scroll_by(distance, max_scroll) {
             context.request_repaint();
         }
     }

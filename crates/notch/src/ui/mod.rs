@@ -9,6 +9,7 @@ mod outline;
 pub mod palette;
 mod pill_button;
 mod ring;
+mod scroll;
 mod svg_icon;
 mod text_field;
 pub mod type_styles;
@@ -23,6 +24,7 @@ pub use input::{KeyInput, PointerEvent};
 pub use outline::draw_dashed_outline;
 pub use pill_button::PillButton;
 pub use ring::Ring;
+pub use scroll::ScrollOffset;
 pub use svg_icon::{Stroke, draw_strokes};
 pub use text_field::{FieldLook, FieldOutcome, TextField};
 

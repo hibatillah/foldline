@@ -7,7 +7,7 @@ use crate::{
     activity::Presence,
     gfx::{Canvas, Color, Fonts, Point, Rect, Size},
     page::{Context, Frame, Mode, Notifier, Page, PageSizes, PointerEvent, Priority, TimerId},
-    ui::Icon,
+    ui::{Icon, ScrollOffset},
 };
 use geometry::{content_height, events_area, max_scroll, widest_form};
 use labels::Labels;
@@ -80,7 +80,7 @@ pub struct CalendarPage {
     grid: DayGrid,
     view: View,
     /// How far the event list is scrolled up, in device-independent pixels.
-    scroll: f32,
+    scroll: ScrollOffset,
     /// The pointer height while a drag scrolls the list.
     drag_last_y: Option<f32>,
     selected_day: Option<i64>,
@@ -109,7 +109,7 @@ impl CalendarPage {
             reminder_short_width: 0.0,
             grid: DayGrid::month_of(0),
             view: View::default(),
-            scroll: 0.0,
+            scroll: ScrollOffset::default(),
             drag_last_y: None,
             selected_day: None,
             hovered_cell: None,
@@ -133,7 +133,7 @@ impl CalendarPage {
             Some(day) if day != self.today => list(&occurrences_on(&self.events, day, &SystemClock)),
             _ => build(&self.occurrences, now),
         };
-        self.scroll = self.scroll.min(max_scroll(self.agenda.rows.len(), self.view));
+        self.scroll.clamp_to(max_scroll(self.agenda.rows.len(), self.view));
         self.labels = Labels::new(self.today, self.selected(), &self.grid);
         self.reminder = reminder(&self.occurrences, now);
         if let Some(reminder) = &self.reminder {
@@ -293,7 +293,7 @@ impl Page for CalendarPage {
         self.view = View::from_setting(context.settings.get_string(VIEW_SETTING), self.view);
         let view_changed = self.view != previous_view;
         if view_changed {
-            self.scroll = 0.0;
+            self.scroll.reset();
         }
         match link_change(self.link.as_deref(), context.settings.get_string(LINK_SETTING)) {
             LinkChange::Keep => {
@@ -331,7 +331,7 @@ impl Page for CalendarPage {
         } else {
             self.hovered_cell = None;
             self.drag_last_y = None;
-            self.scroll = 0.0;
+            self.scroll.reset();
             self.selected_day = None;
             self.refresh(context.fonts());
         }
