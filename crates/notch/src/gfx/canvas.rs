@@ -23,13 +23,18 @@ use super::{
 
 const MIN_VISIBLE_ALPHA: f32 = 0.01;
 
-/// What a page draws with. All coordinates are device pixels; multiply device-independent sizes by `scale`.
+/// What a page draws with. Coordinates are device pixels, so multiply device-independent sizes by `scale`; inside
+/// `in_units` they are device-independent units and `scale` is 1.
+#[cfg_attr(not(test), expect(dead_code, reason = "the host opens unit space in a later step"))]
 pub struct Canvas<'a> {
     target: &'a ID2D1DCRenderTarget,
     brush: &'a ID2D1SolidColorBrush,
     images: &'a ImageCache,
     fonts: &'a Fonts,
     scale: f32,
+    raster_scale: f32,
+    origin: Point,
+    in_unit_space: bool,
 }
 
 impl From<Rect> for D2D_RECT_F {
@@ -52,11 +57,53 @@ impl<'a> Canvas<'a> {
         fonts: &'a Fonts,
         scale: f32,
     ) -> Self {
-        Self { target, brush, images, fonts, scale }
+        Self {
+            target,
+            brush,
+            images,
+            fonts,
+            scale,
+            raster_scale: 1.0,
+            origin: Point::new(0.0, 0.0),
+            in_unit_space: false,
+        }
     }
 
     pub fn scale(&self) -> f32 {
         self.scale
+    }
+
+    /// Device pixels per drawing unit for images and masks built at pixel size: 1 outside `in_units`.
+    #[cfg_attr(not(test), expect(dead_code, reason = "the host opens unit space in a later step"))]
+    pub fn raster_scale(&self) -> f32 {
+        self.raster_scale
+    }
+
+    /// Where unit space starts, in device pixels; zero outside `in_units`.
+    #[cfg_attr(not(test), expect(dead_code, reason = "the host opens unit space in a later step"))]
+    pub fn origin(&self) -> Point {
+        self.origin
+    }
+
+    /// Draws in device-independent units with `origin` (device pixels) as the zero point; it cannot be nested.
+    #[cfg_attr(not(test), expect(dead_code, reason = "the host opens unit space in a later step"))]
+    pub fn in_units(&self, origin: Point, draw: impl FnOnce(&Canvas)) {
+        debug_assert!(!self.in_unit_space, "in_units cannot be nested");
+        let previous = self.transform();
+        let unit_space =
+            Matrix3x2 { M11: self.scale, M12: 0.0, M21: 0.0, M22: self.scale, M31: origin.x, M32: origin.y };
+        self.set_transform(&then(&unit_space, &previous));
+        draw(&Canvas {
+            target: self.target,
+            brush: self.brush,
+            images: self.images,
+            fonts: self.fonts.unit(),
+            scale: 1.0,
+            raster_scale: self.scale,
+            origin,
+            in_unit_space: true,
+        });
+        self.set_transform(&previous);
     }
 
     pub fn fill_rounded_rect(&self, rect: Rect, radius: f32, color: Color) {
@@ -170,23 +217,46 @@ impl<'a> Canvas<'a> {
         unsafe { self.target.PopAxisAlignedClip() };
     }
 
+    /// Zooms what `draw` paints around `origin`, in the coordinates this canvas draws in, on top of the current transform.
     pub fn scaled_about(&self, origin: Point, factor: f32, draw: impl FnOnce()) {
-        unsafe {
-            self.target.SetTransform(&Matrix3x2 {
-                M11: factor,
-                M12: 0.0,
-                M21: 0.0,
-                M22: factor,
-                M31: origin.x * (1.0 - factor),
-                M32: origin.y * (1.0 - factor),
-            });
-        }
+        let previous = self.transform();
+        let zoom = Matrix3x2 {
+            M11: factor,
+            M12: 0.0,
+            M21: 0.0,
+            M22: factor,
+            M31: origin.x * (1.0 - factor),
+            M32: origin.y * (1.0 - factor),
+        };
+        self.set_transform(&then(&zoom, &previous));
         draw();
-        unsafe { self.target.SetTransform(&Matrix3x2 { M11: 1.0, M12: 0.0, M21: 0.0, M22: 1.0, M31: 0.0, M32: 0.0 }) };
+        self.set_transform(&previous);
+    }
+
+    fn transform(&self) -> Matrix3x2 {
+        let mut transform = Matrix3x2::identity();
+        unsafe { self.target.GetTransform(&mut transform) };
+        transform
+    }
+
+    fn set_transform(&self, transform: &Matrix3x2) {
+        unsafe { self.target.SetTransform(transform) };
     }
 
     fn use_color(&self, color: Color) {
         unsafe { self.brush.SetColor(&D2D1_COLOR_F { r: color.r, g: color.g, b: color.b, a: color.a }) };
+    }
+}
+
+/// A transform that applies `first`, then `second` (Direct2D multiplies row vectors).
+fn then(first: &Matrix3x2, second: &Matrix3x2) -> Matrix3x2 {
+    Matrix3x2 {
+        M11: first.M11 * second.M11 + first.M12 * second.M21,
+        M12: first.M11 * second.M12 + first.M12 * second.M22,
+        M21: first.M21 * second.M11 + first.M22 * second.M21,
+        M22: first.M21 * second.M12 + first.M22 * second.M22,
+        M31: first.M31 * second.M11 + first.M32 * second.M21 + second.M31,
+        M32: first.M31 * second.M12 + first.M32 * second.M22 + second.M32,
     }
 }
 
@@ -206,7 +276,116 @@ fn flare_image(size: u32, side: FlareSide, color: Color) -> ImageData {
 
 #[cfg(test)]
 mod tests {
+    use std::cell::Cell;
+
+    use windows::{
+        Win32::{
+            Foundation::{HWND, POINT, RECT},
+            UI::WindowsAndMessaging::{CreateWindowExW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP},
+        },
+        core::w,
+    };
+
     use super::*;
+    use crate::gfx::{Align, Surface, UI_FONT, Weight};
+
+    const SURFACE_WIDTH: i32 = 260;
+    const SURFACE_HEIGHT: i32 = 60;
+
+    /// Same face and size as the 13 px regular style the pages use; `gfx` cannot import `ui`.
+    const REGULAR_13: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Regular, Align::Leading);
+
+    fn test_window() -> HWND {
+        let style = WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
+        unsafe { CreateWindowExW(style, w!("STATIC"), w!("canvas"), WS_POPUP, 0, 0, 10, 10, None, None, None, None) }
+            .unwrap()
+    }
+
+    /// Draws on a transparent surface at `scale` and returns its premultiplied BGRA pixels.
+    fn render(scale: f32, draw: impl FnOnce(&Canvas)) -> Vec<u8> {
+        let fonts = Fonts::new(scale).unwrap();
+        let surface = Surface::new(SURFACE_WIDTH, SURFACE_HEIGHT).unwrap();
+        let region = RECT { left: 0, top: 0, right: SURFACE_WIDTH, bottom: SURFACE_HEIGHT };
+        surface.render_and_present(test_window(), POINT { x: 0, y: 0 }, region, &fonts, scale, draw).unwrap();
+        surface.read_pixels().to_vec()
+    }
+
+    fn ink_columns(pixels: &[u8]) -> (usize, usize) {
+        let row_pixels = SURFACE_WIDTH as usize;
+        let inked: Vec<usize> = pixels
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .enumerate()
+            .filter(|(_, pixel)| pixel[3] > 24)
+            .map(|(index, _)| index % row_pixels)
+            .collect();
+        (*inked.iter().min().unwrap(), *inked.iter().max().unwrap())
+    }
+
+    #[test]
+    fn a_rect_drawn_in_units_covers_the_same_pixels_as_one_scaled_by_hand() {
+        let in_units = render(1.5, |canvas| {
+            canvas.in_units(Point::new(7.0, 3.0), |canvas| {
+                canvas.fill_rounded_rect(Rect::new(10.0, 10.0, 30.0, 20.0), 0.0, Color::WHITE);
+            });
+        });
+        let by_hand = render(1.5, |canvas| {
+            canvas.fill_rounded_rect(Rect::new(22.0, 18.0, 52.0, 33.0), 0.0, Color::WHITE);
+        });
+        assert_eq!(in_units, by_hand);
+    }
+
+    #[test]
+    fn zooming_inside_a_unit_space_keeps_the_unit_transform() {
+        let in_units = render(1.5, |canvas| {
+            canvas.in_units(Point::new(7.0, 3.0), |canvas| {
+                canvas.scaled_about(Point::new(20.0, 16.0), 2.0, || {
+                    canvas.fill_rounded_rect(Rect::new(10.0, 10.0, 30.0, 20.0), 0.0, Color::WHITE);
+                });
+                canvas.fill_rounded_rect(Rect::new(50.0, 2.0, 60.0, 8.0), 0.0, Color::WHITE);
+            });
+        });
+        // The zoomed rect spans units (0,4)-(40,24); the one drawn after it sits in units unzoomed.
+        let by_hand = render(1.5, |canvas| {
+            canvas.fill_rounded_rect(Rect::new(7.0, 9.0, 67.0, 39.0), 0.0, Color::WHITE);
+            canvas.fill_rounded_rect(Rect::new(82.0, 6.0, 97.0, 15.0), 0.0, Color::WHITE);
+        });
+        assert_eq!(in_units, by_hand);
+    }
+
+    #[test]
+    fn text_measured_in_units_is_within_a_pixel_of_its_drawn_width() {
+        let text = "Write the v0.5 release notes";
+        let measured_units = Cell::new(0.0_f32);
+        let pixels = render(1.25, |canvas| {
+            canvas.in_units(Point::new(10.0, 10.0), |canvas| {
+                measured_units.set(canvas.measure(&REGULAR_13, text));
+                let area = Rect::new(0.0, 0.0, measured_units.get() + 20.0, 20.0);
+                canvas.text(&REGULAR_13, text, area, Color::WHITE);
+            });
+        });
+        let (first, last) = ink_columns(&pixels);
+        let inked_width = (last - first + 1) as f32;
+        let measured_pixels = measured_units.get() * 1.25;
+        assert!((inked_width - measured_pixels).abs() <= 1.0, "inked {inked_width}, measured {measured_pixels}");
+    }
+
+    #[test]
+    fn the_canvas_reports_the_device_scale_only_inside_a_unit_space() {
+        let seen = Cell::new([0.0_f32; 4]);
+        let origins = Cell::new([Point::new(-1.0, -1.0); 2]);
+        render(1.5, |canvas| {
+            let outside = [canvas.scale(), canvas.raster_scale()];
+            let outside_origin = canvas.origin();
+            canvas.in_units(Point::new(7.0, 3.0), |canvas| {
+                seen.set([outside[0], outside[1], canvas.scale(), canvas.raster_scale()]);
+                origins.set([outside_origin, canvas.origin()]);
+            });
+        });
+        assert_eq!(seen.get(), [1.5, 1.0, 1.0, 1.5]);
+        assert_eq!(origins.get(), [Point::new(0.0, 0.0), Point::new(7.0, 3.0)]);
+    }
 
     fn coverage(image: &ImageData, x: u32, y: u32) -> u8 {
         image.bgra_premultiplied[((y * image.width + x) * 4 + 3) as usize]

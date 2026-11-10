@@ -86,6 +86,8 @@ pub struct Fonts {
     wide_scratch: RefCell<Vec<u16>>,
     widths: RefCell<TextCache<f32>>,
     layouts: RefCell<TextCache<IDWriteTextLayout>>,
+    #[cfg_attr(not(test), expect(dead_code, reason = "the host opens unit space in a later step"))]
+    unit: OnceCell<Box<Fonts>>,
     #[cfg(test)]
     builds: BuildCounts,
 }
@@ -105,7 +107,11 @@ impl Fonts {
     pub fn new(scale: f32) -> Result<Self> {
         let factory: IDWriteFactory = unsafe { DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED)? };
         let bundled = load_bundled_fonts(&factory).ok();
-        Ok(Self {
+        Ok(Self::from_parts(factory, bundled, scale))
+    }
+
+    fn from_parts(factory: IDWriteFactory, bundled: Option<IDWriteFontCollection1>, scale: f32) -> Self {
+        Self {
             factory,
             bundled,
             scale,
@@ -114,9 +120,19 @@ impl Fonts {
             wide_scratch: RefCell::new(Vec::new()),
             widths: RefCell::new(TextCache::new()),
             layouts: RefCell::new(TextCache::new()),
+            unit: OnceCell::new(),
             #[cfg(test)]
             builds: BuildCounts::default(),
-        })
+        }
+    }
+
+    /// The same fonts at scale 1.0, for drawing in device-independent units; built on first use and kept.
+    #[cfg_attr(not(test), expect(dead_code, reason = "the host opens unit space in a later step"))]
+    pub fn unit(&self) -> &Fonts {
+        if self.scale == 1.0 {
+            return self;
+        }
+        self.unit.get_or_init(|| Box::new(Self::from_parts(self.factory.clone(), self.bundled.clone(), 1.0)))
     }
 
     pub(super) fn format(&self, style: &FontStyle) -> Option<IDWriteTextFormat> {
@@ -266,6 +282,17 @@ mod tests {
         let bundled = FontStyle::new(UI_FONT, 14.0, Weight::Regular, Align::Leading);
         let system = FontStyle::new(FALLBACK_FONT, 14.0, Weight::Regular, Align::Leading);
         assert_ne!(fonts.measure(&bundled, "Notification"), fonts.measure(&system, "Notification"));
+    }
+
+    #[test]
+    fn the_unit_fonts_measure_at_scale_one_and_are_built_once() {
+        let scaled = Fonts::new(1.5).unwrap();
+        let style = FontStyle::new(UI_FONT, 14.0, Weight::Regular, Align::Leading);
+        assert_eq!(
+            scaled.unit().measure(&style, "Notification"),
+            Fonts::new(1.0).unwrap().measure(&style, "Notification")
+        );
+        assert!(std::ptr::eq(scaled.unit(), scaled.unit()));
     }
 
     #[test]
