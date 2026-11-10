@@ -7,14 +7,14 @@ use crate::{
 };
 
 /// The cell whose area holds `point`, left to right; the gaps between cells hold none.
-pub(super) fn column_at(bounds: Rect, scale: f32, point: Point) -> Option<usize> {
-    (0..COLUMNS).find(|&column| WeatherPage::column_area(bounds, scale, column).contains(point))
+pub(super) fn column_at(bounds: Rect, point: Point) -> Option<usize> {
+    (0..COLUMNS).find(|&column| WeatherPage::column_area(bounds, column).contains(point))
 }
 
 impl WeatherPage {
     /// The cell under `point` that has something to show.
     pub(super) fn cell_at(&self, frame: &Frame, point: Point) -> Option<usize> {
-        let column = column_at(frame.bounds, frame.scale, point)?;
+        let column = column_at(frame.bounds, point)?;
         self.cell_url(column).map(|_| column)
     }
 
@@ -42,24 +42,17 @@ mod tests {
     #[test]
     fn a_point_in_a_cell_finds_its_column() {
         for column in 0..COLUMNS {
-            let area = WeatherPage::column_area(BOUNDS, 1.0, column);
-            assert_eq!(column_at(BOUNDS, 1.0, Point::new(area.center_x(), area.center_y())), Some(column));
+            let area = WeatherPage::column_area(BOUNDS, column);
+            assert_eq!(column_at(BOUNDS, Point::new(area.center_x(), area.center_y())), Some(column));
         }
     }
 
     #[test]
     fn the_left_column_and_the_gaps_hit_no_cell() {
-        let first = WeatherPage::column_area(BOUNDS, 1.0, 0);
-        let second = WeatherPage::column_area(BOUNDS, 1.0, 1);
-        assert_eq!(column_at(BOUNDS, 1.0, Point::new(40.0, 40.0)), None);
-        assert_eq!(column_at(BOUNDS, 1.0, Point::new((first.right + second.left) / 2.0, 40.0)), None);
-    }
-
-    #[test]
-    fn cells_are_found_at_other_scales() {
-        let bounds = Rect::new(10.0, 4.0, 10.0 + 2.0 * CONTENT_WIDTH, 4.0 + 2.0 * CONTENT_HEIGHT);
-        let area = WeatherPage::column_area(bounds, 2.0, 3);
-        assert_eq!(column_at(bounds, 2.0, Point::new(area.center_x(), area.center_y())), Some(3));
+        let first = WeatherPage::column_area(BOUNDS, 0);
+        let second = WeatherPage::column_area(BOUNDS, 1);
+        assert_eq!(column_at(BOUNDS, Point::new(40.0, 40.0)), None);
+        assert_eq!(column_at(BOUNDS, Point::new((first.right + second.left) / 2.0, 40.0)), None);
     }
 
     #[test]

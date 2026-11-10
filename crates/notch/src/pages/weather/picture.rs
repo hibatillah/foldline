@@ -52,7 +52,7 @@ fn layers(symbol: Symbol, is_now: bool) -> Vec<Stroke> {
     }
 }
 
-/// Draws `symbol` in a square of `size` device pixels around `center`.
+/// Draws `symbol` in a square of `size` units around `center`.
 pub(super) fn draw_symbol(canvas: &Canvas, symbol: Symbol, center: Point, size: f32, is_now: bool, opacity: f32) {
     draw_strokes(canvas, &layers(symbol, is_now), center, size, LINE_WIDTH, opacity);
 }

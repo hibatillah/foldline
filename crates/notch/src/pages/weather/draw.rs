@@ -4,7 +4,7 @@ use crate::i18n::tr;
 use salah::Local;
 
 use super::{
-    WeatherPage,
+    WeatherPage, WeatherTarget,
     forecast::{Forecast, rain_line},
     message::{Message, MessageKind},
     picture::draw_symbol,
@@ -82,35 +82,35 @@ fn stack_height(heights: &[f32], gap: f32) -> f32 {
 }
 
 impl WeatherPage {
-    pub(super) fn left_area(bounds: Rect, scale: f32) -> Rect {
-        Rect::new(bounds.left, bounds.top, bounds.left + LEFT_WIDTH * scale, bounds.bottom)
+    pub(super) fn left_area(bounds: Rect) -> Rect {
+        Rect::new(bounds.left, bounds.top, bounds.left + LEFT_WIDTH, bounds.bottom)
     }
 
-    pub(super) fn column_area(bounds: Rect, scale: f32, column: usize) -> Rect {
-        let left = bounds.left + (LEFT_WIDTH + LEFT_GAP) * scale;
-        let width = (bounds.right - left - CELL_GAP * scale * (COLUMNS - 1) as f32) / COLUMNS as f32;
-        let cell_left = left + column as f32 * (width + CELL_GAP * scale);
+    pub(super) fn column_area(bounds: Rect, column: usize) -> Rect {
+        let left = bounds.left + (LEFT_WIDTH + LEFT_GAP);
+        let width = (bounds.right - left - CELL_GAP * (COLUMNS - 1) as f32) / COLUMNS as f32;
+        let cell_left = left + column as f32 * (width + CELL_GAP);
         Rect::new(cell_left, bounds.top, cell_left + width, bounds.bottom)
     }
 
-    pub(super) fn draw_message(canvas: &Canvas, bounds: Rect, scale: f32, title: &str, detail: &str, opacity: f32) {
+    pub(super) fn draw_message(canvas: &Canvas, bounds: Rect, title: &str, detail: &str, opacity: f32) {
         let middle = bounds.center_y();
-        let title_area = Rect::new(bounds.left, middle - 22.0 * scale, bounds.right, middle);
-        let detail_area = Rect::new(bounds.left, middle + 2.0 * scale, bounds.right, middle + 22.0 * scale);
+        let title_area = Rect::new(bounds.left, middle - 22.0, bounds.right, middle);
+        let detail_area = Rect::new(bounds.left, middle + 2.0, bounds.right, middle + 22.0);
         canvas.text(&TITLE, title, title_area, Color::WHITE.faded(opacity));
         canvas.text(&REGULAR_12_CENTER, detail, detail_area, TEXT_MUTED.faded(opacity));
     }
 
     /// A round badge on the left and a left-aligned title and detail on the right, the whole row centered.
-    pub(super) fn draw_message_row(canvas: &Canvas, bounds: Rect, scale: f32, message: &Message, opacity: f32) {
+    pub(super) fn draw_message_row(canvas: &Canvas, bounds: Rect, message: &Message, opacity: f32) {
         let text_width =
             canvas.measure(&MESSAGE_TITLE, &message.title).max(canvas.measure(&MESSAGE_DETAIL, &message.detail));
-        let left = bounds.center_x() - (MESSAGE_BADGE + MESSAGE_GAP + text_width) * scale / 2.0;
-        let center = Point::new(left + MESSAGE_BADGE * scale / 2.0, bounds.center_y());
-        let radius = MESSAGE_BADGE * scale / 2.0;
+        let left = bounds.center_x() - (MESSAGE_BADGE + MESSAGE_GAP + text_width) / 2.0;
+        let center = Point::new(left + MESSAGE_BADGE / 2.0, bounds.center_y());
+        let radius = MESSAGE_BADGE / 2.0;
         canvas.fill_circle(center, radius, SURFACE_BORDER.faded(opacity));
-        canvas.fill_circle(center, radius - scale, SURFACE_BADGE.faded(opacity));
-        let size = ICON_SIZE * scale;
+        canvas.fill_circle(center, radius - 1.0, SURFACE_BADGE.faded(opacity));
+        let size = ICON_SIZE;
         match message.kind {
             MessageKind::NoLocation => draw_strokes(
                 canvas,
@@ -129,43 +129,38 @@ impl WeatherPage {
                 opacity,
             ),
         }
-        let stack = stack_height(&[MESSAGE_TITLE_HEIGHT, MESSAGE_DETAIL_HEIGHT], MESSAGE_LINE_GAP) * scale;
-        let text_left = left + (MESSAGE_BADGE + MESSAGE_GAP) * scale;
+        let stack = stack_height(&[MESSAGE_TITLE_HEIGHT, MESSAGE_DETAIL_HEIGHT], MESSAGE_LINE_GAP);
+        let text_left = left + (MESSAGE_BADGE + MESSAGE_GAP);
         let title_top = bounds.center_y() - stack / 2.0;
-        let title_area = Rect::new(
-            text_left,
-            title_top,
-            text_left + text_width * scale + 2.0,
-            title_top + MESSAGE_TITLE_HEIGHT * scale,
-        );
+        let title_area =
+            Rect::new(text_left, title_top, text_left + text_width + 2.0, title_top + MESSAGE_TITLE_HEIGHT);
         canvas.text(&MESSAGE_TITLE, &message.title, title_area, Color::WHITE.faded(opacity));
-        let detail_top = title_area.bottom + MESSAGE_LINE_GAP * scale;
-        let detail_area = Rect { top: detail_top, bottom: detail_top + MESSAGE_DETAIL_HEIGHT * scale, ..title_area };
+        let detail_top = title_area.bottom + MESSAGE_LINE_GAP;
+        let detail_area = Rect { top: detail_top, bottom: detail_top + MESSAGE_DETAIL_HEIGHT, ..title_area };
         canvas.text(&MESSAGE_DETAIL, &message.detail, detail_area, TEXT_MUTED.faded(opacity));
     }
 
     /// The pill on the first line of the left column, at its right end, level with the place name.
-    pub(super) fn toggle_area(bounds: Rect, scale: f32) -> Rect {
-        let center_y = bounds.center_y() - stack_height(&LEFT_HEIGHTS, LEFT_LINE_GAP) * scale / 2.0
-            + (EYEBROW_HEIGHT / 2.0 + 1.5) * scale;
-        let right = bounds.left + LEFT_WIDTH * scale;
-        let top = (center_y - TOGGLE_HEIGHT * scale / 2.0).max(bounds.top);
-        Rect::new(right - TOGGLE_WIDTH * scale, top, right, top + TOGGLE_HEIGHT * scale)
+    pub(super) fn toggle_area(bounds: Rect) -> Rect {
+        let center_y =
+            bounds.center_y() - stack_height(&LEFT_HEIGHTS, LEFT_LINE_GAP) / 2.0 + (EYEBROW_HEIGHT / 2.0 + 1.5);
+        let right = bounds.left + LEFT_WIDTH;
+        let top = (center_y - TOGGLE_HEIGHT / 2.0).max(bounds.top);
+        Rect::new(right - TOGGLE_WIDTH, top, right, top + TOGGLE_HEIGHT)
     }
 
     /// The pill names what is shown: "Today" for the hours, "Week" for the days; pressing it shows the other.
     pub(super) fn draw_toggle(&self, canvas: &Canvas, area: Rect, opacity: f32) {
-        let scale = canvas.scale();
         let radius = area.height() / 2.0;
-        let fill = if self.is_toggle_hovered { TOGGLE_FILL_HOVERED } else { SURFACE_HOVER };
+        let fill = if self.hover.is(WeatherTarget::Toggle) { TOGGLE_FILL_HOVERED } else { SURFACE_HOVER };
         canvas.fill_rounded_rect(area, radius, SURFACE_BUTTON_BORDER.faded(opacity));
-        let inner = Rect::new(area.left + scale, area.top + scale, area.right - scale, area.bottom - scale);
-        canvas.fill_rounded_rect(inner, radius - scale, fill.faded(opacity));
+        let inner = Rect::new(area.left + 1.0, area.top + 1.0, area.right - 1.0, area.bottom - 1.0);
+        canvas.fill_rounded_rect(inner, radius - 1.0, fill.faded(opacity));
         let label = if self.shows_days { tr!("weather.week") } else { tr!("weather.today") };
         canvas.text(&MEDIUM_11_CENTER, &label, area, TEXT_LIGHT.faded(opacity));
     }
 
-    pub(super) fn draw_left(&self, canvas: &Canvas, forecast: &Forecast, area: Rect, scale: f32, opacity: f32) {
+    pub(super) fn draw_left(&self, canvas: &Canvas, forecast: &Forecast, area: Rect, opacity: f32) {
         let now = self.now();
         let place = self.location.as_ref().map(|location| location.label.as_str()).unwrap_or_default();
         let (temperature, condition, rain) = if self.shows_days {
@@ -189,11 +184,10 @@ impl WeatherPage {
                 rain_line(forecast, now),
             )
         };
-        let mut top = area.center_y() - stack_height(&LEFT_HEIGHTS, LEFT_LINE_GAP) * scale / 2.0;
-        let toggle = Self::toggle_area(area, scale);
-        let eyebrow_top = toggle.center_y() - EYEBROW_HEIGHT * scale / 2.0;
-        let eyebrow =
-            Rect::new(area.left, eyebrow_top, toggle.left - TOGGLE_GAP * scale, eyebrow_top + EYEBROW_HEIGHT * scale);
+        let mut top = area.center_y() - stack_height(&LEFT_HEIGHTS, LEFT_LINE_GAP) / 2.0;
+        let toggle = Self::toggle_area(area);
+        let eyebrow_top = toggle.center_y() - EYEBROW_HEIGHT / 2.0;
+        let eyebrow = Rect::new(area.left, eyebrow_top, toggle.left - TOGGLE_GAP, eyebrow_top + EYEBROW_HEIGHT);
         canvas.text(&REGULAR_10, place, eyebrow, TEXT_DIM.faded(opacity));
         let lines: [(&FontStyle, String, Color); 4] = [
             (&REGULAR_10, String::new(), TEXT_DIM),
@@ -202,17 +196,17 @@ impl WeatherPage {
             (&MEDIUM_12, rain, ACCENT_BLUE_LIGHT),
         ];
         for ((style, text, color), height) in lines.into_iter().zip(LEFT_HEIGHTS) {
-            let line = Rect::new(area.left, top, area.right, top + height * scale);
+            let line = Rect::new(area.left, top, area.right, top + height);
             canvas.text(style, &text, line, color.faded(opacity));
-            top = line.bottom + LEFT_LINE_GAP * scale;
+            top = line.bottom + LEFT_LINE_GAP;
         }
     }
 
-    pub(super) fn draw_columns(&self, canvas: &Canvas, forecast: &Forecast, bounds: Rect, scale: f32, opacity: f32) {
+    pub(super) fn draw_columns(&self, canvas: &Canvas, forecast: &Forecast, bounds: Rect, opacity: f32) {
         let now = self.now();
         let first_hour = forecast.first_hour_index(now);
         for column in 0..COLUMNS {
-            let area = Self::column_area(bounds, scale, column);
+            let area = Self::column_area(bounds, column);
             let is_now = column == 0;
             let (label, symbol, high, low, rain) = if self.shows_days {
                 let Some(day) = forecast.days.get(column) else { continue };
@@ -228,32 +222,32 @@ impl WeatherPage {
                 (label, hour.symbol, hour.temperature, None, hour.rain_millimeters)
             };
             if is_now {
-                canvas.fill_rounded_rect(area, CELL_RADIUS * scale, NOW_FILL.faded(opacity));
+                canvas.fill_rounded_rect(area, CELL_RADIUS, NOW_FILL.faded(opacity));
             }
-            if self.hovered_cell == Some(column) {
-                canvas.fill_rounded_rect(area, CELL_RADIUS * scale, CELL_HOVER.faded(opacity));
+            if self.hover.is(WeatherTarget::Cell(column)) {
+                canvas.fill_rounded_rect(area, CELL_RADIUS, CELL_HOVER.faded(opacity));
             }
             let (gap, heights): (f32, &[f32]) = if self.shows_days {
                 (DAYS_GAP, &[LABEL_HEIGHT, ICON_SIZE, TEMPERATURE_LINE + LOW_LINE])
             } else {
                 (HOURS_GAP, &[LABEL_HEIGHT, ICON_SIZE, TEMPERATURE_LINE, SUB_HEIGHT])
             };
-            let mut top = area.center_y() - stack_height(heights, gap) * scale / 2.0;
+            let mut top = area.center_y() - stack_height(heights, gap) / 2.0;
             let mut next_row = |height: f32| {
-                let row = Rect::new(area.left, top, area.right, top + height * scale);
-                top = row.bottom + gap * scale;
+                let row = Rect::new(area.left, top, area.right, top + height);
+                top = row.bottom + gap;
                 row
             };
             let (label_style, label_color) = if is_now { (&MEDIUM_11_CENTER, NOW_TEXT) } else { (&LABEL, TEXT_MUTED) };
             canvas.text(label_style, &label, next_row(LABEL_HEIGHT), label_color.faded(opacity));
             let icon_row = next_row(ICON_SIZE);
             let icon_center = Point::new(icon_row.center_x(), icon_row.center_y());
-            draw_symbol(canvas, symbol, icon_center, ICON_SIZE * scale, is_now, opacity);
+            draw_symbol(canvas, symbol, icon_center, ICON_SIZE, is_now, opacity);
             let high_color = if is_now { Color::WHITE } else { TEXT_LIGHT };
             match low {
                 Some(low) => {
                     let row = next_row(TEMPERATURE_LINE + LOW_LINE);
-                    let high_row = Rect { bottom: row.top + TEMPERATURE_LINE * scale, ..row };
+                    let high_row = Rect { bottom: row.top + TEMPERATURE_LINE, ..row };
                     let low_row = Rect { top: high_row.bottom, ..row };
                     canvas.text(&DAY_HIGH, &format!("{high:.0}\u{b0}"), high_row, high_color.faded(opacity));
                     canvas.text(&DAY_LOW, &format!("{low:.0}\u{b0}"), low_row, TEXT_DIM.faded(opacity));
@@ -290,9 +284,9 @@ mod tests {
 
     #[test]
     fn the_cells_fill_the_right_side_with_four_between_them() {
-        let first = WeatherPage::column_area(BOUNDS, 1.0, 0);
-        let second = WeatherPage::column_area(BOUNDS, 1.0, 1);
-        let last = WeatherPage::column_area(BOUNDS, 1.0, COLUMNS - 1);
+        let first = WeatherPage::column_area(BOUNDS, 0);
+        let second = WeatherPage::column_area(BOUNDS, 1);
+        let last = WeatherPage::column_area(BOUNDS, COLUMNS - 1);
         assert_eq!(first.left, LEFT_WIDTH + LEFT_GAP);
         assert!((second.left - first.right - CELL_GAP).abs() < 0.01);
         assert!((last.right - BOUNDS.right).abs() < 0.01);
@@ -302,19 +296,13 @@ mod tests {
 
     #[test]
     fn the_pill_sits_at_the_right_end_of_the_first_line_inside_the_left_column() {
-        let pill = WeatherPage::toggle_area(BOUNDS, 1.0);
-        let left = WeatherPage::left_area(BOUNDS, 1.0);
+        let pill = WeatherPage::toggle_area(BOUNDS);
+        let left = WeatherPage::left_area(BOUNDS);
         assert_eq!(pill.right, left.right);
         assert_eq!((pill.width(), pill.height()), (TOGGLE_WIDTH, TOGGLE_HEIGHT));
         assert!(pill.top >= BOUNDS.top && pill.bottom <= BOUNDS.top + 32.0);
         assert!(left.contains(Point::new(pill.center_x(), pill.center_y())));
         assert!(!pill.contains(Point::new(20.0, pill.center_y())), "the temperature is not a button");
-    }
-
-    #[test]
-    fn the_pill_scales_with_the_screen() {
-        let pill = WeatherPage::toggle_area(Rect::new(0.0, 0.0, 2.0 * BOUNDS.right, 2.0 * BOUNDS.bottom), 2.0);
-        assert_eq!((pill.width(), pill.height()), (2.0 * TOGGLE_WIDTH, 2.0 * TOGGLE_HEIGHT));
     }
 
     #[test]

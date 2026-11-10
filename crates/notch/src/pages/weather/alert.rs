@@ -58,10 +58,10 @@ pub(super) fn banner_height(line_count: usize) -> f32 {
     TOP_PADDING + HEADING_HEIGHT + HEADING_GAP + line_count as f32 * BODY_LINE_HEIGHT + BOTTOM_PADDING
 }
 
-/// The right edge of the button row and the top of the gap above it, in device pixels.
-fn buttons_origin(area: Rect, scale: f32, line_count: usize) -> (f32, f32) {
+/// The right edge of the button row and the top of the gap above it, in units.
+fn buttons_origin(area: Rect, line_count: usize) -> (f32, f32) {
     let text_bottom = TOP_PADDING + HEADING_HEIGHT + HEADING_GAP + line_count as f32 * BODY_LINE_HEIGHT;
-    (area.right - PADDING * scale, area.top + text_bottom * scale)
+    (area.right - PADDING, area.top + text_bottom)
 }
 
 fn text_width() -> f32 {
@@ -197,14 +197,7 @@ impl Alert {
     }
 
     /// The pointer on the banner keeps it up and shows the buttons; leaving lets it go after a moment.
-    pub(super) fn on_pointer(
-        &mut self,
-        event: PointerEvent,
-        area: Rect,
-        scale: f32,
-        now: DateTime<Utc>,
-        context: &mut Context,
-    ) {
+    pub(super) fn on_pointer(&mut self, event: PointerEvent, area: Rect, now: DateTime<Utc>, context: &mut Context) {
         if self.press_opens(event, now) {
             context.request_open();
         }
@@ -220,8 +213,8 @@ impl Alert {
             PointerEvent::Left | PointerEvent::CaptureLost => self.pointer_left(context),
             _ => {}
         }
-        let (right, top) = buttons_origin(area, scale, self.lines.len());
-        let (clicked, needs_repaint) = self.buttons.on_pointer(event, right, top, scale);
+        let (right, top) = buttons_origin(area, self.lines.len());
+        let (clicked, needs_repaint) = self.buttons.on_pointer(event, right, top, 1.0);
         if needs_repaint {
             context.request_repaint();
         }
@@ -243,52 +236,45 @@ impl Alert {
         }
     }
 
-    pub(super) fn draw(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32, now: DateTime<Utc>) {
+    pub(super) fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32, now: DateTime<Utc>) {
         if self.flash.is_visible() {
-            self.draw_banner(canvas, area, scale, opacity);
+            self.draw_banner(canvas, area, opacity);
         } else if let Some(badge) = self.live_badge(now) {
-            badge.draw(canvas, area, scale, opacity, now, false);
+            badge.draw(canvas, area, opacity, now, false);
         }
     }
 
-    pub(super) fn draw_short_badge(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32, now: DateTime<Utc>) {
+    pub(super) fn draw_short_badge(&self, canvas: &Canvas, area: Rect, opacity: f32, now: DateTime<Utc>) {
         if let Some(badge) = self.live_badge(now) {
-            badge.draw(canvas, area, scale, opacity, now, true);
+            badge.draw(canvas, area, opacity, now, true);
         }
     }
 
-    fn draw_banner(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+    fn draw_banner(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         let tile = Rect::new(
-            area.left + PADDING * scale,
-            area.top + TOP_PADDING * scale,
-            area.left + (PADDING + TILE_SIZE) * scale,
-            area.top + (TOP_PADDING + TILE_SIZE) * scale,
+            area.left + PADDING,
+            area.top + TOP_PADDING,
+            area.left + (PADDING + TILE_SIZE),
+            area.top + (TOP_PADDING + TILE_SIZE),
         );
-        canvas.fill_rounded_rect(tile, TILE_RADIUS * scale, TILE.faded(opacity));
+        canvas.fill_rounded_rect(tile, TILE_RADIUS, TILE.faded(opacity));
         let layers = [Stroke::new(RAIN_CLOUD, Color::WHITE), Stroke::new(RAIN_DROPS, Color::WHITE)];
-        draw_strokes(
-            canvas,
-            &layers,
-            Point::new(tile.center_x(), tile.center_y()),
-            TILE_ICON_SIZE * scale,
-            2.0,
-            opacity,
-        );
-        let left = tile.right + TILE_GAP * scale;
-        let right = area.right - PADDING * scale;
-        let heading = Rect::new(left, tile.top, right, tile.top + HEADING_HEIGHT * scale);
+        draw_strokes(canvas, &layers, Point::new(tile.center_x(), tile.center_y()), TILE_ICON_SIZE, 2.0, opacity);
+        let left = tile.right + TILE_GAP;
+        let right = area.right - PADDING;
+        let heading = Rect::new(left, tile.top, right, tile.top + HEADING_HEIGHT);
         canvas.text(&MEDIUM_14, &self.title, heading, Color::WHITE.faded(opacity));
-        let title_width = canvas.measure(&MEDIUM_14, &self.title) * scale;
-        let app_left = left + title_width + TITLE_GAP * scale;
+        let title_width = canvas.measure(&MEDIUM_14, &self.title);
+        let app_left = left + title_width + TITLE_GAP;
         canvas.text(&REGULAR_14, "Weather", Rect { left: app_left, ..heading }, CARD_APP_NAME_TEXT.faded(opacity));
         for (index, line) in self.lines.iter().enumerate() {
-            let top = heading.bottom + (HEADING_GAP + index as f32 * BODY_LINE_HEIGHT) * scale;
-            let rect = Rect::new(left, top, right, top + BODY_LINE_HEIGHT * scale);
+            let top = heading.bottom + (HEADING_GAP + index as f32 * BODY_LINE_HEIGHT);
+            let rect = Rect::new(left, top, right, top + BODY_LINE_HEIGHT);
             canvas.text(&REGULAR_13, line, rect, CARD_BODY_TEXT.faded(opacity));
         }
         if self.is_pointer_over {
-            let (right, top) = buttons_origin(area, scale, self.lines.len());
-            self.buttons.draw(canvas, right, top, scale, opacity);
+            let (right, top) = buttons_origin(area, self.lines.len());
+            self.buttons.draw(canvas, right, top, 1.0, opacity);
         }
     }
 }
@@ -372,7 +358,7 @@ mod tests {
     #[test]
     fn the_buttons_end_inside_the_banner_at_its_padding() {
         let area = Rect::new(0.0, 0.0, WIDTH, banner_height(2) + BANNER_BUTTONS_HEIGHT);
-        let (right, top) = buttons_origin(area, 1.0, 2);
+        let (right, top) = buttons_origin(area, 2);
         assert_eq!(right, WIDTH - PADDING);
         assert_eq!(top + BANNER_BUTTONS_HEIGHT, area.bottom - BOTTOM_PADDING);
     }
