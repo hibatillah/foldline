@@ -16,6 +16,9 @@ Budget for `notch.exe` (not the settings window; see `AGENTS.md`): 0 % CPU while
 - Draw shapes into small cached images: describe them with `Path` (or `gfx::svg_path` for SVG path data), rasterize
   with `Mask`, reuse through `Canvas::cached_image`. Direct2D geometry (`ID2D1PathGeometry`, `FillGeometry`,
   `DrawGeometry`) costs about 10 MB the first time it is used. Build text that changes rarely once, not on every paint.
+- A cached image is rasterized at device size through `Canvas::pixel_square`, and its cache key holds the device side,
+  not the unit side. Text formats exist in two sets (device for the host, unit for pages: `Fonts::unit()`), each built
+  once; never build a set per frame.
 - When `scripts/perf.sh` fails, find the cause and leave the limits where they are. An idle CPU reading just above the
   limit can come from something else on the machine (speculation, not a measured cause): run it again with the pointer
   parked and no other app switched, compare with `docs/reference/performance-baseline.md`, and look in the diff for a

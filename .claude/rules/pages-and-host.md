@@ -29,6 +29,14 @@ Read `docs/how-to/add-a-page.md` before writing a page, `docs/how-to/add-an-acti
   activity; it keeps its own state. Pointer input on its pill content arrives in `Page::on_presence_pointer`.
 - Pages draw through `Canvas` and multiply colors by the `opacity` they are given, so content follows the open and
   close animation.
+- Pages and activities draw and receive pointer input in units starting at zero: the host opens `Canvas::in_units`
+  around every draw hook and converts pointer points (`host/notch/units.rs`). Only `Page::draw_backdrop` works in
+  device pixels.
+- Scrolling uses `ui::ScrollOffset` and hover uses `ui::HoverTarget`; the input types are `ui::PointerEvent` and
+  `ui::KeyInput` (re-exported from `page`).
+- `gfx` and `ui` import nothing from `page`, `i18n`, `host`, `pages`, `activity` or `platform` (the test
+  `the_drawing_layers_import_nothing_above_them` in `ui/mod.rs` enforces it); texts reach a widget as arguments
+  (`BannerButtons` takes `BannerLabels`).
 - Input hooks: `Page::on_pointer` (with `PointerEvent::Scrolled` only where `Page::claims_scroll` says the page uses
   the wheel), `on_key` after `Context::take_keyboard`, `on_system_message` for the messages the page listens to
   (`Context::listen_to_clipboard`, `listen_to_power_setting`), and `on_enabled_changed` when the user switches the

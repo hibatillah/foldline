@@ -16,6 +16,9 @@ check before writing or moving code.
   child could hold. `Notch` follows this: its methods live one job per file in `host/notch/`.
 - State a job owns is a small struct defined beside that job's logic (`Springs` and `FrameTimer` in `animation.rs`, `ShownPresences` in `presences.rs`, `HoverState` in
   `hover.rs`) and held by the main type; a new job adds a field of its own struct, not loose fields.
+- `host/notch/units.rs` is the only place that converts between device pixels and units. The drawing layers keep one
+  job per file: `gfx/pixel_square.rs` (whole-pixel placement of cached bitmaps), `ui/scroll.rs` (`ScrollOffset`),
+  `ui/hover.rs` (`HoverTarget`) and `ui/input.rs` (`PointerEvent`, `KeyInput`).
 - Pure logic (layout math, rules, wording, parsing) never imports `windows::`; only the host, `platform` and `ui` call
   Windows.
 - A moved item becomes `pub(super)` before it becomes `pub`; re-export from the module root only what outside code uses.
