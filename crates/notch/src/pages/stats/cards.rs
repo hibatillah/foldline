@@ -44,25 +44,18 @@ impl<'a> ChartCard<'a> {
         }
     }
 
-    pub fn draw(&self, canvas: &Canvas, card: Rect, scale: f32, opacity: f32) {
-        text(canvas, &REGULAR_11, &self.name, label_area(card, scale), TEXT_MUTED, opacity);
-        text(canvas, &VALUE, self.value, value_area(card, scale), Color::WHITE, opacity);
-        draw_load(canvas, card, scale, BASELINE, self.load, self.accent, opacity);
-        text(canvas, &REGULAR_11, self.sub, sub_area(card, scale), TEXT_MUTED, opacity);
+    pub fn draw(&self, canvas: &Canvas, card: Rect, opacity: f32) {
+        text(canvas, &REGULAR_11, &self.name, label_area(card), TEXT_MUTED, opacity);
+        text(canvas, &VALUE, self.value, value_area(card), Color::WHITE, opacity);
+        draw_load(canvas, card, BASELINE, self.load, self.accent, opacity);
+        text(canvas, &REGULAR_11, self.sub, sub_area(card), TEXT_MUTED, opacity);
     }
 }
 
 /// Download in white, upload in gray, and the kind of network at the bottom.
-pub(super) fn draw_network(
-    canvas: &Canvas,
-    card: Rect,
-    scale: f32,
-    readout: &Readout,
-    kind: NetworkKind,
-    opacity: f32,
-) {
-    text(canvas, &REGULAR_11, &tr!("stats.network"), label_area(card, scale), TEXT_MUTED, opacity);
-    text(canvas, &RATE, &readout.download_text, network_row_area(card, scale, 0), Color::WHITE, opacity);
-    text(canvas, &RATE, &readout.upload_text, network_row_area(card, scale, 1), UPLOAD_GRAY, opacity);
-    text(canvas, &REGULAR_11, kind.label(), network_kind_area(card, scale), TEXT_MUTED, opacity);
+pub(super) fn draw_network(canvas: &Canvas, card: Rect, readout: &Readout, kind: NetworkKind, opacity: f32) {
+    text(canvas, &REGULAR_11, &tr!("stats.network"), label_area(card), TEXT_MUTED, opacity);
+    text(canvas, &RATE, &readout.download_text, network_row_area(card, 0), Color::WHITE, opacity);
+    text(canvas, &RATE, &readout.upload_text, network_row_area(card, 1), UPLOAD_GRAY, opacity);
+    text(canvas, &REGULAR_11, kind.label(), network_kind_area(card), TEXT_MUTED, opacity);
 }

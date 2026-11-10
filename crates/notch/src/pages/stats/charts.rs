@@ -38,33 +38,20 @@ pub(super) fn bar_height(load: f32) -> f32 {
 }
 
 /// Draws the dotted baseline `baseline` px below the card top and two bars standing on it, as high as `load` (0 to 1).
-pub(super) fn draw_load(
-    canvas: &Canvas,
-    card: Rect,
-    scale: f32,
-    baseline: f32,
-    load: f32,
-    accent: Accent,
-    opacity: f32,
-) {
-    let line_top = card.top + (baseline - BASELINE_STROKE / 2.0) * scale;
+pub(super) fn draw_load(canvas: &Canvas, card: Rect, baseline: f32, load: f32, accent: Accent, opacity: f32) {
+    let line_top = card.top + (baseline - BASELINE_STROKE / 2.0);
     let mut left = BASELINE_LEFT;
     while left < BASELINE_RIGHT {
         let right = (left + BASELINE_DOT).min(BASELINE_RIGHT);
-        let dot = Rect::new(
-            card.left + left * scale,
-            line_top,
-            card.left + right * scale,
-            line_top + BASELINE_STROKE * scale,
-        );
+        let dot = Rect::new(card.left + left, line_top, card.left + right, line_top + BASELINE_STROKE);
         canvas.fill_rounded_rect(dot, 0.0, accent.base.faded(opacity * BASELINE_OPACITY));
         left += BASELINE_PITCH;
     }
-    let bottom = card.top + (baseline + BASELINE_STROKE / 2.0) * scale;
-    let top = bottom - bar_height(load) * scale;
+    let bottom = card.top + (baseline + BASELINE_STROKE / 2.0);
+    let top = bottom - bar_height(load);
     let bar = |left: f32, color: Color| {
-        let rect = Rect::new(card.left + left * scale, top, card.left + (left + BAR_WIDTH) * scale, bottom);
-        canvas.fill_rounded_rect(rect, BAR_RADIUS * scale, color.faded(opacity));
+        let rect = Rect::new(card.left + left, top, card.left + (left + BAR_WIDTH), bottom);
+        canvas.fill_rounded_rect(rect, BAR_RADIUS, color.faded(opacity));
     };
     if load >= IDLE_LOAD {
         bar(OLDER_BAR_LEFT, accent.light);
@@ -73,10 +60,10 @@ pub(super) fn draw_load(
 }
 
 /// The 56 x 4 track of a disk row whose text starts `row_top` px below the card top.
-pub(super) fn disk_bar_track(card: Rect, scale: f32, row_top: f32) -> Rect {
-    let top = card.top + (row_top + DISK_BAR_OFFSET) * scale;
-    let left = card.left + DISK_BAR_LEFT * scale;
-    Rect::new(left, top, left + DISK_BAR_WIDTH * scale, top + DISK_BAR_HEIGHT * scale)
+pub(super) fn disk_bar_track(card: Rect, row_top: f32) -> Rect {
+    let top = card.top + (row_top + DISK_BAR_OFFSET);
+    let left = card.left + DISK_BAR_LEFT;
+    Rect::new(left, top, left + DISK_BAR_WIDTH, top + DISK_BAR_HEIGHT)
 }
 
 pub(super) fn draw_disk_bar(canvas: &Canvas, track: Rect, percent: f32, opacity: f32) {
@@ -113,7 +100,7 @@ mod tests {
     #[test]
     fn the_disk_bar_is_56_by_4_and_starts_at_34() {
         let card = Rect::new(10.0, 20.0, 142.0, 106.0);
-        let track = disk_bar_track(card, 1.0, 32.0);
+        let track = disk_bar_track(card, 32.0);
         assert_eq!((track.left, track.width(), track.height()), (44.0, 56.0, 4.0));
         assert_eq!(track.top, 20.0 + 37.0);
     }

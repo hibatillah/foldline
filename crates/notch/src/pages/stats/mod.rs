@@ -220,6 +220,10 @@ impl Page for StatsPage {
         (mode == Mode::Expanded).then_some(Priority::BACKGROUND)
     }
 
+    fn uses_units(&self) -> bool {
+        true
+    }
+
     fn sizes(&self) -> PageSizes {
         PageSizes { resting_width: RESTING_WIDTH, expanded: Size::new(expanded_width(&self.tiles()), CARD_HEIGHT) }
     }
@@ -227,21 +231,20 @@ impl Page for StatsPage {
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}
 
     fn draw_expanded(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
-        let scale = frame.scale;
         let (Some(sample), Some(readout)) = (&self.latest, &self.readout) else {
-            for tile in card_rects(frame.bounds, scale, 4) {
-                canvas.fill_rounded_rect(tile, TILE_RADIUS * scale, SURFACE_ROW.faded(opacity));
+            for tile in card_rects(frame.bounds, 4) {
+                canvas.fill_rounded_rect(tile, TILE_RADIUS, SURFACE_ROW.faded(opacity));
             }
             return;
         };
-        for (kind, rect) in readout.tiles.iter().zip(card_rects(frame.bounds, scale, readout.tiles.len())) {
-            canvas.fill_rounded_rect(rect, TILE_RADIUS * scale, SURFACE_ROW.faded(opacity));
+        for (kind, rect) in readout.tiles.iter().zip(card_rects(frame.bounds, readout.tiles.len())) {
+            canvas.fill_rounded_rect(rect, TILE_RADIUS, SURFACE_ROW.faded(opacity));
             match kind {
-                Tile::Cpu => ChartCard::cpu(readout).draw(canvas, rect, scale, opacity),
-                Tile::Memory => ChartCard::memory(readout).draw(canvas, rect, scale, opacity),
-                Tile::Gpus => draw_gpus(canvas, rect, scale, &readout.gpus, opacity),
-                Tile::Network => draw_network(canvas, rect, scale, readout, sample.network_kind, opacity),
-                Tile::Disks => draw_disks(canvas, rect, scale, &readout.disks, opacity),
+                Tile::Cpu => ChartCard::cpu(readout).draw(canvas, rect, opacity),
+                Tile::Memory => ChartCard::memory(readout).draw(canvas, rect, opacity),
+                Tile::Gpus => draw_gpus(canvas, rect, &readout.gpus, opacity),
+                Tile::Network => draw_network(canvas, rect, readout, sample.network_kind, opacity),
+                Tile::Disks => draw_disks(canvas, rect, &readout.disks, opacity),
             }
         }
     }

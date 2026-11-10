@@ -17,7 +17,7 @@ fn the_stats_page_is_opt_in_and_has_no_collapsed_state() {
 #[test]
 fn every_card_is_132_by_86_with_8_between_them() {
     let width = expanded_width(&tiles_for(true));
-    let rects = card_rects(Rect::new(0.0, 0.0, width, 86.0), 1.0, 5);
+    let rects = card_rects(Rect::new(0.0, 0.0, width, 86.0), 5);
     assert_eq!(rects.len(), 5);
     for rect in &rects {
         assert_eq!((rect.width(), rect.height()), (132.0, 86.0));
@@ -63,22 +63,22 @@ fn the_gpu_tile_appears_only_when_there_is_a_gpu() {
 #[test]
 fn the_network_rows_sit_at_20_and_43_with_the_kind_at_66() {
     let card = Rect::new(0.0, 0.0, 132.0, 86.0);
-    let download = network_row_area(card, 1.0, 0);
-    let upload = network_row_area(card, 1.0, 1);
+    let download = network_row_area(card, 0);
+    let upload = network_row_area(card, 1);
     assert_eq!((download.top, upload.top), (20.0, 43.0));
     assert_eq!(upload.top - download.top, NETWORK_ROW_PITCH);
-    assert!(upload.bottom <= network_kind_area(card, 1.0).top, "the network kind stays below the rows");
-    assert_eq!(network_kind_area(card, 1.0).top, 66.0);
-    assert!(network_kind_area(card, 1.0).bottom <= card.bottom);
+    assert!(upload.bottom <= network_kind_area(card).top, "the network kind stays below the rows");
+    assert_eq!(network_kind_area(card).top, 66.0);
+    assert!(network_kind_area(card).bottom <= card.bottom);
 }
 
 #[test]
 fn the_texts_start_at_the_card_positions_of_the_board() {
     let card = Rect::new(0.0, 0.0, 132.0, 86.0);
-    assert_eq!((label_area(card, 1.0).left, label_area(card, 1.0).top), (12.0, 8.0));
-    assert_eq!(value_area(card, 1.0).top, 19.0);
-    assert_eq!(sub_area(card, 1.0).top, 64.0);
-    assert_eq!(label_area(card, 1.0).right, 120.0);
+    assert_eq!((label_area(card).left, label_area(card).top), (12.0, 8.0));
+    assert_eq!(value_area(card).top, 19.0);
+    assert_eq!(sub_area(card).top, 64.0);
+    assert_eq!(label_area(card).right, 120.0);
 }
 
 #[test]
@@ -90,7 +90,7 @@ fn disk_rows_sit_at_32_then_27_46_then_24_40_56() {
     let card = Rect::new(0.0, 0.0, 132.0, 86.0);
     for count in 1..=MAX_DISKS {
         for &top in disk_row_tops(count) {
-            let track = disk_bar_track(card, 1.0, top);
+            let track = disk_bar_track(card, top);
             assert!(track.right <= card.right - TILE_PADDING_X && track.bottom <= card.bottom - 4.0);
         }
     }
