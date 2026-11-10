@@ -1,5 +1,5 @@
 use super::{
-    TodoPage,
+    TodoPage, TodoTarget,
     layout::{
         BUTTON_HEIGHT, CHECK_SIZE, ROW_PADDING, Row, TEXT_LEFT, add_button, check_rect, clear_button, delete_rect,
         empty_area,
@@ -68,7 +68,7 @@ impl TodoPage {
 
     fn draw_clear_button(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
         let radius = BUTTON_HEIGHT * scale / 2.0;
-        let fill = if self.is_clear_hovered { SURFACE_BORDER } else { SURFACE_HOVER };
+        let fill = if self.hover.is(TodoTarget::ClearAll) { SURFACE_BORDER } else { SURFACE_HOVER };
         canvas.fill_rounded_rect(area, radius, SURFACE_BUTTON_BORDER.faded(opacity));
         let inner = Rect::new(area.left + scale, area.top + scale, area.right - scale, area.bottom - scale);
         canvas.fill_rounded_rect(inner, radius - scale, fill.faded(opacity));
@@ -76,7 +76,7 @@ impl TodoPage {
     }
 
     fn draw_add_button(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-        let fill = if self.is_add_hovered { Color::gray(0.85) } else { Color::WHITE };
+        let fill = if self.hover.is(TodoTarget::Add) { Color::gray(0.85) } else { Color::WHITE };
         let text = Color::BLACK;
         canvas.fill_rounded_rect(area, area.height() / 2.0, fill.faded(opacity));
         let plus_width = canvas.measure(&REGULAR_14, "+") * scale;
@@ -108,7 +108,7 @@ impl TodoPage {
     pub(super) fn draw_row(&self, canvas: &Canvas, row: Row, rect: Rect, position: usize, opacity: f32) {
         let scale = canvas.scale();
         let text_area = Rect { left: rect.left + TEXT_LEFT * scale, right: rect.right - 36.0 * scale, ..rect };
-        let is_hovered = self.hovered_row == Some(position);
+        let is_hovered = self.hover.is(TodoTarget::Row(position));
         let fill = if is_hovered { SURFACE_HOVER } else { SURFACE_ROW };
         match row {
             Row::Field => {

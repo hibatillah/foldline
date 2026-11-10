@@ -1,6 +1,7 @@
 //! Reusable widgets for pages, so every page looks and behaves the same way.
 
 mod banner_buttons;
+mod hover;
 mod hud;
 mod icon_button;
 mod icons;
@@ -17,6 +18,7 @@ pub mod type_styles;
 pub use banner_buttons::{
     BANNER_BUTTON_HEIGHT, BANNER_BUTTONS_GAP_ABOVE, BANNER_BUTTONS_HEIGHT, BannerButton, BannerButtons, BannerLabels,
 };
+pub use hover::HoverTarget;
 pub use hud::{LEVEL_WIDTH, draw_level, draw_message, message_width};
 pub use icon_button::IconButton;
 pub use icons::Icon;
