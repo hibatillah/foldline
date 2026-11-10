@@ -351,11 +351,11 @@ The bar stays at the bottom of the page in both heights.
   with no scrollbar and no hint of the rows beyond. The toolbar (28 px high, then 8 px) sits on top: "Todo" (20 px, Medium) and the count ("3 left",
   "3 left · 2 done", "0 left" in 12 px grey, 8 px after the title, on its baseline) at the left, **Clear all** and **Add**
   at the right, 8 px apart. Rows run the full width below it.
-- **Add** is a fixed white pill (26 px high, 13 px radius, black "+ Add" in 12 px Medium, as the design's 600 is not
+- **Add** is a fixed white pill (72 px wide, widened from 60 so "Tambah" fits; 26 px high, 13 px radius, black "+ Add" in 12 px Medium, as the design's 600 is not
   bundled). It is never dimmed. Pressing it adds the
   input as the last row (scrolled into view), with the keyboard (1 px `#408fff` outline, "+" in the same blue, "What needs doing?", "Enter
   to add" at the right).
-- **Clear all** is a 26 px pill (`#1c1c22`, 1 px `#2c2c34` border, text `#e6e6eb`, text only). It
+- **Clear all** ("Bersihkan" in Indonesian, 80 px wide) is a 26 px pill (`#1c1c22`, 1 px `#2c2c34` border, text `#e6e6eb`, text only). It
   removes every task, done or not, without asking, and is hidden when the list is empty.
 - The page is 508 px wide and 28 + 8 + the rows high (3 tasks 144 px, five or more rows 220 px), at least 86 px.
 - Empty: the same 508 px width as a list, 86 px high, with the title and Add on top and "All clear" centered below;

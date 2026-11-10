@@ -10,6 +10,7 @@
 
 ## What the budget changes in the code
 
+- **Text lookups stay cheap.** `tr!("key")` on a found key returns a borrowed string (one hash lookup, no allocation); a text with a value in it is built when it is made or when the language changes, never on every paint. The language change adds no timer, hook or thread.
 - **Every timer and animation stops as soon as its output stops changing.** The frame timer ends when the springs settle and no page reports `animate` as moving. A timer left running is the usual cause of idle CPU.
 - **Background work wakes the UI thread with a `Notifier`; nothing polls.** Wait on what calls you: a Windows callback, a message, a blocking wait or an event hook. An event hook asks for the one event and the one thread it needs (`crates/notch/src/host/screen_mode.rs`), because a hook on every window's events wakes the notch on every mouse move.
 - **A page or activity that shows something only while visible measures only while visible.** The stats page opens its counters when the notch is hovered on any page (`on_hover_changed(true)`, while the page is switched on) and closes them when the pointer leaves; the shalat page sleeps until the pill mark's window opens.

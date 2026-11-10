@@ -196,7 +196,8 @@ thread with a `Notifier` that posts a message; the page or activity then reads t
 - the shelf asks Explorer for file pictures and carries a file being dragged out (that needs a single-threaded
   apartment, which the UI thread is not); `drop_target.rs` has the thread that takes dragged files in
 - the device battery activity runs a WinRT `DeviceWatcher` that Windows pushes changes into
-- the two hide-Windows-popups options each run a thread of their own: a show hook on the volume flyout's thread (`host/volume_flyout/hook_thread.rs`) and a wait on registry changes (`host/notification_banners.rs`)
+- the two hide-Windows-popups options each run a thread of their own: a show hook on the volume flyout's thread that finds the flyout window and empties its region (`host/volume_flyout/hook_thread.rs`) and a wait on registry changes (`host/notification_banners.rs`)
+- the saved city follows the device (`host/location_tracker.rs`): a callback on network interface changes, registered only while `location.track` is on, restarts a one-shot 10 s timer (host timer 11); when it fires, or at start and after sleep, a worker thread asks Windows for the position once and ends with its answer. A continuous location subscription is avoided because Windows then shows its "location in use" icon for as long as the notch runs
 - the Caps Lock activity runs a keyboard hook, which only wakes the activity
 
 ### Animation
@@ -212,6 +213,10 @@ publishes `pages.known` when it starts so the window can list pages it does not 
 `crates/store/` and tells the notch to re-read them; the message, keys and field behavior are in
 [settings keys](../reference/settings-keys.md#settings-file) and the [settings window](../reference/settings-window.md). The idle budget applies to `notch.exe` only
 ([performance baseline](../reference/performance-baseline.md#settings-window)).
+
+## Text in two languages
+
+Both programs look texts up with `tr!("key")` (rust-i18n 3, compiled in from one `locales/app.yml` per crate, English and Indonesian side by side). The language is `general.language` resolved by `store::language` (`auto` reads the Windows display language); `store::language::current()` is what `tr!` reads, with a per-thread override that tests use so a test in Indonesian never changes the text under another. The notch re-reads the key on `WM_SETTINGS_CHANGED` and calls `Page::on_language_changed` and `Activity::on_language_changed` so cached text is rebuilt; the settings window builds its pages again when the language differs from the one they were built in. A key found in the table comes back borrowed (no allocation); a text with a value in it is built when it is made, not on every paint. A test per crate checks that every `tr!` key exists in both languages and that no key is unused; fit tests measure the Indonesian text of each fixed-size place with the real fonts.
 
 | File in `crates/settings/src/` | Job |
 | --- | --- |

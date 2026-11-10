@@ -44,13 +44,13 @@ Skills install into `.agents/skills/` and are linked into `.claude/skills/`. Bot
 ## Build and run
 
 ```
-cargo build --release                  # target\x86_64-pc-windows-msvc\release\notch.exe
+cargo +stable-x86_64-pc-windows-msvc build --release                # target\x86_64-pc-windows-msvc\release\notch.exe
 scripts/watch.sh                       # debug build, relaunched on every saved file
 scripts/reload.sh                      # one release build; starts it and closes the old one
 cargo +stable-x86_64-pc-windows-msvc build --release -p settings    # the settings window
 ```
 
-Plain `cargo` commands cover only the notch. Add `+stable-x86_64-pc-windows-msvc ... --workspace` to include `crates/settings/` and `crates/store/`. [docs/how-to/build-run-and-debug.md](docs/how-to/build-run-and-debug.md) covers debugging, and `scripts/test-build.sh` makes an installer of your working tree for a teammate.
+Use the MSVC toolchain for every crate (the notch's text lookup, rust-i18n, needs it as GPUI does). Commands without `-p` or `--workspace` cover only the notch; add `--workspace` to include `crates/settings/`, `crates/store/` and `crates/places/`. [docs/how-to/build-run-and-debug.md](docs/how-to/build-run-and-debug.md) covers debugging, and `scripts/test-build.sh` makes an installer of your working tree for a teammate.
 
 ## How the code is organized
 
@@ -77,9 +77,9 @@ request that passes the **CI** check, yours included; see [docs/how-to/work-with
 ## Before you finish a change
 
 ```
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test
+cargo +stable-x86_64-pc-windows-msvc fmt --check
+cargo +stable-x86_64-pc-windows-msvc clippy --workspace --all-targets -- -D warnings
+cargo +stable-x86_64-pc-windows-msvc test --workspace
 scripts/perf.sh          # after host, animation, timer or drawing changes
 ```
 

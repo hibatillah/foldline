@@ -46,22 +46,25 @@ The collapsed pill reads, left to right: the time at the left edge, then one gro
 - **Calendar.** Click a day of the month to list its events; **Settings > Calendar** can show only the current week instead, on a shorter page (the list scrolls past three events). Paste your calendar's iCal address into **Settings > Calendar**, which lists the Google Calendar steps for finding it. Treat the address like a password.
 - **Settings gear.** The gear at the right edge of the open header opens the settings window. On the shelf, right-clicking a file removes it; the notch has no other right-click menu.
 - **Tray menu.** Right-click the tray icon (on Windows 11 it may sit under the `^` menu): **Start with Windows**, **Settings** (the settings window) and **Quit Notch**.
-- **Settings window.** The gear and **Settings** in the tray menu open it. Settings are edited only there, not inside the notch. The sidebar lists General, Pages, Behavior and Advanced under "Notch", Calendar, Shalat, System stats and Weather under "Page settings", and About at the bottom; each page opens with a sentence on what it is for, then its sections as bordered blocks of rows, each with a description and a control. The sidebar sits on a translucent neutral frame with the app's tile logo on top (blue in a stable build, orange in a pre-release), and the page is one solid card in front of it with its own header ("Settings › page") and the minimize, maximize and close buttons; icons and the page title are blue. On a small display it opens smaller than its default size, never below 720 x 480. **About** shows the version, links to the licenses, the lyrics source and the release notes (not available yet), and opens the settings file and the data folder; its **Check now** button is not available yet. The city search for the prayer times and the weather is in General. Toggles apply at once; type a value and press Enter, or click away, to save it. Which disks and GPUs the stats page shows are chosen under System stats (the lists appear after the notch has been hovered once with the stats page on); the message before rain is the **Rain alert** switch under Weather (see [docs/reference/settings-keys.md](docs/reference/settings-keys.md)).
+- **Settings window.** The gear and **Settings** in the tray menu open it. Settings are edited only there, not inside the notch. The sidebar lists General, Pages, Behavior and Advanced under "Notch", Calendar, Shalat, System stats and Weather under "Page settings", and About at the bottom; each page opens with a sentence on what it is for, then its sections as bordered blocks of rows, each with a description and a control. The sidebar sits on a translucent neutral frame with the app's tile logo on top (blue in a stable build, orange in a pre-release), and the page is one solid card in front of it with its own header ("Settings › page") and the minimize, maximize and close buttons; icons and the page title are blue. On a small display it opens smaller than its default size, never below 720 x 480. **About** shows the version, links to the licenses, the lyrics source and the release notes (not available yet), and opens the settings file and the data folder; its **Check now** button is not available yet. The city search for the prayer times and the weather is in General, under the **Track location** switch (on by default): while it is on the city changes by itself when the device moves to another one, and a city you pick stays until then; switch it off to keep a city for good. Toggles apply at once; type a value and press Enter, or click away, to save it. Which disks and GPUs the stats page shows are chosen under System stats (the lists appear after the notch has been hovered once with the stats page on); the message before rain is the **Rain alert** switch under Weather (see [docs/reference/settings-keys.md](docs/reference/settings-keys.md)).
 
 [docs/reference/settings-keys.md](docs/reference/settings-keys.md) lists every setting and its key.
 
 | Option | Default |
 | --- | --- |
+| Language | Automatic (follows the Windows display language: Indonesian when it is Indonesian, English otherwise) |
 | Notifications | On |
 | Device battery warnings | On |
 | Hide when idle | Off |
-| Hide the Windows volume popup | On |
+| Hide the Windows volume and brightness popups | On |
 | Hide Windows notification banners | On |
 | Over a maximized window | 2 · Lyrics |
 | Over a full-screen app | 0 · Hidden |
 | Open on hover over a maximized window | On |
 | Open on hover over a full-screen app | On |
 | Start with Windows | On in the installer |
+
+**Language** (Settings > General) switches the notch and the settings window between English and Bahasa Indonesia while both run; Automatic follows the Windows display language. Notification titles and texts, track names and event titles stay as the sending app wrote them.
 
 **Hide when idle** keeps the notch hidden over regular windows until a short message or a banner arrives (a volume change, "camera active"); a lasting mark (the muted speaker, Caps Lock, a running countdown, the camera or microphone dot) does not bring it back, in any mode, so while the notch is hidden the privacy dot is not visible. Playing music keeps the pill up.
 
@@ -73,7 +76,7 @@ Over a **maximized** window and over a **full-screen** app (a game, a video, an 
 
 ### Windows' own popups
 
-**Hide the Windows volume popup** (Settings > General, on by default) keeps away the volume box Windows draws above the taskbar, so only the notch shows the volume. It is hidden again each time Windows shows it, and nothing in Windows is changed: when the notch closes or crashes, the popup comes back.
+**Hide the Windows volume and brightness popups** (Settings > General, on by default) keeps away the box Windows draws above the taskbar for both, so only the notch shows them. The box's window gets an empty shape, so Windows can show it as often as it likes and nothing appears; the shape is put back when the notch closes or the switch goes off. If the notch is ended by force, the box stays away until you start the notch and close it again, or restart Explorer.
 
 **Hide Windows notification banners** (Settings > General, on by default) turns off the banner Windows shows at the bottom right for every app while the notch runs, so only the notch shows notifications. Notifications stay in Windows' notification center, which is where the notch reads them. Each app's previous choice is saved first (also at the first start, when the switch is on without you having set it) and put back when you turn the switch off, when the notch quits, or at the next start after a crash. An app that has never shown a notification gets its first Windows banner before the notch can turn it off. [docs/how-to/hide-windows-popups.md](docs/how-to/hide-windows-popups.md) has the details and what is not yet confirmed, such as the brightness popup.
 
@@ -120,7 +123,7 @@ Notch runs on your computer, with no account and no analytics. Everything below 
 - Caps Lock, through a keyboard hook that looks at that one key and keeps nothing it sees.
 - CPU, memory, GPU, disk and network readings for the stats page.
 - What you copy (text and pictures), only while the Clipboard page is on: the last 7 copies are kept in memory, never written to disk, never sent anywhere, and dropped when Notch quits or the page is switched off.
-- The location you pick (a city). The city list ships with the app and prayer times are calculated on your PC from it; only the Weather page sends the place's coordinates anywhere (see below).
+- The location: a city you pick, or, while **Track location** is on, the city nearest to the position Windows reports (asked once at start, after sleep and after a network change; the notch itself sends nothing for this, and Windows' own location service may use Wi-Fi or the internet). The city list ships with the app and prayer times are calculated on your PC from it; only the Weather page sends the place's coordinates anywhere (see below).
 
 Settings are in `%APPDATA%\notch\settings.txt`. A stable installer adds a "Start with Windows" entry under your user's `Run` key unless you untick it; a pre-release installer adds none.
 

@@ -29,8 +29,10 @@ The settings window (`crates/settings/`, GPUI) builds only with the MSVC host to
 Run from the repository root:
 
 ```
-cargo build --release
+cargo +stable-x86_64-pc-windows-msvc build --release
 ```
+
+Build with the MSVC toolchain: the notch's text lookup (rust-i18n) needs a crate in its macro tree that the GNU host toolchain cannot build (no `dlltool`), as the settings window already needed MSVC.
 
 The executable is `target\x86_64-pc-windows-msvc\release\notch.exe`. The workspace's default member is the notch, so
 this does not build the settings window; `cargo +stable-x86_64-pc-windows-msvc build --release -p settings` builds

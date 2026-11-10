@@ -12,10 +12,11 @@ crates/
       page.rs         the whole contract for a page: the Page trait, Context, Frame, events
       activity.rs     the whole contract for an activity: the Activity trait, Presence, SystemMessage, Flash
       log.rs          optional debug log (set NOTCH_DEBUG to a file path)
+      i18n.rs         the `tr!` text lookup; the texts are in `crates/notch/locales/app.yml` (the settings window has its own `crates/settings/locales/app.yml`)
       host/           the notch itself: window, animation, hover, tray, the launcher of the settings window. Knows no page.
       gfx/            drawing toolkit: Canvas, fonts, colors, image pixels (`image_data.rs`) and their uploaded brushes (`image_brush.rs`), springs, geometry, text clamping, the bounded cache of measured text (`text_cache.rs`), SVG path data read into a `Path` (`svg_path.rs`)
       platform/       small Windows actions for pages and activities: an app's icon, a shell bitmap's pixels (`bitmap.rs`), a window's class and its executable (`window_info.rs`), open a file, read and write the clipboard (`clipboard.rs`), paste into the window in front (`paste.rs`), drag a file
-                      out, the picture Explorer shows, whether the machine has a battery (`power.rs`), each app's notification banner value and a watch on those values (`notification_settings.rs`), paired Bluetooth devices, their battery and the radio (`bluetooth_devices.rs`), devices behind a 2.4 GHz USB receiver and a Logitech receiver's HID++ battery (`dongle_devices.rs`; `dongle_devices/` holds the tree walk, the HID channel, the receiver rules and the HID++ messages), opening a notification's app as a click on Windows' banner does (`toast_activation.rs`; `toast_activation/` holds the toast XML rules, the read of Windows' notification database, the toast activator lookup, the click's deadline and cap on stuck activator threads, and the foreground hook that tells whether the app came forward)
+                      out, the picture Explorer shows, whether the machine has a battery (`power.rs`), each app's notification banner value and a watch on those values (`notification_settings.rs`), paired Bluetooth devices, their battery and the radio (`bluetooth_devices.rs`), one read of the device position (`geolocation.rs`), devices behind a 2.4 GHz USB receiver and a Logitech receiver's HID++ battery (`dongle_devices.rs`; `dongle_devices/` holds the tree walk, the HID channel, the receiver rules and the HID++ messages), opening a notification's app as a click on Windows' banner does (`toast_activation.rs`; `toast_activation/` holds the toast XML rules, the read of Windows' notification database, the toast activator lookup, the click's deadline and cap on stuck activator threads, and the foreground hook that tells whether the app came forward)
       ui/             reusable widgets: IconButton, PillButton, Ring, TextField (the todo page's add field), icons (`icons/`: the shapes in `paths.rs`; the gear included), line icons from SVG path data in several colors (`svg_icon.rs`), the shared bitmap square of cached shapes (`bitmap_square.rs`), the dashed outline, the HUD layouts, the shared colors (`palette.rs`) and text styles (`type_styles.rs`), a banner's Dismiss and Open buttons (`banner_buttons.rs`)
       activities/     the registry (mod.rs) and one file or folder per activity: volume, brightness, battery, Bluetooth,
                       microphone, camera, clipboard, Caps Lock, notifications (`notifications/`: the card, the item and
@@ -33,7 +34,7 @@ crates/
         weather/      weather: the MET Norway request (fetch.rs), the forecast (forecast.rs), the sky icons (picture.rs), the message states and their width (message.rs), the page's drawing and the Today/Week pill (draw.rs), the rain alert (alert.rs: the banner, badge.rs: the countdown badge), the weather.com addresses (link.rs) the clickable cells (click.rs), fetch and rain-alert scheduling (refresh.rs), pointer input (input.rs) and the snapshot samples (sample.rs)
         todo/         todo list: the list and its todo.txt file (list.rs), which rows show and where (layout.rs), drawing (draw.rs), the page
   places/                the city list and the shared `location.*` keys, used by the notch and the settings window
-  store/                 the settings file code shared by the notch and the settings window (per-key atomic writes)
+  store/                 the settings file code shared by the notch and the settings window (per-key atomic writes) and `language.rs`, the language both programs read
   settings/              the settings window, a separate GPUI executable named notch-settings.exe (needs the MSVC host
                          toolchain); src/sections/ holds one file per section (shalat/ one file per card group, about/ the
                          About page: app card, links, licenses file, data paths);
@@ -75,7 +76,8 @@ assets/fonts/     Geist, the bundled font, and its license
 | `tray.rs` | the tray icon and its menu: Start with Windows (checked when on), Settings, Quit Notch; the notch has no menu of its own |
 | `settings_launcher.rs` | starts `notch-settings.exe` from the folder of the running `notch.exe`, without waiting; the gear in the header and the tray's Settings item both call it |
 | `display.rs` | display scale and refresh rate |
-| `volume_flyout.rs` | hides Windows' volume flyout each time Explorer shows it, from a show hook on the flyout's thread (`notch.hide_windows_volume_popup`); `volume_flyout/identity.rs` tells the flyout from Explorer's other island windows (pure); `volume_flyout/hook_thread.rs` runs the hook on a thread of its own |
+| `location_tracker.rs` | keeps the saved city where the device is (`location.track`): a worker thread that reads Windows' position once, the answer's message, and what an answer changes (pure `update_for`); `location_tracker/network.rs` registers a callback on network interface changes while tracking is on |
+| `volume_flyout.rs` | keeps Windows' volume and brightness flyout from drawing by giving its window an empty region, found by a show hook on the flyout's thread (`notch.hide_windows_volume_popup`); `volume_flyout/identity.rs` tells the flyout from Explorer's other island windows (pure); `volume_flyout/hook_thread.rs` runs the hook on a thread of its own |
 | `notification_banners.rs` | turns off Windows' notification banner for every app while the notch runs and puts the values back (`notch.hide_windows_notifications`), from a thread that waits on registry changes; `notification_banners/backup.rs` is the saved values and what a pass changes (pure), `notification_banners/passes.rs` reads and writes them |
 
 ### The notch's files
@@ -97,6 +99,7 @@ owns a small struct for it, defined beside its logic and held by `Notch` (`sprin
 | `animation.rs` | the springs, the frame the springs describe, the animation timer | `Springs`, `FrameTimer` |
 | `keyboard.rs` | typing: who owns the keyboard, text keys, pasted text, the keyboard lost to another window | `KeyboardState` |
 | `settings_reload.rs` | applying a changed settings file after `WM_SETTINGS_CHANGED` | |
+| `location.rs` | following `location.track`: start and stop watching, the 10 s wait after a network change, saving the city a position gives | |
 | `resting_row.rs` | the idle row and the claimed pill's row: the group, the battery ring, the dot column, short badges, their drawing | `RestingRow` |
 | `row_motion.rs` | one spring per row item and for the clocks, so items slide when the row changes | `RowMotion` |
 | `header_row.rs` | the open header: the gear, the icons, the group, what a click on them does | |

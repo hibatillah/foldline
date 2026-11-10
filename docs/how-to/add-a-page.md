@@ -131,6 +131,10 @@ What each part does:
 - `on_settings_changed` runs after another program (the settings window) changed `settings.txt` and the notch re-read
   it. Read your keys again here; fall back to the current value, not the default, so a missing or unreadable line
   changes nothing. Never write settings from it.
+- `on_language_changed` runs once when `general.language` changed (after `on_settings_changed`). Rebuild text you cached from
+  `tr!` (a label, a count, a measured width) and request a repaint. `name()` returns a `String` read in the current
+  language through `tr!("page.<id>")`; look texts up with `crate::i18n::tr!` when you create or rebuild them, never in
+  `draw_*`, and add the English and Indonesian text to `crates/notch/locales/app.yml`.
 - `on_timer` runs when a timer from `context.set_timer` fires. Request a repaint when something visible changed.
 - `on_pointer` receives pointer events while your page is the open one, including while it is still fading in after a switch; a page fading out gets none.
   The collapsed pill sends none to pages: a page whose `presence()` is a banner or a badge gets the pointer over it in

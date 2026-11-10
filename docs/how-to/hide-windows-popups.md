@@ -1,36 +1,29 @@
 # Hide Windows' own popups
 
-> **How-to.** Read when: Windows shows its own volume box or notification banner next to the notch and you want only the notch. Skip if: you want Windows' popups as well.
+> **How-to.** Read when: Windows shows its own volume or brightness box or notification banner next to the notch and you want only the notch. Skip if: you want Windows' popups as well.
 
 Both switches are under **Settings > General > Windows popups** and are on by default (an unset key counts as on); switch one off to get that Windows popup back.
 
-## The volume popup
+## The volume and brightness popups
 
-**Hide the Windows volume popup** (`notch.hide_windows_volume_popup`).
+**Hide the Windows volume and brightness popups** (`notch.hide_windows_volume_popup`).
 
-- Explorer draws the volume box in a window of class `XamlExplorerHostIslandWindow` (no title, never takes focus,
-  centered above the taskbar). It shows that window again at every volume change, so the notch hides it each time:
-  an `EVENT_OBJECT_SHOW` hook on the window's own thread hides it about 2 ms after Explorer shows it
+- Explorer draws both boxes in one window of class `XamlExplorerHostIslandWindow` (no title, never takes focus,
+  centered above the taskbar, extended style `0x08200088` on build 26300). The notch gives that window an empty region
+  (`SetWindowRgn`), which Windows accepts from another process and Explorer never resets, so every show draws nothing
   (`crates/notch/src/host/volume_flyout.rs`).
-- The hook runs on a thread of the notch's own (`volume_flyout/hook_thread.rs`), not on the thread that draws the
-  notch, because the notch draws its own volume message at the same moment.
-- Measured on Windows 11 build 26300: over eight volume changes, one frame of the box was captured on screen once;
-  without the setting it stays for about 2.5 s after each change. A stand-in for the hook on an idle thread hid the box
-  1 to 4 ms after it was shown, and a check every millisecond never saw it on screen.
-- Moving the hidden box off screen does not help: Explorer moves it back before it shows it.
-- Nothing in Windows is changed. When the notch closes, is switched off here, or crashes, the hook ends and the box
-  appears again at the next volume change.
-- Until the first volume change after Explorer starts, the window may not exist; the notch then listens to Explorer's
-  shows until it appears. After Explorer restarts, the notch looks for the new window.
-- A Windows update can change the window. The box then simply shows again; no other window is hidden, because the
+- A show hook on the window's own thread (`volume_flyout/hook_thread.rs`) finds the window at its first show, because it
+  does not exist until the first volume or brightness change after Explorer starts. Until then the hook listens to
+  Explorer's shows; after Explorer restarts the notch looks for the new window. The hook is only a finder and a backstop
+  that empties the region again if it was lost.
+- Hiding the window after Explorer showed it (the earlier approach) left one or two frames of the box on screen, mostly
+  with quick key presses: the box was already drawn when the hide arrived.
+- A test with the real keys on build 26300, with the region emptied, showed no box at all for volume and brightness.
+- The region is put back when the notch exits, when the switch is turned off and at the end of a Windows session. A newer
+  notch that replaces a running one keeps the flyout concealed. A notch ended by force cannot put it back: the box then
+  stays away until the notch is started and closed again, or Explorer restarts.
+- A Windows update can change the window. The box then simply shows again; no other window is touched, because the
   notch checks the class, the missing title, the extended style and the position.
-
-## The brightness popup
-
-Not confirmed. A brightness change made through WMI (`WmiMonitorBrightnessMethods`) shows no box at all on build
-26300, no window appears or changes, and software cannot press the brightness keys. If the keys show their box in the
-same window as the volume box, the volume switch already hides it, because the hook hides that window at every show;
-if they use another window, it still shows.
 
 ## Notification banners
 

@@ -21,6 +21,7 @@ keys, defaults and the window's sections are listed in [settings keys](../refere
    - A choice among pictures: a picture card (`card::frame` and `card::grid`, as in `sections/behavior.rs`) whose click
      calls `field::write(key, word, cx)`.
    - Every item gets a description of one to three short lines that says what the setting does.
+   - Write the label and description through `tr!("<section>.<key>")` and add the English and Indonesian text to `crates/settings/locales/app.yml`, as `general.track_location` does.
    - A new section: create `sections/<name>.rs` with a `page() -> Page` function (title, one-line description, groups)
      and add it to `sections::all` in `sections/mod.rs` as a `NavEntry` with its sidebar group (`NavGroup::Notch` or
      `NavGroup::PageSettings`) and icon.

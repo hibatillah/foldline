@@ -13,7 +13,7 @@ New to the team? Start with [ONBOARDING.md](../ONBOARDING.md) at the repository 
 | [Add an activity](how-to/add-an-activity.md) | something should show in the collapsed pill |
 | [Add a setting](how-to/add-a-setting.md) | a new key, or a control in the settings window |
 | [Switch off or remove](how-to/switch-off-or-remove.md) | fewer pages or activities, temporarily or for good |
-| [Hide Windows' own popups](how-to/hide-windows-popups.md) | Windows' volume box or notification banners show next to the notch |
+| [Hide Windows' own popups](how-to/hide-windows-popups.md) | Windows' volume or brightness box or notification banners show next to the notch |
 | [Test and snapshot](how-to/test-and-snapshot.md) | writing a test, rendering page pictures, the manual checklist |
 | [Run the performance check](how-to/run-the-perf-check.md) | after host, animation, timer or drawing changes, and before a release |
 | [Work with branches](how-to/work-with-branches.md) | starting a change, opening or merging a pull request, or before you push |
