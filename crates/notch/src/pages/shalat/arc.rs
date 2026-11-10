@@ -91,8 +91,8 @@ pub(super) fn point_at(slot: f32, width: f32) -> Pair {
     cubic(&segment(index, width), (slot - index as f32).clamp(0.0, 1.0))
 }
 
-fn curve(width: f32, scale: f32) -> Path {
-    let to_pixels = |point: Pair| Point::new(point.0 * scale, point.1 * scale);
+fn curve(width: f32, raster_scale: f32) -> Path {
+    let to_pixels = |point: Pair| Point::new(point.0 * raster_scale, point.1 * raster_scale);
     let mut path = Path::new().move_to(to_pixels(segment(0, width)[0]));
     for index in 0..PRAYER_COUNT - 1 {
         let [_, first, second, end] = segment(index, width);
@@ -101,35 +101,35 @@ fn curve(width: f32, scale: f32) -> Path {
     path
 }
 
-fn area(width: f32, scale: f32) -> Path {
-    let (first, last) = (marker_x(0, width) * scale, marker_x(PRAYER_COUNT - 1, width) * scale);
-    let mut path = curve(width, scale);
-    path = path.line_to(Point::new(last, BASELINE * scale)).line_to(Point::new(first, BASELINE * scale));
+fn area(width: f32, raster_scale: f32) -> Path {
+    let (first, last) = (marker_x(0, width) * raster_scale, marker_x(PRAYER_COUNT - 1, width) * raster_scale);
+    let mut path = curve(width, raster_scale);
+    path = path.line_to(Point::new(last, BASELINE * raster_scale)).line_to(Point::new(first, BASELINE * raster_scale));
     path.close()
 }
 
-fn line_image(width: f32, height: u32, scale: f32, color: Color) -> ImageData {
-    let figures = curve(width, scale).flatten();
-    Mask::stroke(width_pixels(width, scale), height, &figures, LINE_WIDTH * scale / 2.0)
+fn line_image(width: f32, height: u32, raster_scale: f32, color: Color) -> ImageData {
+    let figures = curve(width, raster_scale).flatten();
+    Mask::stroke(width_pixels(width, raster_scale), height, &figures, LINE_WIDTH * raster_scale / 2.0)
         .tinted(color.r, color.g, color.b)
 }
 
-fn fill_image(width: f32, height: u32, scale: f32, color: Color, top_alpha: f32) -> ImageData {
-    let figures = area(width, scale).flatten();
-    let (top, bottom) = (TOP * scale, BASELINE * scale);
-    Mask::fill(width_pixels(width, scale), height, &figures).painted(|_, row| {
+fn fill_image(width: f32, height: u32, raster_scale: f32, color: Color, top_alpha: f32) -> ImageData {
+    let figures = area(width, raster_scale).flatten();
+    let (top, bottom) = (TOP * raster_scale, BASELINE * raster_scale);
+    Mask::fill(width_pixels(width, raster_scale), height, &figures).painted(|_, row| {
         let amount = ((row as f32 + 0.5 - top) / (bottom - top)).clamp(0.0, 1.0);
         color.with_alpha(top_alpha * (1.0 - amount))
     })
 }
 
-fn width_pixels(width: f32, scale: f32) -> u32 {
-    (width * scale).round() as u32
+fn width_pixels(width: f32, raster_scale: f32) -> u32 {
+    (width * raster_scale).round() as u32
 }
 
-fn glow_image(scale: f32) -> ImageData {
-    let side = (GLOW_RADIUS * 2.0 * scale).ceil() as u32;
-    let radius = GLOW_RADIUS * scale;
+/// The sun's glow in a `side` pixel square.
+fn glow_image(side: u32, raster_scale: f32) -> ImageData {
+    let radius = GLOW_RADIUS * raster_scale;
     let middle = side as f32 / 2.0;
     let mask = Mask::from_distance(side, side, |point| (point.x - middle).hypot(point.y - middle) - radius);
     mask.painted(|x, y| {
@@ -148,28 +148,28 @@ pub(super) fn progress_x(position: Position, width: f32) -> Option<f32> {
 }
 
 fn draw_marker(canvas: &Canvas, center: Point, marker: Marker, opacity: f32) {
-    let scale = canvas.scale();
     match marker {
-        Marker::Passed => canvas.fill_circle(center, 3.5 * scale, MINT_GREEN.faded(opacity)),
+        Marker::Passed => canvas.fill_circle(center, 3.5, MINT_GREEN.faded(opacity)),
         Marker::Next => {
-            canvas.fill_circle(center, 7.0 * scale, MINT_GREEN.with_alpha(0.18).faded(opacity));
-            canvas.fill_circle(center, 4.5 * scale, MINT_GREEN.faded(opacity));
+            canvas.fill_circle(center, 7.0, MINT_GREEN.with_alpha(0.18).faded(opacity));
+            canvas.fill_circle(center, 4.5, MINT_GREEN.faded(opacity));
         }
         Marker::Ahead => {
-            canvas.fill_circle(center, 4.25 * scale, AHEAD_RING.faded(opacity));
-            canvas.fill_circle(center, 2.75 * scale, Color::BLACK.faded(opacity));
+            canvas.fill_circle(center, 4.25, AHEAD_RING.faded(opacity));
+            canvas.fill_circle(center, 2.75, Color::BLACK.faded(opacity));
         }
     }
 }
 
-/// Draws the arc into `chart` (device pixels, as high as the page): the gray remainder, the green past and the sun.
+/// Draws the arc into `chart` (units, as high as the page): the gray remainder, the green past and the sun.
 pub(super) fn draw(canvas: &Canvas, chart: Rect, position: Position, markers: [Marker; PRAYER_COUNT], opacity: f32) {
-    let scale = canvas.scale();
-    let width = chart.width() / scale;
-    let height = chart.height().round() as u32;
-    let rect = Rect::new(chart.left, chart.top, chart.left + width_pixels(width, scale) as f32, chart.bottom);
-    let key = |kind: u8| ("shalat-arc", kind, width_pixels(width, scale), height);
-    let split = progress_x(position, width).map_or(rect.left, |x| (chart.left + x * scale).min(rect.right));
+    let raster_scale = canvas.raster_scale();
+    let width = chart.width();
+    let width_pixels = width_pixels(width, raster_scale);
+    let height = (chart.height() * raster_scale).round() as u32;
+    let rect = Rect::new(chart.left, chart.top, chart.left + width_pixels as f32 / raster_scale, chart.bottom);
+    let key = |kind: u8| ("shalat-arc", kind, width_pixels, height);
+    let split = progress_x(position, width).map_or(rect.left, |x| (chart.left + x).min(rect.right));
     let future = Rect { left: split, ..rect };
     let past = Rect { right: split, ..rect };
     for kind in 0..LAYER_COUNT {
@@ -178,28 +178,27 @@ pub(super) fn draw(canvas: &Canvas, chart: Rect, position: Position, markers: [M
             continue;
         }
         let build = || match kind {
-            0 => fill_image(width, height, scale, FUTURE_FILL, FUTURE_FILL_ALPHA),
-            1 => fill_image(width, height, scale, MINT_GREEN, PAST_FILL_ALPHA),
-            2 => line_image(width, height, scale, SURFACE_OUTLINE),
-            _ => line_image(width, height, scale, MINT_GREEN),
+            0 => fill_image(width, height, raster_scale, FUTURE_FILL, FUTURE_FILL_ALPHA),
+            1 => fill_image(width, height, raster_scale, MINT_GREEN, PAST_FILL_ALPHA),
+            2 => line_image(width, height, raster_scale, SURFACE_OUTLINE),
+            _ => line_image(width, height, raster_scale, MINT_GREEN),
         };
         let Some(brush) = canvas.cached_image(key(kind), build) else { continue };
         canvas.clipped(clip, || canvas.image(&brush, rect, 0.0, opacity));
     }
     for (index, marker) in markers.into_iter().enumerate() {
         let (x, y) = point_at(index as f32, width);
-        draw_marker(canvas, Point::new(chart.left + x * scale, chart.top + y * scale), marker, opacity);
+        draw_marker(canvas, Point::new(chart.left + x, chart.top + y), marker, opacity);
     }
     if let Position::During(slot) = position {
         let (x, y) = point_at(slot, width);
-        let center = Point::new(chart.left + x * scale, chart.top + y * scale);
-        let side = (GLOW_RADIUS * 2.0 * scale).ceil();
-        if let Some(glow) = canvas.cached_image(("shalat-sun-glow", side as u32), || glow_image(scale)) {
-            let glow_rect = Rect::around(center, side / 2.0, side / 2.0);
+        let center = Point::new(chart.left + x, chart.top + y);
+        let (side, glow_rect) = canvas.pixel_square(center, GLOW_RADIUS * 2.0);
+        if let Some(glow) = canvas.cached_image(("shalat-sun-glow", side), || glow_image(side, raster_scale)) {
             canvas.image(&glow, glow_rect, 0.0, opacity);
         }
-        canvas.fill_circle(center, 6.75 * scale, Color::BLACK.faded(opacity));
-        canvas.fill_circle(center, 5.25 * scale, SUN_GLOW.faded(opacity));
+        canvas.fill_circle(center, 6.75, Color::BLACK.faded(opacity));
+        canvas.fill_circle(center, 5.25, SUN_GLOW.faded(opacity));
     }
 }
 
@@ -256,17 +255,17 @@ mod tests {
     /// The first draw builds four chart images and the glow on the UI thread; run with `-- --ignored --nocapture`.
     #[test]
     #[ignore = "timing"]
-    fn the_first_draw_builds_its_images_in_under_fifty_milliseconds_at_scale_one_and_a_half() {
-        let scale = 1.5;
-        let height = (86.0 * scale) as u32;
+    fn the_first_draw_builds_its_images_in_under_fifty_milliseconds_at_raster_scale_one_and_a_half() {
+        let raster_scale = 1.5;
+        let height = (86.0 * raster_scale) as u32;
         let started = std::time::Instant::now();
-        fill_image(WIDTH, height, scale, FUTURE_FILL, FUTURE_FILL_ALPHA);
-        fill_image(WIDTH, height, scale, MINT_GREEN, PAST_FILL_ALPHA);
-        line_image(WIDTH, height, scale, SURFACE_OUTLINE);
-        line_image(WIDTH, height, scale, MINT_GREEN);
-        glow_image(scale);
+        fill_image(WIDTH, height, raster_scale, FUTURE_FILL, FUTURE_FILL_ALPHA);
+        fill_image(WIDTH, height, raster_scale, MINT_GREEN, PAST_FILL_ALPHA);
+        line_image(WIDTH, height, raster_scale, SURFACE_OUTLINE);
+        line_image(WIDTH, height, raster_scale, MINT_GREEN);
+        glow_image((GLOW_RADIUS * 2.0 * raster_scale).ceil() as u32 + 2, raster_scale);
         let elapsed = started.elapsed();
-        println!("arc first draw at scale 1.5: {elapsed:?}");
+        println!("arc first draw at raster_scale 1.5: {elapsed:?}");
         assert!(elapsed < std::time::Duration::from_millis(50), "{elapsed:?}");
     }
 }

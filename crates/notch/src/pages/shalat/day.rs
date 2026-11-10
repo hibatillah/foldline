@@ -70,7 +70,7 @@ pub(super) fn markers(
 
 impl ShalatPage {
     pub(super) fn draw_day(&self, canvas: &Canvas, schedule: &Schedule, frame: &Frame, opacity: f32) {
-        let (bounds, scale) = (frame.bounds, frame.scale);
+        let bounds = frame.bounds;
         let now = self.now();
         let (prayer, time) = schedule.next;
         let seconds_left = (time - now).num_seconds();
@@ -82,30 +82,25 @@ impl ShalatPage {
             (&REGULAR_10, self.config.city.clone(), TEXT_DIM, CITY_HEIGHT),
         ];
         let total = lines.iter().map(|line| line.3).sum::<f32>() + LINE_GAP * 3.0 + CITY_GAP;
-        let mut top = bounds.center_y() - total * scale / 2.0;
+        let mut top = bounds.center_y() - total / 2.0;
         for (index, (style, text, color, height)) in lines.into_iter().enumerate() {
             if index == 3 {
-                top += CITY_GAP * scale;
+                top += CITY_GAP;
             }
-            let line = Rect::new(bounds.left, top, bounds.left + SIDE_WIDTH * scale, top + height * scale);
+            let line = Rect::new(bounds.left, top, bounds.left + SIDE_WIDTH, top + height);
             canvas.text(style, &text, line, color.faded(opacity));
-            top = line.bottom + LINE_GAP * scale;
+            top = line.bottom + LINE_GAP;
         }
 
-        let chart = Rect { left: bounds.left + (SIDE_WIDTH + SIDE_GAP) * scale, ..bounds };
-        let chart_width = chart.width() / scale;
+        let chart = Rect { left: bounds.left + SIDE_WIDTH + SIDE_GAP, ..bounds };
+        let chart_width = chart.width();
         let states = markers(&schedule.today, now, time, is_tomorrow);
         arc::draw(canvas, chart, arc::position(&schedule.today, now), states, opacity);
         let slot_width = chart_width / PRAYER_COUNT as f32;
         for (index, state) in states.into_iter().enumerate() {
-            let center_x = chart.left + arc::marker_x(index, chart_width) * scale;
+            let center_x = chart.left + arc::marker_x(index, chart_width);
             let column = |top: f32, bottom: f32| {
-                Rect::new(
-                    center_x - slot_width * scale / 2.0,
-                    chart.top + top * scale,
-                    center_x + slot_width * scale / 2.0,
-                    chart.top + bottom * scale,
-                )
+                Rect::new(center_x - slot_width / 2.0, chart.top + top, center_x + slot_width / 2.0, chart.top + bottom)
             };
             let slot = PRAYER_SLOTS[index];
             let (name_style, name_color, time_color) = match state {

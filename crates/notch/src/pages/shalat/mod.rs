@@ -142,27 +142,26 @@ impl ShalatPage {
         page
     }
 
-    fn draw_badge(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32, text: &str) {
-        let icon_center = Point::new(area.left + BADGE_ICON_SIZE * scale / 2.0, area.center_y());
-        Icon::Moon.draw(canvas, icon_center, BADGE_ICON_SIZE * scale, MINT_GREEN, opacity);
-        let text_area =
-            Rect::new(area.left + (BADGE_ICON_SIZE + BADGE_ICON_GAP) * scale, area.top, area.right, area.bottom);
+    fn draw_badge(&self, canvas: &Canvas, area: Rect, opacity: f32, text: &str) {
+        let icon_center = Point::new(area.left + BADGE_ICON_SIZE / 2.0, area.center_y());
+        Icon::Moon.draw(canvas, icon_center, BADGE_ICON_SIZE, MINT_GREEN, opacity);
+        let text_area = Rect::new(area.left + BADGE_ICON_SIZE + BADGE_ICON_GAP, area.top, area.right, area.bottom);
         canvas.text(&MEDIUM_13, text, text_area, MINT_GREEN.faded(opacity));
     }
 
     fn draw_empty(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
-        let (bounds, scale) = (frame.bounds, frame.scale);
-        let center = crate::gfx::Point::new(bounds.left + 22.0 * scale, bounds.center_y());
-        Icon::Clock.draw(canvas, center, 22.0 * scale, MINT_GREEN, opacity);
-        let left = bounds.left + 52.0 * scale;
-        let title = Rect::new(left, bounds.center_y() - 20.0 * scale, bounds.right, bounds.center_y());
+        let bounds = frame.bounds;
+        let center = crate::gfx::Point::new(bounds.left + 22.0, bounds.center_y());
+        Icon::Clock.draw(canvas, center, 22.0, MINT_GREEN, opacity);
+        let left = bounds.left + 52.0;
+        let title = Rect::new(left, bounds.center_y() - 20.0, bounds.right, bounds.center_y());
         let (headline, hint_text) = if self.config.place.is_some() {
             ("No prayer times today", "The sun does not rise and set at this place today.")
         } else {
             ("Choose your city", "Open the gear in the header and search for it. Times are worked out on this PC.")
         };
         canvas.text(&MEDIUM_14, headline, title, Color::WHITE.faded(opacity));
-        let hint = Rect::new(left, bounds.center_y() + 2.0 * scale, bounds.right, bounds.center_y() + 20.0 * scale);
+        let hint = Rect::new(left, bounds.center_y() + 2.0, bounds.right, bounds.center_y() + 20.0);
         canvas.text(&REGULAR_11, hint_text, hint, TEXT_MUTED.faded(opacity));
     }
 }
@@ -170,6 +169,10 @@ impl ShalatPage {
 impl Page for ShalatPage {
     fn id(&self) -> &'static str {
         "shalat"
+    }
+
+    fn uses_units(&self) -> bool {
+        true
     }
 
     fn name(&self) -> String {
@@ -197,12 +200,12 @@ impl Page for ShalatPage {
         self.badge.as_ref().map(|_| Icon::Moon.size())
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
         if self.badge.is_none() {
             return;
         }
         let center = Point::new(area.center_x(), area.center_y());
-        Icon::Moon.draw(canvas, center, Icon::Moon.size() * scale, MINT_GREEN, opacity);
+        Icon::Moon.draw(canvas, center, Icon::Moon.size(), MINT_GREEN, opacity);
     }
 
     fn header_status_page(&self) -> Option<&'static str> {
@@ -232,11 +235,11 @@ impl Page for ShalatPage {
         }
     }
 
-    fn draw_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
         if self.alert.is_visible() {
             ui::draw_message(canvas, area, opacity, Icon::Moon, MINT_GREEN, &self.alert_title, Some(&self.alert_value));
         } else if let Some(text) = &self.badge {
-            self.draw_badge(canvas, area, scale, opacity, text);
+            self.draw_badge(canvas, area, opacity, text);
         }
     }
 
@@ -244,11 +247,11 @@ impl Page for ShalatPage {
         self.badge_short.as_ref().map(|_| self.badge_short_width)
     }
 
-    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
         if self.alert.is_visible() {
-            self.draw_presence(canvas, area, scale, opacity);
+            self.draw_presence(canvas, area, _scale, opacity);
         } else if let Some(text) = self.badge_short.as_ref().or(self.badge.as_ref()) {
-            self.draw_badge(canvas, area, scale, opacity, text);
+            self.draw_badge(canvas, area, opacity, text);
         }
     }
 
