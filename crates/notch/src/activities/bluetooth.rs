@@ -159,6 +159,10 @@ impl Activity for BluetoothActivity {
         "bluetooth"
     }
 
+    fn uses_units(&self) -> bool {
+        true
+    }
+
     fn presence(&self) -> Option<Presence> {
         self.flash.is_visible().then_some(Presence::Transient { width: self.width })
     }

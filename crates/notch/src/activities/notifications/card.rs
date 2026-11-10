@@ -66,11 +66,10 @@ impl Words {
     }
 }
 
-/// Where and how the card is drawn: its area in device pixels, the scale and opacity, and whether the buttons show.
+/// Where and how the card is drawn: its area in units, the opacity, and whether the buttons show.
 #[derive(Clone, Copy)]
 pub struct DrawLook {
     pub area: Rect,
-    pub scale: f32,
     pub opacity: f32,
     pub shows_buttons: bool,
 }
@@ -98,65 +97,65 @@ impl Card {
         card_height(self.words.body.len(), shows_buttons)
     }
 
-    /// The right edge of the button row and the top of the gap above it, in device pixels.
-    fn buttons_origin(&self, area: Rect, scale: f32) -> (f32, f32) {
+    /// The right edge of the button row and the top of the gap above it, in units.
+    fn buttons_origin(&self, area: Rect) -> (f32, f32) {
         let text_bottom = TOP_PADDING + HEADING_HEIGHT + HEADING_GAP + self.words.body.len() as f32 * BODY_LINE_HEIGHT;
-        let top = area.top + text_bottom.max(TOP_PADDING + TILE_SIZE) * scale;
-        (area.right - PADDING * scale, top)
+        let top = area.top + text_bottom.max(TOP_PADDING + TILE_SIZE);
+        (area.right - PADDING, top)
     }
 
     /// Returns the clicked button and whether the buttons need a repaint.
-    pub fn on_pointer(&mut self, event: PointerEvent, area: Rect, scale: f32) -> (Option<BannerButton>, bool) {
-        let (right, top) = self.buttons_origin(area, scale);
-        self.buttons.on_pointer(event, right, top, scale)
+    pub fn on_pointer(&mut self, event: PointerEvent, area: Rect) -> (Option<BannerButton>, bool) {
+        let (right, top) = self.buttons_origin(area);
+        self.buttons.on_pointer(event, right, top, 1.0)
     }
 
     pub fn draw(&self, canvas: &Canvas, item: &Item, look: DrawLook, reply: &ReplyState) {
-        let DrawLook { area, scale, opacity, shows_buttons } = look;
+        let DrawLook { area, opacity, shows_buttons } = look;
         let tile = Rect::new(
-            area.left + PADDING * scale,
-            area.top + TOP_PADDING * scale,
-            area.left + (PADDING + TILE_SIZE) * scale,
-            area.top + (TOP_PADDING + TILE_SIZE) * scale,
+            area.left + PADDING,
+            area.top + TOP_PADDING,
+            area.left + PADDING + TILE_SIZE,
+            area.top + TOP_PADDING + TILE_SIZE,
         );
-        draw_tile(canvas, item, tile, scale, opacity);
-        let left = tile.right + TILE_GAP * scale;
-        let right = area.right - PADDING * scale;
-        let heading = Rect::new(left, tile.top, right, tile.top + HEADING_HEIGHT * scale);
+        draw_tile(canvas, item, tile, opacity);
+        let left = tile.right + TILE_GAP;
+        let right = area.right - PADDING;
+        let heading = Rect::new(left, tile.top, right, tile.top + HEADING_HEIGHT);
         canvas.text(&MEDIUM_14, &self.words.lead, heading, Color::WHITE.faded(opacity));
         if let Some(app) = &self.words.app {
-            let app_left = left + (self.words.lead_width + TITLE_GAP) * scale;
+            let app_left = left + self.words.lead_width + TITLE_GAP;
             canvas.text(&REGULAR_14, app, Rect { left: app_left, ..heading }, CARD_APP_NAME_TEXT.faded(opacity));
         }
         for (index, line) in self.words.body.iter().enumerate() {
-            let top = heading.bottom + (HEADING_GAP + index as f32 * BODY_LINE_HEIGHT) * scale;
+            let top = heading.bottom + HEADING_GAP + index as f32 * BODY_LINE_HEIGHT;
             canvas.text(
                 &REGULAR_13,
                 line,
-                Rect::new(left, top, right, top + BODY_LINE_HEIGHT * scale),
+                Rect::new(left, top, right, top + BODY_LINE_HEIGHT),
                 CARD_BODY_TEXT.faded(opacity),
             );
         }
         if shows_buttons {
-            let (right, top) = self.buttons_origin(area, scale);
+            let (right, top) = self.buttons_origin(area);
             if reply.is_typing() {
-                reply.draw(canvas, tile.left, right, top, scale, opacity);
+                reply.draw(canvas, tile.left, right, top, opacity);
             } else {
-                self.buttons.draw(canvas, right, top, scale, opacity);
+                self.buttons.draw(canvas, right, top, 1.0, opacity);
             }
         }
     }
 }
 
-fn draw_tile(canvas: &Canvas, item: &Item, tile: Rect, scale: f32, opacity: f32) {
+fn draw_tile(canvas: &Canvas, item: &Item, tile: Rect, opacity: f32) {
     let logo = item.icon.as_deref().and_then(|icon| {
         let key = ("notification-logo", item.app_id.as_str());
         canvas.cached_image(key, || ImageData::new(icon.width, icon.height, icon.bgra_premultiplied.clone()))
     });
     match logo {
-        Some(brush) => canvas.image(&brush, tile, TILE_RADIUS * scale, opacity),
+        Some(brush) => canvas.image(&brush, tile, TILE_RADIUS, opacity),
         None => {
-            canvas.fill_rounded_rect(tile, TILE_RADIUS * scale, app_color(&item.app).faded(opacity));
+            canvas.fill_rounded_rect(tile, TILE_RADIUS, app_color(&item.app).faded(opacity));
             canvas.text(&TILE_LETTER, &app_letter(&item.app), tile, Color::WHITE.faded(opacity));
         }
     }
@@ -219,12 +218,12 @@ mod tests {
         let fonts = Fonts::new(1.0).unwrap();
         let mut card = Card::new(&item("Rafi", "Deploy is green."), true, &fonts);
         let area = Rect::new(0.0, 0.0, WIDTH, card.height(true));
-        let (right, top) = card.buttons_origin(area, 1.0);
+        let (right, top) = card.buttons_origin(area);
         assert_eq!(right, WIDTH - PADDING);
         assert!(top + BANNER_BUTTONS_HEIGHT <= area.bottom - BOTTOM_PADDING + 0.01);
         let open = Point::new(right - 10.0, area.bottom - BOTTOM_PADDING - 10.0);
-        card.on_pointer(PointerEvent::Pressed(open), area, 1.0);
-        assert_eq!(card.on_pointer(PointerEvent::Released(open), area, 1.0).0, Some(BannerButton::Open));
+        card.on_pointer(PointerEvent::Pressed(open), area);
+        assert_eq!(card.on_pointer(PointerEvent::Released(open), area).0, Some(BannerButton::Open));
     }
 
     #[test]
@@ -234,7 +233,7 @@ mod tests {
         long.app = "A very long application name from a store package".to_owned();
         let card = Card::new(&long, true, &fonts);
         let area = Rect::new(0.0, 0.0, WIDTH, card.height(true));
-        let (right, top) = card.buttons_origin(area, 1.0);
+        let (right, top) = card.buttons_origin(area);
         let dismiss = card.buttons.rects(right, top, 1.0).next().unwrap().1;
         assert!(dismiss.left >= PADDING, "Dismiss starts at {}", dismiss.left);
     }

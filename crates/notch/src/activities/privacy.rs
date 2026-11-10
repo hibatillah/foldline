@@ -105,10 +105,9 @@ impl Privacy {
             let tint = if self.is_active { self.device.color } else { Color::gray(0.7) };
             ui::draw_message(canvas, area, opacity, self.device.icon, tint, &self.message, None);
         } else {
-            let scale = canvas.scale();
             let (radius, offset_x, offset_y) = self.device.row.dot(TOP_ROW_ACTIVE.load(Ordering::Relaxed));
-            let center = Point::new(area.center_x() + offset_x * scale, area.center_y() + offset_y * scale);
-            canvas.fill_circle(center, radius * scale, self.device.color.faded(opacity));
+            let center = Point::new(area.center_x() + offset_x, area.center_y() + offset_y);
+            canvas.fill_circle(center, radius, self.device.color.faded(opacity));
         }
     }
 }

@@ -46,6 +46,10 @@ impl Activity for DeviceBatteryActivity {
         "device_battery"
     }
 
+    fn uses_units(&self) -> bool {
+        true
+    }
+
     fn is_optional(&self) -> bool {
         true
     }

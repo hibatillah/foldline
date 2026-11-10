@@ -165,6 +165,10 @@ impl Activity for MicrophoneActivity {
         "microphone"
     }
 
+    fn uses_units(&self) -> bool {
+        true
+    }
+
     fn presence(&self) -> Option<Presence> {
         self.privacy.presence()
     }

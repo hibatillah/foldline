@@ -162,6 +162,10 @@ impl Activity for CameraActivity {
         "camera"
     }
 
+    fn uses_units(&self) -> bool {
+        true
+    }
+
     fn presence(&self) -> Option<Presence> {
         self.privacy.presence()
     }

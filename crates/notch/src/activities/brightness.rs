@@ -31,6 +31,10 @@ impl Activity for BrightnessActivity {
         "brightness"
     }
 
+    fn uses_units(&self) -> bool {
+        true
+    }
+
     fn presence(&self) -> Option<Presence> {
         self.flash.is_visible().then_some(Presence::Transient { width: ui::LEVEL_WIDTH })
     }

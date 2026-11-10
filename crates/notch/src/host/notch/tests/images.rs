@@ -233,7 +233,7 @@ fn banner_snapshot_of(notch: &Notch, activity: Box<dyn Activity>, name: &str) {
             );
             canvas.fill_top_flares(bounds, RESTING_FLARE * scale, Color::BLACK);
             let area = Rect::new(bounds.left, bounds.top, bounds.right, bounds.bottom - RESTING_BOTTOM_PADDING * scale);
-            activity.draw(canvas, area, scale, 1.0);
+            crate::host::notch::units::draw_activity(activity.as_ref(), canvas, area, scale, 1.0);
         })
         .unwrap();
     write_image(

@@ -69,14 +69,13 @@ impl ReplyState {
         }
     }
 
-    /// Draws the field in the row the buttons use; `row_right` and `row_top` are the buttons' origin in device pixels.
-    pub fn draw(&self, canvas: &Canvas, row_left: f32, row_right: f32, row_top: f32, scale: f32, opacity: f32) {
+    /// Draws the field in the row the buttons use; `row_right` and `row_top` are the buttons' origin in units.
+    pub fn draw(&self, canvas: &Canvas, row_left: f32, row_right: f32, row_top: f32, opacity: f32) {
         let (Some(field), Some(offer)) = (&self.field, &self.offer) else { return };
-        let top = row_top + BANNER_BUTTONS_GAP_ABOVE * scale;
-        let row = Rect::new(row_left, top, row_right, top + BANNER_BUTTON_HEIGHT * scale);
+        let top = row_top + BANNER_BUTTONS_GAP_ABOVE;
+        let row = Rect::new(row_left, top, row_right, top + BANNER_BUTTON_HEIGHT);
         canvas.fill_rounded_rect(row, row.height() / 2.0, FIELD_FILL.faded(opacity));
-        let text_area =
-            Rect::new(row.left + FIELD_PADDING * scale, row.top, row.right - FIELD_PADDING * scale, row.bottom);
+        let text_area = Rect::new(row.left + FIELD_PADDING, row.top, row.right - FIELD_PADDING, row.bottom);
         let hint = if offer.placeholder.is_empty() {
             tr!("notification.reply_hint").into_owned()
         } else {

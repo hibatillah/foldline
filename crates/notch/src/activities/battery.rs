@@ -113,6 +113,10 @@ impl Activity for BatteryActivity {
         "battery"
     }
 
+    fn uses_units(&self) -> bool {
+        true
+    }
+
     fn presence(&self) -> Option<Presence> {
         if self.flash.is_visible() {
             return Some(Presence::Transient { width: self.width });
@@ -123,12 +127,12 @@ impl Activity for BatteryActivity {
             .map(|_| Presence::Companion { slot: Slot::Ring, width: RING_DIAMETER })
     }
 
-    fn draw(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+    fn draw(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
         if !self.flash.is_visible() {
             let Some(percent) = self.tracker.percent else { return };
             let center = Point::new(area.center_x(), area.center_y());
             let color = ring_color(percent, self.tracker.is_on_battery);
-            Ring { center, diameter: RING_DIAMETER * scale }.draw(canvas, ring_fraction(percent), color, opacity);
+            Ring { center, diameter: RING_DIAMETER }.draw(canvas, ring_fraction(percent), color, opacity);
             return;
         }
         let (icon, tint) = match self.event {
