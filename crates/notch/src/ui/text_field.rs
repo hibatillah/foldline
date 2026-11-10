@@ -1,10 +1,7 @@
 //! A one-line text field for pages that hold the keyboard; the caret is steady, so editing runs no timer.
 
-use crate::ui::palette::TEXT_DIM;
-use crate::{
-    gfx::{Canvas, Color, FontStyle, Rect},
-    page::KeyInput,
-};
+use super::{KeyInput, palette::TEXT_DIM};
+use crate::gfx::{Canvas, Color, FontStyle, Rect};
 
 const CARET_WIDTH: f32 = 1.5;
 const CARET_INSET: f32 = 3.0;

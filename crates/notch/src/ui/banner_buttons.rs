@@ -1,13 +1,18 @@
 //! The Dismiss and Open buttons a banner shows while the pointer is on it, right-aligned under its text; a banner
 //! that can be answered adds Reply, which then is the main one.
 
+use super::PointerEvent;
 use super::svg_icon::{Stroke, draw_strokes};
-use crate::i18n::tr;
-use crate::ui::type_styles::MEDIUM_13;
-use crate::{
-    gfx::{Canvas, Color, Fonts, Point, Rect, clamp_lines},
-    page::PointerEvent,
-};
+use super::type_styles::MEDIUM_13;
+use crate::gfx::{Canvas, Color, Fonts, Point, Rect, clamp_lines};
+
+/// The words on the buttons; the caller translates them.
+#[derive(Clone, Copy, Debug)]
+pub struct BannerLabels<'a> {
+    pub dismiss: &'a str,
+    pub reply: &'a str,
+    pub open: &'a str,
+}
 
 /// The space the buttons add under a banner's text, in DIP: the gap above them and their height.
 pub const BANNER_BUTTONS_HEIGHT: f32 = TOP_GAP + HEIGHT;
@@ -54,12 +59,13 @@ pub struct BannerButtons {
 }
 
 impl BannerButtons {
-    /// `open_label` is cut with an ellipsis so a long app name cannot push Dismiss off the banner.
-    pub fn new(fonts: &Fonts, open_label: &str) -> Self {
-        let open_label = clamp_lines(open_label, 1, MAX_OPEN_LABEL_WIDTH, |text| fonts.measure(&MEDIUM_13, text))
+    /// `labels.open` names the app and is cut with an ellipsis so a long name cannot push Dismiss off the banner;
+    /// `labels.reply` is unused.
+    pub fn new(fonts: &Fonts, labels: BannerLabels) -> Self {
+        let open_label = clamp_lines(labels.open, 1, MAX_OPEN_LABEL_WIDTH, |text| fonts.measure(&MEDIUM_13, text))
             .pop()
             .unwrap_or_default();
-        let dismiss_label = tr!("banner.dismiss").into_owned();
+        let dismiss_label = labels.dismiss.to_owned();
         let dismiss_width = 2.0 * PADDING + fonts.measure(&MEDIUM_13, &dismiss_label);
         let open_width = PADDING + fonts.measure(&MEDIUM_13, &open_label) + ICON_GAP + ICON_SIZE + OPEN_RIGHT_PADDING;
         Self {
@@ -75,11 +81,11 @@ impl BannerButtons {
     }
 
     /// Dismiss, a plain Open and Reply as the main button.
-    pub fn with_reply(fonts: &Fonts) -> Self {
+    pub fn with_reply(fonts: &Fonts, labels: BannerLabels) -> Self {
         let width = |label: &str| 2.0 * PADDING + fonts.measure(&MEDIUM_13, label);
         // Open's label beside Reply, where the app's name no longer fits.
         let (dismiss_label, reply_label, open_label) =
-            (tr!("banner.dismiss").into_owned(), tr!("banner.reply").into_owned(), tr!("banner.open").into_owned());
+            (labels.dismiss.to_owned(), labels.reply.to_owned(), labels.open.to_owned());
         Self {
             dismiss_width: width(&dismiss_label),
             open_width: width(&open_label),
@@ -229,8 +235,10 @@ impl BannerButtons {
 mod tests {
     use super::*;
 
+    const LABELS: BannerLabels = BannerLabels { dismiss: "Dismiss", reply: "Reply", open: "Open" };
+
     fn buttons() -> BannerButtons {
-        BannerButtons::new(&Fonts::new(1.0).unwrap(), "Open Discord")
+        BannerButtons::new(&Fonts::new(1.0).unwrap(), BannerLabels { open: "Open Discord", ..LABELS })
     }
 
     #[test]
@@ -282,15 +290,15 @@ mod tests {
 
     #[test]
     fn a_long_app_name_keeps_the_open_button_narrower_than_its_cap() {
-        let buttons =
-            BannerButtons::new(&Fonts::new(1.0).unwrap(), &format!("Open {}", "Very long app name ".repeat(6)));
+        let open = format!("Open {}", "Very long app name ".repeat(6));
+        let buttons = BannerButtons::new(&Fonts::new(1.0).unwrap(), BannerLabels { open: &open, ..LABELS });
         assert!(buttons.open_label.ends_with('\u{2026}'));
         assert!(buttons.open_width <= PADDING + MAX_OPEN_LABEL_WIDTH + ICON_GAP + ICON_SIZE + OPEN_RIGHT_PADDING);
     }
 
     #[test]
     fn with_a_reply_the_reply_button_is_rightmost_and_open_and_dismiss_sit_left_of_it() {
-        let buttons = BannerButtons::with_reply(&Fonts::new(1.0).unwrap());
+        let buttons = BannerButtons::with_reply(&Fonts::new(1.0).unwrap(), LABELS);
         let rects: Vec<_> = buttons.rects(380.0, 60.0, 1.0).collect();
         let kinds: Vec<_> = rects.iter().map(|(button, _)| *button).collect();
         assert_eq!(kinds, [BannerButton::Dismiss, BannerButton::Open, BannerButton::Reply]);
@@ -300,32 +308,9 @@ mod tests {
     }
 
     #[test]
-    fn the_banner_buttons_read_tutup_balas_buka_in_indonesian() {
-        store::language::with_override(store::language::Language::Indonesian, || {
-            let with_reply = BannerButtons::with_reply(&Fonts::new(1.0).unwrap());
-            assert_eq!(
-                (with_reply.dismiss_label(), with_reply.reply_label(), with_reply.open_label()),
-                ("Tutup", "Balas", "Buka")
-            );
-        });
-        let english = BannerButtons::with_reply(&Fonts::new(1.0).unwrap());
-        assert_eq!(
-            (english.dismiss_label(), english.reply_label(), english.open_label()),
-            ("Dismiss", "Reply", "Open")
-        );
-    }
-
-    #[test]
-    fn the_three_buttons_fit_the_notification_card_in_both_languages() {
-        let fonts = Fonts::new(1.0).unwrap();
-        for language in [store::language::Language::English, store::language::Language::Indonesian] {
-            store::language::with_override(language, || {
-                let buttons = BannerButtons::with_reply(&fonts);
-                // A notification card is 340 DIP wide with 20 DIP of padding on each side.
-                let rects: Vec<_> = buttons.rects(300.0, 0.0, 1.0).collect();
-                let leftmost = rects.iter().map(|(_, rect)| rect.left).fold(f32::MAX, f32::min);
-                assert!(leftmost >= 0.0, "{language:?}: the buttons need {} px of 300", 300.0 - leftmost);
-            });
-        }
+    fn the_buttons_show_the_labels_the_caller_passes() {
+        let labels = BannerLabels { dismiss: "Tutup", reply: "Balas", open: "Buka" };
+        let buttons = BannerButtons::with_reply(&Fonts::new(1.0).unwrap(), labels);
+        assert_eq!((buttons.dismiss_label(), buttons.reply_label(), buttons.open_label()), ("Tutup", "Balas", "Buka"));
     }
 }

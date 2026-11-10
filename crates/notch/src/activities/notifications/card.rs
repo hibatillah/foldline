@@ -2,12 +2,13 @@
 
 use super::items::{Item, app_color, app_letter, body_text, heading, open_label};
 use super::reply::ReplyState;
+use crate::i18n::tr;
 use crate::ui::palette::{CARD_APP_NAME_TEXT, CARD_BODY_TEXT};
 use crate::ui::type_styles::{MEDIUM_14, REGULAR_13, REGULAR_14};
 use crate::{
     gfx::{Align, Canvas, Color, FontStyle, Fonts, ImageData, Rect, UI_FONT, Weight, clamp_lines},
     page::PointerEvent,
-    ui::{BANNER_BUTTONS_HEIGHT, BannerButton, BannerButtons},
+    ui::{BANNER_BUTTONS_HEIGHT, BannerButton, BannerButtons, BannerLabels},
 };
 
 pub const WIDTH: f32 = 340.0;
@@ -82,12 +83,15 @@ pub struct Card {
 
 impl Card {
     pub fn new(item: &Item, shows_text: bool, fonts: &Fonts) -> Self {
-        Self { words: Words::new(item, shows_text, fonts), buttons: BannerButtons::new(fonts, &open_label(item)) }
+        let (dismiss, reply, open) = (tr!("banner.dismiss"), tr!("banner.reply"), open_label(item));
+        let labels = BannerLabels { dismiss: &dismiss, reply: &reply, open: &open };
+        Self { words: Words::new(item, shows_text, fonts), buttons: BannerButtons::new(fonts, labels) }
     }
 
     /// Adds the Reply button once the toast is known to offer one.
     pub fn offer_reply(&mut self, fonts: &Fonts) {
-        self.buttons = BannerButtons::with_reply(fonts);
+        let (dismiss, reply, open) = (tr!("banner.dismiss"), tr!("banner.reply"), tr!("banner.open"));
+        self.buttons = BannerButtons::with_reply(fonts, BannerLabels { dismiss: &dismiss, reply: &reply, open: &open });
     }
 
     pub fn height(&self, shows_buttons: bool) -> f32 {
@@ -240,5 +244,34 @@ mod tests {
         let fonts = Fonts::new(1.0).unwrap();
         let words = Words::new(&item("Rafi", "Can you check the hover state on the"), true, &fonts);
         assert_eq!(words.body.len(), 1);
+    }
+
+    #[test]
+    fn a_card_that_can_be_answered_reads_tutup_balas_buka_in_indonesian() {
+        let fonts = Fonts::new(1.0).unwrap();
+        store::language::with_override(store::language::Language::Indonesian, || {
+            let mut card = Card::new(&item("Rafi", "hi"), true, &fonts);
+            card.offer_reply(&fonts);
+            let buttons = &card.buttons;
+            assert_eq!(
+                (buttons.dismiss_label(), buttons.reply_label(), buttons.open_label()),
+                ("Tutup", "Balas", "Buka")
+            );
+        });
+    }
+
+    #[test]
+    fn the_three_buttons_fit_the_notification_card_in_both_languages() {
+        let fonts = Fonts::new(1.0).unwrap();
+        for language in [store::language::Language::English, store::language::Language::Indonesian] {
+            store::language::with_override(language, || {
+                let mut card = Card::new(&item("Rafi", "hi"), true, &fonts);
+                card.offer_reply(&fonts);
+                // A notification card is 340 DIP wide with 20 DIP of padding on each side.
+                let rects: Vec<_> = card.buttons.rects(300.0, 0.0, 1.0).collect();
+                let leftmost = rects.iter().map(|(_, rect)| rect.left).fold(f32::MAX, f32::min);
+                assert!(leftmost >= 0.0, "{language:?}: the buttons need {} px of 300", 300.0 - leftmost);
+            });
+        }
     }
 }

@@ -11,7 +11,7 @@ use crate::{
     activity::{FLASH_TIMER, Flash, Presence},
     gfx::{Canvas, Color, Point, Rect, clamp_lines},
     page::{Context, PointerEvent, TimerId},
-    ui::{BANNER_BUTTONS_HEIGHT, BannerButton, BannerButtons, Stroke, draw_strokes},
+    ui::{BANNER_BUTTONS_HEIGHT, BannerButton, BannerButtons, BannerLabels, Stroke, draw_strokes},
 };
 
 pub(super) const BADGE_TIMER: TimerId = TimerId(3);
@@ -73,6 +73,11 @@ pub(super) fn body_text(sky: &str, time: &str, place: &str) -> String {
     tr!("weather.alert_body", sky = sky, time = time, place = place).into_owned()
 }
 
+fn translated_buttons(fonts: &crate::gfx::Fonts) -> BannerButtons {
+    let (dismiss, reply, open) = (tr!("banner.dismiss"), tr!("banner.reply"), tr!("banner.open"));
+    BannerButtons::new(fonts, BannerLabels { dismiss: &dismiss, reply: &reply, open: &open })
+}
+
 impl Alert {
     pub(super) fn new() -> Self {
         Self {
@@ -91,7 +96,7 @@ impl Alert {
         alert.title = "Rain in 30 min".to_owned();
         let body = body_text("Thunderstorms", "17:00", "Pekanbaru, ID");
         alert.lines = clamp_lines(&body, BODY_LINES, text_width(), |text| fonts.measure(&REGULAR_13, text));
-        alert.buttons = BannerButtons::new(fonts, &tr!("banner.open"));
+        alert.buttons = translated_buttons(fonts);
         alert.badge = Some(Badge::new(fonts, rain_at, super::RAIN_ALERT_LEAD_MINUTES));
         alert.flash = Flash::visible();
         alert
@@ -119,7 +124,7 @@ impl Alert {
     pub(super) fn show(&mut self, context: &mut Context, rain: Rain, now: DateTime<Utc>) {
         let fonts = context.fonts();
         self.lines = clamp_lines(&rain.body, BODY_LINES, text_width(), |text| fonts.measure(&REGULAR_13, text));
-        self.buttons = BannerButtons::new(fonts, &tr!("banner.open"));
+        self.buttons = translated_buttons(fonts);
         self.badge = Some(Badge::new(fonts, rain.at, super::RAIN_ALERT_LEAD_MINUTES));
         self.title = rain.title;
         self.is_pointer_over = false;

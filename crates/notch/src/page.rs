@@ -15,6 +15,8 @@ use crate::{
     host::Settings,
 };
 
+pub use crate::ui::{KeyInput, PointerEvent};
+
 /// Device-independent pixels; resting content is centered within this height.
 pub const RESTING_HEIGHT: f32 = 33.0;
 pub const RESTING_MIN_WIDTH: f32 = 150.0;
@@ -75,41 +77,11 @@ impl Frame {
     }
 }
 
-/// Pointer input, delivered to visible open pages in their own shifted frames. Positions are device pixels.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum PointerEvent {
-    Moved(Point),
-    Pressed(Point),
-    Released(Point),
-    Left,
-    CaptureLost,
-    SecondaryReleased(Point),
-    /// The wheel or a touchpad swipe over a page that `Page::claims_scroll`: positive moves toward later content.
-    Scrolled {
-        notches: f32,
-    },
-}
-
 /// Who holds the keyboard; a page and an activity each count from zero.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KeyboardOwner {
     Page(usize),
     Activity(usize),
-}
-
-/// Typing delivered to the page or activity that holds the keyboard (`Context::take_keyboard`).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum KeyInput {
-    /// Typed or pasted characters, without line breaks or other control characters.
-    Text(String),
-    Backspace,
-    Delete,
-    Left,
-    Right,
-    Home,
-    End,
-    Enter,
-    Escape,
 }
 
 /// Identifies one of a page's timers. Must be below `TIMERS_PER_PAGE` (16).
