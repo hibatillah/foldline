@@ -56,7 +56,8 @@ Use the MSVC toolchain for every crate (the notch's text lookup, rust-i18n, need
 
 - `crates/notch/src/host/` is the notch itself: the window, hover, animation, input, the tray and the launcher of the settings window. It names no page. `Notch` is one struct whose methods live one job per file in `crates/notch/src/host/notch/`.
 - `crates/notch/src/pages/` holds one folder per page (media, shelf, calendar, timer, todo, shalat, stats, weather, devices, clipboard) and `crates/notch/src/activities/` one file per pill message (volume, battery, notifications…). Each is listed in one registry line, so adding or removing one touches no other file.
-- `crates/notch/src/gfx/` and `crates/notch/src/ui/` are the drawing toolkit and widgets. `crates/notch/src/platform/` holds small Windows actions.
+- `crates/notch/src/gfx/` is the Direct2D and DirectWrite drawing toolkit and `crates/notch/src/ui/` the widgets and input helpers built on it; neither imports from `page`, `i18n`, `host`, `pages`, `activity` or `platform` (a test enforces it). `crates/notch/src/platform/` holds small Windows actions.
+- Pages, activities and widgets draw and receive pointer input in device-independent units starting at zero; `crates/notch/src/host/notch/units.rs` is the only place that converts to device pixels. [docs/explanation/drawing-model.md](docs/explanation/drawing-model.md) gives the reasons.
 - Dependencies point one way: pages and activities use `page`, `activity`, `gfx`, `ui` and `platform`; nothing in those knows a particular page; pages never use each other.
 
 The layout rules (one job per file, about 400 lines, state in a small struct beside its logic) are in [docs/reference/source-map.md](docs/reference/source-map.md), and the reasons are in [docs/explanation/architecture.md](docs/explanation/architecture.md).
@@ -65,8 +66,8 @@ The layout rules (one job per file, about 400 lines, state in a small struct bes
 
 - **Performance.** No polling. A timer or animation stops as soon as its output stops changing. Draw shapes into small cached images, not Direct2D geometry. See [docs/reference/performance-baseline.md](docs/reference/performance-baseline.md) for the numbers.
 - **Design.** Order, spacing, color and font of anything visible follow [docs/reference/design-rules.md](docs/reference/design-rules.md). When you decide something it does not cover, propose a rule with its reason and add it in the same change.
-- **Style.** Names are written in full (`present_track_ids`, not `ptids`). Comments say only what the code cannot: a reason, a unit, a Windows workaround. Sizes are in device-independent pixels.
-- **Tests.** Logic that takes and returns plain values gets a unit test named as a sentence about behavior. Tests sit with the code they check. Drawing is checked with `cargo test snapshots -- --ignored`, then by looking at `target/snapshots`.
+- **Style.** Names are written in full (`present_track_ids`, not `ptids`). Comments say only what the code cannot: a reason, a unit, a Windows workaround. Sizes are in device-independent units, never multiplied by a scale outside the host and `Page::draw_backdrop`.
+- **Tests.** Logic that takes and returns plain values gets a unit test named as a sentence about behavior. Tests sit with the code they check. Drawing is checked with `cargo test snapshots -- --ignored`, then by looking at `target/snapshots`, at the display scales 1.0, 1.25 and 1.5 ([docs/how-to/test-and-snapshot.md](docs/how-to/test-and-snapshot.md)).
 - **Docs.** When behavior a user can see changes, update `README.md` and the doc that covers it in the same change.
 
 ## Branches and pull requests

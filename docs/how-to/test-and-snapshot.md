@@ -31,7 +31,24 @@ cargo test snapshots -- --ignored
 These tests are ignored by default. They draw every page off-screen with example content and write the pictures to
 `target/snapshots` (BMP files; `host/notch/tests/images.rs` holds them): each open page, the collapsed pill in its
 states (`resting-idle`, `resting-idle-with-group`, `resting-media-bars` for the idle wave, `resting-media-lyrics`, `resting-media-lyrics-with-timer`, and others), the short messages, the notification banner and the shelf with files dragged over it. `cargo test page_state -- --ignored` (`host/notch/tests/page_states.rs`) draws the states of the shelf, todo, shalat and weather pages (`state-*` files), and `cargo test clipboard_state -- --ignored` (`host/notch/tests/clipboard_states.rs`) those of the clipboard page. Look at the pictures
-after a change to drawing or layout. Two more ignored tests need a real screen and open windows for a moment:
+after a change to drawing or layout.
+
+#### Check a drawing change at three display scales
+
+Pages draw in units ([the drawing model](../explanation/drawing-model.md)), so a drawing change must look the same at
+every display scale. The pictures are drawn at `SCALE`, one constant in `crates/notch/src/host/notch/tests/mod.rs`
+(1.25 by default).
+
+1. Render the pictures before your change and copy `target/snapshots` to a folder of its own:
+   `cargo +stable-x86_64-pc-windows-msvc test snapshots -- --ignored`.
+2. Apply your change, render again and copy the folder again.
+3. Set `SCALE` to 1.0, then to 1.5, and repeat steps 1 and 2 for each; set it back to 1.25 when you are done.
+4. Compare each before and after folder by eye, or with the local, git-ignored helper
+   `uv run --with pillow python -I .superpowers/spikes/canvas-units/compare_snapshots.py <before-folder> <after-folder>`,
+   which prints the changed pixels per picture and writes a `-diff.png` beside each after picture. The clock and the
+   media bars differ between runs; ignore those.
+
+Two more ignored tests need a real screen and open windows for a moment:
 
 ```
 cargo test a_real_maximized -- --ignored      # a maximized and a full-screen window are told apart

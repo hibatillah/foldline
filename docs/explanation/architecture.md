@@ -150,10 +150,16 @@ the page's backdrop (the media page's lyric glow), `draw_resting` on the page ch
 Only the rectangle around the pill is redrawn and shown, and the window shrinks and grows with the pill, so the screen
 outside the pill is never covered and never blocks clicks.
 
+The host's own drawing (the shadow, the pill, the page dots and the clock) and `Page::draw_backdrop` are in device
+pixels. Every other page and activity draw hook runs inside a unit space that `host/notch/units.rs` opens, so pages, activities and widgets write sizes in
+device-independent units starting at zero and never multiply by a scale. The reasons, the three drawing layers (`gfx`,
+`ui`, pages) and how cached images stay sharp are in [the drawing model](drawing-model.md).
+
 ### Input and timers
 
-Windows messages reach `window.rs`, which calls the notch. The notch converts positions to a common space and routes
-pointer events to the page chosen for the open mode. A right click reaches only a page that uses it for its own content (the shelf's files); the notch has no menu of its own. The tray icon has the three items Start with Windows, Settings and Quit Notch
+Windows messages reach `window.rs`, which calls the notch. The notch routes pointer events to the page chosen for the
+open mode, and `host/notch/units.rs` converts each position to units from the top-left of that page's frame (or of the
+banner's or badge's area), the same space the page draws in. A right click reaches only a page that uses it for its own content (the shelf's files); the notch has no menu of its own. The tray icon has the three items Start with Windows, Settings and Quit Notch
 (`host/tray.rs`), and the gear in the open header starts the settings window the way the tray's Settings item does (`host/settings_launcher.rs`). A page's timers (`Context::set_timer`) are Windows timers whose ids encode the page and the
 timer number, so each page has its own.
 
@@ -270,3 +276,4 @@ The timer page is the example of a page that also has a collapsed presence and a
 - Where a file lives: [source map](../reference/source-map.md).
 - How to test it: [test and snapshot](../how-to/test-and-snapshot.md).
 - Why the budget is what it is: [performance budget](performance-budget.md).
+- Why the notch draws by hand, in units: [drawing model](drawing-model.md).

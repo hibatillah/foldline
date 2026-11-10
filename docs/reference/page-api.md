@@ -40,7 +40,7 @@ The source is the reference; each hook has a doc comment. `codegraph_explore` re
 ## Drawing
 
 - Text styles are `const FontStyle::new(family, size, weight, align)` declared in the page. `.wrapped()` wraps long text instead of cutting it with an ellipsis; `.tabular()` gives every digit the same width, for numbers that change while shown.
-- Icons are shapes built from a `Path` and drawn into small cached images by `ui::Icon`, not font glyphs. Add one in `crates/notch/src/ui/icons.rs` and list it in that file's `ALL` test array.
+- Icons are shapes built from a `Path` and drawn into small cached images by `ui::Icon`, not font glyphs. Add one to the `Icon` enum in `crates/notch/src/ui/icons/mod.rs`, give it a shape in `icons/paths.rs`, and list it in the `ALL` test array in `icons/tests.rs`.
 - Do not use Direct2D geometry (`ID2D1PathGeometry`, `FillGeometry`, `DrawGeometry`): its first use adds about 10 MB. Describe a shape with `Path`, rasterize it with `Mask`, and reuse it through `Canvas::cached_image`.
 - `Spring` eases a value toward a target. Call `step(elapsed_seconds)` from the page's `animate` and return `true` while `is_settled()` is `false`.
 

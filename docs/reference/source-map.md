@@ -14,7 +14,7 @@ crates/
       log.rs          optional debug log (set NOTCH_DEBUG to a file path)
       i18n.rs         the `tr!` text lookup; the texts are in `crates/notch/locales/app.yml` (the settings window has its own `crates/settings/locales/app.yml`)
       host/           the notch itself: window, animation, hover, tray, the launcher of the settings window. Knows no page.
-      gfx/            drawing toolkit: Canvas, fonts, colors, image pixels (`image_data.rs`) and their uploaded brushes (`image_brush.rs`), springs, geometry, text clamping, the bounded cache of measured text (`text_cache.rs`), SVG path data read into a `Path` (`svg_path.rs`), the whole-pixel square for cached shapes (`pixel_square.rs`, `Canvas::pixel_square`)
+      gfx/            drawing toolkit: Canvas and its unit space (`Canvas::in_units` in `canvas.rs`), fonts (a device set for the host and a unit set, `Fonts::unit`, in `fonts.rs`), the window's bitmap (`surface.rs`), colors, image pixels (`image_data.rs`) and their uploaded brushes (`image_brush.rs`), springs, geometry, text clamping, the bounded cache of measured text (`text_cache.rs`), SVG path data read into a `Path` (`svg_path.rs`), the whole-pixel square for cached shapes (`pixel_square.rs`, `Canvas::pixel_square`)
       platform/       small Windows actions for pages and activities: an app's icon, a shell bitmap's pixels (`bitmap.rs`), a window's class and its executable (`window_info.rs`), open a file, read and write the clipboard (`clipboard.rs`), paste into the window in front (`paste.rs`), drag a file
                       out, the picture Explorer shows, whether the machine has a battery (`power.rs`), each app's notification banner value and a watch on those values (`notification_settings.rs`), paired Bluetooth devices, their battery and the radio (`bluetooth_devices.rs`), one read of the device position (`geolocation.rs`), devices behind a 2.4 GHz USB receiver and a Logitech receiver's HID++ battery (`dongle_devices.rs`; `dongle_devices/` holds the tree walk, the HID channel, the receiver rules and the HID++ messages), opening a notification's app as a click on Windows' banner does (`toast_activation.rs`; `toast_activation/` holds the toast XML rules, the read of Windows' notification database, the toast activator lookup, the click's deadline and cap on stuck activator threads, and the foreground hook that tells whether the app came forward)
       ui/             reusable widgets: IconButton, PillButton, Ring, TextField (the todo page's add field), icons (`icons/`: the shapes in `paths.rs`; the gear included), line icons from SVG path data in several colors (`svg_icon.rs`), the dashed outline, the shared list scroll offset (`scroll.rs`), the one hovered thing on a page (`hover.rs`), the HUD layouts, the shared colors (`palette.rs`) and text styles (`type_styles.rs`), a banner's Dismiss and Open buttons (`banner_buttons.rs`, labels passed in), the input types `PointerEvent` and `KeyInput` (`input.rs`, re-exported by `page`)
@@ -123,6 +123,8 @@ Every module follows one shape, so a file's place tells you its job.
 - Tests sit with the code they check; a module with many tests moves them to `tests.rs` or `tests/`.
 
 Dependencies point one way. Pages use `page`, `activity` (for `Presence` and `Flash`), `gfx`, `ui` and `platform`;
-activities use `activity`, `page` (for `Context`), `gfx`, `ui` and `platform`. The host uses `page`, `activity` and `gfx`. Nothing in
-`gfx`, `ui`, `page` or `activity` knows about a particular page or activity, and pages and activities never use each
-other.
+activities use `activity`, `page` (for `Context`), `gfx`, `ui` and `platform`. The host uses `page`, `activity`, `gfx`
+and `ui` (for icons). Nothing in `gfx`, `ui`, `page` or `activity` knows about a particular page or activity, and pages
+and activities never use each other. `gfx` and `ui` import nothing from `page`, `i18n`, `host`, `pages`, `activity` or
+`platform`; the test `the_drawing_layers_import_nothing_above_them` in `ui/mod.rs` enforces it, and the reason is in
+[the drawing model](../explanation/drawing-model.md#the-three-layers).

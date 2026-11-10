@@ -39,4 +39,5 @@ New to the team? Start with [ONBOARDING.md](../ONBOARDING.md) at the repository 
 | Read | When |
 | --- | --- |
 | [Architecture](explanation/architecture.md) | restructuring, or learning how the host, pages and activities fit |
+| [Drawing model](explanation/drawing-model.md) | changing how something is drawn, adding a widget, or asking why the notch uses no UI framework |
 | [Performance budget](explanation/performance-budget.md) | changing timers, animation or drawing |

@@ -65,7 +65,7 @@ A state that lasts and also announces itself, like muted speakers or Caps Lock, 
 it in the group: lower ranks sit nearer the clock, in the pill and in the header (music wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5; the default is 0).
 
 Draw messages with `ui::draw_level` (icon, bar, value) or `ui::draw_message` (icon, text, optional value) so every
-transient looks alike, and add an `Icon` to `crates/notch/src/ui/icons.rs` when you need a new glyph.
+transient looks alike, and add an `Icon` to `crates/notch/src/ui/icons/` (the enum in `mod.rs`, the shape in `paths.rs`) when you need a new glyph.
 
 ### 3. Get events without polling
 
