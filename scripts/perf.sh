@@ -32,12 +32,12 @@ for argument in "$@"; do
     esac
 done
 
-[ "$build" = 1 ] && cargo build --release
+[ "$build" = 1 ] && cargo +stable-x86_64-pc-windows-msvc build --release
 
 mkdir -p run
 cp target/x86_64-pc-windows-msvc/release/notch.exe run/notch-perf.exe
 
-cargo run --release --quiet -p notch --example perf -- \
+cargo +stable-x86_64-pc-windows-msvc run --release --quiet -p notch --example perf -- \
     --exe "$(cygpath -w "$PWD/run/notch-perf.exe")" \
     --log "$(cygpath -w "$PWD/run/perf.log")" \
     "${extra_arguments[@]}"

@@ -10,7 +10,8 @@ if [ "${1:-}" = "--debug" ]; then
     profile_directory="debug"
 fi
 
-cargo build "${build_arguments[@]}"
+# rust-i18n pulls windows-sys into the proc-macro tree, which the GNU host toolchain cannot build (no dlltool).
+cargo +stable-x86_64-pc-windows-msvc build "${build_arguments[@]}"
 # GPUI builds only with the MSVC host toolchain; the tray's Settings… item starts this program from the notch's folder.
 cargo +stable-x86_64-pc-windows-msvc build "${build_arguments[@]}" -p settings
 

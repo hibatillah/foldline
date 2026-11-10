@@ -13,7 +13,7 @@ commit=$(git rev-parse --short HEAD 2>/dev/null || echo nogit)
 git diff --quiet HEAD 2>/dev/null || commit="$commit-dirty"
 package="$name-$version-test-$commit-windows-x64"
 
-cargo build --release
+cargo +stable-x86_64-pc-windows-msvc build --release
 # GPUI builds only with the MSVC host toolchain.
 cargo +stable-x86_64-pc-windows-msvc build --release -p settings
 
