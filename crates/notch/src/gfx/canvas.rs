@@ -25,7 +25,6 @@ const MIN_VISIBLE_ALPHA: f32 = 0.01;
 
 /// What a page draws with. Coordinates are device pixels, so multiply device-independent sizes by `scale`; inside
 /// `in_units` they are device-independent units and `scale` is 1.
-#[cfg_attr(not(test), expect(dead_code, reason = "the host opens unit space in a later step"))]
 pub struct Canvas<'a> {
     target: &'a ID2D1DCRenderTarget,
     brush: &'a ID2D1SolidColorBrush,
@@ -84,7 +83,6 @@ impl<'a> Canvas<'a> {
     }
 
     /// Draws in device-independent units with `origin` (device pixels) as the zero point; it cannot be nested.
-    #[cfg_attr(not(test), expect(dead_code, reason = "the host opens unit space in a later step"))]
     pub fn in_units(&self, origin: Point, draw: impl FnOnce(&Canvas)) {
         debug_assert!(!self.in_unit_space, "in_units cannot be nested");
         let previous = self.transform();

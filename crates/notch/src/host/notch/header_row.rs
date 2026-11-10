@@ -1,6 +1,6 @@
 //! The open header's icons and gear, and what a click on them does.
 
-use super::{Notch, Source, row_motion::RowItem};
+use super::{Notch, Source, row_motion::RowItem, units};
 use crate::host::{
     chrome, clock,
     pill_row::{self, HeaderInput, HeaderRow},
@@ -104,10 +104,16 @@ impl Notch {
             let left = header.right - inset * scale;
             let area = Rect::new(left, center_y - half_height, left + width * scale, center_y + half_height);
             match source {
-                Source::Page(index) => self.pages[index].draw_header_status(canvas, area, scale, opacity),
-                Source::Activity(index) => {
-                    self.activities[index].activity.draw_header_status(canvas, area, scale, opacity)
+                Source::Page(index) => {
+                    units::draw_page_header_status(self.pages[index].as_ref(), canvas, area, scale, opacity)
                 }
+                Source::Activity(index) => units::draw_activity_header_status(
+                    self.activities[index].activity.as_ref(),
+                    canvas,
+                    area,
+                    scale,
+                    opacity,
+                ),
             }
         }
         if let Some(inset) = self.row_motion.header.position(RowItem::Gear) {

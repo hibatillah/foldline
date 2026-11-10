@@ -95,6 +95,13 @@ pub trait Page {
     /// Re-evaluated after every event; None means unavailable in this mode.
     fn priority(&self, mode: Mode) -> Option<Priority>;
 
+    /// Interim migration aid until every page is converted: true makes the host open the unit space for this page, so
+    /// its draw hooks (except `draw_backdrop`) get a unit `Frame` or area, a canvas at scale 1 and pointer hooks get
+    /// unit points.
+    fn uses_units(&self) -> bool {
+        false
+    }
+
     /// Re-evaluated after every event; sizes describe content without host chrome.
     fn sizes(&self) -> PageSizes;
 

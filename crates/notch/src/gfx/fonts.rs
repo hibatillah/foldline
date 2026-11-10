@@ -86,7 +86,6 @@ pub struct Fonts {
     wide_scratch: RefCell<Vec<u16>>,
     widths: RefCell<TextCache<f32>>,
     layouts: RefCell<TextCache<IDWriteTextLayout>>,
-    #[cfg_attr(not(test), expect(dead_code, reason = "the host opens unit space in a later step"))]
     unit: OnceCell<Box<Fonts>>,
     #[cfg(test)]
     builds: BuildCounts,
@@ -127,7 +126,6 @@ impl Fonts {
     }
 
     /// The same fonts at scale 1.0, for drawing in device-independent units; built on first use and kept.
-    #[cfg_attr(not(test), expect(dead_code, reason = "the host opens unit space in a later step"))]
     pub fn unit(&self) -> &Fonts {
         if self.scale == 1.0 {
             return self;

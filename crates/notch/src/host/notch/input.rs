@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use super::{Notch, Source, badge_pointer::BadgeDelivery};
+use super::{Notch, Source, badge_pointer::BadgeDelivery, units};
 use windows::Win32::{
     Foundation::{POINT, RECT},
     UI::WindowsAndMessaging::GetCursorPos,
@@ -162,12 +162,12 @@ impl Notch {
                 self.leave_badge();
                 let scale = self.scale;
                 match source {
-                    Source::Activity(index) => {
-                        self.with_activity(index, |activity, context| activity.on_pointer(event, area, scale, context))
-                    }
-                    Source::Page(index) => {
-                        self.with_page(index, |page, context| page.on_presence_pointer(event, area, scale, context))
-                    }
+                    Source::Activity(index) => self.with_activity(index, |activity, context| {
+                        units::activity_pointer(activity, event, area, scale, context)
+                    }),
+                    Source::Page(index) => self.with_page(index, |page, context| {
+                        units::page_presence_pointer(page, event, area, scale, context)
+                    }),
                 }
             } else {
                 // Badges draw only while no message takes over the pill and the pill is not hidden.
@@ -183,7 +183,7 @@ impl Notch {
         // During a swap only the arriving page takes input, at the place it is moving to.
         let Some(index) = self.expanded_index else { return };
         let frame = self.natural_page_frame(index, &viewport, 0.0);
-        self.with_page(index, |page, context| page.on_pointer(event, &frame, context));
+        self.with_page(index, |page, context| units::page_pointer(page, event, &frame, context));
     }
 
     fn leave_badge(&mut self) {
@@ -195,7 +195,7 @@ impl Notch {
     fn deliver_to_badge(&mut self, delivery: BadgeDelivery) {
         let BadgeDelivery { page_index, event, area } = delivery;
         let scale = self.scale;
-        self.with_page(page_index, |page, context| page.on_presence_pointer(event, area, scale, context));
+        self.with_page(page_index, |page, context| units::page_presence_pointer(page, event, area, scale, context));
     }
 
     pub(super) fn pointer_is_over_window(&self) -> bool {

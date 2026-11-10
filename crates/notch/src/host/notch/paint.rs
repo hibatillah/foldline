@@ -84,7 +84,7 @@ impl Notch {
                                 lead_gap: self.springs.claim_lead_gap.position.max(0.0),
                                 ..frame
                             };
-                            self.pages[index].draw_resting(canvas, &page_frame, page_opacity);
+                            units::draw_page_resting(self.pages[index].as_ref(), canvas, &page_frame, page_opacity);
                             self.draw_claimed_group(canvas, &frame, page_opacity);
                         } else {
                             self.draw_group(canvas, &frame, page_opacity);
@@ -133,7 +133,7 @@ impl Notch {
         canvas.clipped(chrome::page_clip_rect(frame.bounds, self.scale), || {
             for (index, page_frame, page_opacity) in self.swap_page_frames(frame).into_iter().flatten() {
                 if page_opacity > 0.001 {
-                    self.pages[index].draw_expanded(canvas, &page_frame, opacity * page_opacity);
+                    units::draw_page_expanded(self.pages[index].as_ref(), canvas, &page_frame, opacity * page_opacity);
                 }
             }
         });
@@ -197,15 +197,21 @@ impl Notch {
     /// A badge of a page draws its short form when `short` is set: several badges with text share the pill.
     pub(super) fn draw_badge(&self, source: Source, canvas: &Canvas, area: Rect, short: bool, opacity: f32) {
         match source {
-            Source::Page(index) if short => self.pages[index].draw_short_presence(canvas, area, self.scale, opacity),
+            Source::Page(index) if short => {
+                units::draw_page_short_presence(self.pages[index].as_ref(), canvas, area, self.scale, opacity)
+            }
             _ => self.draw_source(source, canvas, area, opacity),
         }
     }
 
     pub(super) fn draw_source(&self, source: Source, canvas: &Canvas, area: Rect, opacity: f32) {
         match source {
-            Source::Activity(index) => self.activities[index].activity.draw(canvas, area, self.scale, opacity),
-            Source::Page(index) => self.pages[index].draw_presence(canvas, area, self.scale, opacity),
+            Source::Activity(index) => {
+                units::draw_activity(self.activities[index].activity.as_ref(), canvas, area, self.scale, opacity)
+            }
+            Source::Page(index) => {
+                units::draw_page_presence(self.pages[index].as_ref(), canvas, area, self.scale, opacity)
+            }
         }
     }
 }

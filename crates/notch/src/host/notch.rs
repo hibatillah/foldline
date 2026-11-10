@@ -49,6 +49,7 @@ mod resting_row;
 mod row_motion;
 mod settings_reload;
 mod timers;
+mod units;
 
 #[cfg(test)]
 mod tests;

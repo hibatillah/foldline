@@ -52,6 +52,12 @@ pub trait Activity {
         false
     }
 
+    /// Interim migration aid until every activity is converted: true makes the host open the unit space, so `draw`
+    /// and `draw_header_status` get a unit area and a canvas at scale 1 and `on_pointer` gets unit points.
+    fn uses_units(&self) -> bool {
+        false
+    }
+
     /// What this activity shows right now; `None` means nothing. Asked again after every event.
     fn presence(&self) -> Option<Presence>;
 
