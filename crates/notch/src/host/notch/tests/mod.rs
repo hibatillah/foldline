@@ -33,6 +33,7 @@ mod resting_row;
 mod row_motion;
 mod screen_mode;
 mod settings_reload;
+mod unit_presences;
 mod units;
 
 pub(super) const SCALE: f32 = 1.25;
