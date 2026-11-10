@@ -1,5 +1,6 @@
 //! The calculation method cards: Auto and the six methods, each showing where the sun is at Fajr and at Isha.
 
+use crate::i18n::tr;
 use gpui::{AnyElement, App, SharedString, prelude::*};
 use gpui_component::v_flex;
 use places::Location;
@@ -18,7 +19,7 @@ pub enum IshaRule {
 pub struct Method {
     pub word: &'static str,
     pub label: &'static str,
-    pub regions: &'static str,
+    pub regions: fn() -> &'static str,
     pub fajr_degrees: f32,
     pub isha: IshaRule,
 }
@@ -33,42 +34,42 @@ pub const METHODS: [Method; 6] = [
     Method {
         word: "singapore",
         label: "Kemenag",
-        regions: "Indonesia, Malaysia, Singapore",
+        regions: || tr!("shalat.region_kemenag"),
         fajr_degrees: 20.0,
         isha: IshaRule::Degrees(18.0),
     },
     Method {
         word: "mwl",
         label: "MWL",
-        regions: "Europe, Far East, parts of the US",
+        regions: || tr!("shalat.region_mwl"),
         fajr_degrees: 18.0,
         isha: IshaRule::Degrees(17.0),
     },
     Method {
         word: "northamerica",
         label: "ISNA",
-        regions: "North America",
+        regions: || tr!("shalat.region_isna"),
         fajr_degrees: 15.0,
         isha: IshaRule::Degrees(15.0),
     },
     Method {
         word: "karachi",
         label: "Karachi",
-        regions: "Pakistan, India, Bangladesh",
+        regions: || tr!("shalat.region_karachi"),
         fajr_degrees: 18.0,
         isha: IshaRule::Degrees(18.0),
     },
     Method {
         word: "ummalqura",
         label: "Umm al-Qura",
-        regions: "Saudi Arabia",
+        regions: || tr!("shalat.region_umm_al_qura"),
         fajr_degrees: 18.5,
         isha: IshaRule::MinutesAfterMaghrib(90),
     },
     Method {
         word: "egyptian",
         label: "Egyptian",
-        regions: "Africa, Syria, Lebanon",
+        regions: || tr!("shalat.region_egyptian"),
         fajr_degrees: 19.5,
         isha: IshaRule::Degrees(17.5),
     },
@@ -97,14 +98,14 @@ pub fn auto_method_name(country: &str) -> &'static str {
 
 /// "Fajr 18°"; a half degree keeps its decimal.
 pub fn fajr_label(method: &Method) -> String {
-    format!("Fajr {}°", method.fajr_degrees)
+    tr!("shalat.angle_fajr", degrees = method.fajr_degrees)
 }
 
 /// "Isha 18°" or "Isha 90 min".
 pub fn isha_label(method: &Method) -> String {
     match method.isha {
-        IshaRule::Degrees(degrees) => format!("Isha {degrees}°"),
-        IshaRule::MinutesAfterMaghrib(minutes) => format!("Isha {minutes} min"),
+        IshaRule::Degrees(degrees) => tr!("shalat.angle_isha", degrees = degrees),
+        IshaRule::MinutesAfterMaghrib(minutes) => tr!("shalat.isha_minutes", minutes = minutes),
     }
 }
 
@@ -123,9 +124,9 @@ pub fn shown_word(settings: &Settings) -> &'static str {
 
 fn auto_sentence(country: &str) -> String {
     if country.is_empty() {
-        "Auto picks the method of your country. Choose a city to see which one.".to_owned()
+        tr!("shalat.auto_sentence_empty").to_owned()
     } else {
-        format!("Auto picks the method of your country: {} for {country}.", auto_method_name(country))
+        tr!("shalat.auto_sentence", method = auto_method_name(country), country = country)
     }
 }
 
@@ -153,11 +154,11 @@ pub fn item() -> Item {
         let country = Location::read(&|key| settings.get_string(key).map(str::to_owned))
             .map(|location| location.country)
             .unwrap_or_default();
-        let auto_name = if country.is_empty() { "By country" } else { auto_method_name(&country) };
+        let auto_name = if country.is_empty() { tr!("shalat.auto_by_country") } else { auto_method_name(&country) };
         let mut cards = vec![method_card(
             AUTO_WORD,
-            "Auto",
-            "Picks by your country",
+            tr!("shalat.auto"),
+            tr!("shalat.auto_note"),
             pictures::globe_to(auto_name),
             shown == AUTO_WORD,
             cx,
@@ -167,15 +168,12 @@ pub fn item() -> Item {
                 &Sun { label: fajr_label(method), depth_degrees: method.fajr_degrees },
                 &Sun { label: isha_label(method), depth_degrees: isha_depth(method) },
             );
-            method_card(method.word, method.label, method.regions, picture, method.word == shown, cx)
+            method_card(method.word, method.label, (method.regions)(), picture, method.word == shown, cx)
         }));
-        let explanation = format!(
-            "Each method sets how far below the horizon the sun is at Fajr and at Isha. {}",
-            auto_sentence(&country)
-        );
+        let explanation = tr!("shalat.method_explanation", auto = auto_sentence(&country));
         v_flex()
             .gap_3()
-            .child(card::described("How Fajr and Isha are found", explanation, cx))
+            .child(card::described(tr!("shalat.method_title"), explanation, cx))
             .child(card::grid(card::COLUMNS, cards))
             .into_any_element()
     })

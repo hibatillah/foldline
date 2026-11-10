@@ -3608,6 +3608,7 @@ name = "notch"
 version = "0.5.0"
 dependencies = [
  "places",
+ "rust-i18n",
  "salah",
  "store",
  "windows 0.62.2",
@@ -5286,6 +5287,7 @@ dependencies = [
  "gpui-component",
  "gpui-component-assets",
  "places",
+ "rust-i18n",
  "salah",
  "store",
  "windows 0.62.2",
@@ -5517,6 +5519,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "store"
 version = "0.5.0"
+dependencies = [
+ "windows 0.62.2",
+]
 
 [[package]]
 name = "str_indices"

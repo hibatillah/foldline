@@ -1,3 +1,5 @@
+pub mod language;
+
 use std::{collections::BTreeMap, fs, io::ErrorKind, path::PathBuf};
 
 /// Small persistent key-value store shared by all pages, saved as `key=value` lines in `%APPDATA%\notch`.

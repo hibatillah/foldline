@@ -1,5 +1,6 @@
 use std::ops::RangeInclusive;
 
+use crate::i18n::tr;
 use crate::{
     field::{self, Kind},
     layout::{Group, Item, Page},
@@ -9,19 +10,19 @@ const TOP_RANGE: RangeInclusive<u32> = 0..=2000;
 
 pub fn page() -> Page {
     Page::new(
-        "Advanced",
-        "Troubleshooting and placement. Changes apply after you restart the notch.",
+        tr!("advanced.title"),
+        tr!("advanced.description"),
         vec![Group::new(vec![
             Item::new(
-                "Debug log file",
-                field::input("advanced.debug_log", Kind::Text { width: 280.0 }, "Path to a log file"),
+                tr!("advanced.debug_log"),
+                field::input("advanced.debug_log", Kind::Text { width: 280.0 }, tr!("advanced.debug_log_placeholder")),
             )
-            .description("Appends timestamped lines to this file. Empty means no log."),
+            .description(tr!("advanced.debug_log_note")),
             Item::new(
-                "Move down (pixels)",
+                tr!("advanced.move_down"),
                 field::input("notch.top", Kind::WholeNumber { default: 0, range: TOP_RANGE }, "0"),
             )
-            .description("Distance below the top edge, 0 to 2000."),
+            .description(tr!("advanced.move_down_note")),
         ])],
     )
 }

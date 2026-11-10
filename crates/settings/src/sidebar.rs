@@ -1,5 +1,6 @@
 //! The sidebar: the app's mark and name, then the pages in labelled groups, sitting straight on the window frame.
 
+use crate::i18n::tr;
 use std::rc::Rc;
 
 use gpui::{AnyElement, App, ClickEvent, IntoElement, SharedString, Window, WindowControlArea, div, prelude::*, px};
@@ -42,7 +43,7 @@ impl NavGroup {
     pub fn label(self) -> &'static str {
         match self {
             NavGroup::Notch => "Notch",
-            NavGroup::PageSettings => "Page settings",
+            NavGroup::PageSettings => tr!("sidebar.page_settings"),
             NavGroup::Footer => "",
         }
     }

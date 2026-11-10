@@ -1,0 +1,556 @@
+_version: 2
+general.title:
+  en: General
+  id: Umum
+pages.title:
+  en: Pages
+  id: Halaman
+behavior.title:
+  en: Behavior
+  id: Perilaku
+calendar.title:
+  en: Calendar
+  id: Kalender
+shalat.title:
+  en: Shalat
+  id: Shalat
+stats.title:
+  en: System stats
+  id: Statistik sistem
+weather.title:
+  en: Weather
+  id: Cuaca
+advanced.title:
+  en: Advanced
+  id: Lanjutan
+about.title:
+  en: About
+  id: Tentang
+general.language_title:
+  en: Language
+  id: Bahasa
+general.language_description:
+  en: Choose the language of the notch and of this window.
+  id: Pilih bahasa notch dan jendela ini.
+language.auto:
+  en: Automatic
+  id: Otomatis
+language.english:
+  en: English
+  id: English
+language.indonesian:
+  en: Bahasa Indonesia
+  id: Bahasa Indonesia
+language.auto_english:
+  en: Follows Windows, which is in English.
+  id: Mengikuti Windows, yang memakai bahasa Inggris.
+language.auto_indonesian:
+  en: Follows Windows, which is in Indonesian.
+  id: Mengikuti Windows, yang memakai bahasa Indonesia.
+general.description:
+  en: "Startup, your location, notifications, Windows popups and the focus timer."
+  id: "Startup, lokasi, notifikasi, popup Windows, dan timer fokus."
+general.group_startup:
+  en: "Startup"
+  id: "Startup"
+general.start_with_windows:
+  en: "Start with Windows"
+  id: "Mulai bersama Windows"
+general.start_with_windows_note:
+  en: "Starts the notch when you sign in."
+  id: "Menjalankan notch saat masuk ke Windows."
+general.hide_when_idle:
+  en: "Hide when idle"
+  id: "Sembunyikan saat diam"
+general.hide_when_idle_note:
+  en: "Hides the notch when nothing is happening. Point at the top edge to bring it back."
+  id: "Menyembunyikan notch saat tidak ada aktivitas. Arahkan kursor ke tepi atas untuk memunculkannya lagi."
+general.group_location:
+  en: "Location"
+  id: "Lokasi"
+general.track_location:
+  en: "Track location"
+  id: "Lacak lokasi"
+general.track_location_note:
+  en: "The city changes by itself when the device moves to another one. Needs Windows location access (Settings > Privacy & security > Location). Turn off to keep the city chosen below."
+  id: "Kota berubah sendiri saat perangkat pindah ke kota lain. Perlu akses lokasi Windows (Pengaturan > Privasi & keamanan > Lokasi). Matikan agar kota yang dipilih di bawah tetap."
+general.city:
+  en: "City"
+  id: "Kota"
+general.city_note:
+  en: "The one place for the prayer times and the weather."
+  id: "Satu lokasi untuk jadwal shalat dan cuaca."
+general.group_notifications:
+  en: "Notifications"
+  id: "Notifikasi"
+general.show_notifications:
+  en: "Show notifications"
+  id: "Tampilkan notifikasi"
+general.show_notifications_note:
+  en: "Shows a banner when Windows shows a notification. To keep Windows' own banner away, turn on \"Hide Windows notification banners\" under Windows popups."
+  id: "Menampilkan banner saat Windows menampilkan notifikasi. Untuk menyembunyikan banner bawaan Windows, aktifkan \"Sembunyikan banner notifikasi Windows\" di bagian Popup Windows."
+general.show_notification_text:
+  en: "Show notification text"
+  id: "Tampilkan isi notifikasi"
+general.show_notification_text_note:
+  en: "Shows the message in the banner. Without it, the banner reads \"New message\"."
+  id: "Menampilkan isi pesan di banner. Tanpa ini, banner hanya bertuliskan \"Pesan baru\"."
+general.device_battery:
+  en: "Warn when a device battery is low"
+  id: "Peringatkan saat baterai perangkat lemah"
+general.device_battery_note:
+  en: "Shows a message when a connected Bluetooth device reaches 20 % or 10 %."
+  id: "Menampilkan pesan saat baterai perangkat Bluetooth yang terhubung mencapai 20 % atau 10 %."
+general.group_windows_popups:
+  en: "Windows popups"
+  id: "Popup Windows"
+general.hide_volume_popup:
+  en: "Hide the Windows volume and brightness popups"
+  id: "Sembunyikan popup volume dan kecerahan Windows"
+general.hide_volume_popup_note:
+  en: "Keeps the volume and brightness boxes Windows shows above the taskbar away while the notch runs, so only the notch shows them. They come back when the notch closes."
+  id: "Menyembunyikan kotak volume dan kecerahan yang ditampilkan Windows di atas taskbar selama notch berjalan, sehingga hanya notch yang menampilkannya. Kotak itu kembali saat notch ditutup."
+general.hide_banners:
+  en: "Hide Windows notification banners"
+  id: "Sembunyikan banner notifikasi Windows"
+general.hide_banners_note:
+  en: "Turns off the banner Windows shows at the bottom right for every app while the notch runs, so only the notch shows notifications; they stay in the notification center. Each app's own choice comes back when this is off or the notch closes."
+  id: "Mematikan banner yang ditampilkan Windows di kanan bawah untuk semua aplikasi selama notch berjalan, sehingga hanya notch yang menampilkan notifikasi; notifikasi tetap ada di pusat notifikasi. Pilihan tiap aplikasi kembali saat ini dimatikan atau notch ditutup."
+general.group_timer:
+  en: "Timer"
+  id: "Timer"
+general.focus_minutes:
+  en: "Focus (minutes)"
+  id: "Fokus (menit)"
+general.focus_minutes_note:
+  en: "Length of a focus session, 5 to 120."
+  id: "Lama satu sesi fokus, 5 sampai 120."
+general.short_break_minutes:
+  en: "Short break (minutes)"
+  id: "Istirahat singkat (menit)"
+general.short_break_note:
+  en: "Rest after a focus session, 1 to 120."
+  id: "Istirahat setelah sesi fokus, 1 sampai 120."
+general.long_break_minutes:
+  en: "Long break (minutes)"
+  id: "Istirahat panjang (menit)"
+general.long_break_note:
+  en: "Longer rest after several sessions, 1 to 120."
+  id: "Istirahat lebih lama setelah beberapa sesi, 1 sampai 120."
+pages.desc_media:
+  en: "Music player with synced lyrics."
+  id: "Pemutar musik dengan lirik yang sinkron."
+pages.desc_shelf:
+  en: "Holds dropped files for a while."
+  id: "Menyimpan file yang dijatuhkan untuk sementara."
+pages.desc_calendar:
+  en: "The month or the week, and the events of a day you pick."
+  id: "Bulan atau pekan, dan acara pada hari yang dipilih."
+pages.desc_timer:
+  en: "Focus and break timer."
+  id: "Timer fokus dan istirahat."
+pages.desc_stats:
+  en: "System stats, off until you switch it on."
+  id: "Statistik sistem, mati sampai dinyalakan."
+pages.desc_clipboard:
+  en: "History of the last 7 copies with a preview, paste and copy buttons. Kept in memory only and cleared when the app quits."
+  id: "Riwayat 7 salinan terakhir dengan pratinjau, tombol tempel dan salin. Hanya disimpan di memori dan dihapus saat aplikasi ditutup."
+pages.not_reported:
+  en: "The notch has not reported its pages yet. Start the notch once, then reopen this window."
+  id: "Notch belum melaporkan halamannya. Jalankan notch sekali, lalu buka jendela ini lagi."
+pages.description:
+  en: "Choose which pages the notch shows and drag them into your order. At least one stays on."
+  id: "Pilih halaman yang ditampilkan notch dan seret ke urutan yang diinginkan. Minimal satu halaman tetap menyala."
+behavior.level0:
+  en: "0 · Hidden"
+  id: "0 · Tersembunyi"
+behavior.level0_note:
+  en: "Nothing is drawn. Not even messages."
+  id: "Tidak ada yang digambar. Pesan pun tidak."
+behavior.level1:
+  en: "1 · Activities"
+  id: "1 · Aktivitas"
+behavior.level1_note:
+  en: "On-demand messages only, such as volume. Then it hides again."
+  id: "Hanya pesan sesuai kebutuhan, seperti volume. Lalu bersembunyi lagi."
+behavior.level2:
+  en: "2 · Lyrics"
+  id: "2 · Lirik"
+behavior.level2_note:
+  en: "Lyrics while they play, plus everything from level 1."
+  id: "Lirik selagi diputar, ditambah semua dari level 1."
+behavior.level3:
+  en: "3 · Always visible"
+  id: "3 · Selalu terlihat"
+behavior.level3_note:
+  en: "The idle pill with clock and battery, plus everything from levels 1 and 2."
+  id: "Pill saat diam dengan jam dan baterai, ditambah semua dari level 1 dan 2."
+behavior.intro:
+  en: "Behavior works like a log level. You pick how much the notch is allowed to show, and every level also shows everything below it. Level 2 does not mean lyrics only: it shows lyrics and messages. Level 3 shows all of it."
+  id: "Perilaku bekerja seperti level log. Pilih seberapa banyak yang boleh ditampilkan notch, dan setiap level juga menampilkan semua level di bawahnya. Level 2 bukan hanya lirik: isinya lirik dan pesan. Level 3 menampilkan semuanya."
+behavior.column_messages:
+  en: "On-demand messages"
+  id: "Pesan sesuai kebutuhan"
+behavior.column_lyrics:
+  en: "Lyrics"
+  id: "Lirik"
+behavior.column_idle_pill:
+  en: "Idle pill"
+  id: "Pill saat diam"
+behavior.group_shows:
+  en: "What the notch shows"
+  id: "Apa yang ditampilkan notch"
+behavior.group_hover:
+  en: "Open on hover"
+  id: "Buka saat kursor diarahkan"
+behavior.description:
+  en: "Choose what the notch shows, as a level, while a maximized or full-screen window is in front of it."
+  id: "Pilih apa yang ditampilkan notch, sebagai level, saat jendela yang dimaksimalkan atau layar penuh ada di depannya."
+behavior.group_levels:
+  en: "Levels"
+  id: "Level"
+behavior.over_maximized:
+  en: "Over a maximized window"
+  id: "Di atas jendela yang dimaksimalkan"
+behavior.over_maximized_note:
+  en: "Applies while a maximized window is in front."
+  id: "Berlaku saat jendela yang dimaksimalkan ada di depan."
+behavior.hover_maximized_note:
+  en: "Pointing at the top edge opens the notch. Off: it never opens over a maximized window."
+  id: "Mengarahkan kursor ke tepi atas membuka notch. Mati: notch tidak pernah terbuka di atas jendela yang dimaksimalkan."
+behavior.over_fullscreen:
+  en: "Over a full-screen app"
+  id: "Di atas aplikasi layar penuh"
+behavior.over_fullscreen_note:
+  en: "Applies while a full-screen app or game is in front."
+  id: "Berlaku saat aplikasi atau game layar penuh ada di depan."
+behavior.hover_fullscreen_note:
+  en: "Pointing at the top edge opens the notch. Off: it never opens over a full-screen app."
+  id: "Mengarahkan kursor ke tepi atas membuka notch. Mati: notch tidak pernah terbuka di atas aplikasi layar penuh."
+calendar.view_month:
+  en: "Month"
+  id: "Bulan"
+calendar.view_month_note:
+  en: "The whole month. Pick any day to list its events."
+  id: "Seluruh bulan. Pilih hari mana pun untuk melihat acaranya."
+calendar.view_week:
+  en: "Week"
+  id: "Pekan"
+calendar.view_week_note:
+  en: "Only the current week, on a shorter page."
+  id: "Hanya pekan ini, pada halaman yang lebih pendek."
+calendar.google_step1:
+  en: "Open calendar.google.com on a computer."
+  id: "Buka calendar.google.com di komputer."
+calendar.google_step2:
+  en: "Click the gear icon at the top right, then Settings."
+  id: "Klik ikon roda gigi di kanan atas, lalu Setelan."
+calendar.google_step3:
+  en: "Under \"Settings for my calendars\" on the left, click the calendar to show."
+  id: "Di bawah \"Setelan untuk kalender saya\" di sebelah kiri, klik kalender yang ingin ditampilkan."
+calendar.google_step4:
+  en: "Click Integrate calendar."
+  id: "Klik Integrasikan kalender."
+calendar.google_step5:
+  en: "Copy the link under \"Secret address in iCal format\" and paste it into the Calendar address field."
+  id: "Salin tautan di bawah \"Alamat rahasia dalam format iCal\" lalu tempel ke kolom Alamat kalender."
+calendar.google_note1:
+  en: "The secret address lets anyone who has it read the whole calendar. Keep it to yourself; Reset in the same section replaces it."
+  id: "Alamat rahasia memungkinkan siapa pun yang memilikinya membaca seluruh kalender. Simpan sendiri; Reset di bagian yang sama menggantinya."
+calendar.google_note2:
+  en: "A work or school account may hide the address when the admin limits sharing. Ask the admin in that case."
+  id: "Akun kerja atau sekolah mungkin menyembunyikan alamat ini saat admin membatasi berbagi. Tanyakan ke admin jika begitu."
+calendar.description:
+  en: "Connect your calendar and choose how often the notch downloads it again."
+  id: "Hubungkan kalender dan pilih seberapa sering notch mengunduhnya lagi."
+calendar.group_google:
+  en: "Google Calendar"
+  id: "Google Calendar"
+calendar.address:
+  en: "Calendar address (.ics)"
+  id: "Alamat kalender (.ics)"
+calendar.address_placeholder:
+  en: "Paste the secret iCal address"
+  id: "Tempel alamat iCal rahasia"
+calendar.address_note:
+  en: "The private iCal link of your calendar."
+  id: "Tautan iCal pribadi untuk kalender ini."
+calendar.refresh:
+  en: "Refresh (minutes)"
+  id: "Perbarui (menit)"
+calendar.refresh_note:
+  en: "How often the notch downloads it again, 1 to 1440."
+  id: "Seberapa sering notch mengunduhnya lagi, 1 sampai 1440."
+calendar.guide_title:
+  en: "How to get the address from Google Calendar"
+  id: "Cara mendapatkan alamat dari Google Calendar"
+calendar.view_title:
+  en: "Calendar view"
+  id: "Tampilan kalender"
+calendar.view_description:
+  en: "Show the whole month or only the current week."
+  id: "Tampilkan seluruh bulan atau hanya pekan ini."
+stats.disks_title:
+  en: "Up to 3 disks"
+  id: "Hingga 3 disk"
+stats.disks_hint:
+  en: "Open the System stats page in the notch once to list your disks"
+  id: "Buka halaman Statistik sistem di notch sekali untuk melihat daftar disk"
+stats.disks_none:
+  en: "No disk found"
+  id: "Disk tidak ditemukan"
+stats.gpus_title:
+  en: "Up to 2 GPUs"
+  id: "Hingga 2 GPU"
+stats.gpus_hint:
+  en: "Open the System stats page in the notch once to list your GPUs"
+  id: "Buka halaman Statistik sistem di notch sekali untuk melihat daftar GPU"
+stats.gpus_none:
+  en: "No GPU found"
+  id: "GPU tidak ditemukan"
+stats.description:
+  en: "Choose which disks and graphics cards the System stats page shows."
+  id: "Pilih disk dan kartu grafis yang ditampilkan halaman Statistik sistem."
+stats.group_disks:
+  en: "Disks"
+  id: "Disk"
+stats.group_gpus:
+  en: "GPUs"
+  id: "GPU"
+weather.description:
+  en: "A rain alert for your place. It needs the Weather page switched on in Pages."
+  id: "Peringatan hujan untuk lokasi yang dipilih. Butuh halaman Cuaca yang menyala di bagian Halaman."
+weather.rain_alert:
+  en: "Rain alert"
+  id: "Peringatan hujan"
+weather.rain_alert_note:
+  en: "A banner 30 minutes before rain, then a countdown beside the clock. Open shows the weather page."
+  id: "Banner 30 menit sebelum hujan, lalu hitung mundur di samping jam. Buka menampilkan halaman cuaca."
+advanced.description:
+  en: "Troubleshooting and placement. Changes apply after you restart the notch."
+  id: "Pemecahan masalah dan penempatan. Perubahan berlaku setelah notch dimulai ulang."
+advanced.debug_log:
+  en: "Debug log file"
+  id: "File log debug"
+advanced.debug_log_placeholder:
+  en: "Path to a log file"
+  id: "Path ke file log"
+advanced.debug_log_note:
+  en: "Appends timestamped lines to this file. Empty means no log."
+  id: "Menambahkan baris berstempel waktu ke file ini. Kosong berarti tanpa log."
+advanced.move_down:
+  en: "Move down (pixels)"
+  id: "Geser ke bawah (piksel)"
+advanced.move_down_note:
+  en: "Distance below the top edge, 0 to 2000."
+  id: "Jarak dari tepi atas, 0 sampai 2000."
+shalat.description:
+  en: "Prayer times use the location set in General. Pick the calculation method, the reminders and any minute adjustments."
+  id: "Waktu shalat memakai lokasi yang diatur di Umum. Pilih metode perhitungan, pengingat, dan penyesuaian menit."
+shalat.group_method:
+  en: "Calculation method"
+  id: "Metode perhitungan"
+shalat.group_asr:
+  en: "Asr"
+  id: "Ashar"
+shalat.group_reminders:
+  en: "Reminders"
+  id: "Pengingat"
+shalat.group_adjust:
+  en: "Adjust the times"
+  id: "Sesuaikan waktu"
+shalat.fajr:
+  en: "Fajr"
+  id: "Subuh"
+shalat.sunrise:
+  en: "Sunrise"
+  id: "Terbit"
+shalat.dhuhr:
+  en: "Dhuhr"
+  id: "Dzuhur"
+shalat.asr:
+  en: "Asr"
+  id: "Ashar"
+shalat.maghrib:
+  en: "Maghrib"
+  id: "Maghrib"
+shalat.isha:
+  en: "Isha"
+  id: "Isya"
+shalat.offset_zero:
+  en: "0 min"
+  id: "0 menit"
+shalat.offset_plus:
+  en: "+%{offset} min"
+  id: "+%{offset} menit"
+shalat.offset_minus:
+  en: "−%{offset} min"
+  id: "−%{offset} menit"
+shalat.asr_standard:
+  en: "Standard"
+  id: "Standar"
+shalat.asr_standard_schools:
+  en: "Shafi'i, Maliki and Hanbali"
+  id: "Syafi'i, Maliki, dan Hanbali"
+shalat.asr_standard_caption:
+  en: "Shadow = 1× its height"
+  id: "Bayangan = 1× tingginya"
+shalat.asr_hanafi:
+  en: "Hanafi"
+  id: "Hanafi"
+shalat.asr_hanafi_schools:
+  en: "Hanafi school: a later Asr"
+  id: "Mazhab Hanafi: Ashar lebih akhir"
+shalat.asr_hanafi_caption:
+  en: "Shadow = 2× its height"
+  id: "Bayangan = 2× tingginya"
+shalat.asr_title:
+  en: "When Asr begins"
+  id: "Saat Ashar dimulai"
+shalat.asr_description:
+  en: "Standard or Hanafi: the length of an object's shadow that marks Asr."
+  id: "Standar atau Hanafi: panjang bayangan benda yang menandai Ashar."
+shalat.region_kemenag:
+  en: "Indonesia, Malaysia, Singapore"
+  id: "Indonesia, Malaysia, Singapura"
+shalat.region_mwl:
+  en: "Europe, Far East, parts of the US"
+  id: "Eropa, Timur Jauh, sebagian AS"
+shalat.region_isna:
+  en: "North America"
+  id: "Amerika Utara"
+shalat.region_karachi:
+  en: "Pakistan, India, Bangladesh"
+  id: "Pakistan, India, Bangladesh"
+shalat.region_umm_al_qura:
+  en: "Saudi Arabia"
+  id: "Arab Saudi"
+shalat.region_egyptian:
+  en: "Africa, Syria, Lebanon"
+  id: "Afrika, Suriah, Lebanon"
+shalat.angle_fajr:
+  en: "Fajr %{degrees}°"
+  id: "Subuh %{degrees}°"
+shalat.angle_isha:
+  en: "Isha %{degrees}°"
+  id: "Isya %{degrees}°"
+shalat.isha_minutes:
+  en: "Isha %{minutes} min"
+  id: "Isya %{minutes} menit"
+shalat.auto_sentence_empty:
+  en: "Auto picks the method of your country. Choose a city to see which one."
+  id: "Otomatis memilih metode sesuai negara. Pilih kota untuk melihat metode yang dipakai."
+shalat.auto_sentence:
+  en: "Auto picks the method of your country: %{method} for %{country}."
+  id: "Otomatis memilih metode sesuai negara: %{method} untuk %{country}."
+shalat.auto_by_country:
+  en: "By country"
+  id: "Menurut negara"
+shalat.auto:
+  en: "Auto"
+  id: "Otomatis"
+shalat.auto_note:
+  en: "Picks by your country"
+  id: "Memilih sesuai negara"
+shalat.method_explanation:
+  en: "Each method sets how far below the horizon the sun is at Fajr and at Isha. %{auto}"
+  id: "Tiap metode menentukan seberapa jauh matahari di bawah cakrawala saat Subuh dan Isya. %{auto}"
+shalat.method_title:
+  en: "How Fajr and Isha are found"
+  id: "Cara Subuh dan Isya ditentukan"
+shalat.reminder_message:
+  en: "Message when a prayer starts"
+  id: "Pesan saat shalat dimulai"
+shalat.reminder_message_note:
+  en: "A short message at the time of the prayer."
+  id: "Pesan singkat pada waktu shalat."
+shalat.reminder_badge:
+  en: "Next prayer in the pill"
+  id: "Shalat berikutnya di pill"
+shalat.reminder_badge_note:
+  en: "Shows the next prayer for the last 30 minutes."
+  id: "Menampilkan shalat berikutnya selama 30 menit terakhir."
+shalat.alert_title:
+  en: "Time for %{prayer}"
+  id: "Waktunya %{prayer}"
+shalat.badge_text:
+  en: "%{prayer} in %{minutes}m"
+  id: "%{prayer} %{minutes}m lagi"
+shalat.reminders_title:
+  en: "What the notch shows around a prayer"
+  id: "Yang ditampilkan notch di sekitar waktu shalat"
+shalat.reminders_description:
+  en: "Each card previews what you would see. Switch it off to stop it."
+  id: "Tiap kartu memperlihatkan tampilannya. Matikan untuk menghentikannya."
+about.whats_new:
+  en: "What's new"
+  id: "Yang baru"
+about.whats_new_note:
+  en: "This version's release notes"
+  id: "Catatan rilis versi ini"
+about.open:
+  en: "Open"
+  id: "Buka"
+about.licenses:
+  en: "Licenses"
+  id: "Lisensi"
+about.licenses_note:
+  en: "Open source licenses and font licenses"
+  id: "Lisensi sumber terbuka dan lisensi font"
+about.view:
+  en: "View"
+  id: "Lihat"
+about.lyrics:
+  en: "Lyrics"
+  id: "Lirik"
+about.lyrics_note:
+  en: "Synced lyrics come from LRCLIB"
+  id: "Lirik sinkron berasal dari LRCLIB"
+about.settings_file:
+  en: "Settings file"
+  id: "File pengaturan"
+about.settings_file_note:
+  en: "settings.txt, the same settings as a file"
+  id: "settings.txt, pengaturan yang sama dalam bentuk file"
+about.data_folder:
+  en: "Data folder"
+  id: "Folder data"
+about.data_folder_note:
+  en: "Your to-do list, the Shelf and the saved calendar"
+  id: "Daftar Todo, Shelf, dan kalender yang tersimpan"
+about.nothing_saved:
+  en: "The notch has not saved anything yet."
+  id: "Notch belum menyimpan apa pun."
+about.description:
+  en: "The version you run, where its notes and licenses are, and the files the notch keeps for you."
+  id: "Versi yang dipakai, tempat catatan dan lisensinya, serta file yang disimpan notch."
+about.group_files:
+  en: "Files"
+  id: "File"
+about.coming_soon:
+  en: "Coming soon"
+  id: "Segera hadir"
+about.check_now:
+  en: "Check now"
+  id: "Periksa sekarang"
+about.version:
+  en: "Version %{version}"
+  id: "Versi %{version}"
+about.licenses_missing:
+  en: "%{file} was not found."
+  id: "%{file} tidak ditemukan."
+header.settings:
+  en: "Settings"
+  id: "Pengaturan"
+sidebar.page_settings:
+  en: "Page settings"
+  id: "Pengaturan halaman"
+general.city_placeholder:
+  en: "Search for a city"
+  id: "Cari kota"
+shalat.adjust_title:
+  en: "Fine-tune each prayer"
+  id: "Setel tiap waktu shalat"
+shalat.adjust_description:
+  en: "Add or subtract minutes, from −30 to 30, to match your local mosque. The dots show where each prayer falls in the day."
+  id: "Tambah atau kurangi menit, dari −30 sampai 30, agar sesuai dengan masjid setempat. Titik menunjukkan letak tiap waktu shalat dalam sehari."

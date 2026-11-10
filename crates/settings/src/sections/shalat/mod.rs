@@ -4,6 +4,7 @@ mod methods;
 mod pictures;
 mod reminders;
 
+use crate::i18n::tr;
 use crate::layout::{Group, Page};
 
 // The keys `crates/notch/src/pages/shalat/config.rs` reads; a test compares them.
@@ -14,13 +15,13 @@ const BADGE_KEY: &str = "shalat.badge";
 
 pub fn page() -> Page {
     Page::new(
-        "Shalat",
-        "Prayer times use the location set in General. Pick the calculation method, the reminders and any minute adjustments.",
+        tr!("shalat.title"),
+        tr!("shalat.description"),
         vec![
-            Group::titled("Calculation method", vec![methods::item()]),
-            Group::titled("Asr", vec![asr::item()]),
-            Group::titled("Reminders", vec![reminders::item()]),
-            Group::titled("Adjust the times", vec![adjust::item()]),
+            Group::titled(tr!("shalat.group_method"), vec![methods::item()]),
+            Group::titled(tr!("shalat.group_asr"), vec![asr::item()]),
+            Group::titled(tr!("shalat.group_reminders"), vec![reminders::item()]),
+            Group::titled(tr!("shalat.group_adjust"), vec![adjust::item()]),
         ],
     )
 }

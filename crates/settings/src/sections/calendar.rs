@@ -1,3 +1,4 @@
+use crate::i18n::tr;
 use gpui::{AnyElement, App, SharedString, Window, div, prelude::*};
 use gpui_component::{ActiveTheme as _, v_flex};
 use store::Settings;
@@ -12,55 +13,56 @@ const VIEW_KEY: &str = "calendar.view";
 
 struct View {
     word: &'static str,
-    label: &'static str,
-    description: &'static str,
+    label: fn() -> &'static str,
+    description: fn() -> &'static str,
 }
 
 const VIEWS: [View; 2] = [
-    View { word: "month", label: "Month", description: "The whole month. Pick any day to list its events." },
-    View { word: "week", label: "Week", description: "Only the current week, on a shorter page." },
+    View { word: "month", label: || tr!("calendar.view_month"), description: || tr!("calendar.view_month_note") },
+    View { word: "week", label: || tr!("calendar.view_week"), description: || tr!("calendar.view_week_note") },
 ];
 
 // Wording follows Google's "Sync your calendar with computer programs" page (support.google.com/calendar/answer/37648).
-const GOOGLE_STEPS: [&str; 5] = [
-    "Open calendar.google.com on a computer.",
-    "Click the gear icon at the top right, then Settings.",
-    "Under \"Settings for my calendars\" on the left, click the calendar to show.",
-    "Click Integrate calendar.",
-    "Copy the link under \"Secret address in iCal format\" and paste it into the Calendar address field.",
-];
+fn google_steps() -> [&'static str; 5] {
+    [
+        tr!("calendar.google_step1"),
+        tr!("calendar.google_step2"),
+        tr!("calendar.google_step3"),
+        tr!("calendar.google_step4"),
+        tr!("calendar.google_step5"),
+    ]
+}
 
-const GOOGLE_NOTES: [&str; 2] = [
-    "The secret address lets anyone who has it read the whole calendar. Keep it to yourself; Reset in the same section replaces it.",
-    "A work or school account may hide the address when the admin limits sharing. Ask the admin in that case.",
-];
+fn google_notes() -> [&'static str; 2] {
+    [tr!("calendar.google_note1"), tr!("calendar.google_note2")]
+}
 
 pub fn page() -> Page {
     Page::new(
-        "Calendar",
-        "Connect your calendar and choose how often the notch downloads it again.",
+        tr!("calendar.title"),
+        tr!("calendar.description"),
         vec![
             Group::titled(
-                "Google Calendar",
+                tr!("calendar.group_google"),
                 vec![
                     Item::new(
-                        "Calendar address (.ics)",
+                        tr!("calendar.address"),
                         field::input(
                             "calendar.ics_url",
                             Kind::Secret { width: 280.0 },
-                            "Paste the secret iCal address",
+                            tr!("calendar.address_placeholder"),
                         ),
                     )
-                    .description("The private iCal link of your calendar."),
+                    .description(tr!("calendar.address_note")),
                     Item::new(
-                        "Refresh (minutes)",
+                        tr!("calendar.refresh"),
                         field::input(
                             "calendar.refresh_minutes",
                             Kind::WholeNumber { default: 15, range: 1..=1440 },
                             "15",
                         ),
                     )
-                    .description("How often the notch downloads it again, 1 to 1440."),
+                    .description(tr!("calendar.refresh_note")),
                 ],
             )
             .icon(crate::icons::CALENDAR),
@@ -71,16 +73,11 @@ pub fn page() -> Page {
 }
 
 fn guide(window: &mut Window, cx: &mut App) -> AnyElement {
-    let steps = GOOGLE_STEPS.iter().enumerate().map(|(index, step)| div().child(format!("{}. {step}", index + 1)));
-    let notes = GOOGLE_NOTES.iter().map(|note| div().text_color(cx.theme().muted_foreground).child(*note));
+    let steps =
+        google_steps().into_iter().enumerate().map(|(index, step)| div().child(format!("{}. {step}", index + 1)));
+    let notes = google_notes().into_iter().map(|note| div().text_color(cx.theme().muted_foreground).child(note));
     let body = v_flex().gap_1().text_sm().children(steps).children(notes).into_any_element();
-    layout::accordion(
-        "google-steps",
-        false,
-        vec![(SharedString::from("How to get the address from Google Calendar"), body)],
-        window,
-        cx,
-    )
+    layout::accordion("google-steps", false, vec![(SharedString::from(tr!("calendar.guide_title")), body)], window, cx)
 }
 
 fn view_card(view: &'static View, selected: bool, cx: &App) -> AnyElement {
@@ -88,7 +85,7 @@ fn view_card(view: &'static View, selected: bool, cx: &App) -> AnyElement {
     card::frame(SharedString::from(format!("{VIEW_KEY}-{word}")), selected, 10.0, 10.0, cx)
         .cursor_pointer()
         .on_click(move |_event, _window, cx| field::write(VIEW_KEY, word, cx))
-        .child(card::header(view.label, Some(view.description), selected, cx))
+        .child(card::header((view.label)(), Some((view.description)()), selected, cx))
         .into_any_element()
 }
 
@@ -100,7 +97,7 @@ fn view_item() -> Item {
         let cards = VIEWS.iter().map(|view| view_card(view, view.word == shown, cx)).collect();
         v_flex()
             .gap_3()
-            .child(card::described("Calendar view", "Show the whole month or only the current week.", cx))
+            .child(card::described(tr!("calendar.view_title"), tr!("calendar.view_description"), cx))
             .child(card::grid(2, cards))
             .into_any_element()
     })

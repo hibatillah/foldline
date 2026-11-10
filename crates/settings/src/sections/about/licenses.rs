@@ -1,5 +1,6 @@
 //! The license notices: the file the "Licenses" row opens, and where it is looked for.
 
+use crate::i18n::tr;
 use std::path::{Path, PathBuf};
 
 use gpui::{App, Window};
@@ -25,7 +26,9 @@ pub fn open_licenses(window: &mut Window, cx: &mut App) {
         std::env::current_exe().ok().and_then(|exe| find_licenses_file(exe.parent()?, |candidate| candidate.is_file()));
     match found {
         Some(path) => cx.open_with_system(&path),
-        None => window.push_notification(Notification::warning(format!("{LICENSES_FILE} was not found.")), cx),
+        None => {
+            window.push_notification(Notification::warning(tr!("about.licenses_missing", file = LICENSES_FILE)), cx)
+        }
     }
 }
 

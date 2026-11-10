@@ -1,5 +1,6 @@
 //! The two reminder cards: each previews the collapsed pill with the reminder and has a switch.
 
+use crate::i18n::tr;
 use gpui::{AnyElement, App, SharedString, div, prelude::*, px};
 use gpui_component::{ActiveTheme as _, Icon, IconName, h_flex, v_flex};
 use store::Settings;
@@ -16,28 +17,34 @@ const PICTURE_HEIGHT: f32 = 84.0;
 
 struct Reminder {
     key: &'static str,
-    title: &'static str,
-    description: &'static str,
+    title: fn() -> &'static str,
+    description: fn() -> &'static str,
 }
 
 // Both are on unless the file says `off`, as the notch reads them.
 const REMINDERS: [Reminder; 2] = [
     Reminder {
         key: MESSAGE_KEY,
-        title: "Message when a prayer starts",
-        description: "A short message at the time of the prayer.",
+        title: || tr!("shalat.reminder_message"),
+        description: || tr!("shalat.reminder_message_note"),
     },
     Reminder {
         key: BADGE_KEY,
-        title: "Next prayer in the pill",
-        description: "Shows the next prayer for the last 30 minutes.",
+        title: || tr!("shalat.reminder_badge"),
+        description: || tr!("shalat.reminder_badge_note"),
     },
 ];
 
 // What the notch writes: the message title and value, and the collapsed mark, which reads "Asr in 24m".
-const MESSAGE_TEXT: &str = "Time for Asr";
+fn message_text() -> String {
+    tr!("shalat.alert_title", prayer = tr!("shalat.asr"))
+}
+
+fn badge_text() -> String {
+    tr!("shalat.badge_text", prayer = tr!("shalat.asr"), minutes = 24)
+}
+
 const MESSAGE_TIME: &str = "15:19";
-const BADGE_TEXT: &str = "Asr in 24m";
 const IDLE_CLOCK: &str = "15:05";
 
 fn moon() -> Icon {
@@ -48,7 +55,7 @@ fn message_picture() -> AnyElement {
     let content = h_flex()
         .gap(px(8.0))
         .child(moon())
-        .child(div().child(MESSAGE_TEXT))
+        .child(div().child(message_text()))
         .child(div().text_color(color(TEAL)).child(MESSAGE_TIME));
     preview(pill_frame(content, 40.0, 20.0, 0.0, 14.0))
 }
@@ -57,7 +64,7 @@ fn badge_picture() -> AnyElement {
     let content = h_flex()
         .gap(px(24.0))
         .child(div().child(IDLE_CLOCK))
-        .child(h_flex().gap(px(4.0)).text_color(color(TEAL)).child(moon()).child(div().child(BADGE_TEXT)));
+        .child(h_flex().gap(px(4.0)).text_color(color(TEAL)).child(moon()).child(div().child(badge_text())));
     preview(pill_frame(content, 36.0, 14.0, 3.0, 12.0))
 }
 
@@ -82,13 +89,13 @@ fn reminder_card(reminder: &'static Reminder, picture: AnyElement, cx: &App) -> 
         .flex_1()
         .min_w_0()
         .gap(px(1.0))
-        .child(div().text_size(px(13.0)).font_weight(gpui::FontWeight::MEDIUM).child(reminder.title))
+        .child(div().text_size(px(13.0)).font_weight(gpui::FontWeight::MEDIUM).child((reminder.title)()))
         .child(
             div()
                 .text_size(px(12.0))
                 .line_height(px(16.0))
                 .text_color(cx.theme().muted_foreground)
-                .child(reminder.description),
+                .child((reminder.description)()),
         );
     card::frame(SharedString::from(format!("card-{}", reminder.key)), on, 9.0, 9.0, cx)
         .child(picture)
@@ -105,11 +112,7 @@ pub fn item() -> Item {
             .collect();
         v_flex()
             .gap_3()
-            .child(card::described(
-                "What the notch shows around a prayer",
-                "Each card previews what you would see. Switch it off to stop it.",
-                cx,
-            ))
+            .child(card::described(tr!("shalat.reminders_title"), tr!("shalat.reminders_description"), cx))
             .child(card::grid(2, cards))
             .into_any_element()
     })
@@ -132,10 +135,29 @@ mod tests {
         }
     }
 
+    /// The text of one key (its `en` and `id` lines) in a locale file.
+    fn locale_entry(file: &str, key: &str) -> String {
+        let text = std::fs::read_to_string(file).unwrap();
+        let start = text
+            .find(&format!(
+                "
+{key}:
+"
+            ))
+            .unwrap_or_else(|| panic!("{key} missing in {file}"));
+        text[start + 1..].lines().take(3).collect::<Vec<_>>().join(
+            "
+",
+        )
+    }
+
     #[test]
     fn the_previews_use_the_words_the_notch_shows() {
-        assert!(notch_source("mod.rs").contains(&format!("\"{MESSAGE_TEXT}\"")));
-        assert!(notch_source("text.rs").contains("\"{} in {}m\""));
+        let notch = format!("{}/../notch/locales/app.yml", env!("CARGO_MANIFEST_DIR"));
+        let own = format!("{}/locales/app.yml", env!("CARGO_MANIFEST_DIR"));
+        for key in ["shalat.alert_title", "shalat.badge_text"] {
+            assert_eq!(locale_entry(&own, key), locale_entry(&notch, key), "{key} differs between the two programs");
+        }
     }
 
     #[test]

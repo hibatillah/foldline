@@ -1,5 +1,6 @@
 //! The city search both the General and the Shalat page show: a field with up to five matches below it.
 
+use crate::i18n::tr;
 use std::rc::Rc;
 
 use gpui::{
@@ -46,7 +47,9 @@ fn city_search_element(id: &'static str, window: &mut Window, cx: &mut App) -> A
     let search = window.use_keyed_state(SharedString::from(id), cx, {
         let label = label.clone();
         move |window, cx| {
-            let input = cx.new(|cx| InputState::new(window, cx).placeholder("Search for a city").default_value(label));
+            let input = cx.new(|cx| {
+                InputState::new(window, cx).placeholder(tr!("general.city_placeholder")).default_value(label)
+            });
             let _subscription = cx.subscribe_in(&input, window, |search: &mut CitySearch, input, event, window, cx| {
                 if matches!(event, InputEvent::Change) {
                     search.matches = places::search(&input.read(cx).value(), RESULT_LIMIT);

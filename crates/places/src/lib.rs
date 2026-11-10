@@ -71,6 +71,58 @@ pub fn values_of(city: &City) -> Vec<(&'static str, String)> {
     ]
 }
 
+/// `on` unless switched off: the city follows the device.
+pub const TRACK_KEY: &str = "location.track";
+/// A device nearer another city than its saved one changes the city only after moving this far from the saved point.
+pub const MOVE_LIMIT_KM: f64 = 25.0;
+
+pub fn is_tracking(get: &dyn Fn(&str) -> Option<String>) -> bool {
+    !matches!(get(TRACK_KEY).as_deref(), Some("off" | "false"))
+}
+
+/// The great-circle distance of two (latitude, longitude) points in degrees.
+pub fn distance_km(from: (f64, f64), to: (f64, f64)) -> f64 {
+    const EARTH_RADIUS_KM: f64 = 6371.0;
+    let (from_latitude, to_latitude) = (from.0.to_radians(), to.0.to_radians());
+    let half_latitude = (to_latitude - from_latitude) / 2.0;
+    let half_longitude = (to.1 - from.1).to_radians() / 2.0;
+    let haversine =
+        half_latitude.sin().powi(2) + from_latitude.cos() * to_latitude.cos() * half_longitude.sin().powi(2);
+    2.0 * EARTH_RADIUS_KM * haversine.sqrt().asin()
+}
+
+/// The listed city closest to the position.
+pub fn nearest(latitude: f64, longitude: f64) -> Option<City> {
+    nearest_in(CITIES, latitude, longitude)
+}
+
+fn nearest_in(data: &str, latitude: f64, longitude: f64) -> Option<City> {
+    data.lines()
+        .filter_map(|line| {
+            let mut fields = line.split('\t').skip(2);
+            let point = (fields.next()?.parse().ok()?, fields.next()?.parse().ok()?);
+            Some((distance_km((latitude, longitude), point), line))
+        })
+        .min_by(|(first, _), (second, _)| first.total_cmp(second))
+        .and_then(|(_, line)| parse(line))
+}
+
+/// The city to save for a device at the position: the nearest one when none is saved, else only when it is another
+/// city and the device is more than `MOVE_LIMIT_KM` from the saved point, so two neighbouring cities never flip back
+/// and forth.
+pub fn city_to_save(saved: Option<&Location>, latitude: f64, longitude: f64) -> Option<City> {
+    city_to_save_in(CITIES, saved, latitude, longitude)
+}
+
+fn city_to_save_in(data: &str, saved: Option<&Location>, latitude: f64, longitude: f64) -> Option<City> {
+    let city = nearest_in(data, latitude, longitude)?;
+    let Some(saved) = saved else { return Some(city) };
+    if saved.label == city.label() {
+        return None;
+    }
+    (distance_km((saved.latitude, saved.longitude), (latitude, longitude)) > MOVE_LIMIT_KM).then_some(city)
+}
+
 fn parse(line: &str) -> Option<City> {
     let mut fields = line.split('\t');
     let name = fields.next()?.to_owned();
@@ -204,5 +256,72 @@ mod tests {
         let keys: Vec<_> = values_of(&city).iter().map(|(key, _)| *key).collect();
         assert_eq!(keys, [CITY_KEY, LATITUDE_KEY, LONGITUDE_KEY, COUNTRY_KEY]);
         assert_eq!(values_of(&city)[1].1, "0.517");
+    }
+
+    const TOWNS: &str = "Pekanbaru\tID\t0.517\t101.442\nDumai\tID\t1.667\t101.45\nJakarta\tID\t-6.175\t106.827\nSurabaya\tID\t-7.25\t112.75\nRumbai\tID\t0.6\t101.4\n";
+
+    fn saved_city(name: &str, latitude: f64, longitude: f64) -> Location {
+        Location { label: format!("{name}, ID"), country: "ID".to_owned(), latitude, longitude }
+    }
+
+    #[test]
+    fn the_distance_between_two_points_is_the_great_circle_length_in_kilometres() {
+        assert_eq!(distance_km((1.0, 2.0), (1.0, 2.0)), 0.0);
+        let jakarta_to_surabaya = distance_km((-6.175, 106.827), (-7.25, 112.75));
+        assert!((650.0..680.0).contains(&jakarta_to_surabaya), "{jakarta_to_surabaya}");
+    }
+
+    #[test]
+    fn the_nearest_city_is_the_one_closest_to_the_position() {
+        assert_eq!(nearest_in(TOWNS, 0.528, 101.438).unwrap().name, "Pekanbaru");
+        assert_eq!(nearest_in(TOWNS, 1.5, 101.5).unwrap().name, "Dumai");
+        assert!(nearest_in("", 1.0, 1.0).is_none());
+    }
+
+    #[test]
+    fn with_no_saved_city_the_nearest_one_is_saved() {
+        assert_eq!(city_to_save_in(TOWNS, None, 0.528, 101.438).unwrap().label(), "Pekanbaru, ID");
+    }
+
+    #[test]
+    fn staying_in_the_saved_city_changes_nothing() {
+        let saved = saved_city("Pekanbaru", 0.517, 101.442);
+        assert!(city_to_save_in(TOWNS, Some(&saved), 0.528, 101.438).is_none());
+    }
+
+    #[test]
+    fn a_move_to_another_city_replaces_the_saved_one() {
+        let saved = saved_city("Jakarta", -6.175, 106.827);
+        assert_eq!(city_to_save_in(TOWNS, Some(&saved), 0.528, 101.438).unwrap().name, "Pekanbaru");
+    }
+
+    #[test]
+    fn a_nearer_small_town_within_the_move_limit_keeps_the_saved_city() {
+        let saved = saved_city("Pekanbaru", 0.517, 101.442);
+        // Rumbai is the nearest city here, but the device is only about 9 km from the saved point.
+        assert!(city_to_save_in(TOWNS, Some(&saved), 0.58, 101.4).is_none());
+    }
+
+    #[test]
+    fn a_position_nearest_to_the_saved_city_keeps_it_however_far_it_is() {
+        let saved = saved_city("Pekanbaru", 0.517, 101.442);
+        // About 27 km from the saved point, with Pekanbaru still the nearest city.
+        assert!(city_to_save_in(TOWNS, Some(&saved), 0.3, 101.55).is_none());
+    }
+
+    #[test]
+    fn a_move_of_more_than_the_limit_to_a_nearer_city_replaces_the_saved_one() {
+        let saved = saved_city("Pekanbaru", 0.517, 101.442);
+        assert_eq!(city_to_save_in(TOWNS, Some(&saved), 1.2, 101.45).unwrap().name, "Dumai");
+    }
+
+    #[test]
+    fn tracking_is_on_until_it_is_switched_off() {
+        let on = |pairs: &[(&str, &str)]| is_tracking(&saved(pairs));
+        assert!(on(&[]));
+        assert!(on(&[(TRACK_KEY, "on")]));
+        assert!(!on(&[(TRACK_KEY, "off")]));
+        assert!(!on(&[(TRACK_KEY, "false")]));
+        assert!(on(&[(TRACK_KEY, "maybe")]));
     }
 }

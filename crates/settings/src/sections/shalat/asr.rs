@@ -1,5 +1,6 @@
 //! The two Asr cards: the standard rule and the Hanafi one, each drawing a stick with its shadow.
 
+use crate::i18n::tr;
 use gpui::{AnyElement, App, SharedString, prelude::*};
 use gpui_component::v_flex;
 use store::Settings;
@@ -9,36 +10,36 @@ use crate::{card, field, layout::Item};
 
 struct Rule {
     hanafi: bool,
-    label: &'static str,
-    schools: &'static str,
+    label: fn() -> &'static str,
+    schools: fn() -> &'static str,
     shadow_in_heights: f32,
-    caption: &'static str,
+    caption: fn() -> &'static str,
 }
 
 const RULES: [Rule; 2] = [
     Rule {
         hanafi: false,
-        label: "Standard",
-        schools: "Shafi'i, Maliki and Hanbali",
+        label: || tr!("shalat.asr_standard"),
+        schools: || tr!("shalat.asr_standard_schools"),
         shadow_in_heights: 1.0,
-        caption: "Shadow = 1× its height",
+        caption: || tr!("shalat.asr_standard_caption"),
     },
     Rule {
         hanafi: true,
-        label: "Hanafi",
-        schools: "Hanafi school: a later Asr",
+        label: || tr!("shalat.asr_hanafi"),
+        schools: || tr!("shalat.asr_hanafi_schools"),
         shadow_in_heights: 2.0,
-        caption: "Shadow = 2× its height",
+        caption: || tr!("shalat.asr_hanafi_caption"),
     },
 ];
 
 fn rule_card(rule: &'static Rule, selected: bool, cx: &App) -> AnyElement {
     let hanafi = rule.hanafi;
-    card::frame(SharedString::from(format!("{HANAFI_KEY}-{}", rule.label)), selected, 10.0, 10.0, cx)
+    card::frame(SharedString::from(format!("{HANAFI_KEY}-{}", rule.hanafi)), selected, 10.0, 10.0, cx)
         .cursor_pointer()
         .on_click(move |_event, _window, cx| field::write(HANAFI_KEY, field::on_off(hanafi), cx))
-        .child(card::header(rule.label, Some(rule.schools), selected, cx))
-        .child(pictures::stick_and_shadow(rule.shadow_in_heights, rule.caption))
+        .child(card::header((rule.label)(), Some((rule.schools)()), selected, cx))
+        .child(pictures::stick_and_shadow(rule.shadow_in_heights, (rule.caption)()))
         .into_any_element()
 }
 
@@ -48,11 +49,7 @@ pub fn item() -> Item {
         let cards = RULES.iter().map(|rule| rule_card(rule, rule.hanafi == hanafi, cx)).collect();
         v_flex()
             .gap_3()
-            .child(card::described(
-                "When Asr begins",
-                "Standard or Hanafi: the length of an object's shadow that marks Asr.",
-                cx,
-            ))
+            .child(card::described(tr!("shalat.asr_title"), tr!("shalat.asr_description"), cx))
             .child(card::grid(2, cards))
             .into_any_element()
     })

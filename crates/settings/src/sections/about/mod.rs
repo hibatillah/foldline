@@ -4,6 +4,7 @@ mod licenses;
 mod paths;
 mod widgets;
 
+use crate::i18n::tr;
 use std::{path::Path, rc::Rc};
 
 use gpui::{AnyElement, App, Window};
@@ -45,22 +46,22 @@ struct Row {
 fn link_rows() -> Vec<Row> {
     vec![
         Row {
-            title: "What's new",
-            description: "This version's release notes",
-            button: "Open",
+            title: tr!("about.whats_new"),
+            description: tr!("about.whats_new_note"),
+            button: tr!("about.open"),
             action: Action::Link(WHATS_NEW_URL),
             external: true,
         },
         Row {
-            title: "Licenses",
-            description: "Open source licenses and font licenses",
-            button: "View",
+            title: tr!("about.licenses"),
+            description: tr!("about.licenses_note"),
+            button: tr!("about.view"),
             action: Action::Licenses,
             external: false,
         },
         Row {
-            title: "Lyrics",
-            description: "Synced lyrics come from LRCLIB",
+            title: tr!("about.lyrics"),
+            description: tr!("about.lyrics_note"),
             button: "lrclib.net",
             action: Action::Link(LRCLIB_URL),
             external: true,
@@ -71,16 +72,16 @@ fn link_rows() -> Vec<Row> {
 fn file_rows() -> Vec<Row> {
     vec![
         Row {
-            title: "Settings file",
-            description: "settings.txt, the same settings as a file",
-            button: "Open",
+            title: tr!("about.settings_file"),
+            description: tr!("about.settings_file_note"),
+            button: tr!("about.open"),
             action: Action::SettingsFile,
             external: true,
         },
         Row {
-            title: "Data folder",
-            description: "Your to-do list, the Shelf and the saved calendar",
-            button: "Open",
+            title: tr!("about.data_folder"),
+            description: tr!("about.data_folder_note"),
+            button: tr!("about.open"),
             action: Action::DataFolder,
             external: true,
         },
@@ -91,9 +92,7 @@ fn file_rows() -> Vec<Row> {
 fn perform(opening: Opening, window: &mut Window, cx: &mut App) {
     match opening {
         Opening::File(path) | Opening::Folder(path) => cx.open_with_system(&path),
-        Opening::Nothing => {
-            window.push_notification(Notification::warning("The notch has not saved anything yet."), cx)
-        }
+        Opening::Nothing => window.push_notification(Notification::warning(tr!("about.nothing_saved")), cx),
     }
 }
 
@@ -139,12 +138,12 @@ fn items(rows: Vec<Row>) -> Vec<Item> {
 pub fn page() -> Page {
     let card = Item::custom(|_window, cx| widgets::app_card(update_check(), cx));
     Page::new(
-        "About",
-        "The version you run, where its notes and licenses are, and the files the notch keeps for you.",
+        tr!("about.title"),
+        tr!("about.description"),
         vec![
             Group::new(vec![card]),
             Group::new(items(link_rows())),
-            Group::titled("Files", items(file_rows())).icon(crate::icons::FOLDER),
+            Group::titled(tr!("about.group_files"), items(file_rows())).icon(crate::icons::FOLDER),
         ],
     )
 }

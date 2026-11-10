@@ -1,3 +1,4 @@
+use crate::i18n::tr;
 use gpui::{AnyElement, App, Context, IntoElement, Render, SharedString, Window, div, prelude::*, px};
 use gpui_component::{ActiveTheme as _, h_flex, v_flex};
 use store::Settings;
@@ -115,14 +116,12 @@ impl Render for DragPreview {
 
 fn page_description(id: &str) -> Option<&'static str> {
     match id {
-        "media" => Some("Music player with synced lyrics."),
-        "shelf" => Some("Holds dropped files for a while."),
-        "calendar" => Some("The month or the week, and the events of a day you pick."),
-        "timer" => Some("Focus and break timer."),
-        "stats" => Some("System stats, off until you switch it on."),
-        "clipboard" => Some(
-            "History of the last 7 copies with a preview, paste and copy buttons. Kept in memory only and cleared when the app quits.",
-        ),
+        "media" => Some(tr!("pages.desc_media")),
+        "shelf" => Some(tr!("pages.desc_shelf")),
+        "calendar" => Some(tr!("pages.desc_calendar")),
+        "timer" => Some(tr!("pages.desc_timer")),
+        "stats" => Some(tr!("pages.desc_stats")),
+        "clipboard" => Some(tr!("pages.desc_clipboard")),
         _ => None,
     }
 }
@@ -140,9 +139,7 @@ fn page_list(cx: &mut App) -> AnyElement {
     let settings = Settings::load();
     let known = parse_known(settings.get_string(KNOWN_KEY));
     if known.is_empty() {
-        return div()
-            .child("The notch has not reported its pages yet. Start the notch once, then reopen this window.")
-            .into_any_element();
+        return div().child(tr!("pages.not_reported")).into_any_element();
     }
     let order = current_order(&known, settings.get_string(ORDER_KEY));
     let disabled = disabled_pages(&known, settings.get_string(DISABLED_KEY));
@@ -202,8 +199,8 @@ fn page_list(cx: &mut App) -> AnyElement {
 
 pub fn page() -> Page {
     Page::new(
-        "Pages",
-        "Choose which pages the notch shows and drag them into your order. At least one stays on.",
+        tr!("pages.title"),
+        tr!("pages.description"),
         vec![Group::loose(vec![Item::custom(|_window, cx| page_list(cx))])],
     )
 }

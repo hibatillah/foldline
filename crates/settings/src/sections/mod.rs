@@ -3,6 +3,7 @@ mod advanced;
 mod behavior;
 mod calendar;
 mod general;
+mod language;
 mod pages;
 mod shalat;
 mod stats;
@@ -73,6 +74,18 @@ mod tests {
         for entry in &entries {
             assert!(entry.page.description().trim().len() > 20, "{} needs a description sentence", entry.page.title);
         }
+    }
+
+    #[test]
+    fn rebuilding_the_pages_in_indonesian_changes_their_titles() {
+        use store::language::{Language, with_override};
+        let titles = |entries: Vec<NavEntry>| entries.iter().map(|entry| entry.page.title).collect::<Vec<_>>();
+        let english = titles(all());
+        let indonesian = with_override(Language::Indonesian, || titles(all()));
+        assert_eq!(english[0], "General");
+        assert_eq!(indonesian[0], "Umum");
+        assert_eq!(indonesian[3], "Kalender");
+        assert_eq!(indonesian[8], "Tentang");
     }
 
     #[test]

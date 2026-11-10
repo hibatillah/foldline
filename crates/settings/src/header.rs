@@ -2,6 +2,7 @@
 //! window's drag area. The buttons are drawn here (not by the component library's title bar) so the close button's red
 //! hover can follow the card's rounded top-right corner; GPUI clips children to a rectangle only.
 
+use crate::i18n::tr;
 use gpui::{App, ElementId, IntoElement, Window, WindowControlArea, div, prelude::*, px};
 use gpui_component::{ActiveTheme as _, Icon, IconName, Sizable as _, h_flex};
 
@@ -9,11 +10,10 @@ use crate::palette;
 
 pub const HEIGHT: f32 = 36.0;
 const BUTTON_WIDTH: f32 = 36.0;
-const ROOT: &str = "Settings";
 
 /// The breadcrumb as the two names it joins: "Settings" and the page's title.
 pub fn breadcrumb(page_title: &'static str) -> [&'static str; 2] {
-    [ROOT, page_title]
+    [tr!("header.settings"), page_title]
 }
 
 /// The breadcrumb as one line of text, with a "›" between the names.

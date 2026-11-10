@@ -1,5 +1,6 @@
 use std::ops::RangeInclusive;
 
+use crate::i18n::tr;
 use crate::{
     field::{self, Kind},
     layout::{Group, Item, Page},
@@ -22,68 +23,58 @@ pub fn page() -> Page {
         cx.refresh_windows();
     });
     Page::new(
-        "General",
-        "Startup, your location, notifications, Windows popups and the focus timer.",
+        tr!("general.title"),
+        tr!("general.description"),
         vec![
+            Group::titled(tr!("general.language_title"), vec![super::language::item()]),
             Group::titled(
-                "Startup",
+                tr!("general.group_startup"),
                 vec![
-                    Item::new("Start with Windows", start_with_windows)
-                        .description("Starts the notch when you sign in."),
-                    Item::new("Hide when idle", field::toggle("notch.hide_when_idle", false)).description(
-                        "Hides the notch when nothing is happening. Point at the top edge to bring it back.",
-                    ),
+                    Item::new(tr!("general.start_with_windows"), start_with_windows)
+                        .description(tr!("general.start_with_windows_note")),
+                    Item::new(tr!("general.hide_when_idle"), field::toggle("notch.hide_when_idle", false))
+                        .description(tr!("general.hide_when_idle_note")),
                 ],
             ),
             Group::titled(
-                "Location",
+                tr!("general.group_location"),
                 vec![
-                    Item::new("City", location::city_search("general-city"))
-                        .description("The one place for the prayer times and the weather.")
+                    Item::new(tr!("general.track_location"), field::toggle(places::TRACK_KEY, true))
+                        .description(tr!("general.track_location_note")),
+                    Item::new(tr!("general.city"), location::city_search("general-city"))
+                        .description(tr!("general.city_note"))
                         .top_aligned(),
                 ],
             ),
             Group::titled(
-                "Notifications",
+                tr!("general.group_notifications"),
                 vec![
-                    Item::new("Show notifications", field::toggle("activity.notifications", true)).description(
-                        "Shows a banner when Windows shows a notification. To keep Windows' own banner away, turn on \
-                             \"Hide Windows notification banners\" under Windows popups.",
-                    ),
-                    Item::new("Show notification text", field::toggle("notifications.show_text", true))
-                        .description("Shows the message in the banner. Without it, the banner reads \"New message\"."),
-                    Item::new("Warn when a device battery is low", field::toggle("activity.device_battery", true))
-                        .description("Shows a message when a connected Bluetooth device reaches 20 % or 10 %."),
+                    Item::new(tr!("general.show_notifications"), field::toggle("activity.notifications", true))
+                        .description(tr!("general.show_notifications_note")),
+                    Item::new(tr!("general.show_notification_text"), field::toggle("notifications.show_text", true))
+                        .description(tr!("general.show_notification_text_note")),
+                    Item::new(tr!("general.device_battery"), field::toggle("activity.device_battery", true))
+                        .description(tr!("general.device_battery_note")),
                 ],
             ),
             Group::titled(
-                "Windows popups",
+                tr!("general.group_windows_popups"),
                 vec![
-                    Item::new("Hide the Windows volume popup", field::toggle("notch.hide_windows_volume_popup", true))
-                        .description(
-                            "Keeps the volume box Windows shows above the taskbar away while the notch runs, so only \
-                             the notch shows the volume. It comes back when the notch closes.",
-                        ),
-                    Item::new(
-                        "Hide Windows notification banners",
-                        field::toggle("notch.hide_windows_notifications", true),
-                    )
-                    .description(
-                        "Turns off the banner Windows shows at the bottom right for every app while the notch runs, so \
-                         only the notch shows notifications; they stay in the notification center. Each app's own \
-                         choice comes back when this is off or the notch closes.",
-                    ),
+                    Item::new(tr!("general.hide_volume_popup"), field::toggle("notch.hide_windows_volume_popup", true))
+                        .description(tr!("general.hide_volume_popup_note")),
+                    Item::new(tr!("general.hide_banners"), field::toggle("notch.hide_windows_notifications", true))
+                        .description(tr!("general.hide_banners_note")),
                 ],
             ),
             Group::titled(
-                "Timer",
+                tr!("general.group_timer"),
                 vec![
-                    minutes("Focus (minutes)", "timer.focus_minutes", 25, 5..=120, "25")
-                        .description("Length of a focus session, 5 to 120."),
-                    minutes("Short break (minutes)", "timer.short_break_minutes", 5, 1..=120, "5")
-                        .description("Rest after a focus session, 1 to 120."),
-                    minutes("Long break (minutes)", "timer.long_break_minutes", 15, 1..=120, "15")
-                        .description("Longer rest after several sessions, 1 to 120."),
+                    minutes(tr!("general.focus_minutes"), "timer.focus_minutes", 25, 5..=120, "25")
+                        .description(tr!("general.focus_minutes_note")),
+                    minutes(tr!("general.short_break_minutes"), "timer.short_break_minutes", 5, 1..=120, "5")
+                        .description(tr!("general.short_break_note")),
+                    minutes(tr!("general.long_break_minutes"), "timer.long_break_minutes", 15, 1..=120, "15")
+                        .description(tr!("general.long_break_note")),
                 ],
             ),
         ],

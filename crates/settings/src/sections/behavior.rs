@@ -1,3 +1,4 @@
+use crate::i18n::tr;
 use gpui::{App, SharedString, div, prelude::*, px};
 use gpui_component::{ActiveTheme as _, Icon, IconName, Sizable as _, h_flex, v_flex};
 use store::Settings;
@@ -10,28 +11,16 @@ use crate::{
 
 struct Choice {
     word: &'static str,
-    label: &'static str,
-    description: &'static str,
+    label: fn() -> &'static str,
+    description: fn() -> &'static str,
 }
 
 // The words `Showing::parse` accepts in `src/host/visibility.rs`; a test compares them, the labels are this window's own.
 const CHOICES: [Choice; 4] = [
-    Choice { word: "hidden", label: "0 · Hidden", description: "Nothing is drawn. Not even messages." },
-    Choice {
-        word: "activities",
-        label: "1 · Activities",
-        description: "On-demand messages only, such as volume. Then it hides again.",
-    },
-    Choice {
-        word: "lyrics",
-        label: "2 · Lyrics",
-        description: "Lyrics while they play, plus everything from level 1.",
-    },
-    Choice {
-        word: "music",
-        label: "3 · Always visible",
-        description: "The idle pill with clock and battery, plus everything from levels 1 and 2.",
-    },
+    Choice { word: "hidden", label: || tr!("behavior.level0"), description: || tr!("behavior.level0_note") },
+    Choice { word: "activities", label: || tr!("behavior.level1"), description: || tr!("behavior.level1_note") },
+    Choice { word: "lyrics", label: || tr!("behavior.level2"), description: || tr!("behavior.level2_note") },
+    Choice { word: "music", label: || tr!("behavior.level3"), description: || tr!("behavior.level3_note") },
 ];
 
 const MAXIMIZED_KEY: &str = "notch.maximized";
@@ -62,7 +51,7 @@ fn choice_card(
     card::frame(SharedString::from(format!("{key}-{word}")), selected, 10.0, 10.0, cx)
         .cursor_pointer()
         .on_click(move |_event, _window, cx| field::write(key, word, cx))
-        .child(card::header(choice.label, None, selected, cx))
+        .child(card::header((choice.label)(), None, selected, cx))
         .child(picture(backdrop, pill_for(word)))
 }
 
@@ -80,7 +69,7 @@ fn choice_item(
             .iter()
             .map(|choice| choice_card(key, backdrop, choice, choice.word == shown, cx).into_any_element())
             .collect();
-        let sentence = CHOICES.iter().find(|choice| choice.word == shown).map_or("", |choice| choice.description);
+        let sentence = CHOICES.iter().find(|choice| choice.word == shown).map_or("", |choice| (choice.description)());
         v_flex()
             .gap_3()
             .child(
@@ -96,8 +85,13 @@ fn choice_item(
     })
 }
 
-const INTRO: &str = "Behavior works like a log level. You pick how much the notch is allowed to show, and every level also shows everything below it. Level 2 does not mean lyrics only: it shows lyrics and messages. Level 3 shows all of it.";
-const MATRIX_COLUMNS: [&str; 3] = ["On-demand messages", "Lyrics", "Idle pill"];
+fn intro() -> &'static str {
+    tr!("behavior.intro")
+}
+
+fn matrix_columns() -> [&'static str; 3] {
+    [tr!("behavior.column_messages"), tr!("behavior.column_lyrics"), tr!("behavior.column_idle_pill")]
+}
 const LABEL_WIDTH: f32 = 170.0;
 
 /// Whether a level (its index in `CHOICES`) shows a column: column 0 needs level 1, column 1 level 2, column 2 level 3.
@@ -118,20 +112,21 @@ fn matrix_row(level: usize, cx: &App) -> gpui::Div {
     h_flex()
         .h(px(32.0))
         .items_center()
-        .child(div().w(px(LABEL_WIDTH)).text_sm().child(CHOICES[level].label))
-        .children((0..MATRIX_COLUMNS.len()).map(cell))
+        .child(div().w(px(LABEL_WIDTH)).text_sm().child((CHOICES[level].label)()))
+        .children((0..matrix_columns().len()).map(cell))
 }
 
 /// The intro sentence and the read-only matrix of what each level shows.
 fn levels_item() -> Item {
     Item::custom(move |_window, cx| {
         let muted = cx.theme().muted_foreground;
-        let header = h_flex().child(div().w(px(LABEL_WIDTH))).children(MATRIX_COLUMNS.iter().map(move |name| {
-            div().flex_1().flex().justify_center().text_size(px(12.0)).text_color(muted).child(*name)
-        }));
+        let header =
+            h_flex().child(div().w(px(LABEL_WIDTH))).children(matrix_columns().into_iter().map(move |name| {
+                div().flex_1().flex().justify_center().text_size(px(12.0)).text_color(muted).child(name)
+            }));
         v_flex()
             .gap_3()
-            .child(div().text_sm().text_color(muted).child(INTRO))
+            .child(div().text_sm().text_color(muted).child(intro()))
             .child(v_flex().child(header).children((0..CHOICES.len()).map(|level| matrix_row(level, cx))))
             .into_any_element()
     })
@@ -149,35 +144,35 @@ fn situation(
     Group::titled(
         heading,
         vec![
-            choice_item("What the notch shows", description, key, default, backdrop),
-            Item::new("Open on hover", field::toggle(hover_key, true)).description(hover_description),
+            choice_item(tr!("behavior.group_shows"), description, key, default, backdrop),
+            Item::new(tr!("behavior.group_hover"), field::toggle(hover_key, true)).description(hover_description),
         ],
     )
 }
 
 pub fn page() -> Page {
     Page::new(
-        "Behavior",
-        "Choose what the notch shows, as a level, while a maximized or full-screen window is in front of it.",
+        tr!("behavior.title"),
+        tr!("behavior.description"),
         vec![
-            Group::titled("Levels", vec![levels_item()]),
+            Group::titled(tr!("behavior.group_levels"), vec![levels_item()]),
             situation(
-                "Over a maximized window",
-                "Applies while a maximized window is in front.",
+                tr!("behavior.over_maximized"),
+                tr!("behavior.over_maximized_note"),
                 MAXIMIZED_KEY,
                 DEFAULT_MAXIMIZED,
                 Backdrop::MaximizedWindow,
                 HOVER_MAXIMIZED_KEY,
-                "Pointing at the top edge opens the notch. Off: it never opens over a maximized window.",
+                tr!("behavior.hover_maximized_note"),
             ),
             situation(
-                "Over a full-screen app",
-                "Applies while a full-screen app or game is in front.",
+                tr!("behavior.over_fullscreen"),
+                tr!("behavior.over_fullscreen_note"),
                 FULLSCREEN_KEY,
                 DEFAULT_FULLSCREEN,
                 Backdrop::FullScreenApp,
                 HOVER_FULLSCREEN_KEY,
-                "Pointing at the top edge opens the notch. Off: it never opens over a full-screen app.",
+                tr!("behavior.hover_fullscreen_note"),
             ),
         ],
     )

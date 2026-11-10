@@ -1,5 +1,6 @@
 //! Fine-tuning each prayer by up to 30 minutes, with a day bar that shows where each prayer falls.
 
+use crate::i18n::tr;
 use gpui::{AnyElement, App, SharedString, div, linear_color_stop, linear_gradient, prelude::*, px, relative};
 use gpui_component::{ActiveTheme as _, Icon, IconName, h_flex, v_flex};
 use store::Settings;
@@ -16,7 +17,7 @@ const DOT_RING: f32 = 3.0;
 const BAR_HEIGHT: f32 = 12.0;
 
 struct Prayer {
-    name: &'static str,
+    name: fn() -> &'static str,
     key: &'static str,
     // Where the prayer typically falls, in minutes after midnight; the bar moves the dot from here.
     typical_minute: i64,
@@ -24,12 +25,12 @@ struct Prayer {
 
 // The keys are `Prayer::offset_key` in `crates/notch/src/pages/shalat/times.rs`; a test compares them.
 const PRAYERS: [Prayer; 6] = [
-    Prayer { name: "Fajr", key: "shalat.offset_fajr", typical_minute: 4 * 60 + 38 },
-    Prayer { name: "Sunrise", key: "shalat.offset_sunrise", typical_minute: 5 * 60 + 56 },
-    Prayer { name: "Dhuhr", key: "shalat.offset_dhuhr", typical_minute: 11 * 60 + 52 },
-    Prayer { name: "Asr", key: "shalat.offset_asr", typical_minute: 15 * 60 + 14 },
-    Prayer { name: "Maghrib", key: "shalat.offset_maghrib", typical_minute: 17 * 60 + 51 },
-    Prayer { name: "Isha", key: "shalat.offset_isha", typical_minute: 19 * 60 + 3 },
+    Prayer { name: || tr!("shalat.fajr"), key: "shalat.offset_fajr", typical_minute: 4 * 60 + 38 },
+    Prayer { name: || tr!("shalat.sunrise"), key: "shalat.offset_sunrise", typical_minute: 5 * 60 + 56 },
+    Prayer { name: || tr!("shalat.dhuhr"), key: "shalat.offset_dhuhr", typical_minute: 11 * 60 + 52 },
+    Prayer { name: || tr!("shalat.asr"), key: "shalat.offset_asr", typical_minute: 15 * 60 + 14 },
+    Prayer { name: || tr!("shalat.maghrib"), key: "shalat.offset_maghrib", typical_minute: 17 * 60 + 51 },
+    Prayer { name: || tr!("shalat.isha"), key: "shalat.offset_isha", typical_minute: 19 * 60 + 3 },
 ];
 
 // Color stops of the day bar, as a fraction of the day: night, dawn, noon blue, dusk, night.
@@ -61,9 +62,9 @@ pub fn stepped(offset: i64, delta: i64) -> i64 {
 /// "0 min", "+2 min", "−5 min".
 pub fn offset_text(offset: i64) -> String {
     match offset {
-        0 => "0 min".to_owned(),
-        offset if offset > 0 => format!("+{offset} min"),
-        offset => format!("−{} min", -offset),
+        0 => tr!("shalat.offset_zero").to_owned(),
+        offset if offset > 0 => tr!("shalat.offset_plus", offset = offset),
+        offset => tr!("shalat.offset_minus", offset = -offset),
     }
 }
 
@@ -154,7 +155,7 @@ fn prayer_column(prayer: &'static Prayer, offset: i64, cx: &App) -> AnyElement {
         .min_w(px(COLUMN_MIN_WIDTH))
         .items_center()
         .gap(px(6.0))
-        .child(div().text_size(px(13.0)).child(prayer.name))
+        .child(div().text_size(px(13.0)).child((prayer.name)()))
         .child(
             h_flex()
                 .items_center()
@@ -175,12 +176,15 @@ pub fn item() -> Item {
         let columns = PRAYERS.iter().zip(offsets).map(|(prayer, offset)| prayer_column(prayer, offset, cx));
         v_flex()
             .gap_3()
-            .child(card::described(
-                "Fine-tune each prayer",
-                "Add or subtract minutes, from −30 to 30, to match your local mosque. The dots show where each prayer falls in the day.",
-                cx,
-            ))
-            .child(v_flex().gap(px(14.0)).px(px(16.0)).py(px(8.0)).child(day_bar(&offsets)).child(h_flex().flex_wrap().gap(px(4.0)).children(columns)))
+            .child(card::described(tr!("shalat.adjust_title"), tr!("shalat.adjust_description"), cx))
+            .child(
+                v_flex()
+                    .gap(px(14.0))
+                    .px(px(16.0))
+                    .py(px(8.0))
+                    .child(day_bar(&offsets))
+                    .child(h_flex().flex_wrap().gap(px(4.0)).children(columns)),
+            )
             .into_any_element()
     })
 }
@@ -203,7 +207,7 @@ mod tests {
             std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../notch/src/pages/shalat/times.rs"))
                 .expect("notch times source");
         for prayer in &PRAYERS {
-            let line = format!("Prayer::{} => \"{}\"", prayer.name, prayer.key);
+            let line = format!("Prayer::{} => \"{}\"", (prayer.name)(), prayer.key);
             assert!(source.contains(&line), "{line} missing in times.rs");
         }
     }

@@ -1,9 +1,12 @@
 #![windows_subsystem = "windows"]
 
+rust_i18n::i18n!("locales", fallback = "en");
+
 mod brand;
 mod card;
 mod field;
 mod header;
+mod i18n;
 mod icons;
 mod layout;
 mod location;
@@ -49,10 +52,16 @@ const CARD_RADIUS: f32 = 8.0;
 struct SettingsWindow {
     selected_page_index: usize,
     pages: Vec<NavEntry>,
+    /// The language `pages` was built in; the pages are built again when it changes.
+    built_for: store::language::Language,
 }
 
 impl Render for SettingsWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if store::language::current() != self.built_for {
+            self.built_for = store::language::current();
+            self.pages = sections::all();
+        }
         let view = cx.entity();
         let version_label = format!("v{}", version::displayed_version());
         let brand = h_flex()
@@ -133,6 +142,7 @@ fn main() {
 
     Application::new().with_assets(icons::WindowAssets).run(|cx: &mut App| {
         gpui_component::init(cx);
+        rust_i18n::set_locale(store::language::apply_setting(&store::Settings::load()).code());
         if let Err(error) =
             cx.text_system().add_fonts(GEIST_FONTS.iter().map(|bytes| std::borrow::Cow::Borrowed(*bytes)).collect())
         {
@@ -160,7 +170,11 @@ fn main() {
         let opened = cx.open_window(options, |window, cx| {
             Theme::sync_system_appearance(Some(window), cx);
             palette::apply(cx);
-            let view = cx.new(|_| SettingsWindow { selected_page_index: 0, pages: sections::all() });
+            let view = cx.new(|_| SettingsWindow {
+                selected_page_index: 0,
+                pages: sections::all(),
+                built_for: store::language::current(),
+            });
             let view_to_refresh = view.clone();
             window
                 .observe_window_appearance(move |window, cx| {

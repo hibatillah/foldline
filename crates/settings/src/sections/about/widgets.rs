@@ -1,5 +1,6 @@
 //! The About page's pieces: the pill button and the app card.
 
+use crate::i18n::tr;
 use std::rc::Rc;
 
 use gpui::{AnyElement, App, ElementId, Window, div, img, prelude::*, px};
@@ -12,7 +13,9 @@ pub type Handler = Rc<dyn Fn(&mut Window, &mut App)>;
 
 const TILE_SIZE: f32 = 48.0;
 const PILL_HEIGHT: f32 = 32.0;
-const COMING_SOON: &str = "Coming soon";
+fn coming_soon() -> &'static str {
+    tr!("about.coming_soon")
+}
 
 /// A dark rounded button with a thin border and an optional icon. Without a handler it is dimmed and "Coming soon"
 /// stands to its left.
@@ -44,8 +47,8 @@ pub fn pill(id: &str, label: &'static str, icon: Option<IconName>, handler: Opti
         None => h_flex()
             .gap_3()
             .items_center()
-            .child(div().text_sm().text_color(palette::muted(cx)).child(COMING_SOON))
-            .child(button.opacity(0.6).tooltip(|window, cx| Tooltip::new(COMING_SOON).build(window, cx)))
+            .child(div().text_sm().text_color(palette::muted(cx)).child(coming_soon()))
+            .child(button.opacity(0.6).tooltip(|window, cx| Tooltip::new(coming_soon()).build(window, cx)))
             .into_any_element(),
     }
 }
@@ -53,7 +56,7 @@ pub fn pill(id: &str, label: &'static str, icon: Option<IconName>, handler: Opti
 /// The app card: the tile, the name and version at the left, the update check at the right.
 pub fn app_card(check_now: Option<Handler>, cx: &App) -> AnyElement {
     let theme = cx.theme();
-    let check = pill("check-now", "Check now", None, check_now, cx);
+    let check = pill("check-now", tr!("about.check_now"), None, check_now, cx);
     h_flex()
         .w_full()
         .items_center()
@@ -68,7 +71,7 @@ pub fn app_card(check_now: Option<Handler>, cx: &App) -> AnyElement {
                         div()
                             .text_sm()
                             .text_color(theme.muted_foreground)
-                            .child(format!("Version {}", version::displayed_version())),
+                            .child(tr!("about.version", version = version::displayed_version())),
                     ),
             ),
         )

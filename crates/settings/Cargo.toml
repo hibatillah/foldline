@@ -10,6 +10,7 @@ name = "notch-settings"
 path = "src/main.rs"
 
 [dependencies]
+rust-i18n = "3"
 gpui = { version = "=0.2.2", default-features = false, features = ["windows-manifest"] }
 gpui-component = { version = "=0.5.1", default-features = false }
 gpui-component-assets = { version = "=0.5.1" }

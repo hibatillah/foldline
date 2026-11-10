@@ -1,6 +1,7 @@
 //! The System stats page's choices: which disks and GPUs it shows. The notch publishes what exists
 //! (`stats.known_disks`, `stats.known_gpus`) when the page is shown; this page writes `stats.disks` and `stats.gpus`.
 
+use crate::i18n::tr;
 use gpui::{AnyElement, App, ElementId, SharedString, Window, div, prelude::*};
 use gpui_component::{ActiveTheme as _, Disableable as _, checkbox::Checkbox, v_flex};
 use store::Settings;
@@ -27,11 +28,11 @@ struct Kind {
     limit: usize,
     id_prefix: &'static str,
     /// "Up to 3 disks".
-    limit_hint: &'static str,
+    limit_hint: fn() -> &'static str,
     /// Shown while the notch has not published the list.
-    unlisted: &'static str,
+    unlisted: fn() -> &'static str,
     /// Shown when the list is published and empty.
-    none_found: &'static str,
+    none_found: fn() -> &'static str,
 }
 
 const DISKS: Kind = Kind {
@@ -40,9 +41,9 @@ const DISKS: Kind = Kind {
     separator: ',',
     limit: MAX_DISKS,
     id_prefix: "stats-disk",
-    limit_hint: "Up to 3 disks",
-    unlisted: "Open the System stats page in the notch once to list your disks",
-    none_found: "No disk found",
+    limit_hint: || tr!("stats.disks_title"),
+    unlisted: || tr!("stats.disks_hint"),
+    none_found: || tr!("stats.disks_none"),
 };
 
 const GPUS: Kind = Kind {
@@ -51,9 +52,9 @@ const GPUS: Kind = Kind {
     separator: '|',
     limit: MAX_GPUS,
     id_prefix: "stats-gpu",
-    limit_hint: "Up to 2 GPUs",
-    unlisted: "Open the System stats page in the notch once to list your GPUs",
-    none_found: "No GPU found",
+    limit_hint: || tr!("stats.gpus_title"),
+    unlisted: || tr!("stats.gpus_hint"),
+    none_found: || tr!("stats.gpus_none"),
 };
 
 /// What the notch has published for one kind of device.
@@ -129,8 +130,8 @@ fn muted_message(text: &'static str, cx: &App) -> AnyElement {
 fn rows(kind: Kind, _window: &mut Window, cx: &mut App) -> AnyElement {
     let settings = Settings::load();
     let known = match availability(&settings, kind) {
-        Availability::Unlisted => return muted_message(kind.unlisted, cx),
-        Availability::NoneFound => return muted_message(kind.none_found, cx),
+        Availability::Unlisted => return muted_message((kind.unlisted)(), cx),
+        Availability::NoneFound => return muted_message((kind.none_found)(), cx),
         Availability::Devices(known) => known,
     };
     let chosen = selected(&known, settings.get_string(kind.key), kind);
@@ -157,17 +158,17 @@ fn rows(kind: Kind, _window: &mut Window, cx: &mut App) -> AnyElement {
     v_flex()
         .gap_3()
         .children(checkboxes)
-        .children(any_disabled.then(|| muted_message(kind.limit_hint, cx)))
+        .children(any_disabled.then(|| muted_message((kind.limit_hint)(), cx)))
         .into_any_element()
 }
 
 pub fn page() -> Page {
     Page::new(
-        "System stats",
-        "Choose which disks and graphics cards the System stats page shows.",
+        tr!("stats.title"),
+        tr!("stats.description"),
         vec![
-            Group::titled("Disks", vec![Item::custom(|window, cx| rows(DISKS, window, cx))]),
-            Group::titled("GPUs", vec![Item::custom(|window, cx| rows(GPUS, window, cx))]),
+            Group::titled(tr!("stats.group_disks"), vec![Item::custom(|window, cx| rows(DISKS, window, cx))]),
+            Group::titled(tr!("stats.group_gpus"), vec![Item::custom(|window, cx| rows(GPUS, window, cx))]),
         ],
     )
 }
