@@ -66,7 +66,7 @@ The layout rules (one job per file, about 400 lines, state in a small struct bes
 
 - **Performance.** No polling. A timer or animation stops as soon as its output stops changing. Draw shapes into small cached images, not Direct2D geometry. See [docs/reference/performance-baseline.md](docs/reference/performance-baseline.md) for the numbers.
 - **Design.** Order, spacing, color and font of anything visible follow [docs/reference/design-rules.md](docs/reference/design-rules.md). When you decide something it does not cover, propose a rule with its reason and add it in the same change.
-- **Style.** Names are written in full (`present_track_ids`, not `ptids`). Comments say only what the code cannot: a reason, a unit, a Windows workaround. Sizes are in device-independent units, never multiplied by a scale outside the host and `Page::draw_backdrop`.
+- **Style.** Names are written in full (`present_track_ids`, not `ptids`). Comments say only what the code cannot: a reason, a unit, a Windows workaround. Pages and activities write sizes in device-independent units and do not multiply by a scale; only the host and `Page::draw_backdrop` work in device pixels.
 - **Tests.** Logic that takes and returns plain values gets a unit test named as a sentence about behavior. Tests sit with the code they check. Drawing is checked with `cargo test snapshots -- --ignored`, then by looking at `target/snapshots`, at the display scales 1.0, 1.25 and 1.5 ([docs/how-to/test-and-snapshot.md](docs/how-to/test-and-snapshot.md)).
 - **Docs.** When behavior a user can see changes, update `README.md` and the doc that covers it in the same change.
 

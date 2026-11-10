@@ -51,8 +51,11 @@ their own, shared with other programs, as a move plus import changes.
 
 ## Device pixels and units, and where the border is
 
-A display at 125 % has 1.25 device pixels per unit. Pages, activities and widgets write every size in units
-(a 26-unit button is 26 units at any display scale) and never multiply by a scale.
+A display at 125 % has 1.25 device pixels per unit. Pages and activities write every size in units
+(a 26-unit button is 26 units at any display scale) and do not multiply by a scale themselves. The `ui` widgets draw in
+the canvas's current space and read `Canvas::scale()` (1.0 in a unit space, the display scale in device pixels). A
+hit-test helper without a canvas (`BannerButtons::rects`, `button_at`, `on_pointer`, `IconButton::is_hit`) takes the
+scale of the caller's space, which is 1.0 in units.
 
 The border is one file, `crates/notch/src/host/notch/units.rs`, the only place that converts between the two:
 
@@ -87,8 +90,8 @@ in, in the canvas's current space but snapped to the device grid. The code that 
 `Canvas::raster_scale()` to turn its unit sizes into pixels.
 
 The cache key holds the device side that `pixel_square` returns, not the unit size. The same 18-unit ring is a
-different bitmap at 1.0 and at 1.5, and a key without the device side would reuse the wrong one after the display
-scale changes.
+different bitmap at 1.0 and at 1.5 (the display scale is read once per process, and the snapshot tests set their own
+`SCALE`), so the key holds one entry per bitmap size.
 
 ## What is deliberately missing
 

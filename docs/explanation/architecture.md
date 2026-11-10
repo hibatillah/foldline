@@ -151,8 +151,8 @@ Only the rectangle around the pill is redrawn and shown, and the window shrinks 
 outside the pill is never covered and never blocks clicks.
 
 The host's own drawing (the shadow, the pill, the page dots and the clock) and `Page::draw_backdrop` are in device
-pixels. Every other page and activity draw hook runs inside a unit space that `host/notch/units.rs` opens, so pages, activities and widgets write sizes in
-device-independent units starting at zero and never multiply by a scale. The reasons, the three drawing layers (`gfx`,
+pixels. Every other page and activity draw hook runs inside a unit space that `host/notch/units.rs` opens, so pages and activities write sizes in
+device-independent units starting at zero and do not multiply by a scale; widgets read `canvas.scale()`. The reasons, the three drawing layers (`gfx`,
 `ui`, pages) and how cached images stay sharp are in [the drawing model](drawing-model.md).
 
 ### Input and timers

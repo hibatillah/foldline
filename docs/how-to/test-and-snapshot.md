@@ -43,10 +43,8 @@ every display scale. The pictures are drawn at `SCALE`, one constant in `crates/
    `cargo +stable-x86_64-pc-windows-msvc test snapshots -- --ignored`.
 2. Apply your change, render again and copy the folder again.
 3. Set `SCALE` to 1.0, then to 1.5, and repeat steps 1 and 2 for each; set it back to 1.25 when you are done.
-4. Compare each before and after folder by eye, or with the local, git-ignored helper
-   `uv run --with pillow python -I .superpowers/spikes/canvas-units/compare_snapshots.py <before-folder> <after-folder>`,
-   which prints the changed pixels per picture and writes a `-diff.png` beside each after picture. The clock and the
-   media bars differ between runs; ignore those.
+4. Compare each before and after folder by eye. The clock and the media bars differ between runs; ignore those.
+   A local helper, `.superpowers/spikes/canvas-units/compare_snapshots.py`, can print changed pixels per picture, but it is not in the repository.
 
 Two more ignored tests need a real screen and open windows for a moment:
 

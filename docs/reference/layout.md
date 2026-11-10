@@ -3,7 +3,7 @@
 > **Reference.** Read when: you change padding, the header, or the open and collapsed shapes. Skip if: you only add a page; the host sizes it for you.
 
 The host owns the shape, the padding and the header. A page draws only the content area inside them, and all sizes
-are in device-independent pixels. A page draws in these units from zero and never multiplies by the display scale;
+are in device-independent pixels. A page draws in these units from zero and does not multiply by the display scale itself;
 the host converts them (`crates/notch/src/host/notch/units.rs`, see [the drawing model](../explanation/drawing-model.md)). The numbers are constants in
 `crates/notch/src/host/chrome.rs`; the time is drawn by `crates/notch/src/host/clock.rs`.
 
