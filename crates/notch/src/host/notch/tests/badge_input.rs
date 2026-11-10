@@ -59,14 +59,18 @@ fn badge_area(notch: &Notch, index: usize) -> Rect {
     areas.into_iter().find(|&(page_index, _)| page_index == index).expect("the badge shows").1
 }
 
+/// A device point `x` and `y` units right of and below the badge's top-left; its page hears `Point::new(x, y)`.
+fn inside(area: Rect, x: f32, y: f32) -> Point {
+    Point::new(area.left + x * SCALE, area.top + y * SCALE)
+}
+
 #[test]
 fn a_press_on_a_collapsed_page_badge_reaches_its_page_and_opens_the_notch_on_it() {
     let (mut notch, index, heard) = badge_rig();
     let area = badge_area(&notch, index);
-    let press = PointerEvent::Pressed(Point::new(area.center_x(), area.center_y()));
-    notch.route_pointer(press);
+    notch.route_pointer(PointerEvent::Pressed(inside(area, 6.0, 4.0)));
     notch.flush();
-    assert_eq!(*heard.borrow(), [press]);
+    assert_eq!(*heard.borrow(), [PointerEvent::Pressed(Point::new(6.0, 4.0))]);
     assert_eq!(notch.springs.expansion.target, 1.0);
     assert_eq!(notch.selected_page, Some(index));
 }
@@ -85,8 +89,7 @@ fn a_press_on_the_collapsed_pill_beside_a_page_badge_reaches_no_page_and_keeps_i
 fn moving_off_a_collapsed_page_badge_tells_its_page_the_pointer_left() {
     let (mut notch, index, heard) = badge_rig();
     let area = badge_area(&notch, index);
-    let over = PointerEvent::Moved(Point::new(area.center_x(), area.center_y()));
-    notch.route_pointer(over);
+    notch.route_pointer(PointerEvent::Moved(inside(area, 6.0, 4.0)));
     notch.route_pointer(PointerEvent::Moved(Point::new(notch.frame().bounds.left + 2.0, area.center_y())));
-    assert_eq!(*heard.borrow(), [over, PointerEvent::Left]);
+    assert_eq!(*heard.borrow(), [PointerEvent::Moved(Point::new(6.0, 4.0)), PointerEvent::Left]);
 }
