@@ -13,7 +13,7 @@ paths:
   two when the second carries a new fact, in sentence case. A comment that needs more is a docstring.
 - Leave undocumented what the name and signature already say, and leave out step narration, history, issue numbers and
   banners. Begin a file with a one-line `//!` only when its purpose is not clear from its name.
-- Pages, activities and widgets write sizes in units and never multiply by a scale; only the host and `Page::draw_backdrop` work in device pixels.
+- Pages and activities write sizes in units and do not multiply by a scale; widgets read `canvas.scale()`; only the host and `Page::draw_backdrop` work in device pixels.
 - Wrap `unsafe` around the single Windows call that needs it, with a `// SAFETY:` line when the reason is not obvious.
 - `cargo fmt` is the formatter; `rustfmt.toml` holds its settings.
 - In the notch, log a failed cleanup or recovery with `log::debug(&format!("could not <action>: {error}"))` and keep running; reserve
