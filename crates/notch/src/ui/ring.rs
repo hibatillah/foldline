@@ -1,4 +1,3 @@
-use super::bitmap_square::bitmap_square;
 use crate::gfx::{Canvas, Color, ImageData, Mask, Path, Point};
 
 const LINE_WIDTH: f32 = 2.0;
@@ -6,7 +5,7 @@ const STEPS: u32 = 48;
 const POINTS_PER_TURN: f32 = 96.0;
 const TRACK_ALPHA: f32 = 0.22;
 
-/// Progress arcs are cached; center and diameter are device pixels.
+/// Progress arcs are cached; center and diameter are in the canvas's space (device pixels outside `in_units`).
 pub struct Ring {
     pub center: Point,
     pub diameter: f32,
@@ -14,9 +13,10 @@ pub struct Ring {
 
 impl Ring {
     pub fn draw(&self, canvas: &Canvas, fraction: f32, color: Color, opacity: f32) {
-        let (side, area) = bitmap_square(self.center, self.diameter);
-        let stroke_width = LINE_WIDTH * self.diameter / 16.0;
-        let radius = (self.diameter - stroke_width) / 2.0;
+        let (side, area) = canvas.pixel_square(self.center, self.diameter);
+        let diameter = self.diameter * canvas.raster_scale();
+        let stroke_width = LINE_WIDTH * diameter / 16.0;
+        let radius = (diameter - stroke_width) / 2.0;
         let half_width = stroke_width / 2.0;
         let step = step_for(fraction);
 

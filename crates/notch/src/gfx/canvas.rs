@@ -74,13 +74,11 @@ impl<'a> Canvas<'a> {
     }
 
     /// Device pixels per drawing unit for images and masks built at pixel size: 1 outside `in_units`.
-    #[cfg_attr(not(test), expect(dead_code, reason = "the host opens unit space in a later step"))]
     pub fn raster_scale(&self) -> f32 {
         self.raster_scale
     }
 
     /// Where unit space starts, in device pixels; zero outside `in_units`.
-    #[cfg_attr(not(test), expect(dead_code, reason = "the host opens unit space in a later step"))]
     pub fn origin(&self) -> Point {
         self.origin
     }
@@ -278,37 +276,14 @@ fn flare_image(size: u32, side: FlareSide, color: Color) -> ImageData {
 mod tests {
     use std::cell::Cell;
 
-    use windows::{
-        Win32::{
-            Foundation::{HWND, POINT, RECT},
-            UI::WindowsAndMessaging::{CreateWindowExW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP},
-        },
-        core::w,
-    };
-
     use super::*;
-    use crate::gfx::{Align, Surface, UI_FONT, Weight};
-
-    const SURFACE_WIDTH: i32 = 260;
-    const SURFACE_HEIGHT: i32 = 60;
+    use crate::gfx::{
+        Align, UI_FONT, Weight,
+        test_support::{SURFACE_WIDTH, render},
+    };
 
     /// Same face and size as the 13 px regular style the pages use; `gfx` cannot import `ui`.
     const REGULAR_13: FontStyle = FontStyle::new(UI_FONT, 13.0, Weight::Regular, Align::Leading);
-
-    fn test_window() -> HWND {
-        let style = WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
-        unsafe { CreateWindowExW(style, w!("STATIC"), w!("canvas"), WS_POPUP, 0, 0, 10, 10, None, None, None, None) }
-            .unwrap()
-    }
-
-    /// Draws on a transparent surface at `scale` and returns its premultiplied BGRA pixels.
-    fn render(scale: f32, draw: impl FnOnce(&Canvas)) -> Vec<u8> {
-        let fonts = Fonts::new(scale).unwrap();
-        let surface = Surface::new(SURFACE_WIDTH, SURFACE_HEIGHT).unwrap();
-        let region = RECT { left: 0, top: 0, right: SURFACE_WIDTH, bottom: SURFACE_HEIGHT };
-        surface.render_and_present(test_window(), POINT { x: 0, y: 0 }, region, &fonts, scale, draw).unwrap();
-        surface.read_pixels().to_vec()
-    }
 
     fn ink_columns(pixels: &[u8]) -> (usize, usize) {
         let row_pixels = SURFACE_WIDTH as usize;

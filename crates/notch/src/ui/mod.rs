@@ -1,7 +1,6 @@
 //! Reusable widgets for pages, so every page looks and behaves the same way.
 
 mod banner_buttons;
-mod bitmap_square;
 mod hud;
 mod icon_button;
 mod icons;

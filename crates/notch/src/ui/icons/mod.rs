@@ -3,7 +3,6 @@ mod paths;
 mod tests;
 
 use self::paths::Paint;
-use super::bitmap_square::bitmap_square;
 use crate::gfx::{Canvas, Color, ImageData, Mask, Point};
 
 const GRID: f32 = 24.0;
@@ -53,11 +52,12 @@ impl Icon {
         }
     }
 
-    /// Center and size are device pixels.
+    /// Center and size are in the canvas's space: device pixels outside `in_units`.
     pub fn draw(self, canvas: &Canvas, center: Point, size: f32, color: Color, opacity: f32) {
-        let (side, area) = bitmap_square(center, size);
+        let (side, area) = canvas.pixel_square(center, size);
+        let device_size = size * canvas.raster_scale();
         let key = ("icon", self as u8, side, color.rgb_bytes());
-        let Some(brush) = canvas.cached_image(key, || self.render(size, side, color)) else { return };
+        let Some(brush) = canvas.cached_image(key, || self.render(device_size, side, color)) else { return };
         canvas.image(&brush, area, 0.0, opacity * color.a);
     }
 

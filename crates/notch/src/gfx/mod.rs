@@ -8,10 +8,13 @@ mod image_brush;
 mod image_data;
 mod lines;
 mod path;
+mod pixel_square;
 mod raster;
 mod spring;
 mod surface;
 mod svg_path;
+#[cfg(test)]
+pub(crate) mod test_support;
 mod text_cache;
 
 pub use canvas::Canvas;
