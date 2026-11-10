@@ -1,6 +1,7 @@
 //! What the microphone and camera activities share: a message when the device turns on or off, then a coloured dot
 //! for as long as it is in use.
 
+use crate::i18n::tr;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::{
@@ -43,7 +44,7 @@ impl DotRow {
 }
 
 pub struct Device {
-    pub name: &'static str,
+    pub name: fn() -> std::borrow::Cow<'static, str>,
     pub icon: Icon,
     pub color: Color,
     pub row: DotRow,
@@ -74,7 +75,7 @@ impl Privacy {
         }
         self.is_active = is_active;
         self.publish();
-        self.message = message_for(self.device.name, is_active);
+        self.message = message_for(&(self.device.name)(), is_active);
         self.message_width = ui::message_width(context.fonts(), &self.message, None);
         self.flash.show(context, SHOW_MILLISECONDS);
     }
@@ -113,7 +114,7 @@ impl Privacy {
 }
 
 fn message_for(name: &str, is_active: bool) -> String {
-    format!("{name} {}", if is_active { "on" } else { "off" })
+    if is_active { tr!("privacy.on", name = name) } else { tr!("privacy.off", name = name) }.into_owned()
 }
 
 #[cfg(test)]
@@ -122,7 +123,7 @@ mod tests {
 
     fn microphone() -> Privacy {
         Privacy::new(Device {
-            name: "Microphone",
+            name: || tr!("privacy.microphone"),
             icon: Icon::Microphone,
             color: Color::rgb(1.0, 0.62, 0.04),
             row: DotRow::Bottom,
@@ -169,5 +170,27 @@ mod tests {
     #[test]
     fn a_device_not_in_use_shows_nothing() {
         assert_eq!(microphone().presence(), None);
+    }
+
+    #[test]
+    fn the_device_state_reads_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!(message_for("Microphone", true), "Microphone aktif");
+            assert_eq!(message_for("Camera", false), "Camera mati");
+        });
+    }
+
+    #[test]
+    fn the_device_names_read_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!((microphone().device.name)(), "Mikrofon");
+            let camera = Privacy::new(Device {
+                name: || tr!("privacy.camera"),
+                icon: Icon::Camera,
+                color: Color::rgb(0.2, 0.8, 0.4),
+                row: DotRow::Top,
+            });
+            assert_eq!((camera.device.name)(), "Kamera");
+        });
     }
 }

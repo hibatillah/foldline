@@ -1,5 +1,6 @@
 //! Core Audio session callbacks report recording on the default input device without polling.
 
+use crate::i18n::tr;
 use windows::{
     Win32::{
         Media::Audio::{
@@ -149,7 +150,7 @@ impl MicrophoneActivity {
     pub fn new() -> Self {
         Self {
             privacy: Privacy::new(Device {
-                name: "Microphone",
+                name: || tr!("privacy.microphone"),
                 icon: Icon::Microphone,
                 color: ORANGE,
                 row: DotRow::Bottom,

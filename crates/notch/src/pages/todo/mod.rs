@@ -13,6 +13,7 @@ use self::{
     },
     list::TodoList,
 };
+use crate::i18n::tr;
 use crate::{
     gfx::{Canvas, Point, Rect, Size},
     page::{Context, Frame, KeyInput, Mode, Page, PageSizes, PointerEvent, Priority},
@@ -59,8 +60,8 @@ impl TodoPage {
 
     fn refresh_texts(&mut self) {
         self.count_text = match (self.list.open_count(), self.list.done_count()) {
-            (open, 0) => format!("{open} left"),
-            (open, done) => format!("{open} left \u{b7} {done} done"),
+            (open, 0) => tr!("todo.left", count = open).into_owned(),
+            (open, done) => tr!("todo.left_done", open = open, done = done).into_owned(),
         };
         self.scroll = self.scroll.clamp(0.0, max_scroll(self.rows().len()));
     }
@@ -158,8 +159,8 @@ impl Page for TodoPage {
         "todo"
     }
 
-    fn name(&self) -> &'static str {
-        "Todo"
+    fn name(&self) -> String {
+        crate::i18n::tr!("page.todo").into_owned()
     }
 
     fn priority(&self, mode: Mode) -> Option<Priority> {
@@ -187,6 +188,11 @@ impl Page for TodoPage {
                 self.draw_row(canvas, row, row_rect(bounds, scale, position, self.scroll), position, opacity);
             }
         });
+    }
+
+    fn on_language_changed(&mut self, context: &mut Context) {
+        self.refresh_texts();
+        context.request_repaint();
     }
 
     fn on_pointer(&mut self, event: PointerEvent, frame: &Frame, context: &mut Context) {
@@ -366,5 +372,17 @@ mod tests {
         assert_eq!(page.count_text, "0 left");
         assert!(page.is_empty_view());
         assert_eq!(page.sizes().expanded.width, CONTENT_WIDTH);
+    }
+
+    #[test]
+    fn the_todo_count_reads_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            let mut page = page_with(2, 1);
+            page.refresh_texts();
+            assert_eq!(page.count_text, "2 tersisa \u{b7} 1 selesai");
+            let mut open_only = page_with(3, 0);
+            open_only.refresh_texts();
+            assert_eq!(open_only.count_text, "3 tersisa");
+        });
     }
 }

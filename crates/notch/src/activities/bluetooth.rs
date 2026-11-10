@@ -1,6 +1,7 @@
 //! Keep device subscriptions on a worker thread; initial reports are not connection changes.
 //! Battery reports are optional and may arrive seconds after connection.
 
+use crate::i18n::tr;
 use std::{
     collections::VecDeque,
     sync::{
@@ -51,7 +52,13 @@ fn short_name(name: &str) -> String {
 }
 
 fn message(change: &Change) -> String {
-    format!("{} {}", short_name(&change.name), if change.is_connected { "connected" } else { "disconnected" })
+    let name = short_name(&change.name);
+    if change.is_connected {
+        tr!("bluetooth.connected", name = name)
+    } else {
+        tr!("bluetooth.disconnected", name = name)
+    }
+    .into_owned()
 }
 
 fn battery_text(change: &Change) -> Option<String> {
@@ -235,5 +242,13 @@ mod tests {
     #[test]
     fn nothing_shows_before_anything_happens() {
         assert_eq!(BluetoothActivity::new().presence(), None);
+    }
+
+    #[test]
+    fn the_connection_message_reads_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!(message(&change("DAXA SL1", true, None)), "DAXA SL1 tersambung");
+            assert_eq!(message(&change("DAXA SL1", false, None)), "DAXA SL1 terputus");
+        });
     }
 }

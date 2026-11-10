@@ -8,6 +8,7 @@ use super::{
     text, value_area,
 };
 use crate::gfx::{Canvas, Color, Rect};
+use crate::i18n::tr;
 use crate::ui::palette::TEXT_MUTED;
 use crate::ui::type_styles::REGULAR_11;
 
@@ -62,7 +63,7 @@ pub(super) fn draw_gpus(canvas: &Canvas, card: Rect, scale: f32, gpus: &[Row], o
 
 /// Each disk is one line: its name, a 56 x 4 bar and a percentage at the right.
 pub(super) fn draw_disks(canvas: &Canvas, card: Rect, scale: f32, disks: &[Row], opacity: f32) {
-    text(canvas, &REGULAR_11, "Disks", label_area(card, scale), TEXT_MUTED, opacity);
+    text(canvas, &REGULAR_11, &tr!("stats.disks"), label_area(card, scale), TEXT_MUTED, opacity);
     for (disk, &top) in disks.iter().zip(disk_row_tops(disks.len())) {
         name_and_percent(canvas, card, scale, top, disk, DISK_NAME_WIDTH, opacity);
         draw_disk_bar(canvas, disk_bar_track(card, scale, top), disk.meter.percent.unwrap_or(0.0), opacity);

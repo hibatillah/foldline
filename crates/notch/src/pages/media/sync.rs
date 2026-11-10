@@ -51,7 +51,7 @@ impl MediaPage {
 
     pub(super) fn refresh_title_lines(&mut self, fonts: &Fonts) {
         let source =
-            (self.displayed_title().to_owned(), self.displayed_detail().to_owned(), self.is_lyric_panel_visible());
+            (self.displayed_title().into_owned(), self.displayed_detail().into_owned(), self.is_lyric_panel_visible());
         if source == self.title_lines_source && !self.title_lines.is_empty() {
             return;
         }

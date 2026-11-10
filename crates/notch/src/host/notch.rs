@@ -1,5 +1,7 @@
 use std::cell::Cell;
 
+use store::language::{Language, resolve_setting};
+
 use windows::Win32::Foundation::{HWND, POINT};
 
 use super::{
@@ -38,6 +40,7 @@ mod hover;
 mod input;
 mod keyboard;
 mod layout;
+mod location;
 mod page_hotkeys;
 mod pages;
 mod paint;
@@ -76,6 +79,8 @@ const CLOSE_TIMER_ID: usize = 8;
 const RAISE_TIMER_ID: usize = 9;
 /// One-shot: a window that stopped covering the screen must stay so for a moment before the notch comes back.
 const WINDOW_REVEAL_TIMER_ID: usize = 10;
+/// One-shot: network changes come in bursts, so the position is read once they have been quiet for a while.
+const LOCATION_SETTLE_TIMER_ID: usize = 11;
 const LAST_PAGE_SETTING: &str = "navigation.page";
 const PAGE_ORDER_SETTING: &str = "navigation.order";
 const PAGES_OFF_SETTING: &str = "navigation.disabled";
@@ -99,6 +104,9 @@ pub(super) struct Notch {
     surface: Surface,
     fonts: Fonts,
     settings: Settings,
+    /// The Windows display language, read once at start; `auto` resolves to it.
+    system_language: Language,
+    language: Language,
     pages: Vec<Box<dyn Page>>,
     activities: Vec<ActivitySlot>,
     presences: ShownPresences,
@@ -117,6 +125,8 @@ pub(super) struct Notch {
     springs: Springs,
     row_motion: RowMotion,
     hiding: HidingState,
+    /// Whether the saved city follows the device; see `location_tracker`.
+    is_tracking_location: bool,
     has_resting_content: bool,
     hover: HoverState,
     badge_pointer: BadgePointer,
@@ -136,6 +146,7 @@ pub(super) struct NotchParts {
     pub pages: Vec<Box<dyn Page>>,
     pub activities: Vec<Box<dyn Activity>>,
     pub ticks_per_second: i64,
+    pub system_language: Language,
 }
 
 impl Notch {
@@ -150,6 +161,7 @@ impl Notch {
             pages,
             activities,
             ticks_per_second,
+            system_language,
         } = parts;
         visibility::migrate(&mut settings);
         let activities = activities
@@ -161,6 +173,7 @@ impl Notch {
             })
             .collect();
         let hiding = HidingState::read(&settings);
+        let language = resolve_setting(&settings, system_language);
         Self {
             window,
             scale,
@@ -168,6 +181,8 @@ impl Notch {
             surface,
             fonts,
             settings,
+            system_language,
+            language,
             pages,
             activities,
             presences: ShownPresences::default(),
@@ -186,6 +201,7 @@ impl Notch {
             springs: Springs::new(),
             row_motion: RowMotion::new(),
             hiding,
+            is_tracking_location: false,
             has_resting_content: false,
             hover: HoverState::default(),
             badge_pointer: BadgePointer::default(),
@@ -199,6 +215,10 @@ impl Notch {
     pub fn start(&mut self) {
         for (index, page) in self.pages.iter().enumerate() {
             log::debug(&format!("page {index}: {}", page.id()));
+        }
+        // Pages are built before the window sets the language, so text they cached then is made again now.
+        for index in 0..self.pages.len() {
+            self.with_page(index, |page, context| page.on_language_changed(context));
         }
         self.selected_page = self
             .settings
@@ -225,6 +245,7 @@ impl Notch {
         }
         volume_flyout::set_hidden(volume_flyout::wants_hidden(&self.settings));
         notification_banners::set_hidden(notification_banners::wants_hidden(&self.settings));
+        self.sync_location_tracking();
         self.arm_clock_timer();
         self.refresh_layout();
         for spring in self.layout_springs() {

@@ -1,0 +1,571 @@
+_version: 2
+tray.start_with_windows:
+  en: Start with Windows
+  id: Mulai bersama Windows
+tray.settings:
+  en: Settings
+  id: Pengaturan
+tray.quit:
+  en: Quit Notch
+  id: Keluar dari Notch
+page.calendar:
+  en: Calendar
+  id: Kalender
+page.clipboard:
+  en: Clipboard
+  id: Clipboard
+page.devices:
+  en: Connected devices
+  id: Perangkat terhubung
+page.media:
+  en: Media
+  id: Media
+page.shalat:
+  en: Shalat
+  id: Shalat
+page.shelf:
+  en: File shelf
+  id: File shelf
+page.stats:
+  en: System stats
+  id: Statistik sistem
+page.timer:
+  en: Focus timer
+  id: Timer fokus
+page.todo:
+  en: Todo
+  id: Todo
+page.weather:
+  en: Weather
+  id: Cuaca
+banner.dismiss:
+  en: "Dismiss"
+  id: "Tutup"
+banner.reply:
+  en: "Reply"
+  id: "Balas"
+banner.open:
+  en: "Open"
+  id: "Buka"
+caps.on:
+  en: "Caps Lock on"
+  id: "Caps Lock aktif"
+caps.off:
+  en: "Caps Lock off"
+  id: "Caps Lock mati"
+battery.charging:
+  en: "Charging"
+  id: "Mengisi daya"
+battery.on_battery:
+  en: "On battery"
+  id: "Pakai baterai"
+battery.low:
+  en: "Low battery"
+  id: "Baterai lemah"
+clipboard.copied:
+  en: "Copied"
+  id: "Tersalin"
+volume.muted:
+  en: "Muted"
+  id: "Senyap"
+bluetooth.connected:
+  en: "%{name} connected"
+  id: "%{name} tersambung"
+bluetooth.disconnected:
+  en: "%{name} disconnected"
+  id: "%{name} terputus"
+device_battery.low:
+  en: "%{name} · Low battery"
+  id: "%{name} · Baterai lemah"
+privacy.on:
+  en: "%{name} on"
+  id: "%{name} aktif"
+privacy.off:
+  en: "%{name} off"
+  id: "%{name} mati"
+notification.private:
+  en: "New message"
+  id: "Pesan baru"
+notification.open_app:
+  en: "Open %{app}"
+  id: "Buka %{app}"
+notification.reply_hint:
+  en: "Type a reply"
+  id: "Ketik balasan"
+calendar.all_day:
+  en: "All day"
+  id: "Seharian"
+calendar.reminder_now:
+  en: "now"
+  id: "sekarang"
+calendar.reminder_in:
+  en: "in %{minutes}m"
+  id: "%{minutes}m lagi"
+calendar.reminder_short:
+  en: "%{minutes}m"
+  id: "%{minutes}m"
+calendar.no_link_title:
+  en: "No calendar linked"
+  id: "Kalender belum terhubung"
+calendar.no_link_hint:
+  en: "Paste your calendar's iCal address in Settings, under Calendar."
+  id: "Tempel alamat iCal kalender di Pengaturan, bagian Kalender."
+calendar.done_title:
+  en: "Done for today"
+  id: "Selesai untuk hari ini"
+calendar.done_detail:
+  en: "No more events"
+  id: "Tidak ada acara lagi"
+calendar.empty_detail:
+  en: "Events from your calendar show here."
+  id: "Acara dari kalender muncul di sini."
+calendar.empty_title:
+  en: "No events on %{weekday} %{date}"
+  id: "Tidak ada acara hari %{weekday} %{date}"
+calendar.month.1:
+  en: "January"
+  id: "Januari"
+calendar.month.2:
+  en: "February"
+  id: "Februari"
+calendar.month.3:
+  en: "March"
+  id: "Maret"
+calendar.month.4:
+  en: "April"
+  id: "April"
+calendar.month.5:
+  en: "May"
+  id: "Mei"
+calendar.month.6:
+  en: "June"
+  id: "Juni"
+calendar.month.7:
+  en: "July"
+  id: "Juli"
+calendar.month.8:
+  en: "August"
+  id: "Agustus"
+calendar.month.9:
+  en: "September"
+  id: "September"
+calendar.month.10:
+  en: "October"
+  id: "Oktober"
+calendar.month.11:
+  en: "November"
+  id: "November"
+calendar.month.12:
+  en: "December"
+  id: "Desember"
+calendar.weekday.1:
+  en: "Monday"
+  id: "Senin"
+calendar.weekday_letter.1:
+  en: "M"
+  id: "S"
+calendar.weekday.2:
+  en: "Tuesday"
+  id: "Selasa"
+calendar.weekday_letter.2:
+  en: "T"
+  id: "S"
+calendar.weekday.3:
+  en: "Wednesday"
+  id: "Rabu"
+calendar.weekday_letter.3:
+  en: "W"
+  id: "R"
+calendar.weekday.4:
+  en: "Thursday"
+  id: "Kamis"
+calendar.weekday_letter.4:
+  en: "T"
+  id: "K"
+calendar.weekday.5:
+  en: "Friday"
+  id: "Jumat"
+calendar.weekday_letter.5:
+  en: "F"
+  id: "J"
+calendar.weekday.6:
+  en: "Saturday"
+  id: "Sabtu"
+calendar.weekday_letter.6:
+  en: "S"
+  id: "S"
+calendar.weekday.7:
+  en: "Sunday"
+  id: "Minggu"
+calendar.weekday_letter.7:
+  en: "S"
+  id: "M"
+todo.left:
+  en: "%{count} left"
+  id: "%{count} tersisa"
+todo.left_done:
+  en: "%{open} left · %{done} done"
+  id: "%{open} tersisa · %{done} selesai"
+todo.clear_all:
+  en: "Clear all"
+  id: "Bersihkan"
+todo.add:
+  en: "Add"
+  id: "Tambah"
+todo.all_clear:
+  en: "All clear"
+  id: "Semua beres"
+todo.field_hint:
+  en: "What needs doing?"
+  id: "Apa yang perlu dikerjakan?"
+todo.enter_hint:
+  en: "Enter to add"
+  id: "Enter untuk menambah"
+shelf.files_added_one:
+  en: "%{count} file added"
+  id: "%{count} file ditambahkan"
+shelf.files_added_other:
+  en: "%{count} files added"
+  id: "%{count} file ditambahkan"
+shelf.removed:
+  en: "%{name} removed"
+  id: "%{name} dihapus"
+shelf.full:
+  en: "The shelf is full. Remove a file to add more."
+  id: "Shelf penuh. Hapus file untuk menambah lagi."
+shelf.release:
+  en: "Release to hold them"
+  id: "Lepas untuk menyimpan"
+shelf.drop_title:
+  en: "Drop files here"
+  id: "Letakkan file di sini"
+shelf.drop_detail:
+  en: "They are held for a moment, then you drag them out"
+  id: "Disimpan sementara, lalu seret keluar"
+stats.network:
+  en: "Network"
+  id: "Jaringan"
+stats.disks:
+  en: "Disks"
+  id: "Disk"
+stats.threads:
+  en: "%{count} threads"
+  id: "%{count} thread"
+stats.memory_pair:
+  en: "%{used} of %{total} GB"
+  id: "%{used} dari %{total} GB"
+devices.off:
+  en: "Off"
+  id: "Mati"
+devices.on:
+  en: "On"
+  id: "Aktif"
+clipboard.pasted:
+  en: "Pasted"
+  id: "Ditempel"
+clipboard.paste:
+  en: "Paste"
+  id: "Tempel"
+clipboard.undo:
+  en: "Undo"
+  id: "Urungkan"
+clipboard.empty_title:
+  en: "Nothing copied yet"
+  id: "Belum ada yang disalin"
+clipboard.empty_hint:
+  en: "Copy text, a link or an image and it appears here"
+  id: "Salin teks, tautan, atau gambar, lalu muncul di sini"
+clipboard.copied_front:
+  en: "Copied, moved to front"
+  id: "Disalin, dipindah ke depan"
+clipboard.removed:
+  en: "Removed"
+  id: "Dihapus"
+clipboard.skipped_password:
+  en: "Skipped: password manager"
+  id: "Dilewati: pengelola sandi"
+clipboard.skipped_large:
+  en: "Skipped: too large"
+  id: "Dilewati: terlalu besar"
+clipboard.image_size:
+  en: "Image (%{width}×%{height})"
+  id: "Gambar (%{width}×%{height})"
+clipboard.image_details:
+  en: "Image · %{width}×%{height} · %{format}"
+  id: "Gambar · %{width}×%{height} · %{format}"
+clipboard.color_details:
+  en: "Color · %{value}"
+  id: "Warna · %{value}"
+clipboard.kind_link:
+  en: "Link"
+  id: "Tautan"
+clipboard.kind_code:
+  en: "Code"
+  id: "Kode"
+clipboard.kind_text:
+  en: "Text"
+  id: "Teks"
+clipboard.character:
+  en: "character"
+  id: "karakter"
+clipboard.characters:
+  en: "characters"
+  id: "karakter"
+clipboard.age_now:
+  en: "just now"
+  id: "baru saja"
+clipboard.age_seconds:
+  en: "%{count} sec ago"
+  id: "%{count} dtk lalu"
+clipboard.age_minutes:
+  en: "%{count} min ago"
+  id: "%{count} mnt lalu"
+clipboard.age_hours:
+  en: "%{count} h ago"
+  id: "%{count} j lalu"
+clipboard.age_days:
+  en: "%{count} d ago"
+  id: "%{count} hr lalu"
+timer.focus:
+  en: "Focus"
+  id: "Fokus"
+timer.short_break:
+  en: "Short break"
+  id: "Istirahat singkat"
+timer.long_break:
+  en: "Long break"
+  id: "Istirahat panjang"
+timer.start_short_break:
+  en: "Start short break"
+  id: "Istirahat singkat"
+timer.start_long_break:
+  en: "Start long break"
+  id: "Istirahat panjang"
+timer.start_focus:
+  en: "Start focus"
+  id: "Mulai fokus"
+timer.title:
+  en: "Focus timer"
+  id: "Timer fokus"
+timer.session:
+  en: "Session %{n} of %{total}"
+  id: "Sesi %{n} dari %{total}"
+timer.start:
+  en: "Start"
+  id: "Mulai"
+timer.pause:
+  en: "Pause"
+  id: "Jeda"
+timer.extend:
+  en: "+5 min"
+  id: "+5 mnt"
+timer.stop:
+  en: "Stop"
+  id: "Berhenti"
+timer.resume:
+  en: "Resume"
+  id: "Lanjut"
+timer.skip:
+  en: "Skip"
+  id: "Lewati"
+timer.paused:
+  en: "%{title} · paused"
+  id: "%{title} · dijeda"
+timer.next_up:
+  en: "%{focus} min · %{length} min %{next} next"
+  id: "%{focus} mnt · %{length} mnt %{next} berikutnya"
+timer.ready:
+  en: "Ready for focus %{n} of %{total}"
+  id: "Siap fokus %{n} dari %{total}"
+timer.session_done:
+  en: "Focus session done"
+  id: "Sesi fokus selesai"
+timer.break_over:
+  en: "%{phase} over"
+  id: "%{phase} selesai"
+timer.done:
+  en: "Done"
+  id: "Selesai"
+timer.minutes:
+  en: "%{count} min"
+  id: "%{count} mnt"
+timer.back_to_focus:
+  en: "back to focus"
+  id: "kembali fokus"
+timer.focus_session:
+  en: "Focus · %{n} of %{total}"
+  id: "Fokus · %{n} dari %{total}"
+weather.sky_clear:
+  en: "Clear"
+  id: "Cerah"
+weather.sky_clear_night:
+  en: "Clear night"
+  id: "Malam cerah"
+weather.sky_partly_cloudy:
+  en: "Partly cloudy"
+  id: "Berawan sebagian"
+weather.sky_cloudy:
+  en: "Cloudy"
+  id: "Berawan"
+weather.sky_fog:
+  en: "Fog"
+  id: "Berkabut"
+weather.sky_light_rain:
+  en: "Light rain"
+  id: "Hujan ringan"
+weather.sky_rain:
+  en: "Rain"
+  id: "Hujan"
+weather.sky_thunderstorms:
+  en: "Thunderstorms"
+  id: "Badai petir"
+weather.sky_snow:
+  en: "Snow"
+  id: "Salju"
+weather.alert_body:
+  en: "%{sky} around %{time} in %{place}. Bring an umbrella."
+  id: "%{sky} sekitar pukul %{time} di %{place}. Bawa payung."
+weather.week:
+  en: "Week"
+  id: "Pekan"
+weather.today:
+  en: "Today"
+  id: "Hari ini"
+weather.now:
+  en: "Now"
+  id: "Sekarang"
+weather.no_rain:
+  en: "No rain expected"
+  id: "Tidak ada hujan"
+weather.rain_mm:
+  en: "%{amount} mm of rain"
+  id: "%{amount} mm hujan"
+weather.feels:
+  en: "%{condition} · feels %{temperature}°"
+  id: "%{condition} · terasa %{temperature}°"
+weather.weekday.1:
+  en: "Mon"
+  id: "Sen"
+weather.weekday.2:
+  en: "Tue"
+  id: "Sel"
+weather.weekday.3:
+  en: "Wed"
+  id: "Rab"
+weather.weekday.4:
+  en: "Thu"
+  id: "Kam"
+weather.weekday.5:
+  en: "Fri"
+  id: "Jum"
+weather.weekday.6:
+  en: "Sat"
+  id: "Sab"
+weather.weekday.7:
+  en: "Sun"
+  id: "Min"
+weather.rain_now:
+  en: "Rain now"
+  id: "Hujan sekarang"
+weather.rain_from:
+  en: "Rain from %{time}"
+  id: "Hujan mulai %{time}"
+weather.choose_city:
+  en: "Choose a city"
+  id: "Pilih kota"
+weather.pick_location:
+  en: "Pick a location in Settings to see the weather"
+  id: "Pilih lokasi di Pengaturan untuk melihat cuaca"
+weather.service_error:
+  en: "Weather service did not answer"
+  id: "Layanan cuaca tidak menjawab"
+weather.offline:
+  en: "Weather is offline"
+  id: "Cuaca tidak tersambung"
+weather.last_updated:
+  en: "Last updated %{time} · retrying on its own"
+  id: "Diperbarui %{time} · mencoba lagi otomatis"
+weather.retrying:
+  en: "Retrying on its own"
+  id: "Mencoba lagi otomatis"
+weather.badge_long:
+  en: "Rain in %{minutes} min"
+  id: "Hujan %{minutes} mnt lagi"
+weather.badge_short:
+  en: "%{minutes}m"
+  id: "%{minutes}m"
+shalat.fajr:
+  en: "Fajr"
+  id: "Subuh"
+shalat.sunrise:
+  en: "Sunrise"
+  id: "Terbit"
+shalat.dhuhr:
+  en: "Dhuhr"
+  id: "Dzuhur"
+shalat.asr:
+  en: "Asr"
+  id: "Ashar"
+shalat.maghrib:
+  en: "Maghrib"
+  id: "Maghrib"
+shalat.isha:
+  en: "Isha"
+  id: "Isya"
+shalat.tomorrow:
+  en: "Tomorrow"
+  id: "Besok"
+shalat.soon:
+  en: "Starts soon"
+  id: "Segera masuk"
+shalat.next:
+  en: "Next"
+  id: "Berikutnya"
+shalat.alert_title:
+  en: "Time for %{prayer}"
+  id: "Waktunya %{prayer}"
+shalat.in_minutes:
+  en: "in %{minutes} min"
+  id: "%{minutes} menit lagi"
+shalat.in_hours:
+  en: "in %{hours} h"
+  id: "%{hours} jam lagi"
+shalat.in_hours_minutes:
+  en: "in %{hours} h %{minutes} min"
+  id: "%{hours} jam %{minutes} mnt lagi"
+shalat.badge_text:
+  en: "%{prayer} in %{minutes}m"
+  id: "%{prayer} %{minutes}m lagi"
+shalat.badge_short:
+  en: "%{prayer} %{minutes}m"
+  id: "%{prayer} %{minutes}m"
+privacy.microphone:
+  en: "Microphone"
+  id: "Mikrofon"
+privacy.camera:
+  en: "Camera"
+  id: "Kamera"
+media.nothing_title:
+  en: "Play a song"
+  id: "Putar sebuah lagu"
+media.nothing_detail:
+  en: "Nothing is playing"
+  id: "Tidak ada yang diputar"
+media.unknown_title:
+  en: "Unknown title"
+  id: "Judul tidak diketahui"
+devices.none_title:
+  en: "No wireless devices"
+  id: "Tidak ada perangkat nirkabel"
+devices.none_detail:
+  en: "Connect any device to see its battery"
+  id: "Sambungkan perangkat untuk melihat baterainya"
+devices.bluetooth_off_title:
+  en: "Bluetooth is off"
+  id: "Bluetooth mati"
+devices.bluetooth_off_detail:
+  en: "Turn it on in Windows to see battery levels"
+  id: "Nyalakan di Windows untuk melihat level baterai"
+stats.memory:
+  en: "Memory"
+  id: "Memori"

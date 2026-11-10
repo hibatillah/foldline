@@ -1,5 +1,5 @@
 use super::{
-    dates::{MONTH_NAMES, WEEKDAY_NAMES, civil_from_days, weekday},
+    dates::{civil_from_days, month_name, weekday, weekday_name},
     *,
 };
 
@@ -12,8 +12,8 @@ fn a_new_page_has_a_label_for_every_date_of_its_month_before_any_refresh() {
 
 #[test]
 fn the_month_is_written_in_full() {
-    assert_eq!(MONTH_NAMES[9], "October");
-    assert_eq!(MONTH_NAMES[11], "December");
+    assert_eq!(month_name(10), "October");
+    assert_eq!(month_name(12), "December");
 }
 
 fn another_day_of_the_month(page: &CalendarPage) -> i64 {
@@ -66,7 +66,7 @@ fn the_empty_day_message_names_the_selected_weekday_and_date_and_follows_the_pic
     let mut page = CalendarPage::sample(&fonts);
     let expected = |day: i64| {
         let (_, _, date) = civil_from_days(day);
-        format!("No events on {} {date}", WEEKDAY_NAMES[weekday(day) as usize])
+        format!("No events on {} {date}", weekday_name(weekday(day)))
     };
     assert_eq!(page.labels.empty_title, expected(page.today));
     let other_day = another_day_of_the_month(&page);
@@ -193,4 +193,26 @@ fn a_week_list_of_more_than_three_cards_claims_the_wheel() {
         .map(|index| agenda::Row { occurrence: page.agenda.rows[0].occurrence.clone(), time: format!("{index}") })
         .collect();
     assert!(page.claims_scroll(inside, &frame));
+}
+
+#[test]
+fn a_refresh_in_indonesian_rebuilds_the_labels_the_page_caches() {
+    let fonts = Fonts::new(1.0).unwrap();
+    let mut page = CalendarPage::sample(&fonts);
+    assert!(page.labels.empty_title.starts_with("No events on"));
+    store::language::with_override(store::language::Language::Indonesian, || {
+        page.refresh(&fonts);
+        assert!(page.labels.empty_title.starts_with("Tidak ada acara hari"), "{}", page.labels.empty_title);
+    });
+}
+
+#[test]
+fn the_all_day_text_fits_the_time_column_in_both_languages() {
+    let fonts = Fonts::new(1.0).unwrap();
+    for language in [store::language::Language::English, store::language::Language::Indonesian] {
+        store::language::with_override(language, || {
+            let width = fonts.measure(&EVENT_TIME, &crate::i18n::tr!("calendar.all_day"));
+            assert!(width <= draw::TIME_WIDTH, "{language:?}: All day is {width} px in {}", draw::TIME_WIDTH);
+        });
+    }
 }

@@ -31,11 +31,6 @@ const REFRESH_INTERVAL_MILLISECONDS: u32 = 60_000;
 /// Each read runs three WinRT enumerations, so opening the page again soon after a read reuses its answer.
 const FRESH_FOR: Duration = Duration::from_secs(60);
 
-const NO_DEVICES_TITLE: &str = "No wireless devices";
-const NO_DEVICES_DETAIL: &str = "Connect any device to see its battery";
-const BLUETOOTH_OFF_TITLE: &str = "Bluetooth is off";
-const BLUETOOTH_OFF_DETAIL: &str = "Turn it on in Windows to see battery levels";
-
 pub struct DevicesPage {
     /// `None` until the first read finishes; the page draws nothing meanwhile.
     listing: Option<Listing>,
@@ -72,8 +67,8 @@ impl Page for DevicesPage {
         "devices"
     }
 
-    fn name(&self) -> &'static str {
-        "Connected devices"
+    fn name(&self) -> String {
+        crate::i18n::tr!("page.devices").into_owned()
     }
 
     fn is_opt_in(&self) -> bool {
@@ -97,12 +92,22 @@ impl Page for DevicesPage {
     fn draw_expanded(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
         match &self.listing {
             None => {}
-            Some(Listing::BluetoothOff) => {
-                draw_message(canvas, frame.bounds, true, BLUETOOTH_OFF_TITLE, BLUETOOTH_OFF_DETAIL, opacity)
-            }
-            Some(Listing::Devices(devices)) if devices.is_empty() => {
-                draw_message(canvas, frame.bounds, false, NO_DEVICES_TITLE, NO_DEVICES_DETAIL, opacity)
-            }
+            Some(Listing::BluetoothOff) => draw_message(
+                canvas,
+                frame.bounds,
+                true,
+                &crate::i18n::tr!("devices.bluetooth_off_title"),
+                &crate::i18n::tr!("devices.bluetooth_off_detail"),
+                opacity,
+            ),
+            Some(Listing::Devices(devices)) if devices.is_empty() => draw_message(
+                canvas,
+                frame.bounds,
+                false,
+                &crate::i18n::tr!("devices.none_title"),
+                &crate::i18n::tr!("devices.none_detail"),
+                opacity,
+            ),
             Some(Listing::Devices(_)) => {
                 if let Some(prepared) = &self.prepared {
                     draw_tiles(canvas, prepared, frame.bounds, opacity);

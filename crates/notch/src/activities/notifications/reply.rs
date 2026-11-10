@@ -1,5 +1,6 @@
 //! Answering a notification from the banner: whether its toast offers a reply, and the text being typed.
 
+use crate::i18n::tr;
 use crate::{
     gfx::{Canvas, Color, Rect},
     page::KeyInput,
@@ -76,8 +77,12 @@ impl ReplyState {
         canvas.fill_rounded_rect(row, row.height() / 2.0, FIELD_FILL.faded(opacity));
         let text_area =
             Rect::new(row.left + FIELD_PADDING * scale, row.top, row.right - FIELD_PADDING * scale, row.bottom);
-        let placeholder = if offer.placeholder.is_empty() { "Type a reply" } else { offer.placeholder.as_str() };
-        let look = FieldLook { style: &REGULAR_13, color: Color::WHITE, placeholder };
+        let hint = if offer.placeholder.is_empty() {
+            tr!("notification.reply_hint").into_owned()
+        } else {
+            offer.placeholder.clone()
+        };
+        let look = FieldLook { style: &REGULAR_13, color: Color::WHITE, placeholder: &hint };
         field.draw(canvas, text_area, &look, true, opacity);
     }
 }

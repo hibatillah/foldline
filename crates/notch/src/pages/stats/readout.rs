@@ -6,6 +6,7 @@ use super::{
     sampler::{Meter, Sample, chosen},
     tiles_for,
 };
+use crate::i18n::tr;
 
 const MISSING: &str = "\u{2013}";
 
@@ -50,7 +51,7 @@ impl Readout {
         let tiles = tiles_for(!gpus.is_empty());
         Self {
             cpu_text: sample.cpu_percent.map_or_else(|| MISSING.to_owned(), percent_text),
-            threads_text: format!("{} threads", sample.logical_processors),
+            threads_text: tr!("stats.threads", count = sample.logical_processors).into_owned(),
             memory_pair_text: memory_pair_text(sample.memory_used_bytes, sample.memory_total_bytes),
             memory_percent_text: percent_text(sample.memory_percent),
             download_text: format!("\u{2193} {}", rate(sample.download_bytes_per_second)),

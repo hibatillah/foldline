@@ -1,10 +1,9 @@
 //! Notification text and privacy-mode presentation.
 
+use crate::i18n::tr;
 use std::{sync::Arc, time::Instant};
 
 use crate::gfx::{Color, ImageData};
-
-pub const PRIVATE_TEXT: &str = "New message";
 
 #[derive(Clone)]
 pub struct Item {
@@ -59,12 +58,16 @@ pub fn heading(item: &Item) -> Heading {
 }
 
 pub fn body_text(item: &Item, shows_text: bool) -> String {
-    if !shows_text { PRIVATE_TEXT.to_owned() } else { item.body.split_whitespace().collect::<Vec<_>>().join(" ") }
+    if !shows_text {
+        tr!("notification.private").into_owned()
+    } else {
+        item.body.split_whitespace().collect::<Vec<_>>().join(" ")
+    }
 }
 
 /// What the primary button says; it names the app even in privacy mode.
 pub fn open_label(item: &Item) -> String {
-    format!("Open {}", item.app)
+    tr!("notification.open_app", app = item.app).into_owned()
 }
 
 #[cfg(test)]
@@ -109,7 +112,7 @@ mod tests {
     #[test]
     fn private_mode_leaves_the_text_out() {
         let message = item(1, "Rafi", "Deploy is green.");
-        assert_eq!(body_text(&message, false), PRIVATE_TEXT);
+        assert_eq!(body_text(&message, false), "New message");
         assert_eq!(body_text(&message, true), "Deploy is green.");
     }
 
@@ -121,5 +124,13 @@ mod tests {
     #[test]
     fn the_open_button_names_the_app() {
         assert_eq!(open_label(&item(1, "Rafi", "hi")), "Open Discord");
+    }
+
+    #[test]
+    fn the_private_text_and_the_open_label_read_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!(body_text(&item(1, "Sam", "secret"), false), "Pesan baru");
+            assert_eq!(open_label(&item(1, "Sam", "secret")), "Buka Discord");
+        });
     }
 }

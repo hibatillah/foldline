@@ -7,6 +7,7 @@ mod clock;
 mod display;
 mod drop_target;
 mod icon;
+mod location_tracker;
 mod motion;
 mod navigation;
 mod notch;

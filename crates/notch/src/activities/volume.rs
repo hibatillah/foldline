@@ -1,5 +1,6 @@
 //! Core Audio callbacks store volume changes and wake the UI thread without polling.
 
+use crate::i18n::tr;
 use std::sync::{Arc, Mutex};
 
 use windows::{
@@ -176,7 +177,7 @@ impl Activity for VolumeActivity {
         if !self.flash.is_visible() {
             self.draw_header_status(canvas, area, scale, opacity);
         } else if self.is_muted {
-            ui::draw_message(canvas, area, opacity, Icon::SpeakerMuted, Color::WHITE, "Muted", None);
+            ui::draw_message(canvas, area, opacity, Icon::SpeakerMuted, Color::WHITE, &tr!("volume.muted"), None);
         } else {
             ui::draw_level(canvas, area, opacity, Icon::Speaker, self.volume, &value_text(self.volume));
         }
@@ -212,7 +213,7 @@ impl Activity for VolumeActivity {
         if let Some((volume, is_muted)) = level {
             self.volume = volume;
             self.is_muted = is_muted;
-            self.muted_width = ui::message_width(context.fonts(), "Muted", None);
+            self.muted_width = ui::message_width(context.fonts(), &tr!("volume.muted"), None);
             self.flash.show(context, SHOW_MILLISECONDS);
         }
     }

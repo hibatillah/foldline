@@ -33,14 +33,14 @@ fn with_no_music_the_page_stays_out_of_the_way() {
 #[test]
 fn with_nothing_playing_the_open_player_asks_for_a_song() {
     let mut page = MediaPage::new();
-    assert_eq!(page.displayed_title(), NOTHING_PLAYING_TITLE);
-    assert_eq!(page.displayed_detail(), NOTHING_PLAYING_DETAIL);
+    assert_eq!(page.displayed_title(), "Play a song");
+    assert_eq!(page.displayed_detail(), "Nothing is playing");
     page.info.available = true;
     page.info.title = "Song".to_owned();
     page.info.artist = "Artist".to_owned();
-    assert_eq!((page.displayed_title(), page.displayed_detail()), ("Song", "Artist"));
+    assert_eq!((page.displayed_title().as_ref(), page.displayed_detail().as_ref()), ("Song", "Artist"));
     page.info.title.clear();
-    assert_eq!(page.displayed_title(), UNKNOWN_TITLE);
+    assert_eq!(page.displayed_title(), "Unknown title");
 }
 
 #[test]
@@ -152,4 +152,17 @@ fn a_rest_in_the_lyrics_keeps_the_collapsed_pill_in_lyric_mode() {
 #[test]
 fn the_media_page_sits_at_the_left_padding_when_the_notch_is_wider() {
     assert!(playing_page().is_left_aligned());
+}
+
+#[test]
+fn the_idle_player_texts_read_in_indonesian() {
+    store::language::with_override(store::language::Language::Indonesian, || {
+        let mut page = MediaPage::new();
+        assert_eq!(
+            (page.displayed_title().as_ref(), page.displayed_detail().as_ref()),
+            ("Putar sebuah lagu", "Tidak ada yang diputar")
+        );
+        page.info.available = true;
+        assert_eq!(page.displayed_title(), "Judul tidak diketahui");
+    });
 }

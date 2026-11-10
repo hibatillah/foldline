@@ -1,5 +1,6 @@
 //! Charger and low-battery changes arrive through Windows power settings without polling.
 
+use crate::i18n::tr;
 use windows::core::GUID;
 
 use crate::ui::palette::SUCCESS_GREEN;
@@ -92,17 +93,17 @@ impl BatteryActivity {
         self.tracker.percent.map(|percent| format!("{percent}%"))
     }
 
-    fn message(&self) -> &'static str {
+    fn message(&self) -> std::borrow::Cow<'static, str> {
         match self.event {
-            Event::PluggedIn => "Charging",
-            Event::Unplugged => "On battery",
-            Event::Low(_) => "Low battery",
+            Event::PluggedIn => tr!("battery.charging"),
+            Event::Unplugged => tr!("battery.on_battery"),
+            Event::Low(_) => tr!("battery.low"),
         }
     }
 
     fn announce(&mut self, event: Event, context: &mut Context) {
         self.event = event;
-        self.width = ui::message_width(context.fonts(), self.message(), self.percent_text().as_deref());
+        self.width = ui::message_width(context.fonts(), &self.message(), self.percent_text().as_deref());
         self.flash.show(context, SHOW_MILLISECONDS);
     }
 }
@@ -135,7 +136,7 @@ impl Activity for BatteryActivity {
             Event::Unplugged => (Icon::Battery, Color::WHITE),
             Event::Low(_) => (Icon::BatteryLow, LOW_RED),
         };
-        ui::draw_message(canvas, area, opacity, icon, tint, self.message(), self.percent_text().as_deref());
+        ui::draw_message(canvas, area, opacity, icon, tint, &self.message(), self.percent_text().as_deref());
     }
 
     fn on_start(&mut self, context: &mut Context) {

@@ -1,5 +1,6 @@
 //! The forecast from MET Norway's Locationforecast (`complete`): the next hours, the next days and when rain comes.
 
+use crate::i18n::tr;
 use std::collections::BTreeMap;
 
 use salah::{DateTime, Local, NaiveDate, Timelike, Utc};
@@ -184,9 +185,11 @@ fn days_of(entries: &[Entry]) -> Vec<Day> {
 /// "Rain now", "Rain from 17:00" or "No rain expected" for the next twelve hours.
 pub(super) fn rain_line(forecast: &Forecast, now: DateTime<Utc>) -> String {
     match forecast.first_rain(now, 12) {
-        Some(hour) if hour.time <= now => "Rain now".to_owned(),
-        Some(hour) => format!("Rain from {}", hour.time.with_timezone(&Local).format("%H:%M")),
-        None => "No rain expected".to_owned(),
+        Some(hour) if hour.time <= now => tr!("weather.rain_now").into_owned(),
+        Some(hour) => {
+            tr!("weather.rain_from", time = hour.time.with_timezone(&Local).format("%H:%M").to_string()).into_owned()
+        }
+        None => tr!("weather.no_rain").into_owned(),
     }
 }
 

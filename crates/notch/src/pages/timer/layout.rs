@@ -202,4 +202,29 @@ mod tests {
     fn everything_scales_with_the_display() {
         assert!((layout(2.0).buttons(3)[0].height() - 2.0 * layout(1.0).buttons(3)[0].height()).abs() < 0.01);
     }
+
+    #[test]
+    fn the_button_labels_fit_their_buttons_in_both_languages() {
+        let fonts = crate::gfx::Fonts::new(1.0).unwrap();
+        let layout = layout(1.0);
+        let (three, two) = (layout.buttons(3)[0].width(), layout.buttons(2)[0].width());
+        for language in [store::language::Language::English, store::language::Language::Indonesian] {
+            store::language::with_override(language, || {
+                for (key, room) in [
+                    ("timer.start", three),
+                    ("timer.pause", three),
+                    ("timer.extend", three),
+                    ("timer.stop", three),
+                    ("timer.resume", three),
+                    ("timer.start_short_break", two),
+                    ("timer.start_long_break", two),
+                    ("timer.start_focus", two),
+                    ("timer.skip", two),
+                ] {
+                    let width = fonts.measure(&crate::ui::type_styles::MEDIUM_12, &crate::i18n::tr!(key));
+                    assert!(width <= room - 16.0, "{language:?}: {key} is {width} px in a {room} px button");
+                }
+            });
+        }
+    }
 }

@@ -2,6 +2,7 @@
 
 use super::capture::Skip;
 use crate::gfx::ImageBrush;
+use crate::i18n::tr;
 
 /// The selected row and its button turn green for a moment.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -11,10 +12,10 @@ pub(super) enum Confirm {
 }
 
 impl Confirm {
-    pub fn row_text(self) -> &'static str {
+    pub fn row_text(self) -> std::borrow::Cow<'static, str> {
         match self {
-            Confirm::Pasted => "Pasted",
-            Confirm::Copied => "Copied, moved to front",
+            Confirm::Pasted => tr!("clipboard.pasted"),
+            Confirm::Copied => tr!("clipboard.copied_front"),
         }
     }
 }
@@ -27,11 +28,11 @@ pub(super) enum Bar {
 }
 
 impl Bar {
-    pub fn text(self) -> &'static str {
+    pub fn text(self) -> std::borrow::Cow<'static, str> {
         match self {
-            Bar::Removed => "Removed",
-            Bar::Skipped(Skip::Excluded) => "Skipped: password manager",
-            Bar::Skipped(Skip::TooLarge) => "Skipped: too large",
+            Bar::Removed => tr!("clipboard.removed"),
+            Bar::Skipped(Skip::Excluded) => tr!("clipboard.skipped_password"),
+            Bar::Skipped(Skip::TooLarge) => tr!("clipboard.skipped_large"),
         }
     }
 
@@ -64,5 +65,15 @@ mod tests {
         assert_eq!(Bar::Removed.text(), "Removed");
         assert_eq!(Confirm::Copied.row_text(), "Copied, moved to front");
         assert_eq!(Confirm::Pasted.row_text(), "Pasted");
+    }
+
+    #[test]
+    fn the_confirmations_and_bars_read_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!(Confirm::Pasted.row_text(), "Ditempel");
+            assert_eq!(Confirm::Copied.row_text(), "Disalin, dipindah ke depan");
+            assert_eq!(Bar::Removed.text(), "Dihapus");
+            assert_eq!(Bar::Skipped(Skip::TooLarge).text(), "Dilewati: terlalu besar");
+        });
     }
 }

@@ -1,5 +1,6 @@
 //! One remembered copy: what it holds, what kind it is and the words that describe it.
 
+use crate::i18n::tr;
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
@@ -154,25 +155,32 @@ fn is_code(text: &str) -> bool {
 pub(super) fn row_label(item: &Item) -> String {
     match &item.content {
         Content::Text(text) => text.lines().map(str::trim).find(|line| !line.is_empty()).unwrap_or("").to_owned(),
-        Content::Image(image) => format!("Image ({}×{})", image.original_width, image.original_height),
+        Content::Image(image) => {
+            tr!("clipboard.image_size", width = image.original_width, height = image.original_height).into_owned()
+        }
     }
 }
 
 /// The type and size line under the preview, for example `Text · 24 characters`.
 pub(super) fn details(item: &Item) -> String {
     match (&item.content, item.kind) {
-        (Content::Image(image), _) => {
-            format!("Image · {}×{} · {}", image.original_width, image.original_height, image.format)
-        }
-        (Content::Text(text), Kind::Color) => format!("Color · {}", text.trim()),
+        (Content::Image(image), _) => tr!(
+            "clipboard.image_details",
+            width = image.original_width,
+            height = image.original_height,
+            format = image.format
+        )
+        .into_owned(),
+        (Content::Text(text), Kind::Color) => tr!("clipboard.color_details", value = text.trim()).into_owned(),
         (Content::Text(text), kind) => {
             let count = text.chars().count();
             let name = match kind {
-                Kind::Link => "Link",
-                Kind::Code => "Code",
-                _ => "Text",
+                Kind::Link => tr!("clipboard.kind_link"),
+                Kind::Code => tr!("clipboard.kind_code"),
+                _ => tr!("clipboard.kind_text"),
             };
-            format!("{name} · {count} {}", if count == 1 { "character" } else { "characters" })
+            let unit = if count == 1 { tr!("clipboard.character") } else { tr!("clipboard.characters") };
+            format!("{name} \u{b7} {count} {unit}")
         }
     }
 }
@@ -181,11 +189,11 @@ pub(super) fn details(item: &Item) -> String {
 pub(super) fn age_text(age: Duration) -> String {
     let seconds = age.as_secs();
     match seconds {
-        0..=4 => "just now".to_owned(),
-        5..=59 => format!("{seconds} sec ago"),
-        60..=3599 => format!("{} min ago", seconds / 60),
-        3600..=86_399 => format!("{} h ago", seconds / 3600),
-        _ => format!("{} d ago", seconds / 86_400),
+        0..=4 => tr!("clipboard.age_now").into_owned(),
+        5..=59 => tr!("clipboard.age_seconds", count = seconds).into_owned(),
+        60..=3599 => tr!("clipboard.age_minutes", count = seconds / 60).into_owned(),
+        3600..=86_399 => tr!("clipboard.age_hours", count = seconds / 3600).into_owned(),
+        _ => tr!("clipboard.age_days", count = seconds / 86_400).into_owned(),
     }
 }
 
@@ -284,5 +292,16 @@ mod tests {
         assert!(make(1).is_same_as(&make(1)));
         assert!(!make(1).is_same_as(&make(2)));
         assert!(!make(1).is_same_as(&Content::Text("x".into())));
+    }
+
+    #[test]
+    fn the_ages_read_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!(age_text(Duration::from_secs(2)), "baru saja");
+            assert_eq!(age_text(Duration::from_secs(5)), "5 dtk lalu");
+            assert_eq!(age_text(Duration::from_secs(180)), "3 mnt lalu");
+            assert_eq!(age_text(Duration::from_secs(2 * 3600)), "2 j lalu");
+            assert_eq!(age_text(Duration::from_secs(4 * 86_400)), "4 hr lalu");
+        });
     }
 }

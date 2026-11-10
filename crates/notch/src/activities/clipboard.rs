@@ -1,5 +1,6 @@
 //! "Copied" when something is put on the clipboard. It never reads what was copied.
 
+use crate::i18n::tr;
 use windows::Win32::System::DataExchange::CountClipboardFormats;
 
 use crate::{
@@ -11,7 +12,6 @@ use crate::{
 };
 
 const SHOW_MILLISECONDS: u32 = 1200;
-const MESSAGE: &str = "Copied";
 
 pub struct ClipboardActivity {
     flash: Flash,
@@ -40,11 +40,11 @@ impl Activity for ClipboardActivity {
     }
 
     fn draw(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
-        ui::draw_message(canvas, area, opacity, Icon::Copy, Color::WHITE, MESSAGE, None);
+        ui::draw_message(canvas, area, opacity, Icon::Copy, Color::WHITE, &tr!("clipboard.copied"), None);
     }
 
     fn on_start(&mut self, context: &mut Context) {
-        self.width = ui::message_width(context.fonts(), MESSAGE, None);
+        self.width = ui::message_width(context.fonts(), &tr!("clipboard.copied"), None);
         context.listen_to_clipboard();
     }
 

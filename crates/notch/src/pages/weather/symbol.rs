@@ -1,4 +1,5 @@
 //! What the sky looks like: MET Norway's symbol codes reduced to the few pictures the page draws.
+use crate::i18n::tr;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Symbol {
@@ -37,17 +38,17 @@ impl Symbol {
         }
     }
 
-    pub(super) fn label(self) -> &'static str {
+    pub(super) fn label(self) -> std::borrow::Cow<'static, str> {
         match self {
-            Symbol::Clear => "Clear",
-            Symbol::ClearNight => "Clear night",
-            Symbol::PartlyCloudy | Symbol::PartlyCloudyNight => "Partly cloudy",
-            Symbol::Cloudy => "Cloudy",
-            Symbol::Fog => "Fog",
-            Symbol::Drizzle => "Light rain",
-            Symbol::Rain => "Rain",
-            Symbol::Thunderstorm => "Thunderstorms",
-            Symbol::Snow => "Snow",
+            Symbol::Clear => tr!("weather.sky_clear"),
+            Symbol::ClearNight => tr!("weather.sky_clear_night"),
+            Symbol::PartlyCloudy | Symbol::PartlyCloudyNight => tr!("weather.sky_partly_cloudy"),
+            Symbol::Cloudy => tr!("weather.sky_cloudy"),
+            Symbol::Fog => tr!("weather.sky_fog"),
+            Symbol::Drizzle => tr!("weather.sky_light_rain"),
+            Symbol::Rain => tr!("weather.sky_rain"),
+            Symbol::Thunderstorm => tr!("weather.sky_thunderstorms"),
+            Symbol::Snow => tr!("weather.sky_snow"),
         }
     }
 
@@ -89,5 +90,15 @@ mod tests {
             Symbol::Rain.is_wet() && Symbol::Drizzle.is_wet() && Symbol::Thunderstorm.is_wet() && Symbol::Snow.is_wet()
         );
         assert!(!Symbol::Clear.is_wet() && !Symbol::Cloudy.is_wet() && !Symbol::Fog.is_wet());
+    }
+
+    #[test]
+    fn the_sky_reads_in_indonesian() {
+        assert_eq!(Symbol::Thunderstorm.label(), "Thunderstorms");
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!(Symbol::Clear.label(), "Cerah");
+            assert_eq!(Symbol::PartlyCloudy.label(), "Berawan sebagian");
+            assert_eq!(Symbol::Thunderstorm.label(), "Badai petir");
+        });
     }
 }

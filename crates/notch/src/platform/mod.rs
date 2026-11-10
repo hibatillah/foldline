@@ -31,6 +31,7 @@ mod bitmap;
 pub mod bluetooth_devices;
 pub mod clipboard;
 pub mod dongle_devices;
+pub mod geolocation;
 pub mod notification_settings;
 mod paste;
 mod power;

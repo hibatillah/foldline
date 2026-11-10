@@ -4,6 +4,7 @@ use super::times::Prayer;
 use super::{
     BADGE_MINUTES, Config, REFRESH_TIMER, ShalatPage, badge_text, badge_width, clock_text, short_badge_text, times,
 };
+use crate::i18n::tr;
 use crate::{
     gfx::Fonts,
     page::Context,
@@ -88,7 +89,7 @@ impl ShalatPage {
             return;
         }
         self.last_announced = Some(started);
-        self.alert_title = format!("Time for {}", prayer.name());
+        self.alert_title = tr!("shalat.alert_title", prayer = prayer.name()).into_owned();
         self.alert_value = clock_text(started);
         self.alert_width = ui::message_width(context.fonts(), &self.alert_title, Some(&self.alert_value));
         self.alert.show(context, MESSAGE_MILLISECONDS);

@@ -15,7 +15,7 @@ use crate::{
     activity::{Activity, Presence, Slot},
     gfx::{Canvas, Color, Fonts, Point, Rect, Surface},
     host::{chrome, navigation::PageList, screen_mode::ScreenMode, settings::Settings, visibility::Showing},
-    page::{Context, RESTING_HEIGHT},
+    page::{Context, Page, RESTING_HEIGHT},
     pages::{SampleOptions, samples},
     ui::{self, Icon},
 };
@@ -25,6 +25,8 @@ mod clipboard_states;
 mod header_row;
 mod hiding_rules;
 mod images;
+mod language;
+mod location;
 mod page_navigation;
 mod page_states;
 mod resting_row;
@@ -62,7 +64,11 @@ pub(super) fn configured_rig(options: SampleOptions, settings: Settings, activit
     let fonts = Fonts::new(SCALE).unwrap();
     let directory = std::env::temp_dir().join(format!("notch-snapshots-{}", std::process::id()));
     fs::create_dir_all(&directory).unwrap();
-    let pages = samples(&fonts, &directory, options);
+    custom_rig(samples(&fonts, &directory, options), settings, activities)
+}
+
+/// A rig over pages the test builds itself; the Windows language counts as English.
+pub(super) fn custom_rig(pages: Vec<Box<dyn Page>>, settings: Settings, activities: Vec<Box<dyn Activity>>) -> Notch {
     let count = pages.len();
     let width = (WINDOW_WIDTH * SCALE).round() as i32;
     let height = (WINDOW_HEIGHT * SCALE).round() as i32;
@@ -76,6 +82,7 @@ pub(super) fn configured_rig(options: SampleOptions, settings: Settings, activit
         pages,
         activities,
         ticks_per_second: 10_000_000,
+        system_language: store::language::Language::English,
     });
     notch.page_list = PageList::new(count);
     notch

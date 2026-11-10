@@ -48,12 +48,6 @@ const LYRIC_TIMER: TimerId = TimerId(1);
 
 const WAVE_TIMER: TimerId = TimerId(3);
 
-const UNKNOWN_TITLE: &str = "Unknown title";
-
-const NOTHING_PLAYING_TITLE: &str = "Play a song";
-
-const NOTHING_PLAYING_DETAIL: &str = "Nothing is playing";
-
 pub struct MediaPage {
     watcher: Option<MediaWatcher>,
     info: MediaInfo,
@@ -146,8 +140,8 @@ impl Page for MediaPage {
         "media"
     }
 
-    fn name(&self) -> &'static str {
-        "Media"
+    fn name(&self) -> String {
+        crate::i18n::tr!("page.media").into_owned()
     }
 
     fn priority(&self, mode: Mode) -> Option<Priority> {

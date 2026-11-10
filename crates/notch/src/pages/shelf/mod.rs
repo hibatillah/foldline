@@ -130,8 +130,8 @@ impl Page for ShelfPage {
         "shelf"
     }
 
-    fn name(&self) -> &'static str {
-        "File shelf"
+    fn name(&self) -> String {
+        crate::i18n::tr!("page.shelf").into_owned()
     }
 
     fn priority(&self, mode: Mode) -> Option<Priority> {

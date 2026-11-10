@@ -79,7 +79,7 @@ impl WeatherPage {
             let rain = Rain {
                 at: hour.time,
                 title: format!("Rain in {minutes} min"),
-                body: body_text(hour.symbol.label(), &time, &location.label),
+                body: body_text(&hour.symbol.label(), &time, &location.label),
             };
             self.alerted_for = Some(hour.time);
             self.alert.show(context, rain, now);

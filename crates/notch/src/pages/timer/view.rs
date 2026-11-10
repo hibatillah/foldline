@@ -1,6 +1,7 @@
 //! Timer presentation rules, independent of drawing.
 
 use super::session::{Phase, SESSIONS_PER_ROUND, State, Timer, compact_text, page_clock_text};
+use crate::i18n::tr;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
@@ -33,39 +34,39 @@ fn button(action: Action, label: &str, is_primary: bool) -> ButtonSpec {
     ButtonSpec { action, label: label.to_owned(), is_primary, is_destructive: action == Action::Stop }
 }
 
-fn phase_name(phase: Phase) -> &'static str {
+fn phase_name(phase: Phase) -> std::borrow::Cow<'static, str> {
     match phase {
-        Phase::Focus => "Focus",
-        Phase::ShortBreak => "Short break",
-        Phase::LongBreak => "Long break",
+        Phase::Focus => tr!("timer.focus"),
+        Phase::ShortBreak => tr!("timer.short_break"),
+        Phase::LongBreak => tr!("timer.long_break"),
     }
 }
 
 fn running_title(timer: &Timer, phase: Phase) -> String {
     match phase {
-        Phase::Focus => format!("Focus · {} of {SESSIONS_PER_ROUND}", timer.session_number()),
-        Phase::ShortBreak | Phase::LongBreak => phase_name(phase).to_owned(),
+        Phase::Focus => tr!("timer.focus_session", n = timer.session_number(), total = SESSIONS_PER_ROUND).into_owned(),
+        Phase::ShortBreak | Phase::LongBreak => phase_name(phase).into_owned(),
     }
 }
 
-fn start_button_label(next: Option<Phase>) -> &'static str {
+fn start_button_label(next: Option<Phase>) -> std::borrow::Cow<'static, str> {
     match next {
-        Some(Phase::ShortBreak) => "Start short break",
-        Some(Phase::LongBreak) => "Start long break",
-        Some(Phase::Focus) | None => "Start focus",
+        Some(Phase::ShortBreak) => tr!("timer.start_short_break"),
+        Some(Phase::LongBreak) => tr!("timer.start_long_break"),
+        Some(Phase::Focus) | None => tr!("timer.start_focus"),
     }
 }
 
 pub fn view(timer: &Timer, now: u64) -> View {
     match timer.state {
         State::Idle => View {
-            title: "Focus timer".to_owned(),
-            detail: Some(format!("Session {} of {SESSIONS_PER_ROUND}", timer.session_number())),
+            title: tr!("timer.title").into_owned(),
+            detail: Some(tr!("timer.session", n = timer.session_number(), total = SESSIONS_PER_ROUND).into_owned()),
             time: Some(page_clock_text(timer.lengths.focus * 60_000)),
             buttons: vec![
                 button(Action::Shorter, "−5", false),
                 button(Action::Longer, "+5", false),
-                button(Action::Start, "Start", true),
+                button(Action::Start, &tr!("timer.start"), true),
             ],
         },
         State::Running { phase, .. } => View {
@@ -73,45 +74,46 @@ pub fn view(timer: &Timer, now: u64) -> View {
             detail: None,
             time: timer.remaining(now).map(page_clock_text),
             buttons: vec![
-                button(Action::Pause, "Pause", false),
-                button(Action::Extend, "+5 min", false),
-                button(Action::Stop, "Stop", false),
+                button(Action::Pause, &tr!("timer.pause"), false),
+                button(Action::Extend, &tr!("timer.extend"), false),
+                button(Action::Stop, &tr!("timer.stop"), false),
             ],
         },
         State::Paused { phase, .. } => View {
-            title: format!("{} · paused", running_title(timer, phase)),
+            title: tr!("timer.paused", title = running_title(timer, phase)).into_owned(),
             detail: None,
             time: timer.remaining(now).map(page_clock_text),
             buttons: vec![
-                button(Action::Resume, "Resume", true),
-                button(Action::Extend, "+5 min", false),
-                button(Action::Stop, "Stop", false),
+                button(Action::Resume, &tr!("timer.resume"), true),
+                button(Action::Extend, &tr!("timer.extend"), false),
+                button(Action::Stop, &tr!("timer.stop"), false),
             ],
         },
         State::Finished { phase } => {
             let next = timer.next_phase();
             let detail = match (phase, next) {
-                (Phase::Focus, Some(next)) => {
-                    format!(
-                        "{} min · {} min {} next",
-                        timer.lengths.focus,
-                        timer.lengths.minutes(next),
-                        phase_name(next).to_lowercase()
-                    )
-                }
-                (_, Some(_)) => format!("Ready for focus {} of {SESSIONS_PER_ROUND}", timer.session_number()),
+                (Phase::Focus, Some(next)) => tr!(
+                    "timer.next_up",
+                    focus = timer.lengths.focus,
+                    length = timer.lengths.minutes(next),
+                    next = phase_name(next).to_lowercase()
+                )
+                .into_owned(),
+                (_, Some(_)) => tr!("timer.ready", n = timer.session_number(), total = SESSIONS_PER_ROUND).into_owned(),
                 _ => String::new(),
             };
             View {
                 title: match phase {
-                    Phase::Focus => "Focus session done".to_owned(),
-                    Phase::ShortBreak | Phase::LongBreak => format!("{} over", phase_name(phase)),
+                    Phase::Focus => tr!("timer.session_done").into_owned(),
+                    Phase::ShortBreak | Phase::LongBreak => {
+                        tr!("timer.break_over", phase = phase_name(phase)).into_owned()
+                    }
                 },
                 detail: Some(detail),
                 time: None,
                 buttons: vec![
-                    button(Action::StartNext, start_button_label(next), true),
-                    button(Action::Skip, "Skip", false),
+                    button(Action::StartNext, &start_button_label(next), true),
+                    button(Action::Skip, &tr!("timer.skip"), false),
                 ],
             }
         }
@@ -139,7 +141,7 @@ pub fn compact(timer: &Timer, now: u64) -> Option<Compact> {
         State::Running { .. } | State::Finished { .. } => Tone::Break,
     };
     let text = match timer.state {
-        State::Finished { .. } => "Done".to_owned(),
+        State::Finished { .. } => tr!("timer.done").into_owned(),
         _ => compact_text(timer.remaining(now)?),
     };
     Some(Compact { text, fraction: timer.elapsed_fraction(now), tone })
@@ -152,8 +154,12 @@ pub fn widest_form(text: &str) -> String {
 pub fn alert(timer: &Timer) -> Option<(String, String)> {
     let State::Finished { phase } = timer.state else { return None };
     Some(match phase {
-        Phase::Focus => ("Focus session done".to_owned(), format!("{} min", timer.lengths.focus)),
-        Phase::ShortBreak | Phase::LongBreak => (format!("{} over", phase_name(phase)), "back to focus".to_owned()),
+        Phase::Focus => {
+            (tr!("timer.session_done").into_owned(), tr!("timer.minutes", count = timer.lengths.focus).into_owned())
+        }
+        Phase::ShortBreak | Phase::LongBreak => {
+            (tr!("timer.break_over", phase = phase_name(phase)).into_owned(), tr!("timer.back_to_focus").into_owned())
+        }
     })
 }
 
@@ -268,5 +274,21 @@ mod tests {
         assert!(alert(&timer).is_none());
         timer.tick(NOW + 25 * MINUTE);
         assert_eq!(alert(&timer), Some(("Focus session done".to_owned(), "25 min".to_owned())));
+    }
+
+    #[test]
+    fn the_timer_phases_and_buttons_read_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            let idle = view(&Timer::new(), NOW);
+            assert_eq!(idle.title, "Timer fokus");
+            assert_eq!(idle.detail.as_deref(), Some("Sesi 1 dari 4"));
+            assert_eq!(idle.buttons[2].label, "Mulai");
+            let running_view = view(&running(), NOW + 1_000);
+            assert_eq!(running_view.title, "Fokus \u{b7} 1 dari 4");
+            let labels: Vec<&str> = running_view.buttons.iter().map(|button| button.label.as_str()).collect();
+            assert_eq!(labels, ["Jeda", "+5 mnt", "Berhenti"]);
+            assert_eq!(start_button_label(Some(Phase::ShortBreak)), "Istirahat singkat");
+            assert_eq!(phase_name(Phase::LongBreak), "Istirahat panjang");
+        });
     }
 }

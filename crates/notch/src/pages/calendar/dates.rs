@@ -3,22 +3,22 @@
 pub const SECONDS_PER_DAY: i64 = 86_400;
 pub const SECONDS_PER_MINUTE: i64 = 60;
 
-pub const WEEKDAY_LETTERS: [&str; 7] = ["M", "T", "W", "T", "F", "S", "S"];
-pub const WEEKDAY_NAMES: [&str; 7] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-pub const MONTH_NAMES: [&str; 12] = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-];
+/// `month` is 1 to 12.
+pub fn month_name(month: u32) -> String {
+    let key = format!("calendar.month.{month}");
+    crate::i18n::tr!(&key).into_owned()
+}
+
+/// `weekday` is Monday = 0 to Sunday = 6, as `weekday()` counts.
+pub fn weekday_name(weekday: u32) -> String {
+    let key = format!("calendar.weekday.{}", weekday + 1);
+    crate::i18n::tr!(&key).into_owned()
+}
+
+pub fn weekday_letter(weekday: u32) -> String {
+    let key = format!("calendar.weekday_letter.{}", weekday + 1);
+    crate::i18n::tr!(&key).into_owned()
+}
 
 pub fn days_from_civil(year: i64, month: u32, day: u32) -> i64 {
     let year = if month <= 2 { year - 1 } else { year };
@@ -223,5 +223,18 @@ mod tests {
     fn times_of_day_are_written_with_two_digits() {
         assert_eq!(clock_text(9 * 3600), "09:00");
         assert_eq!(clock_text(13 * 3600 + 30 * 60 + 59), "13:30");
+    }
+
+    #[test]
+    fn the_month_and_weekday_names_follow_the_language() {
+        assert_eq!(
+            (month_name(8).as_str(), weekday_name(3).as_str(), weekday_letter(0).as_str()),
+            ("August", "Thursday", "M")
+        );
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!((month_name(8).as_str(), weekday_name(3).as_str()), ("Agustus", "Kamis"));
+            let letters: Vec<String> = (0..7).map(weekday_letter).collect();
+            assert_eq!(letters.join(" "), "S S R K J S M");
+        });
     }
 }

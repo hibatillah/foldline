@@ -32,6 +32,7 @@ use windows::{
 use super::{
     display, drop_target,
     icon::Icon,
+    location_tracker::{WM_LOCATION_FOUND, WM_NETWORK_CHANGED},
     notch::{Notch, NotchParts, WINDOW_HEIGHT, WINDOW_WIDTH},
     notification_banners, registry,
     screen_mode::{self, ScreenMode},
@@ -210,7 +211,10 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
             }
             if wparam.0 == PBT_APMRESUMEAUTOMATIC as usize {
                 screen_mode::refresh_foreground();
-                with_notch(|notch| notch.reset_session_interaction());
+                with_notch(|notch| {
+                    notch.reset_session_interaction();
+                    notch.request_location();
+                });
             }
             LRESULT(1)
         }
@@ -220,6 +224,14 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
                 screen_mode::refresh_foreground();
             }
             with_notch(|notch| notch.reset_session_interaction());
+            LRESULT(0)
+        }
+        WM_LOCATION_FOUND => {
+            with_notch(|notch| notch.location_found());
+            LRESULT(0)
+        }
+        WM_NETWORK_CHANGED => {
+            with_notch(|notch| notch.network_changed());
             LRESULT(0)
         }
         WM_SETTINGS_CHANGED => {
@@ -242,6 +254,7 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
         // Windows ends the process right after this message, so the message loop's exit path never runs.
         WM_ENDSESSION if wparam.0 != 0 => {
             notification_banners::release_at_session_end();
+            volume_flyout::release();
             LRESULT(0)
         }
         WM_DESTROY => {
@@ -332,6 +345,8 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
     unsafe { QueryPerformanceFrequency(&mut ticks_per_second) }?;
 
     let settings = Settings::load();
+    let system_language = store::language::system_language();
+    store::language::set_current(store::language::resolve_setting(&settings, system_language));
     let pages = registry::enabled_pages(pages, &settings);
     let notch = Notch::new(NotchParts {
         window,
@@ -343,6 +358,7 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
         pages,
         activities,
         ticks_per_second,
+        system_language,
     });
     NOTCH.with(|cell| *cell.borrow_mut() = Some(notch));
     match unsafe { WTSRegisterSessionNotification(window, NOTIFY_FOR_THIS_SESSION) } {
@@ -368,5 +384,6 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
         unsafe { DispatchMessageW(&message) };
     }
     notification_banners::release_at_exit(window);
+    volume_flyout::release_at_exit(window);
     Ok(())
 }

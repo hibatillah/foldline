@@ -200,8 +200,8 @@ impl Page for StatsPage {
         "stats"
     }
 
-    fn name(&self) -> &'static str {
-        "System stats"
+    fn name(&self) -> String {
+        crate::i18n::tr!("page.stats").into_owned()
     }
 
     fn on_start(&mut self, context: &mut Context) {

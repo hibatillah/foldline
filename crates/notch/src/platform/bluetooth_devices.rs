@@ -4,7 +4,7 @@
 use windows::{
     Devices::{
         Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothDevice, BluetoothLEDevice},
-        Enumeration::DeviceInformation,
+        Enumeration::{DeviceInformation, DeviceInformationKind},
         Radios::RadioState,
     },
     Foundation::IReference,
@@ -13,6 +13,8 @@ use windows::{
 
 /// The battery level (percent) Windows keeps on a device's PnP node; only some devices report it.
 pub(crate) const BATTERY_PROPERTY: &str = "{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2";
+/// The battery lives on the device node; the device interfaces Windows lists by default never carry it.
+pub(crate) const BATTERY_NODE_KIND: DeviceInformationKind = DeviceInformationKind::Device;
 pub(crate) const BATTERY_NODES_FILTER: &str = "System.Devices.DeviceInstanceId:~<\"BTHENUM\" OR System.Devices.DeviceInstanceId:~<\"BTHHFENUM\" OR System.Devices.DeviceInstanceId:~<\"BTHLE\"";
 
 /// One paired device as Windows reports it; the class and the appearance are the raw Bluetooth values.
@@ -29,9 +31,10 @@ pub struct PairedDevice {
 /// The battery of every device that has a battery node, by the node's name.
 pub fn battery_levels() -> Vec<(String, u8)> {
     let properties = windows_collections::IIterable::<HSTRING>::from(vec![HSTRING::from(BATTERY_PROPERTY)]);
-    let Some(nodes) = DeviceInformation::FindAllAsyncAqsFilterAndAdditionalProperties(
+    let Some(nodes) = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
         &HSTRING::from(BATTERY_NODES_FILTER),
         &properties,
+        BATTERY_NODE_KIND,
     )
     .ok()
     .and_then(|operation| operation.join().ok()) else {
@@ -114,4 +117,17 @@ pub fn is_radio_on() -> Option<bool> {
 
 fn find_all(selector: &HSTRING) -> Option<windows::Devices::Enumeration::DeviceInformationCollection> {
     DeviceInformation::FindAllAsyncAqsFilter(selector).ok()?.join().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "needs a paired device whose node holds a battery level; run on purpose"]
+    fn the_battery_of_a_paired_headset_is_read_from_its_device_node() {
+        let levels = battery_levels();
+        println!("{levels:?}");
+        assert!(!levels.is_empty(), "no node answered");
+    }
 }

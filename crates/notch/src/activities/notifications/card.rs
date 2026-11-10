@@ -207,7 +207,7 @@ mod tests {
     fn private_mode_shows_only_the_private_words() {
         let fonts = Fonts::new(1.0).unwrap();
         let words = Words::new(&item("Invoice", "secret"), false, &fonts);
-        assert_eq!(words.body, vec![super::super::items::PRIVATE_TEXT.to_owned()]);
+        assert_eq!(words.body, vec!["New message".to_owned()]);
     }
 
     #[test]

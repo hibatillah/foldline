@@ -28,7 +28,7 @@ pub fn draw(page: &MediaPage, canvas: &Canvas, frame: &Frame, opacity: f32) {
     for (index, line) in page.title_lines.iter().enumerate() {
         canvas.text(&styles::TITLE, line, layout.title_line(index), Color::WHITE.faded(opacity));
     }
-    canvas.text(&styles::DETAIL, page.displayed_detail(), layout.detail(), TEXT_MUTED.faded(opacity));
+    canvas.text(&styles::DETAIL, &page.displayed_detail(), layout.detail(), TEXT_MUTED.faded(opacity));
 
     controls::draw(page, canvas, &layout, opacity);
 

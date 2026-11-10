@@ -1,8 +1,9 @@
 //! What the media page is showing, derived from its fields.
 
+use super::MediaPage;
 use super::lyrics::LyricLine;
 use super::session::LyricsStatus;
-use super::{MediaPage, NOTHING_PLAYING_DETAIL, NOTHING_PLAYING_TITLE, UNKNOWN_TITLE};
+use crate::i18n::tr;
 
 impl MediaPage {
     pub(super) fn is_wave_shown(&self) -> bool {
@@ -46,17 +47,21 @@ impl MediaPage {
         }
     }
 
-    pub(super) fn displayed_title(&self) -> &str {
+    pub(super) fn displayed_title(&self) -> std::borrow::Cow<'_, str> {
         if !self.info.available {
-            NOTHING_PLAYING_TITLE
+            tr!("media.nothing_title")
         } else if self.info.title.is_empty() {
-            UNKNOWN_TITLE
+            tr!("media.unknown_title")
         } else {
-            &self.info.title
+            std::borrow::Cow::Borrowed(self.info.title.as_str())
         }
     }
 
-    pub(super) fn displayed_detail(&self) -> &str {
-        if self.info.available { &self.info.artist } else { NOTHING_PLAYING_DETAIL }
+    pub(super) fn displayed_detail(&self) -> std::borrow::Cow<'_, str> {
+        if self.info.available {
+            std::borrow::Cow::Borrowed(self.info.artist.as_str())
+        } else {
+            tr!("media.nothing_detail")
+        }
     }
 }

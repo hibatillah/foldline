@@ -96,8 +96,8 @@ impl Page for WeatherPage {
         "weather"
     }
 
-    fn name(&self) -> &'static str {
-        "Weather"
+    fn name(&self) -> String {
+        crate::i18n::tr!("page.weather").into_owned()
     }
 
     fn is_opt_in(&self) -> bool {
@@ -182,6 +182,12 @@ impl Page for WeatherPage {
         self.read_settings(context);
         self.refresh_message_width(context.fonts());
         self.start_fetch(context);
+    }
+
+    fn on_language_changed(&mut self, context: &mut Context) {
+        self.refresh_message_width(context.fonts());
+        self.alert.remeasure_badge(context.fonts());
+        context.request_repaint();
     }
 
     fn on_settings_changed(&mut self, context: &mut Context) {

@@ -1,9 +1,12 @@
 #![windows_subsystem = "windows"]
 
+rust_i18n::i18n!("locales", fallback = "en");
+
 mod activities;
 mod activity;
 mod gfx;
 mod host;
+mod i18n;
 mod log;
 mod page;
 mod pages;

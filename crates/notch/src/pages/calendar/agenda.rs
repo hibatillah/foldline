@@ -7,7 +7,6 @@ use super::{
 
 pub const REMINDER_LEAD_SECONDS: i64 = 15 * SECONDS_PER_MINUTE;
 const REMINDER_TRAIL_MINUTES: i64 = 5;
-const ALL_DAY_TEXT: &str = "All day";
 
 pub struct Row {
     pub occurrence: Occurrence,
@@ -23,7 +22,7 @@ pub struct Agenda {
 
 fn row_for(occurrence: &Occurrence) -> Row {
     let time = if occurrence.is_all_day {
-        ALL_DAY_TEXT.to_owned()
+        crate::i18n::tr!("calendar.all_day").into_owned()
     } else {
         clock_text(occurrence.start.rem_euclid(SECONDS_PER_DAY))
     };
@@ -57,6 +56,8 @@ pub fn list(occurrences: &[Occurrence]) -> Agenda {
 pub struct Reminder {
     pub title: String,
     pub text: String,
+    /// `text` without the word around the minutes, for the shorter badge.
+    pub short: String,
     /// When the event starts, in the same local seconds as the occurrences.
     pub start: i64,
 }
@@ -64,7 +65,7 @@ pub struct Reminder {
 impl Reminder {
     /// "12m" for "in 12m"; "now" stays.
     pub fn short_text(&self) -> &str {
-        self.text.strip_prefix("in ").unwrap_or(&self.text)
+        &self.short
     }
 }
 
@@ -73,12 +74,17 @@ pub fn reminder(occurrences: &[Occurrence], now: i64) -> Option<Reminder> {
         occurrence.start - now <= REMINDER_LEAD_SECONDS
             && now - occurrence.start <= REMINDER_TRAIL_MINUTES * SECONDS_PER_MINUTE
     })?;
-    let text = if occurrence.start <= now {
-        "now".to_owned()
+    let (text, short) = if occurrence.start <= now {
+        let now_text = crate::i18n::tr!("calendar.reminder_now").into_owned();
+        (now_text.clone(), now_text)
     } else {
-        format!("in {}m", (occurrence.start - now + SECONDS_PER_MINUTE - 1) / SECONDS_PER_MINUTE)
+        let minutes = (occurrence.start - now + SECONDS_PER_MINUTE - 1) / SECONDS_PER_MINUTE;
+        (
+            crate::i18n::tr!("calendar.reminder_in", minutes = minutes).into_owned(),
+            crate::i18n::tr!("calendar.reminder_short", minutes = minutes).into_owned(),
+        )
     };
-    Some(Reminder { title: occurrence.summary.clone(), text, start: occurrence.start })
+    Some(Reminder { title: occurrence.summary.clone(), text, short, start: occurrence.start })
 }
 
 #[cfg(test)]
@@ -163,9 +169,24 @@ mod tests {
 
     #[test]
     fn the_short_reminder_text_drops_the_word_in() {
-        let reminder = |text: &str| Reminder { title: String::new(), text: text.to_owned(), start: 0 };
-        assert_eq!(reminder("in 12m").short_text(), "12m");
-        assert_eq!(reminder("now").short_text(), "now");
+        let day = [event(13, 60, "Design review")];
+        let start = day[0].start;
+        assert_eq!(reminder(&day, start - 12 * MINUTE).unwrap().short_text(), "12m");
+        assert_eq!(reminder(&day, start).unwrap().short_text(), "now");
+    }
+
+    #[test]
+    fn the_reminder_and_the_all_day_text_read_in_indonesian() {
+        let day = [event(13, 60, "Design review")];
+        let start = day[0].start;
+        store::language::with_override(store::language::Language::Indonesian, || {
+            let soon = reminder(&day, start - 12 * MINUTE).unwrap();
+            assert_eq!((soon.text.as_str(), soon.short_text()), ("12m lagi", "12m"));
+            assert_eq!(reminder(&day, start).unwrap().text, "sekarang");
+            let mut trip = event(0, 0, "Trip");
+            trip.is_all_day = true;
+            assert_eq!(build(&[trip], DAY_START).rows[0].time, "Seharian");
+        });
     }
 
     #[test]

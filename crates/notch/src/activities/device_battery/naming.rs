@@ -17,7 +17,7 @@ fn short_name(name: &str) -> String {
 }
 
 pub(super) fn message(name: &str) -> String {
-    format!("{} \u{b7} Low battery", short_name(name))
+    crate::i18n::tr!("device_battery.low", name = short_name(name)).into_owned()
 }
 
 #[cfg(test)]
@@ -41,5 +41,12 @@ mod tests {
     #[test]
     fn the_message_names_the_device_then_the_warning() {
         assert_eq!(message("MX Master 3"), "MX Master 3 \u{b7} Low battery");
+    }
+
+    #[test]
+    fn the_low_battery_message_reads_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!(message("MX Master 3"), "MX Master 3 \u{b7} Baterai lemah");
+        });
     }
 }

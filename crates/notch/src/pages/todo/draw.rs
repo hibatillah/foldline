@@ -5,6 +5,7 @@ use super::{
         empty_area,
     },
 };
+use crate::i18n::tr;
 use crate::ui::palette::{
     LIGHT_GRAY, REMOVE_BUTTON_FILL, SUCCESS_GREEN, SURFACE_BORDER, SURFACE_BUTTON_BORDER, SURFACE_HOVER, SURFACE_ROW,
     TEXT_DIM, TEXT_LIGHT, TEXT_MUTED,
@@ -71,7 +72,7 @@ impl TodoPage {
         canvas.fill_rounded_rect(area, radius, SURFACE_BUTTON_BORDER.faded(opacity));
         let inner = Rect::new(area.left + scale, area.top + scale, area.right - scale, area.bottom - scale);
         canvas.fill_rounded_rect(inner, radius - scale, fill.faded(opacity));
-        canvas.text(&CLEAR_LABEL, "Clear all", area, TEXT_LIGHT.faded(opacity));
+        canvas.text(&CLEAR_LABEL, &tr!("todo.clear_all"), area, TEXT_LIGHT.faded(opacity));
     }
 
     fn draw_add_button(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
@@ -79,17 +80,17 @@ impl TodoPage {
         let text = Color::BLACK;
         canvas.fill_rounded_rect(area, area.height() / 2.0, fill.faded(opacity));
         let plus_width = canvas.measure(&REGULAR_14, "+") * scale;
-        let content = plus_width + BUTTON_CONTENT_GAP * scale + canvas.measure(&MEDIUM_12, "Add") * scale;
+        let content = plus_width + BUTTON_CONTENT_GAP * scale + canvas.measure(&MEDIUM_12, &tr!("todo.add")) * scale;
         let left = area.center_x() - content / 2.0;
         canvas.text(&REGULAR_14, "+", Rect { left, right: left + plus_width + scale, ..area }, text.faded(opacity));
         let label = Rect { left: left + plus_width + BUTTON_CONTENT_GAP * scale, right: area.right, ..area };
-        canvas.text(&MEDIUM_12, "Add", label, text.faded(opacity));
+        canvas.text(&MEDIUM_12, &tr!("todo.add"), label, text.faded(opacity));
     }
 
     /// "All clear" with its check mark, centered under the toolbar.
     pub(super) fn draw_empty(&self, canvas: &Canvas, bounds: Rect, scale: f32, opacity: f32) {
         let area = empty_area(bounds, scale);
-        let text_width = canvas.measure(&MEDIUM_13, "All clear") * scale;
+        let text_width = canvas.measure(&MEDIUM_13, &tr!("todo.all_clear")) * scale;
         let total = (MESSAGE_ICON_SIZE + MESSAGE_ICON_GAP) * scale + text_width;
         let left = area.center_x() - total / 2.0;
         let icon_center = Point::new(left + MESSAGE_ICON_SIZE * scale / 2.0, area.center_y());
@@ -101,7 +102,7 @@ impl TodoPage {
             area.right,
             area.center_y() + MESSAGE_HEIGHT * scale / 2.0,
         );
-        canvas.text(&MEDIUM_13, "All clear", text_area, LIGHT_GRAY.faded(opacity));
+        canvas.text(&MEDIUM_13, &tr!("todo.all_clear"), text_area, LIGHT_GRAY.faded(opacity));
     }
 
     pub(super) fn draw_row(&self, canvas: &Canvas, row: Row, rect: Rect, position: usize, opacity: f32) {
@@ -117,11 +118,12 @@ impl TodoPage {
                 canvas.fill_rounded_rect(inner, (ROW_RADIUS - FIELD_BORDER_WIDTH) * scale, SURFACE_ROW.faded(opacity));
                 canvas.text(&PLUS, "+", check_rect(rect, scale), FIELD_BORDER.faded(opacity));
                 let field_area = Rect { right: rect.right - (HINT_WIDTH + ROW_PADDING) * scale, ..text_area };
-                let look = FieldLook { style: &REGULAR_13, color: Color::WHITE, placeholder: "What needs doing?" };
+                let hint_text = tr!("todo.field_hint");
+                let look = FieldLook { style: &REGULAR_13, color: Color::WHITE, placeholder: &hint_text };
                 self.field.draw(canvas, field_area, &look, self.has_keyboard, opacity);
                 let hint_area =
                     Rect { left: rect.right - HINT_WIDTH * scale, right: rect.right - ROW_PADDING * scale, ..rect };
-                canvas.text(&HINT, "Enter to add", hint_area, TEXT_DIM.faded(opacity));
+                canvas.text(&HINT, &tr!("todo.enter_hint"), hint_area, TEXT_DIM.faded(opacity));
             }
             Row::Item(index) => {
                 let Some(item) = self.list.item(index) else { return };
@@ -162,8 +164,11 @@ impl TodoPage {
 
 #[cfg(test)]
 mod tests {
+    use super::super::layout::{ADD_WIDTH, CLEAR_WIDTH};
     use super::*;
+    use crate::gfx::Fonts;
     use crate::pages::todo::list::{Item, TodoList};
+    use crate::ui::type_styles::MEDIUM_12;
 
     fn page(open: usize, done: usize) -> TodoPage {
         let items = (0..open)
@@ -186,5 +191,22 @@ mod tests {
         crowded.list.toggle(0);
         crowded.refresh_texts();
         assert_eq!(crowded.count_text, "6 left \u{b7} 1 done");
+    }
+
+    /// Room kept free on each side of a button's text.
+    const SIDE: f32 = 6.0;
+
+    #[test]
+    fn the_clear_all_and_add_buttons_fit_their_pills_in_both_languages() {
+        let fonts = Fonts::new(1.0).unwrap();
+        for language in [store::language::Language::English, store::language::Language::Indonesian] {
+            store::language::with_override(language, || {
+                let clear = fonts.measure(&CLEAR_LABEL, &tr!("todo.clear_all"));
+                assert!(clear <= CLEAR_WIDTH - 2.0 * SIDE, "{language:?}: Clear all is {clear} px in {CLEAR_WIDTH}");
+                let add =
+                    fonts.measure(&REGULAR_14, "+") + BUTTON_CONTENT_GAP + fonts.measure(&MEDIUM_12, &tr!("todo.add"));
+                assert!(add <= ADD_WIDTH - 2.0 * SIDE, "{language:?}: Add is {add} px in {ADD_WIDTH}");
+            });
+        }
     }
 }

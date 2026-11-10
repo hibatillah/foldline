@@ -1,5 +1,6 @@
 //! The devices the page lists and the rules that pick, order and word them. No Windows calls.
 
+use crate::i18n::tr;
 use crate::{platform::bluetooth_devices::PairedDevice, ui::Icon};
 
 /// At or under this a battery is low (red); the same 20 % the battery activity warns at.
@@ -102,9 +103,9 @@ impl Device {
 
     pub(super) fn percent_text(&self) -> String {
         match (self.is_connected, self.battery_percent) {
-            (false, _) => "Off".to_owned(),
+            (false, _) => tr!("devices.off").into_owned(),
             (true, Some(percent)) => format!("{}%", percent.min(100)),
-            (true, None) => "On".to_owned(),
+            (true, None) => tr!("devices.on").into_owned(),
         }
     }
 
@@ -350,5 +351,13 @@ mod tests {
         let devices = assemble(&list, &[("Old mouse".to_owned(), 30)]);
         assert_eq!(devices.len(), 2);
         assert_eq!(devices[0].battery_percent, None, "a stale battery of a device that is off is dropped");
+    }
+
+    #[test]
+    fn a_disconnected_device_reads_mati_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            let device = device("D", false, None);
+            assert_eq!(device.percent_text(), "Mati");
+        });
     }
 }

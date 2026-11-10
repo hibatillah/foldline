@@ -91,13 +91,22 @@ fn every_part_of_every_tile_stays_inside_the_page_area() {
 }
 
 #[test]
-fn the_longest_message_line_fits_the_message_page() {
+fn the_longest_message_lines_fit_the_message_page_in_both_languages() {
     let fonts = Fonts::new(1.0).unwrap();
     let style = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Leading);
-    let width = fonts.measure(&style, NO_DEVICES_DETAIL);
-    assert!(width <= MESSAGE_WIDTH, "{width}");
     let title = FontStyle::new(UI_FONT, 15.0, Weight::Medium, Align::Leading);
-    assert!(fonts.measure(&title, NO_DEVICES_TITLE) <= MESSAGE_WIDTH);
+    for language in [store::language::Language::English, store::language::Language::Indonesian] {
+        store::language::with_override(language, || {
+            for key in ["devices.none_detail", "devices.bluetooth_off_detail"] {
+                let width = fonts.measure(&style, &crate::i18n::tr!(key));
+                assert!(width <= MESSAGE_WIDTH, "{language:?}: {key} is {width} px");
+            }
+            for key in ["devices.none_title", "devices.bluetooth_off_title"] {
+                let width = fonts.measure(&title, &crate::i18n::tr!(key));
+                assert!(width <= MESSAGE_WIDTH, "{language:?}: {key} is {width} px");
+            }
+        });
+    }
 }
 
 #[test]

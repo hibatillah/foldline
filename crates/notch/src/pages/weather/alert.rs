@@ -1,6 +1,7 @@
 //! The rain alert: a 340 DIP banner for a few seconds (Dismiss and Open while the pointer is on it, which shows the weather page), then the
 //! countdown badge in the pill's group until the rain starts.
 
+use crate::i18n::tr;
 use salah::{DateTime, Utc};
 
 use super::badge::{self, Badge};
@@ -17,7 +18,6 @@ pub(super) const BADGE_TIMER: TimerId = TimerId(3);
 const BANNER_MILLISECONDS: u32 = 9000;
 /// After the pointer leaves the banner, so a pointer that slips off the edge on the way to a button does not lose it.
 const LINGER_MILLISECONDS: u32 = 1500;
-const OPEN_LABEL: &str = "Open";
 
 /// The width of a notification card.
 pub(super) const WIDTH: f32 = 340.0;
@@ -70,7 +70,7 @@ fn text_width() -> f32 {
 
 /// What the banner says: the sky, when it comes and where, and a hint.
 pub(super) fn body_text(sky: &str, time: &str, place: &str) -> String {
-    format!("{sky} around {time} in {place}. Bring an umbrella.")
+    tr!("weather.alert_body", sky = sky, time = time, place = place).into_owned()
 }
 
 impl Alert {
@@ -91,7 +91,7 @@ impl Alert {
         alert.title = "Rain in 30 min".to_owned();
         let body = body_text("Thunderstorms", "17:00", "Pekanbaru, ID");
         alert.lines = clamp_lines(&body, BODY_LINES, text_width(), |text| fonts.measure(&REGULAR_13, text));
-        alert.buttons = BannerButtons::new(fonts, OPEN_LABEL);
+        alert.buttons = BannerButtons::new(fonts, &tr!("banner.open"));
         alert.badge = Some(Badge::new(fonts, rain_at, super::RAIN_ALERT_LEAD_MINUTES));
         alert.flash = Flash::visible();
         alert
@@ -111,11 +111,15 @@ impl Alert {
         self
     }
 
+    pub(super) fn remeasure_badge(&mut self, fonts: &crate::gfx::Fonts) {
+        self.badge = self.badge.as_ref().map(|badge| badge.remeasured(fonts));
+    }
+
     /// Starts over with the banner, cut to two lines; the badge counts down to the rain.
     pub(super) fn show(&mut self, context: &mut Context, rain: Rain, now: DateTime<Utc>) {
         let fonts = context.fonts();
         self.lines = clamp_lines(&rain.body, BODY_LINES, text_width(), |text| fonts.measure(&REGULAR_13, text));
-        self.buttons = BannerButtons::new(fonts, OPEN_LABEL);
+        self.buttons = BannerButtons::new(fonts, &tr!("banner.open"));
         self.badge = Some(Badge::new(fonts, rain.at, super::RAIN_ALERT_LEAD_MINUTES));
         self.title = rain.title;
         self.is_pointer_over = false;
@@ -366,5 +370,26 @@ mod tests {
         let (right, top) = buttons_origin(area, 1.0, 2);
         assert_eq!(right, WIDTH - PADDING);
         assert_eq!(top + BANNER_BUTTONS_HEIGHT, area.bottom - BOTTOM_PADDING);
+    }
+
+    #[test]
+    fn the_alert_body_reads_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!(
+                body_text("Badai petir", "17:00", "Pekanbaru, ID"),
+                "Badai petir sekitar pukul 17:00 di Pekanbaru, ID. Bawa payung."
+            );
+        });
+    }
+
+    #[test]
+    fn a_language_change_measures_the_rain_badge_again() {
+        let fonts = crate::gfx::Fonts::new(1.0).unwrap();
+        let mut alert = Alert::sample_banner(&fonts, rain_at());
+        let english = alert.badge.as_ref().unwrap().width;
+        store::language::with_override(store::language::Language::Indonesian, || {
+            alert.remeasure_badge(&fonts);
+            assert!(alert.badge.as_ref().unwrap().width > english);
+        });
     }
 }

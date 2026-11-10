@@ -1,5 +1,6 @@
 //! The open page: the next prayer at the left and the day's arc at the right.
 
+use crate::i18n::tr;
 use salah::{DateTime, Utc};
 
 use super::{
@@ -35,13 +36,13 @@ const MARKER_NAME: FontStyle = FontStyle::new(UI_FONT, 11.0, Weight::Regular, Al
 const MARKER_TIME: FontStyle = FontStyle::new(UI_FONT, 12.0, Weight::Regular, Align::Center).tabular();
 
 /// "Next", or "Starts soon" in the last ten minutes, or "Tomorrow" once the day's prayers are over.
-pub(super) fn heading(is_tomorrow: bool, seconds_left: i64) -> &'static str {
+pub(super) fn heading(is_tomorrow: bool, seconds_left: i64) -> std::borrow::Cow<'static, str> {
     if is_tomorrow {
-        "Tomorrow"
+        tr!("shalat.tomorrow")
     } else if seconds_left < SOON_SECONDS {
-        "Starts soon"
+        tr!("shalat.soon")
     } else {
-        "Next"
+        tr!("shalat.next")
     }
 }
 
@@ -75,8 +76,8 @@ impl ShalatPage {
         let seconds_left = (time - now).num_seconds();
         let is_tomorrow = time > schedule.today[5];
         let lines: [(&FontStyle, String, Color, f32); 4] = [
-            (&REGULAR_11, heading(is_tomorrow, seconds_left).to_owned(), TEXT_MUTED, LABEL_HEIGHT),
-            (&NAME, prayer.name().to_owned(), Color::WHITE, NAME_HEIGHT),
+            (&REGULAR_11, heading(is_tomorrow, seconds_left).into_owned(), TEXT_MUTED, LABEL_HEIGHT),
+            (&NAME, prayer.name().into_owned(), Color::WHITE, NAME_HEIGHT),
             (&MEDIUM_12, remaining_text(seconds_left), MINT_GREEN, COUNTDOWN_HEIGHT),
             (&REGULAR_10, self.config.city.clone(), TEXT_DIM, CITY_HEIGHT),
         ];
@@ -114,7 +115,7 @@ impl ShalatPage {
             };
             canvas.text(
                 name_style,
-                PRAYERS[slot].name(),
+                &PRAYERS[slot].name(),
                 column(MARKER_LABEL_TOP, MARKER_LABEL_BOTTOM),
                 name_color.faded(opacity),
             );
@@ -175,5 +176,14 @@ mod tests {
             markers(&times, now, times[0], false),
             [Marker::Next, Marker::Ahead, Marker::Ahead, Marker::Ahead, Marker::Ahead]
         );
+    }
+
+    #[test]
+    fn the_heading_reads_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!(heading(true, 0), "Besok");
+            assert_eq!(heading(false, 60), "Segera masuk");
+            assert_eq!(heading(false, 4 * 3600), "Berikutnya");
+        });
     }
 }

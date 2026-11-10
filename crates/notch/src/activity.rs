@@ -99,6 +99,9 @@ pub trait Activity {
 
     /// Called on a started activity after another program changed settings.txt: re-read this activity's keys here.
     fn on_settings_changed(&mut self, _context: &mut Context) {}
+
+    /// The language changed: rebuild any text cached from a translation. Called once per change, for started activities.
+    fn on_language_changed(&mut self, _context: &mut Context) {}
 }
 
 /// The timer a `Flash` uses; an activity that also needs timers of its own starts from `TimerId(1)`.

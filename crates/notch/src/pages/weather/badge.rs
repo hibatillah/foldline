@@ -1,5 +1,6 @@
 //! The rain countdown kept in the pill's group after the banner: a cloud and the minutes left, like the prayer mark.
 
+use crate::i18n::tr;
 use salah::{DateTime, Utc};
 
 use crate::ui::palette::ACCENT_BLUE_LIGHT;
@@ -24,11 +25,11 @@ pub(super) fn minutes_until(rain_at: DateTime<Utc>, now: DateTime<Utc>) -> i64 {
 }
 
 pub(super) fn long_text(minutes: i64) -> String {
-    format!("Rain in {minutes} min")
+    tr!("weather.badge_long", minutes = minutes).into_owned()
 }
 
 pub(super) fn short_text(minutes: i64) -> String {
-    format!("{minutes}m")
+    tr!("weather.badge_short", minutes = minutes).into_owned()
 }
 
 /// When the minutes shown change next: just after the next whole-minute boundary.
@@ -46,6 +47,11 @@ impl Badge {
             width: ICON_SIZE + ICON_GAP + text_width(&long_text(widest_minutes)),
             short_width: ICON_SIZE + ICON_GAP + text_width(&short_text(widest_minutes)),
         }
+    }
+
+    /// The same badge measured again, after a language change made its text longer or shorter.
+    pub(super) fn remeasured(&self, fonts: &Fonts) -> Self {
+        Self::new(fonts, self.rain_at, super::RAIN_ALERT_LEAD_MINUTES)
     }
 
     pub(super) fn is_over(&self, now: DateTime<Utc>) -> bool {
@@ -108,5 +114,14 @@ mod tests {
         assert!(!badge.is_over(at("2026-11-05T09:59:59Z")));
         assert!(badge.is_over(at("2026-11-05T10:00:00Z")));
         assert!(badge.short_width < badge.width);
+    }
+
+    #[test]
+    fn the_rain_badge_reads_hujan_25_mnt_lagi() {
+        assert_eq!(long_text(25), "Rain in 25 min");
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!(long_text(25), "Hujan 25 mnt lagi");
+            assert_eq!(short_text(25), "25m");
+        });
     }
 }

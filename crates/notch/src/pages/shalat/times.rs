@@ -1,5 +1,6 @@
 //! Prayer times calculated on this PC; pure functions of a place, a date and the chosen method.
 
+use crate::i18n::tr;
 use salah::{
     Configuration, Coordinates, DateTime, Datelike, Duration, Madhab, Method, NaiveDate, Parameters,
     Prayer as SalahPrayer, PrayerTimes, TimeAdjustment, Utc,
@@ -20,14 +21,14 @@ pub const PRAYERS: [Prayer; 6] =
     [Prayer::Fajr, Prayer::Sunrise, Prayer::Dhuhr, Prayer::Asr, Prayer::Maghrib, Prayer::Isha];
 
 impl Prayer {
-    pub fn name(self) -> &'static str {
+    pub fn name(self) -> std::borrow::Cow<'static, str> {
         match self {
-            Prayer::Fajr => "Fajr",
-            Prayer::Sunrise => "Sunrise",
-            Prayer::Dhuhr => "Dhuhr",
-            Prayer::Asr => "Asr",
-            Prayer::Maghrib => "Maghrib",
-            Prayer::Isha => "Isha",
+            Prayer::Fajr => tr!("shalat.fajr"),
+            Prayer::Sunrise => tr!("shalat.sunrise"),
+            Prayer::Dhuhr => tr!("shalat.dhuhr"),
+            Prayer::Asr => tr!("shalat.asr"),
+            Prayer::Maghrib => tr!("shalat.maghrib"),
+            Prayer::Isha => tr!("shalat.isha"),
         }
     }
 
@@ -310,5 +311,14 @@ mod tests {
         assert!(METHOD_OPTIONS.iter().all(|(word, _)| *word == "auto"
             || parse_method(word, "ZZ") != Method::MuslimWorldLeague
             || *word == "mwl"));
+    }
+
+    #[test]
+    fn the_prayer_names_follow_the_language() {
+        assert_eq!(Prayer::Dhuhr.name(), "Dhuhr");
+        store::language::with_override(store::language::Language::Indonesian, || {
+            let names: Vec<String> = PRAYERS.iter().map(|prayer| prayer.name().into_owned()).collect();
+            assert_eq!(names, ["Subuh", "Terbit", "Dzuhur", "Ashar", "Maghrib", "Isya"]);
+        });
     }
 }

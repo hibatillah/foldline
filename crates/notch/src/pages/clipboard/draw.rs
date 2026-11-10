@@ -8,6 +8,7 @@ use super::{
     state::{Bar, Confirm, Preview},
     style::*,
 };
+use crate::i18n::tr;
 use crate::{
     gfx::{Canvas, Color, FontStyle, ImageData, Point, Rect},
     ui::{Stroke, draw_strokes},
@@ -197,19 +198,19 @@ impl ClipboardPage {
 
         let paste = layout.paste_button();
         let (fill, border, foreground, icon, label) = if self.confirm == Some(Confirm::Pasted) {
-            (GREEN_FILL, GREEN, GREEN, CHECK_ICON, "Pasted")
+            (GREEN_FILL, GREEN, GREEN, CHECK_ICON, tr!("clipboard.pasted"))
         } else {
             let white = if hovered(Target::Paste) { Color::gray(0.85) } else { Color::WHITE };
-            (white, white, Color::BLACK, PASTE_ICON, "Paste")
+            (white, white, Color::BLACK, PASTE_ICON, tr!("clipboard.paste"))
         };
         bordered(canvas, paste, ROW_RADIUS * scale, fill, border, opacity);
-        let label_width = canvas.measure(&BUTTON_LABEL, label) * scale;
+        let label_width = canvas.measure(&BUTTON_LABEL, &label) * scale;
         let content_width = (BUTTON_ICON_SIZE + BUTTON_ICON_GAP) * scale + label_width;
         let left = paste.center_x() - content_width / 2.0;
         let icon_center = Point::new(left + BUTTON_ICON_SIZE * scale / 2.0, paste.center_y());
         stroke_icon(canvas, icon, icon_center, BUTTON_ICON_SIZE, 1.8, foreground, opacity);
         let label_area = Rect { left: left + (BUTTON_ICON_SIZE + BUTTON_ICON_GAP) * scale, ..paste };
-        canvas.text(&BUTTON_LABEL, label, label_area, foreground.faded(opacity));
+        canvas.text(&BUTTON_LABEL, &label, label_area, foreground.faded(opacity));
     }
 }
 
@@ -235,7 +236,7 @@ fn draw_row(canvas: &Canvas, rect: Rect, item: &Item, row: Row, opacity: f32) {
         let center = Point::new(leading + ROW_ICON_SIZE * scale / 2.0, middle);
         stroke_icon(canvas, CHECK_ICON, center, ROW_ICON_SIZE, 1.8, GREEN, opacity);
         let area = Rect::new(leading + (ROW_ICON_SIZE + ROW_GAP) * scale, rect.top, text_right, rect.bottom);
-        canvas.text(&ROW_CONFIRM, confirm.row_text(), area, GREEN.faded(opacity));
+        canvas.text(&ROW_CONFIRM, &confirm.row_text(), area, GREEN.faded(opacity));
         return;
     }
     let (badge_width, style) = match item.kind {
@@ -279,17 +280,17 @@ fn draw_bar(canvas: &Canvas, rect: Rect, bar: Bar, opacity: f32) {
     canvas.fill_rounded_rect(rect, ROW_RADIUS * scale, BAR.faded(opacity));
     let padding = 10.0 * scale;
     let text_area = Rect::new(rect.left + padding, rect.top, rect.right - padding, rect.bottom);
-    canvas.text(&BAR_TEXT, bar.text(), text_area, TEXT.faded(opacity));
+    canvas.text(&BAR_TEXT, &bar.text(), text_area, TEXT.faded(opacity));
     if bar.has_undo() {
-        canvas.text(&BAR_ACTION, "Undo", text_area, UNDO_BLUE.faded(opacity));
+        canvas.text(&BAR_ACTION, &tr!("clipboard.undo"), text_area, UNDO_BLUE.faded(opacity));
     }
 }
 
 /// The badge and two lines side by side, centered on the page.
 fn draw_empty(canvas: &Canvas, bounds: Rect, scale: f32, opacity: f32) {
-    let title = "Nothing copied yet";
-    let hint = "Copy text, a link or an image and it appears here";
-    let text_width = canvas.measure(&EMPTY_TITLE, title).max(canvas.measure(&EMPTY_HINT, hint)).ceil();
+    let title = tr!("clipboard.empty_title");
+    let hint = tr!("clipboard.empty_hint");
+    let text_width = canvas.measure(&EMPTY_TITLE, &title).max(canvas.measure(&EMPTY_HINT, &hint)).ceil();
     let total = (EMPTY_BADGE_SIZE + EMPTY_GAP + text_width) * scale;
     let left = bounds.left + (bounds.width() - total) / 2.0;
     let middle = bounds.top + bounds.height() / 2.0;
@@ -302,8 +303,8 @@ fn draw_empty(canvas: &Canvas, bounds: Rect, scale: f32, opacity: f32) {
     let text_right = text_left + text_width * scale + 2.0 * scale;
     let title_area = Rect::new(text_left, middle - 18.5 * scale, text_right, middle - 0.5 * scale);
     let hint_area = Rect::new(text_left, middle + 2.5 * scale, text_right, middle + 18.5 * scale);
-    canvas.text(&EMPTY_TITLE, title, title_area, TEXT.faded(opacity));
-    canvas.text(&EMPTY_HINT, hint, hint_area, HINT.faded(opacity));
+    canvas.text(&EMPTY_TITLE, &title, title_area, TEXT.faded(opacity));
+    canvas.text(&EMPTY_HINT, &hint, hint_area, HINT.faded(opacity));
 }
 
 #[cfg(test)]

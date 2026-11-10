@@ -4,6 +4,7 @@ use super::{
     slot_rect,
 };
 use super::{document::draw_document, empty::draw_empty_row};
+use crate::i18n::tr;
 use crate::ui::palette::{ACCENT_BLUE, ACCENT_BLUE_LIGHT, SOFT_RED, TEXT_MUTED};
 use crate::ui::palette::{LIGHT_GRAY, REMOVE_BUTTON_FILL};
 use crate::ui::type_styles::{REGULAR_10_CENTER, REGULAR_12_CENTER};
@@ -127,17 +128,12 @@ impl ShelfPage {
         let message_area =
             Rect::new(bounds.left, bounds.center_y() - 8.0 * scale, bounds.right, bounds.center_y() + 8.0 * scale);
         if is_refusing {
-            canvas.text(
-                &REGULAR_12_CENTER,
-                "The shelf is full. Remove a file to add more.",
-                message_area,
-                SOFT_RED.faded(opacity),
-            );
+            canvas.text(&REGULAR_12_CENTER, &tr!("shelf.full"), message_area, SOFT_RED.faded(opacity));
             return;
         }
         if self.shelf.len() == 0 {
             if self.is_drag_over {
-                canvas.text(&REGULAR_12_CENTER, "Release to hold them", message_area, ACCENT_BLUE_LIGHT.faded(opacity));
+                canvas.text(&REGULAR_12_CENTER, &tr!("shelf.release"), message_area, ACCENT_BLUE_LIGHT.faded(opacity));
             } else {
                 draw_empty_row(canvas, bounds, scale, opacity);
             }

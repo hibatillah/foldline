@@ -169,8 +169,8 @@ impl Page for TimerPage {
     }
 
     /// The timer has nothing to say in the collapsed pill as a page; its compact view is a `presence`.
-    fn name(&self) -> &'static str {
-        "Focus timer"
+    fn name(&self) -> String {
+        crate::i18n::tr!("page.timer").into_owned()
     }
 
     fn priority(&self, mode: Mode) -> Option<Priority> {
@@ -274,6 +274,11 @@ impl Page for TimerPage {
 
     fn on_settings_changed(&mut self, context: &mut Context) {
         self.timer.reload_lengths(context.settings);
+        context.request_repaint();
+    }
+
+    fn on_language_changed(&mut self, context: &mut Context) {
+        self.refresh_compact(context.fonts());
         context.request_repaint();
     }
 

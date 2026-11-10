@@ -303,3 +303,19 @@ fn snapshots_of_the_idle_row_and_the_open_header() {
     open(&mut notch, "timer");
     save(&notch, "open-header-with-group-battery-and-dot", 160.0);
 }
+
+#[test]
+#[ignore = "writes images to target/snapshots; run on purpose"]
+fn snapshots_of_every_open_page_in_indonesian() {
+    store::language::with_override(store::language::Language::Indonesian, || {
+        let options = SampleOptions { media: Some(true), timer: true, calendar: true, ..SampleOptions::default() };
+        let mut notch = rig(options);
+        for id in ["media", "shelf", "calendar", "timer", "stats", "todo", "shalat", "weather", "devices"] {
+            open(&mut notch, id);
+            save(&notch, &format!("id-open-{id}"), WINDOW_HEIGHT);
+        }
+        let mut week = rig(SampleOptions { calendar_week: true, ..options });
+        open(&mut week, "calendar");
+        save(&week, "id-open-calendar-week", 260.0);
+    });
+}

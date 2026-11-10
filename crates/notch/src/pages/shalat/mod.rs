@@ -172,8 +172,8 @@ impl Page for ShalatPage {
         "shalat"
     }
 
-    fn name(&self) -> &'static str {
-        "Shalat"
+    fn name(&self) -> String {
+        crate::i18n::tr!("page.shalat").into_owned()
     }
 
     fn is_opt_in(&self) -> bool {
@@ -260,6 +260,11 @@ impl Page for ShalatPage {
     fn on_settings_changed(&mut self, context: &mut Context) {
         self.config = Config::from_settings(context.settings);
         self.refresh(context);
+    }
+
+    fn on_language_changed(&mut self, context: &mut Context) {
+        self.refresh(context);
+        context.request_repaint();
     }
 
     fn on_shown_changed(&mut self, is_shown: bool, context: &mut Context) {

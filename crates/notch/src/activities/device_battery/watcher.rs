@@ -12,8 +12,8 @@ use windows::{
 };
 use windows_collections::{IIterable, IMapView};
 
-use crate::platform::bluetooth_devices::BATTERY_NODES_FILTER;
 pub(super) use crate::platform::bluetooth_devices::BATTERY_PROPERTY;
+use crate::platform::bluetooth_devices::{BATTERY_NODE_KIND, BATTERY_NODES_FILTER};
 
 /// `System.Devices.Connected`: whether the device behind the node is connected right now.
 pub(super) const CONNECTED_PROPERTY: &str = "{83DA6326-97A6-4088-9453-A1923F573B29} 15";
@@ -61,9 +61,10 @@ pub(super) fn start(
     on_event: impl Fn(WatchEvent) + Send + Sync + 'static,
 ) -> Result<DeviceWatcher> {
     let keys: Vec<HSTRING> = extra_keys.iter().map(|key| HSTRING::from(*key)).collect();
-    let watcher = DeviceInformation::CreateWatcherAqsFilterAndAdditionalProperties(
+    let watcher = DeviceInformation::CreateWatcherWithKindAqsFilterAndAdditionalProperties(
         &HSTRING::from(BATTERY_NODES_FILTER),
         &IIterable::<HSTRING>::from(keys),
+        BATTERY_NODE_KIND,
     )?;
     let on_event = Arc::new(on_event);
     let is_initial = Arc::new(AtomicBool::new(true));

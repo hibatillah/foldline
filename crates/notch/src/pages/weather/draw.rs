@@ -1,5 +1,6 @@
 //! Where the weather page puts its left column, its six cells and its messages, and how they look.
 
+use crate::i18n::tr;
 use salah::Local;
 
 use super::{
@@ -160,8 +161,8 @@ impl WeatherPage {
         canvas.fill_rounded_rect(area, radius, SURFACE_BUTTON_BORDER.faded(opacity));
         let inner = Rect::new(area.left + scale, area.top + scale, area.right - scale, area.bottom - scale);
         canvas.fill_rounded_rect(inner, radius - scale, fill.faded(opacity));
-        let label = if self.shows_days { "Week" } else { "Today" };
-        canvas.text(&MEDIUM_11_CENTER, label, area, TEXT_LIGHT.faded(opacity));
+        let label = if self.shows_days { tr!("weather.week") } else { tr!("weather.today") };
+        canvas.text(&MEDIUM_11_CENTER, &label, area, TEXT_LIGHT.faded(opacity));
     }
 
     pub(super) fn draw_left(&self, canvas: &Canvas, forecast: &Forecast, area: Rect, scale: f32, opacity: f32) {
@@ -170,16 +171,21 @@ impl WeatherPage {
         let (temperature, condition, rain) = if self.shows_days {
             let Some(today) = forecast.days.first() else { return };
             let rain = if today.rain_millimeters >= 0.2 {
-                format!("{:.0} mm of rain", today.rain_millimeters)
+                tr!("weather.rain_mm", amount = format!("{:.0}", today.rain_millimeters)).into_owned()
             } else {
-                "No rain expected".to_owned()
+                tr!("weather.no_rain").into_owned()
             };
-            (today.high, today.symbol.label().to_owned(), rain)
+            (today.high, today.symbol.label().into_owned(), rain)
         } else {
             let Some(current) = forecast.current(now) else { return };
             (
                 current.temperature,
-                format!("{} \u{b7} feels {:.0}\u{b0}", current.symbol.label(), forecast.feels_like),
+                tr!(
+                    "weather.feels",
+                    condition = current.symbol.label(),
+                    temperature = format!("{:.0}", forecast.feels_like)
+                )
+                .into_owned(),
                 rain_line(forecast, now),
             )
         };
@@ -210,12 +216,15 @@ impl WeatherPage {
             let is_now = column == 0;
             let (label, symbol, high, low, rain) = if self.shows_days {
                 let Some(day) = forecast.days.get(column) else { continue };
-                let label = if is_now { "Today".to_owned() } else { day.date.format("%a").to_string() };
+                let label = if is_now { tr!("weather.today").into_owned() } else { weekday_short(day.date) };
                 (label, day.symbol, day.high, Some(day.low), day.rain_millimeters)
             } else {
                 let Some(hour) = forecast.hours.get(first_hour + column) else { continue };
-                let label =
-                    if is_now { "Now".to_owned() } else { hour.time.with_timezone(&Local).format("%H:%M").to_string() };
+                let label = if is_now {
+                    tr!("weather.now").into_owned()
+                } else {
+                    hour.time.with_timezone(&Local).format("%H:%M").to_string()
+                };
                 (label, hour.symbol, hour.temperature, None, hour.rain_millimeters)
             };
             if is_now {
@@ -267,6 +276,12 @@ impl WeatherPage {
     }
 }
 
+/// The short weekday name of `date` in the current language.
+fn weekday_short(date: impl salah::Datelike) -> String {
+    let key = format!("weather.weekday.{}", date.weekday().number_from_monday());
+    tr!(&key).into_owned()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,5 +327,18 @@ mod tests {
     fn both_cell_stacks_fit_the_page_height() {
         assert!(stack_height(&[LABEL_HEIGHT, ICON_SIZE, TEMPERATURE_LINE, SUB_HEIGHT], HOURS_GAP) <= 86.0);
         assert!(stack_height(&[LABEL_HEIGHT, ICON_SIZE, TEMPERATURE_LINE + LOW_LINE], DAYS_GAP) <= 86.0);
+    }
+
+    #[test]
+    fn the_today_and_week_labels_fit_the_pill_in_both_languages() {
+        let fonts = crate::gfx::Fonts::new(1.0).unwrap();
+        for language in [store::language::Language::English, store::language::Language::Indonesian] {
+            store::language::with_override(language, || {
+                for key in ["weather.today", "weather.week"] {
+                    let width = fonts.measure(&MEDIUM_11_CENTER, &tr!(key));
+                    assert!(width <= TOGGLE_WIDTH - 8.0, "{language:?}: {key} is {width} px in {TOGGLE_WIDTH}");
+                }
+            });
+        }
     }
 }

@@ -72,8 +72,8 @@ impl Page for ClipboardPage {
         "clipboard"
     }
 
-    fn name(&self) -> &'static str {
-        "Clipboard"
+    fn name(&self) -> String {
+        crate::i18n::tr!("page.clipboard").into_owned()
     }
 
     fn is_opt_in(&self) -> bool {

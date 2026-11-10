@@ -2,6 +2,7 @@
 //! that can be answered adds Reply, which then is the main one.
 
 use super::svg_icon::{Stroke, draw_strokes};
+use crate::i18n::tr;
 use crate::ui::type_styles::MEDIUM_13;
 use crate::{
     gfx::{Canvas, Color, Fonts, Point, Rect, clamp_lines},
@@ -23,10 +24,6 @@ const ICON_SIZE: f32 = 12.0;
 const ICON_GAP: f32 = 6.0;
 /// Keeps Dismiss and the longest Open inside a 340 DIP notification card's 20 DIP padding.
 const MAX_OPEN_LABEL_WIDTH: f32 = 160.0;
-const DISMISS_LABEL: &str = "Dismiss";
-const REPLY_LABEL: &str = "Reply";
-/// Open's label beside Reply, where the app's name no longer fits.
-const OPEN_LABEL_WITH_REPLY: &str = "Open";
 
 const DISMISS_FILL: Color = Color::WHITE.with_alpha(0.14);
 const DISMISS_FILL_HOVERED: Color = Color::WHITE.with_alpha(0.22);
@@ -45,6 +42,9 @@ pub enum BannerButton {
 #[derive(Debug, Default)]
 pub struct BannerButtons {
     open_label: String,
+    /// Read when the buttons are made, so a language change shows on the next banner.
+    dismiss_label: String,
+    reply_label: String,
     dismiss_width: f32,
     open_width: f32,
     /// The width of the Reply button; none when the banner cannot be answered.
@@ -59,22 +59,52 @@ impl BannerButtons {
         let open_label = clamp_lines(open_label, 1, MAX_OPEN_LABEL_WIDTH, |text| fonts.measure(&MEDIUM_13, text))
             .pop()
             .unwrap_or_default();
-        let dismiss_width = 2.0 * PADDING + fonts.measure(&MEDIUM_13, DISMISS_LABEL);
+        let dismiss_label = tr!("banner.dismiss").into_owned();
+        let dismiss_width = 2.0 * PADDING + fonts.measure(&MEDIUM_13, &dismiss_label);
         let open_width = PADDING + fonts.measure(&MEDIUM_13, &open_label) + ICON_GAP + ICON_SIZE + OPEN_RIGHT_PADDING;
-        Self { open_label, dismiss_width, open_width, reply_width: None, hovered: None, pressed: None }
+        Self {
+            open_label,
+            dismiss_label,
+            reply_label: String::new(),
+            dismiss_width,
+            open_width,
+            reply_width: None,
+            hovered: None,
+            pressed: None,
+        }
     }
 
     /// Dismiss, a plain Open and Reply as the main button.
     pub fn with_reply(fonts: &Fonts) -> Self {
         let width = |label: &str| 2.0 * PADDING + fonts.measure(&MEDIUM_13, label);
+        // Open's label beside Reply, where the app's name no longer fits.
+        let (dismiss_label, reply_label, open_label) =
+            (tr!("banner.dismiss").into_owned(), tr!("banner.reply").into_owned(), tr!("banner.open").into_owned());
         Self {
-            open_label: OPEN_LABEL_WITH_REPLY.to_owned(),
-            dismiss_width: width(DISMISS_LABEL),
-            open_width: width(OPEN_LABEL_WITH_REPLY),
-            reply_width: Some(width(REPLY_LABEL)),
+            dismiss_width: width(&dismiss_label),
+            open_width: width(&open_label),
+            reply_width: Some(width(&reply_label)),
+            open_label,
+            dismiss_label,
+            reply_label,
             hovered: None,
             pressed: None,
         }
+    }
+
+    #[cfg(test)]
+    pub fn dismiss_label(&self) -> &str {
+        &self.dismiss_label
+    }
+
+    #[cfg(test)]
+    pub fn reply_label(&self) -> &str {
+        &self.reply_label
+    }
+
+    #[cfg(test)]
+    pub fn open_label(&self) -> &str {
+        &self.open_label
     }
 
     pub fn has_reply(&self) -> bool {
@@ -146,7 +176,9 @@ impl BannerButtons {
             let radius = rect.height() / 2.0;
             let label_left = rect.left + PADDING * scale;
             match button {
-                BannerButton::Dismiss => self.draw_secondary(canvas, rect, DISMISS_LABEL, is_hovered, scale, opacity),
+                BannerButton::Dismiss => {
+                    self.draw_secondary(canvas, rect, &self.dismiss_label, is_hovered, scale, opacity)
+                }
                 BannerButton::Open if self.has_reply() => {
                     self.draw_secondary(canvas, rect, &self.open_label, is_hovered, scale, opacity);
                 }
@@ -155,7 +187,7 @@ impl BannerButtons {
                     canvas.fill_rounded_rect(rect, radius, fill.faded(opacity));
                     canvas.text(
                         &MEDIUM_13,
-                        REPLY_LABEL,
+                        &self.reply_label,
                         Rect { left: label_left, ..rect },
                         Color::BLACK.faded(opacity),
                     );
@@ -265,5 +297,35 @@ mod tests {
         assert_eq!(rects[2].1.right, 380.0);
         assert_eq!(rects[1].1.right, rects[2].1.left - GAP);
         assert_eq!(rects[0].1.right, rects[1].1.left - GAP);
+    }
+
+    #[test]
+    fn the_banner_buttons_read_tutup_balas_buka_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            let with_reply = BannerButtons::with_reply(&Fonts::new(1.0).unwrap());
+            assert_eq!(
+                (with_reply.dismiss_label(), with_reply.reply_label(), with_reply.open_label()),
+                ("Tutup", "Balas", "Buka")
+            );
+        });
+        let english = BannerButtons::with_reply(&Fonts::new(1.0).unwrap());
+        assert_eq!(
+            (english.dismiss_label(), english.reply_label(), english.open_label()),
+            ("Dismiss", "Reply", "Open")
+        );
+    }
+
+    #[test]
+    fn the_three_buttons_fit_the_notification_card_in_both_languages() {
+        let fonts = Fonts::new(1.0).unwrap();
+        for language in [store::language::Language::English, store::language::Language::Indonesian] {
+            store::language::with_override(language, || {
+                let buttons = BannerButtons::with_reply(&fonts);
+                // A notification card is 340 DIP wide with 20 DIP of padding on each side.
+                let rects: Vec<_> = buttons.rects(300.0, 0.0, 1.0).collect();
+                let leftmost = rects.iter().map(|(_, rect)| rect.left).fold(f32::MAX, f32::min);
+                assert!(leftmost >= 0.0, "{language:?}: the buttons need {} px of 300", 300.0 - leftmost);
+            });
+        }
     }
 }

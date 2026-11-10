@@ -105,7 +105,7 @@ fn the_removed_sample_has_six_rows_and_offers_undo() {
 #[test]
 fn the_skipped_sample_shows_the_password_manager_bar_without_undo() {
     let page = ClipboardPage::sample(SKIPPED);
-    assert_eq!(page.bar.map(Bar::text), Some("Skipped: password manager"));
+    assert_eq!(page.bar.map(Bar::text).as_deref(), Some("Skipped: password manager"));
     assert!(!page.history.can_undo());
 }
 

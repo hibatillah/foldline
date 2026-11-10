@@ -1,5 +1,6 @@
-//! Hides Windows' own volume flyout each time Explorer shows it, so the notch's volume activity is the only one.
-//! Nothing about Explorer's window is changed for good: when the notch exits or crashes, the hook goes with it.
+//! Keeps Windows' own volume and brightness flyout from drawing, so the notch's activities are the only ones.
+//! The flyout window gets an empty region, which Explorer never touches, so a show draws nothing. Hiding the window after
+//! Explorer showed it leaves a frame on screen; the region is put back when the notch exits or the setting goes off.
 
 mod hook_thread;
 mod identity;
@@ -9,12 +10,15 @@ use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU32, Ordering};
 use windows::{
     Win32::{
         Foundation::{HWND, RECT},
-        Graphics::Gdi::{GetMonitorInfoW, MONITOR_DEFAULTTONEAREST, MONITORINFO, MonitorFromWindow},
+        Graphics::Gdi::{
+            CreateRectRgn, DeleteObject, GetMonitorInfoW, GetWindowRgn, MONITOR_DEFAULTTONEAREST, MONITORINFO,
+            MonitorFromWindow, NULLREGION, SetWindowRgn,
+        },
         UI::{
             Accessibility::{HWINEVENTHOOK, SetWinEventHook, UnhookWinEvent},
             WindowsAndMessaging::{
                 EVENT_OBJECT_SHOW, FindWindowExW, GWL_EXSTYLE, GetShellWindow, GetWindowLongW, GetWindowRect,
-                GetWindowTextLengthW, GetWindowThreadProcessId, IsWindowVisible, OBJID_WINDOW, SW_HIDE, ShowWindow,
+                GetWindowTextLengthW, GetWindowThreadProcessId, OBJID_WINDOW, SW_HIDE, ShowWindow,
                 WINEVENT_OUTOFCONTEXT,
             },
         },
@@ -62,7 +66,25 @@ pub(super) fn explorer_restarted() {
 
 fn stop_hiding() {
     unhook();
+    release();
     FLYOUT_WINDOW.store(0, Ordering::Relaxed);
+}
+
+/// Puts the flyout's own shape back, from any thread; the notch is leaving or the setting went off.
+pub(super) fn release() {
+    let flyout = FLYOUT_WINDOW.load(Ordering::Relaxed);
+    if flyout != 0 {
+        reveal(HWND(flyout as *mut _));
+    }
+}
+
+/// At exit: a newer notch that replaced this one keeps the flyout concealed.
+pub(super) fn release_at_exit(own_window: HWND) {
+    if super::notification_banners::is_another_notch_running(own_window) {
+        log::debug("volume flyout: a newer notch runs; leaving the flyout to it");
+        return;
+    }
+    release();
 }
 
 fn follow_new_explorer() {
@@ -100,7 +122,7 @@ fn find_flyout(explorer_process: u32) -> Option<HWND> {
     None
 }
 
-/// Listens only to the flyout's own thread, which shows nothing else, and hides the flyout if it is up now.
+/// Listens only to the flyout's own thread, which shows nothing else, and conceals the flyout at once.
 fn adopt(flyout: HWND) {
     FLYOUT_WINDOW.store(flyout.0 as isize, Ordering::Relaxed);
     let mut process = 0;
@@ -109,10 +131,8 @@ fn adopt(flyout: HWND) {
         unhook();
         hook(process, thread);
     }
-    log::debug(&format!("volume flyout: hiding window {:?} on thread {thread}", flyout.0));
-    if unsafe { IsWindowVisible(flyout) }.as_bool() {
-        hide(flyout);
-    }
+    log::debug(&format!("volume flyout: concealing window {:?} on thread {thread}", flyout.0));
+    conceal(flyout);
 }
 
 fn hook(process: u32, thread: u32) {
@@ -147,6 +167,33 @@ fn hide(flyout: HWND) {
     let _ = unsafe { ShowWindow(flyout, SW_HIDE) };
 }
 
+fn has_empty_region(window: HWND) -> bool {
+    let probe = unsafe { CreateRectRgn(0, 0, 1, 1) };
+    let kind = unsafe { GetWindowRgn(window, probe) };
+    let _ = unsafe { DeleteObject(probe.into()) };
+    kind == NULLREGION
+}
+
+/// An empty region draws nothing however often Explorer shows the window; hiding after the show would leave a frame.
+fn conceal(window: HWND) {
+    if has_empty_region(window) {
+        return;
+    }
+    let region = unsafe { CreateRectRgn(0, 0, 0, 0) };
+    // Windows owns the region once it accepts it.
+    if unsafe { SetWindowRgn(window, Some(region), true) } == 0 {
+        let _ = unsafe { DeleteObject(region.into()) };
+        log::debug("could not empty the volume flyout's region; hiding it after each show instead");
+        hide(window);
+    }
+}
+
+fn reveal(window: HWND) {
+    if has_empty_region(window) {
+        unsafe { SetWindowRgn(window, None, true) };
+    }
+}
+
 unsafe extern "system" fn on_show(
     _hook: HWINEVENTHOOK,
     _event: u32,
@@ -160,7 +207,7 @@ unsafe extern "system" fn on_show(
         return;
     }
     if window.0 as isize == FLYOUT_WINDOW.load(Ordering::Relaxed) {
-        hide(window);
+        conceal(window);
     } else if is_flyout(window) {
         // The first show after start, or a flyout Explorer created again.
         adopt(window);
@@ -228,5 +275,56 @@ mod default_tests {
     #[test]
     fn an_explicit_false_shows_the_popup() {
         assert!(!wants_hidden(&settings_with("volume_flyout-false", Some("notch.hide_windows_volume_popup=false\n"))));
+    }
+}
+
+#[cfg(test)]
+mod region_tests {
+    use super::*;
+    use windows::{
+        Win32::UI::WindowsAndMessaging::{CreateWindowExW, DestroyWindow, WS_EX_TOOLWINDOW, WS_POPUP},
+        core::w,
+    };
+
+    fn own_window() -> HWND {
+        unsafe {
+            CreateWindowExW(
+                WS_EX_TOOLWINDOW,
+                w!("STATIC"),
+                w!("flyout stand-in"),
+                WS_POPUP,
+                0,
+                0,
+                200,
+                60,
+                None,
+                None,
+                None,
+                None,
+            )
+        }
+        .unwrap()
+    }
+
+    #[test]
+    fn concealing_a_window_leaves_it_with_an_empty_region_and_revealing_puts_its_shape_back() {
+        let window = own_window();
+        assert!(!has_empty_region(window));
+        conceal(window);
+        assert!(has_empty_region(window));
+        reveal(window);
+        assert!(!has_empty_region(window));
+        let _ = unsafe { DestroyWindow(window) };
+    }
+
+    #[test]
+    fn concealing_twice_and_revealing_a_window_that_was_never_concealed_change_nothing() {
+        let window = own_window();
+        reveal(window);
+        assert!(!has_empty_region(window));
+        conceal(window);
+        conceal(window);
+        assert!(has_empty_region(window));
+        let _ = unsafe { DestroyWindow(window) };
     }
 }

@@ -191,6 +191,9 @@ pub trait Page {
     /// Called after another program changed settings.txt and the host re-read it: re-read this page's keys here.
     fn on_settings_changed(&mut self, _context: &mut Context) {}
 
+    /// The language changed: rebuild any text cached from a translation. Called once per change, after `on_settings_changed`.
+    fn on_language_changed(&mut self, _context: &mut Context) {}
+
     /// Collapsed activity content, independent of page selection; re-evaluated after every event.
     fn presence(&self) -> Option<Presence> {
         None
@@ -251,8 +254,8 @@ pub trait Page {
     fn draw_header_status(&self, _canvas: &Canvas, _area: Rect, _scale: f32, _opacity: f32) {}
 
     /// What the settings window's page list calls the page.
-    fn name(&self) -> &'static str {
-        self.id()
+    fn name(&self) -> String {
+        self.id().to_owned()
     }
 
     /// True for a page that starts switched off until the user adds it.

@@ -1,6 +1,7 @@
 //! Frame Server events report new camera streams; existing streams and direct access are not detected.
 //! Consent-store registry keys are not used because this Windows build no longer updates them.
 
+use crate::i18n::tr;
 use std::{
     collections::HashSet,
     ffi::c_void,
@@ -123,7 +124,7 @@ impl CameraActivity {
     pub fn new() -> Self {
         Self {
             privacy: Privacy::new(Device {
-                name: "Camera",
+                name: || tr!("privacy.camera"),
                 icon: Icon::Camera,
                 color: SUCCESS_GREEN,
                 row: DotRow::Top,

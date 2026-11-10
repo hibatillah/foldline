@@ -1,5 +1,6 @@
 //! A dedicated hook observes only Caps Lock presses and retains no key data; the activity reads the state.
 
+use crate::i18n::tr;
 use std::sync::Mutex;
 
 use windows::Win32::{
@@ -69,8 +70,8 @@ fn is_caps_lock_on() -> bool {
     unsafe { GetKeyState(i32::from(VK_CAPITAL.0)) & 1 != 0 }
 }
 
-fn message(is_on: bool) -> &'static str {
-    if is_on { "Caps Lock on" } else { "Caps Lock off" }
+fn message(is_on: bool) -> std::borrow::Cow<'static, str> {
+    if is_on { tr!("caps.on") } else { tr!("caps.off") }
 }
 
 pub struct CapsLockActivity {
@@ -108,7 +109,7 @@ impl Activity for CapsLockActivity {
             return;
         }
         let tint = if self.is_on { Color::WHITE } else { Color::gray(0.6) };
-        ui::draw_message(canvas, area, opacity, Icon::CapsLock, tint, message(self.is_on), None);
+        ui::draw_message(canvas, area, opacity, Icon::CapsLock, tint, &message(self.is_on), None);
     }
 
     fn header_status_width(&self) -> Option<f32> {
@@ -143,9 +144,9 @@ impl Activity for CapsLockActivity {
         }
         self.is_on = is_on;
         let text = message(is_on);
-        self.width = ui::message_width(context.fonts(), text, None).max(ui::message_width(
+        self.width = ui::message_width(context.fonts(), &text, None).max(ui::message_width(
             context.fonts(),
-            message(!is_on),
+            &message(!is_on),
             None,
         ));
         self.flash.show(context, SHOW_MILLISECONDS);
@@ -199,5 +200,13 @@ mod tests {
     fn caps_lock_ranks_right_after_the_wave() {
         assert_eq!(CapsLockActivity::new().header_status_rank(), 1);
         assert_eq!(CapsLockActivity::new().header_status_page(), None);
+    }
+
+    #[test]
+    fn the_caps_lock_messages_read_in_indonesian() {
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!(message(true), "Caps Lock aktif");
+            assert_eq!(message(false), "Caps Lock mati");
+        });
     }
 }

@@ -1,5 +1,6 @@
 //! The weather page's two message states, what each says and how wide the page is for it.
 
+use crate::i18n::tr;
 use salah::Local;
 
 use super::{WeatherPage, draw};
@@ -30,22 +31,23 @@ impl WeatherPage {
         if self.location.is_none() {
             return Some(Message {
                 kind: MessageKind::NoLocation,
-                title: "Choose a city".to_owned(),
-                detail: "Pick a location in Settings to see the weather".to_owned(),
+                title: tr!("weather.choose_city").into_owned(),
+                detail: tr!("weather.pick_location").into_owned(),
             });
         }
         if !self.is_offline {
             return None;
         }
-        let title = if self.is_service_error { "Weather service did not answer" } else { "Weather is offline" };
+        let title = if self.is_service_error { tr!("weather.service_error") } else { tr!("weather.offline") };
         let detail = match &self.forecast {
-            Some(forecast) => format!(
-                "Last updated {} \u{b7} retrying on its own",
-                forecast.fetched_at.with_timezone(&Local).format("%H:%M")
-            ),
-            None => "Retrying on its own".to_owned(),
+            Some(forecast) => tr!(
+                "weather.last_updated",
+                time = forecast.fetched_at.with_timezone(&Local).format("%H:%M").to_string()
+            )
+            .into_owned(),
+            None => tr!("weather.retrying").into_owned(),
         };
-        Some(Message { kind: MessageKind::Offline, title: title.to_owned(), detail })
+        Some(Message { kind: MessageKind::Offline, title: title.into_owned(), detail })
     }
 
     /// Measures the current message so the page can hug it; the forecast keeps the fixed width.

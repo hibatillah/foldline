@@ -11,10 +11,11 @@ use windows::{
             },
         },
     },
-    core::{PCSTR, PCWSTR, Result, w},
+    core::{HSTRING, PCSTR, PCWSTR, Result, w},
 };
 
 use super::icon::Icon;
+use crate::i18n::tr;
 
 pub(super) const WM_TRAY: u32 = WM_APP + 2;
 const TRAY_ICON_ID: u32 = 1;
@@ -103,10 +104,16 @@ pub(super) fn show_context_menu(window: HWND, state: MenuState) -> Option<MenuCh
     follow_system_theme();
     let Ok(menu) = (unsafe { CreatePopupMenu() }) else { return None };
     let startup_flags = if state.starts_with_windows { MF_STRING | MF_CHECKED } else { MF_STRING };
-    let _ = unsafe { AppendMenuW(menu, startup_flags, MENU_COMMAND_START_WITH_WINDOWS, w!("Start with Windows")) };
-    let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_OPEN_SETTINGS, w!("Settings")) };
+    // Read each time the menu opens, so a language change shows in the next menu.
+    let (start_text, settings_text, quit_text) = (
+        HSTRING::from(tr!("tray.start_with_windows").as_ref()),
+        HSTRING::from(tr!("tray.settings").as_ref()),
+        HSTRING::from(tr!("tray.quit").as_ref()),
+    );
+    let _ = unsafe { AppendMenuW(menu, startup_flags, MENU_COMMAND_START_WITH_WINDOWS, &start_text) };
+    let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_OPEN_SETTINGS, &settings_text) };
     let _ = unsafe { AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null()) };
-    let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_QUIT, w!("Quit Notch")) };
+    let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_QUIT, &quit_text) };
     let mut cursor = POINT::default();
     let _ = unsafe { GetCursorPos(&mut cursor) };
     // A popup menu needs a foreground owner to dismiss correctly when clicking elsewhere.

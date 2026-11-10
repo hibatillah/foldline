@@ -200,8 +200,8 @@ impl Page for CalendarPage {
         "calendar"
     }
 
-    fn name(&self) -> &'static str {
-        "Calendar"
+    fn name(&self) -> String {
+        crate::i18n::tr!("page.calendar").into_owned()
     }
 
     fn priority(&self, mode: Mode) -> Option<Priority> {
@@ -313,6 +313,11 @@ impl Page for CalendarPage {
                 context.set_timer(FETCH_TIMER, FIRST_FETCH_MILLISECONDS);
             }
         }
+        self.refresh(context.fonts());
+        context.request_repaint();
+    }
+
+    fn on_language_changed(&mut self, context: &mut Context) {
         self.refresh(context.fonts());
         context.request_repaint();
     }

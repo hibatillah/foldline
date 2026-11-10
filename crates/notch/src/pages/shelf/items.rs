@@ -1,5 +1,6 @@
 //! Persist one path per line without moving or copying the files.
 
+use crate::i18n::tr;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -50,11 +51,15 @@ pub fn file_name(path: &Path) -> String {
 }
 
 pub fn added_text(count: usize) -> String {
-    format!("{count} file{} added", if count == 1 { "" } else { "s" })
+    if count == 1 {
+        tr!("shelf.files_added_one", count = count).into_owned()
+    } else {
+        tr!("shelf.files_added_other", count = count).into_owned()
+    }
 }
 
 pub fn removed_text(name: &str) -> String {
-    format!("{name} removed")
+    tr!("shelf.removed", name = name).into_owned()
 }
 
 pub fn count_text(count: usize) -> String {
@@ -212,5 +217,14 @@ mod tests {
         shelf.remove(0);
         assert!(!shelf.is_full());
         let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn the_added_text_has_no_plural_in_indonesian() {
+        assert_eq!((added_text(1).as_str(), added_text(3).as_str()), ("1 file added", "3 files added"));
+        store::language::with_override(store::language::Language::Indonesian, || {
+            assert_eq!((added_text(1).as_str(), added_text(3).as_str()), ("1 file ditambahkan", "3 file ditambahkan"));
+            assert_eq!(removed_text("a.pdf"), "a.pdf dihapus");
+        });
     }
 }
