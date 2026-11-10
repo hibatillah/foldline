@@ -35,28 +35,26 @@ pub(super) fn draw_tiles(canvas: &Canvas, prepared: &Prepared, bounds: Rect, opa
     let shown = &prepared.shown;
     let count = shown.devices.len();
     for (index, (device, percent_text)) in shown.devices.iter().zip(&prepared.percent_texts).enumerate() {
-        draw_tile(canvas, device, percent_text, layout::cell(bounds, index, count, canvas.scale()), opacity);
+        draw_tile(canvas, device, percent_text, layout::cell(bounds, index, count), opacity);
     }
 }
 
 fn draw_tile(canvas: &Canvas, device: &Device, percent_text: &str, cell: Rect, opacity: f32) {
-    let scale = canvas.scale();
     let tone = device.tone();
     let fill = match device.ring_fraction() {
         Some(fraction) => Fill::Level { fraction, color: tone_color(tone) },
         None if device.is_connected => Fill::Solid,
         None => Fill::Dashed,
     };
-    ring::draw(canvas, layout::ring_center(cell, scale), &fill, opacity);
+    ring::draw(canvas, layout::ring_center(cell), &fill, opacity);
     let icon_color = if device.is_connected { LIGHT_GRAY } else { OFF_ICON };
-    device.kind.icon().draw(canvas, layout::icon_center(cell, scale), ICON_SIZE * scale, icon_color, opacity);
+    device.kind.icon().draw(canvas, layout::icon_center(cell), ICON_SIZE, icon_color, opacity);
     draw_percent(canvas, device, percent_text, cell, opacity);
-    canvas.text(&REGULAR_10_CENTER, &device.name, layout::name_line(cell, scale), TEXT_MUTED.faded(opacity));
+    canvas.text(&REGULAR_10_CENTER, &device.name, layout::name_line(cell), TEXT_MUTED.faded(opacity));
 }
 
 fn draw_percent(canvas: &Canvas, device: &Device, text: &str, cell: Rect, opacity: f32) {
-    let scale = canvas.scale();
-    let line = layout::percent_line(cell, scale);
+    let line = layout::percent_line(cell);
     let color = match (device.is_connected, device.battery_percent) {
         (false, _) => TEXT_DIM,
         (true, None) => Color::WHITE,
@@ -68,17 +66,17 @@ fn draw_percent(canvas: &Canvas, device: &Device, text: &str, cell: Rect, opacit
         return;
     }
     // The bolt follows the number, and the pair is centered as one.
-    let text_width = canvas.measure(&PERCENT_LEADING, text) * scale;
-    let total = text_width + (BOLT_GAP + BOLT_WIDTH) * scale;
+    let text_width = canvas.measure(&PERCENT_LEADING, text);
+    let total = text_width + BOLT_GAP + BOLT_WIDTH;
     let start = cell.center_x() - total / 2.0;
     canvas.text(
         &PERCENT_LEADING,
         text,
-        Rect { left: start, right: start + text_width + scale, ..line },
+        Rect { left: start, right: start + text_width + 1.0, ..line },
         color.faded(opacity),
     );
-    let bolt = Point::new(start + text_width + (BOLT_GAP + BOLT_WIDTH / 2.0) * scale, line.top + line.height() / 2.0);
-    Icon::Bolt.draw(canvas, bolt, BOLT_SIZE * scale, CHARGING_GREEN, opacity);
+    let bolt = Point::new(start + text_width + BOLT_GAP + BOLT_WIDTH / 2.0, line.top + line.height() / 2.0);
+    Icon::Bolt.draw(canvas, bolt, BOLT_SIZE, CHARGING_GREEN, opacity);
 }
 
 /// The whole-page message: a Bluetooth mark in a round badge at the left, a title and one line of detail beside it.
@@ -90,14 +88,13 @@ pub(super) fn draw_message(
     detail: &str,
     opacity: f32,
 ) {
-    let scale = canvas.scale();
     let text_width = canvas.measure(&MEDIUM_15, title).max(canvas.measure(&REGULAR_12, detail)).ceil();
-    let (icon, title_line, detail_line) = layout::message_lines(bounds, scale, text_width);
-    let radius = MESSAGE_BADGE_DIAMETER / 2.0 * scale;
+    let (icon, title_line, detail_line) = layout::message_lines(bounds, text_width);
+    let radius = MESSAGE_BADGE_DIAMETER / 2.0;
     canvas.fill_circle(icon, radius, SURFACE_BORDER.faded(opacity));
-    canvas.fill_circle(icon, radius - scale, SURFACE_BADGE.faded(opacity));
+    canvas.fill_circle(icon, radius - 1.0, SURFACE_BADGE.faded(opacity));
     let tint = if is_bluetooth_off { BLUETOOTH_OFF } else { MINT_GREEN };
-    Icon::Bluetooth.draw(canvas, icon, MESSAGE_ICON_SIZE * scale, tint, opacity);
+    Icon::Bluetooth.draw(canvas, icon, MESSAGE_ICON_SIZE, tint, opacity);
     canvas.text(&MEDIUM_15, title, title_line, Color::WHITE.faded(opacity));
     canvas.text(&REGULAR_12, detail, detail_line, TEXT_MUTED.faded(opacity));
 }
@@ -114,9 +111,7 @@ mod tests {
         const { assert!(!REGULAR_10_CENTER.wrap) };
         let long_name = "Logitech Wireless Mouse M330 Silent Plus";
         assert!(fonts.measure(&REGULAR_10_CENTER, long_name) > 76.0, "the sample really is wider than the tile's name");
-        for scale in [1.0, 1.5, 2.0] {
-            let cell = layout::cell(Rect::new(0.0, 0.0, 440.0 * scale, 86.0 * scale), 0, 5, scale);
-            assert!(layout::name_line(cell, scale).width() <= 76.0 * scale + 0.01);
-        }
+        let cell = layout::cell(Rect::new(0.0, 0.0, 440.0, 86.0), 0, 5);
+        assert!(layout::name_line(cell).width() <= 76.0 + 0.01);
     }
 }

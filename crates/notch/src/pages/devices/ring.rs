@@ -2,14 +2,13 @@
 
 use std::f32::consts::{FRAC_PI_2, TAU};
 
-use crate::gfx::{Canvas, Color, Mask, Path, Point, Rect};
+use crate::gfx::{Canvas, Color, Mask, Path, Point};
 
 use super::layout::RING_DIAMETER;
 use crate::ui::palette::SURFACE_OUTLINE;
 
 const RING_RADIUS: f32 = 25.0;
 const STROKE: f32 = 4.0;
-const MARGIN: u32 = 1;
 const STEPS: u32 = 50;
 const POINTS_PER_TURN: f32 = 96.0;
 const DASH_COUNT: u32 = 20;
@@ -32,11 +31,8 @@ pub(super) enum Fill {
 }
 
 pub(super) fn draw(canvas: &Canvas, center: Point, fill: &Fill, opacity: f32) {
-    let scale = canvas.scale();
-    let side = (RING_DIAMETER * scale).ceil() as u32 + 2 * MARGIN;
-    let left = (center.x - side as f32 / 2.0).round();
-    let top = (center.y - side as f32 / 2.0).round();
-    let area = Rect::new(left, top, left + side as f32, top + side as f32);
+    let (side, area) = canvas.pixel_square(center, RING_DIAMETER);
+    let scale = canvas.raster_scale();
     let middle = Point::new(side as f32 / 2.0, side as f32 / 2.0);
     let (radius, half_width) = (RING_RADIUS * scale, STROKE * scale / 2.0);
     match *fill {

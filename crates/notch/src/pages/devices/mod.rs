@@ -79,6 +79,10 @@ impl Page for DevicesPage {
         (mode == Mode::Expanded).then_some(Priority::BACKGROUND)
     }
 
+    fn uses_units(&self) -> bool {
+        true
+    }
+
     fn sizes(&self) -> PageSizes {
         let width = match &self.prepared {
             Some(prepared) => tiles_width(prepared.shown.devices.len()),

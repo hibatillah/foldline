@@ -67,27 +67,25 @@ fn the_page_is_as_wide_as_its_tiles() {
 
 #[test]
 fn every_part_of_every_tile_stays_inside_the_page_area() {
-    for scale in [1.0, 1.25, 2.0] {
-        for count in 1..=5 {
-            let area = Rect::new(0.0, 0.0, layout::tiles_width(count) * scale, CONTENT_HEIGHT * scale);
-            for index in 0..count {
-                let cell = layout::cell(area, index, count, scale);
-                assert!(contains(area, cell));
-                for line in [layout::percent_line(cell, scale), layout::name_line(cell, scale)] {
-                    assert!(contains(area, line), "{line:?} at {scale}");
-                }
-                let ring = layout::ring_center(cell, scale);
-                let radius = layout::RING_DIAMETER / 2.0 * scale;
-                assert!(ring.y - radius >= area.top && ring.y + radius <= area.bottom);
-                assert!(ring.x - radius >= cell.left - 0.01, "a ring fits its cell");
+    for count in 1..=5 {
+        let area = Rect::new(0.0, 0.0, layout::tiles_width(count), CONTENT_HEIGHT);
+        for index in 0..count {
+            let cell = layout::cell(area, index, count);
+            assert!(contains(area, cell));
+            for line in [layout::percent_line(cell), layout::name_line(cell)] {
+                assert!(contains(area, line), "{line:?}");
             }
+            let ring = layout::ring_center(cell);
+            let radius = layout::RING_DIAMETER / 2.0;
+            assert!(ring.y - radius >= area.top && ring.y + radius <= area.bottom);
+            assert!(ring.x - radius >= cell.left - 0.01, "a ring fits its cell");
         }
-        let area = Rect::new(0.0, 0.0, MESSAGE_WIDTH * scale, CONTENT_HEIGHT * scale);
-        let text_width = 226.0;
-        let (badge, title, detail) = layout::message_lines(area, scale, text_width);
-        assert!(contains(area, title) && contains(area, detail));
-        assert!(badge.x - layout::MESSAGE_BADGE_DIAMETER / 2.0 * scale >= area.left);
     }
+    let area = Rect::new(0.0, 0.0, MESSAGE_WIDTH, CONTENT_HEIGHT);
+    let text_width = 226.0;
+    let (badge, title, detail) = layout::message_lines(area, text_width);
+    assert!(contains(area, title) && contains(area, detail));
+    assert!(badge.x - layout::MESSAGE_BADGE_DIAMETER / 2.0 >= area.left);
 }
 
 #[test]
