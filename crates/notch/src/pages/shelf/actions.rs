@@ -57,7 +57,7 @@ impl ShelfPage {
         self.request_previews(context);
         let items = self.shelf.items();
         self.arrivals.retain(|path, _| items.contains(path));
-        self.hovered = None;
+        self.hover.clear();
         context.request_repaint();
     }
 

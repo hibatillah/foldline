@@ -96,7 +96,7 @@ pub(super) fn draw_document(canvas: &Canvas, path: &Path, area: Rect, opacity: f
     }
 }
 
-/// Draws in the units of the design (a 40 by 40 box), scaled to the screen.
+/// Draws in the units of the design (a 40 by 40 box), fitted to the area.
 struct Box40<'a> {
     canvas: &'a Canvas<'a>,
     area: Rect,

@@ -7,18 +7,16 @@ use std::time::Instant;
 
 impl ShelfPage {
     pub(super) fn handle_pointer(&mut self, event: PointerEvent, frame: &Frame, context: &mut Context) {
-        let (bounds, scale, count) = (frame.bounds, frame.scale, self.shelf.len());
+        let (bounds, count) = (frame.bounds, self.shelf.len());
         match event {
             PointerEvent::Moved(point) => {
-                let hovered = target_at(point, bounds, scale, count);
-                if hovered != self.hovered {
-                    self.hovered = hovered;
+                if self.hover.set(target_at(point, bounds, count)) {
                     context.request_repaint();
                 }
                 let Some(press) = self.press else { return };
                 let Target::Slot(position) = press.target else { return };
                 let moved = (point.x - press.origin.x).hypot(point.y - press.origin.y);
-                if moved >= DRAG_START_DISTANCE * scale
+                if moved >= DRAG_START_DISTANCE
                     && let Some(index) = file_index(position, count)
                 {
                     self.press = None;
@@ -26,11 +24,11 @@ impl ShelfPage {
                 }
             }
             PointerEvent::Pressed(point) if frame.is_open() => {
-                self.press = target_at(point, bounds, scale, count).map(|target| Press { target, origin: point });
+                self.press = target_at(point, bounds, count).map(|target| Press { target, origin: point });
             }
             PointerEvent::Released(point) => {
                 let Some(press) = self.press.take() else { return };
-                if !frame.is_open() || target_at(point, bounds, scale, count) != Some(press.target) {
+                if !frame.is_open() || target_at(point, bounds, count) != Some(press.target) {
                     return;
                 }
                 match press.target {
@@ -53,8 +51,7 @@ impl ShelfPage {
                 }
             }
             PointerEvent::SecondaryReleased(point) if frame.is_open() => {
-                let Some(Target::Slot(position) | Target::Remove(position)) = target_at(point, bounds, scale, count)
-                else {
+                let Some(Target::Slot(position) | Target::Remove(position)) = target_at(point, bounds, count) else {
                     return;
                 };
                 if let Some(index) = file_index(position, count) {
@@ -63,7 +60,7 @@ impl ShelfPage {
             }
             PointerEvent::Left | PointerEvent::CaptureLost => {
                 self.press = None;
-                if self.hovered.take().is_some() {
+                if self.hover.clear() {
                     context.request_repaint();
                 }
             }

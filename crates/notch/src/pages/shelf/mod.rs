@@ -3,7 +3,7 @@ use crate::{
     activity::{FLASH_TIMER, Flash, Presence},
     gfx::{Canvas, Color, ImageBrush, ImageData, Point, Rect, Size, Spring},
     page::{Context, Frame, Mode, Page, PageSizes, PointerEvent, Priority, TimerId},
-    ui::{self, Icon},
+    ui::{self, HoverTarget, Icon},
 };
 use layout::{
     Target, content_height, file_index, fitted, is_double_click, name_lines, preview_rect, remove_center, shown_count,
@@ -82,7 +82,7 @@ pub struct ShelfPage {
     alert_title: String,
     alert_value: String,
     alert_width: f32,
-    hovered: Option<Target>,
+    hover: HoverTarget<Target>,
     press: Option<Press>,
     is_drag_over: bool,
     dragging: Option<PathBuf>,
@@ -105,7 +105,7 @@ impl ShelfPage {
             alert_title: String::new(),
             alert_value: String::new(),
             alert_width: 0.0,
-            hovered: None,
+            hover: HoverTarget::default(),
             press: None,
             is_drag_over: false,
             dragging: None,
@@ -128,6 +128,10 @@ impl Preview {
 impl Page for ShelfPage {
     fn id(&self) -> &'static str {
         "shelf"
+    }
+
+    fn uses_units(&self) -> bool {
+        true
     }
 
     fn name(&self) -> String {
@@ -223,7 +227,7 @@ impl Page for ShelfPage {
     }
 
     fn uses_right_click(&self, point: Point, frame: &Frame) -> bool {
-        frame.is_open() && target_at(point, frame.bounds, frame.scale, self.shelf.len()).is_some()
+        frame.is_open() && target_at(point, frame.bounds, self.shelf.len()).is_some()
     }
 
     fn on_timer(&mut self, timer: TimerId, context: &mut Context) {

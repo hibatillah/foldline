@@ -40,23 +40,23 @@ pub(super) fn content_height(count: usize) -> f32 {
 }
 
 /// Keep the places centered while the drop target expands the page.
-pub(super) fn slot_rect(position: usize, count: usize, bounds: Rect, scale: f32) -> Rect {
+pub(super) fn slot_rect(position: usize, count: usize, bounds: Rect) -> Rect {
     let needed = 2.0 * ZONE_PADDING + rows(count) as f32 * COLUMN_HEIGHT + (rows(count) - 1) as f32 * ROW_GAP;
-    let spare_width = (bounds.width() - EXPANDED_WIDTH * scale).max(0.0) / 2.0;
-    let spare_height = (bounds.height() - needed * scale).max(0.0) / 2.0;
+    let spare_width = (bounds.width() - EXPANDED_WIDTH).max(0.0) / 2.0;
+    let spare_height = (bounds.height() - needed).max(0.0) / 2.0;
     let (row, column) = (position / SLOTS_PER_ROW, position % SLOTS_PER_ROW);
-    let left = bounds.left + spare_width + (ZONE_PADDING + column as f32 * (FILE_WIDTH + FILE_GAP)) * scale;
-    let top = bounds.top + spare_height + (ZONE_PADDING + row as f32 * (COLUMN_HEIGHT + ROW_GAP)) * scale;
-    Rect::new(left, top, left + FILE_WIDTH * scale, top + COLUMN_HEIGHT * scale)
+    let left = bounds.left + spare_width + (ZONE_PADDING + column as f32 * (FILE_WIDTH + FILE_GAP));
+    let top = bounds.top + spare_height + (ZONE_PADDING + row as f32 * (COLUMN_HEIGHT + ROW_GAP));
+    Rect::new(left, top, left + FILE_WIDTH, top + COLUMN_HEIGHT)
 }
 
-pub(super) fn preview_rect(column: Rect, scale: f32) -> Rect {
-    let left = column.left + (FILE_WIDTH - PREVIEW_SIZE) / 2.0 * scale;
-    Rect::new(left, column.top, left + PREVIEW_SIZE * scale, column.top + PREVIEW_SIZE * scale)
+pub(super) fn preview_rect(column: Rect) -> Rect {
+    let left = column.left + (FILE_WIDTH - PREVIEW_SIZE) / 2.0;
+    Rect::new(left, column.top, left + PREVIEW_SIZE, column.top + PREVIEW_SIZE)
 }
 
-pub(super) fn remove_center(preview: Rect, scale: f32) -> Point {
-    Point::new(preview.right - REMOVE_INSET * scale, preview.top + REMOVE_INSET * scale)
+pub(super) fn remove_center(preview: Rect) -> Point {
+    Point::new(preview.right - REMOVE_INSET, preview.top + REMOVE_INSET)
 }
 
 pub(super) fn fitted(size: (u32, u32), area: Rect) -> Rect {
@@ -71,15 +71,15 @@ pub(super) enum Target {
     Remove(usize),
 }
 
-pub(super) fn target_at(point: Point, bounds: Rect, scale: f32, count: usize) -> Option<Target> {
+pub(super) fn target_at(point: Point, bounds: Rect, count: usize) -> Option<Target> {
     let places = shown_count(count);
     for position in 0..places {
-        let center = remove_center(preview_rect(slot_rect(position, count, bounds, scale), scale), scale);
-        if (point.x - center.x).hypot(point.y - center.y) <= REMOVE_HIT_RADIUS * scale {
+        let center = remove_center(preview_rect(slot_rect(position, count, bounds)));
+        if (point.x - center.x).hypot(point.y - center.y) <= REMOVE_HIT_RADIUS {
             return Some(Target::Remove(position));
         }
     }
-    (0..places).find(|&position| slot_rect(position, count, bounds, scale).contains(point)).map(Target::Slot)
+    (0..places).find(|&position| slot_rect(position, count, bounds).contains(point)).map(Target::Slot)
 }
 
 pub(super) fn name_lines(name: &str, fonts: &Fonts) -> Vec<String> {
@@ -135,19 +135,19 @@ mod tests {
 
     #[test]
     fn the_places_sit_side_by_side_and_fill_the_page_from_edge_to_edge_of_its_padding() {
-        let first = slot_rect(0, 3, BOUNDS, 1.0);
-        let second = slot_rect(1, 3, BOUNDS, 1.0);
+        let first = slot_rect(0, 3, BOUNDS);
+        let second = slot_rect(1, 3, BOUNDS);
         assert_eq!(second.left - first.right, FILE_GAP);
         assert_eq!(first.left, ZONE_PADDING);
-        let last = slot_rect(SLOTS_PER_ROW - 1, 6, BOUNDS, 1.0);
+        let last = slot_rect(SLOTS_PER_ROW - 1, 6, BOUNDS);
         assert!((BOUNDS.right - last.right - ZONE_PADDING).abs() < 0.01, "{last:?}");
     }
 
     #[test]
     fn the_seventh_file_starts_the_second_row_under_the_first() {
         let tall = Rect::new(0.0, 0.0, EXPANDED_WIDTH, content_height(7));
-        let first = slot_rect(0, 7, tall, 1.0);
-        let seventh = slot_rect(SLOTS_PER_ROW, 7, tall, 1.0);
+        let first = slot_rect(0, 7, tall);
+        let seventh = slot_rect(SLOTS_PER_ROW, 7, tall);
         assert_eq!(seventh.left, first.left);
         assert_eq!(seventh.top - first.bottom, ROW_GAP);
         assert!((tall.bottom - seventh.bottom - ZONE_PADDING).abs() < 0.01, "{seventh:?}");
@@ -155,33 +155,33 @@ mod tests {
 
     #[test]
     fn the_padding_is_the_same_on_every_side_of_a_column() {
-        let column = slot_rect(0, 3, BOUNDS, 1.0);
+        let column = slot_rect(0, 3, BOUNDS);
         assert_eq!(column.left - BOUNDS.left, column.top - BOUNDS.top);
         assert!((BOUNDS.bottom - column.bottom - ZONE_PADDING).abs() < 0.01, "{column:?}");
     }
 
     #[test]
     fn a_press_finds_the_file_or_the_cross_under_it() {
-        let column = slot_rect(1, 3, BOUNDS, 1.0);
+        let column = slot_rect(1, 3, BOUNDS);
         let inside = Point::new(column.center_x(), column.bottom - 2.0);
-        assert_eq!(target_at(inside, BOUNDS, 1.0, 3), Some(Target::Slot(1)));
-        let cross = remove_center(preview_rect(column, 1.0), 1.0);
-        assert_eq!(target_at(cross, BOUNDS, 1.0, 3), Some(Target::Remove(1)));
-        assert_eq!(target_at(Point::new(BOUNDS.right - 5.0, 80.0), BOUNDS, 1.0, 3), None);
+        assert_eq!(target_at(inside, BOUNDS, 3), Some(Target::Slot(1)));
+        let cross = remove_center(preview_rect(column));
+        assert_eq!(target_at(cross, BOUNDS, 3), Some(Target::Remove(1)));
+        assert_eq!(target_at(Point::new(BOUNDS.right - 5.0, 80.0), BOUNDS, 3), None);
     }
 
     #[test]
     fn every_file_of_a_full_shelf_has_a_cross() {
         let tall = Rect::new(0.0, 0.0, EXPANDED_WIDTH, content_height(MAX_FILES));
-        let last = slot_rect(MAX_FILES - 1, MAX_FILES, tall, 1.0);
-        let corner = remove_center(preview_rect(last, 1.0), 1.0);
-        assert_eq!(target_at(corner, tall, 1.0, MAX_FILES), Some(Target::Remove(MAX_FILES - 1)));
+        let last = slot_rect(MAX_FILES - 1, MAX_FILES, tall);
+        let corner = remove_center(preview_rect(last));
+        assert_eq!(target_at(corner, tall, MAX_FILES), Some(Target::Remove(MAX_FILES - 1)));
     }
 
     #[test]
     fn an_empty_shelf_has_nothing_to_press() {
-        assert_eq!(target_at(Point::new(40.0, 40.0), BOUNDS, 1.0, 0), None);
-        assert_eq!(target_at(middle(slot_rect(0, 0, BOUNDS, 1.0)), BOUNDS, 1.0, 0), None);
+        assert_eq!(target_at(Point::new(40.0, 40.0), BOUNDS, 0), None);
+        assert_eq!(target_at(middle(slot_rect(0, 0, BOUNDS)), BOUNDS, 0), None);
     }
 
     #[test]

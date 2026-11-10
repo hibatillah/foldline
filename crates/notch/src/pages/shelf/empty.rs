@@ -32,21 +32,21 @@ pub(super) fn row_width(title_width: f32, detail_width: f32) -> f32 {
     BADGE + GAP + title_width.max(detail_width)
 }
 
-pub(super) fn draw_empty_row(canvas: &Canvas, bounds: Rect, scale: f32, opacity: f32) {
+pub(super) fn draw_empty_row(canvas: &Canvas, bounds: Rect, opacity: f32) {
     let text_width = canvas.measure(&MEDIUM_15, &title_text()).max(canvas.measure(&REGULAR_12, &detail_text()));
-    let left = bounds.center_x() - row_width(text_width, 0.0) * scale / 2.0;
-    let center = Point::new(left + BADGE * scale / 2.0, bounds.center_y());
-    let radius = BADGE * scale / 2.0;
+    let left = bounds.center_x() - row_width(text_width, 0.0) / 2.0;
+    let center = Point::new(left + BADGE / 2.0, bounds.center_y());
+    let radius = BADGE / 2.0;
     canvas.fill_circle(center, radius, SURFACE_BORDER.faded(opacity));
-    canvas.fill_circle(center, radius - scale, SURFACE_BADGE.faded(opacity));
+    canvas.fill_circle(center, radius - 1.0, SURFACE_BADGE.faded(opacity));
     let layers = [Stroke::new(DOWNLOAD_ARROW, TEXT_MUTED), Stroke::new(DOWNLOAD_TRAY, TEXT_MUTED)];
-    draw_strokes(canvas, &layers, center, ICON_SIZE * scale, 2.0, opacity);
-    let text_left = left + (BADGE + GAP) * scale;
-    let top = bounds.center_y() - (TITLE_HEIGHT + LINE_GAP + DETAIL_HEIGHT) * scale / 2.0;
-    let title = Rect::new(text_left, top, text_left + text_width * scale + 2.0, top + TITLE_HEIGHT * scale);
+    draw_strokes(canvas, &layers, center, ICON_SIZE, 2.0, opacity);
+    let text_left = left + BADGE + GAP;
+    let top = bounds.center_y() - (TITLE_HEIGHT + LINE_GAP + DETAIL_HEIGHT) / 2.0;
+    let title = Rect::new(text_left, top, text_left + text_width + 2.0, top + TITLE_HEIGHT);
     canvas.text(&MEDIUM_15, &title_text(), title, Color::WHITE.faded(opacity));
-    let detail_top = title.bottom + LINE_GAP * scale;
-    let detail = Rect { top: detail_top, bottom: detail_top + DETAIL_HEIGHT * scale, ..title };
+    let detail_top = title.bottom + LINE_GAP;
+    let detail = Rect { top: detail_top, bottom: detail_top + DETAIL_HEIGHT, ..title };
     canvas.text(&REGULAR_12, &detail_text(), detail, TEXT_MUTED.faded(opacity));
 }
 
