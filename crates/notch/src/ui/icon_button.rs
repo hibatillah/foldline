@@ -26,6 +26,7 @@ impl IconButton {
         self.icon.draw(canvas, self.center, size * scale, self.color, opacity);
     }
 
+    /// `scale` is the scale of the caller's space (1.0 in units).
     pub fn is_hit(center: Point, scale: f32, point: Point) -> bool {
         Rect::around(center, HIT_HALF * scale, HIT_HALF * scale).contains(point)
     }

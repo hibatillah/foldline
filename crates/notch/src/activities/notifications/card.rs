@@ -141,7 +141,7 @@ impl Card {
             if reply.is_typing() {
                 reply.draw(canvas, tile.left, right, top, opacity);
             } else {
-                self.buttons.draw(canvas, right, top, 1.0, opacity);
+                self.buttons.draw(canvas, right, top, opacity);
             }
         }
     }

@@ -118,7 +118,7 @@ impl BannerButtons {
     }
 
     /// Where each button sits, left to right; `right` is the row's right edge and `top` the top of the gap above it, in
-    /// device pixels.
+    /// the caller's space, and `scale` is the scale of the caller's space (1.0 in units).
     pub fn rects(&self, right: f32, top: f32, scale: f32) -> impl Iterator<Item = (BannerButton, Rect)> {
         let button_top = top + TOP_GAP * scale;
         let bottom = button_top + HEIGHT * scale;
@@ -142,12 +142,13 @@ impl BannerButtons {
         .flatten()
     }
 
+    /// `scale` is the scale of the caller's space (1.0 in units).
     pub fn button_at(&self, point: Point, right: f32, top: f32, scale: f32) -> Option<BannerButton> {
         self.rects(right, top, scale).find(|(_, rect)| rect.contains(point)).map(|(button, _)| button)
     }
 
     /// Follows the pointer; returns the button that was clicked (pressed and released on it) and whether the look
-    /// changed, so the caller repaints.
+    /// changed, so the caller repaints; `scale` is the scale of the caller's space (1.0 in units).
     pub fn on_pointer(
         &mut self,
         event: PointerEvent,
@@ -176,17 +177,16 @@ impl BannerButtons {
         (clicked, before != self.hovered)
     }
 
-    pub fn draw(&self, canvas: &Canvas, right: f32, top: f32, scale: f32, opacity: f32) {
+    pub fn draw(&self, canvas: &Canvas, right: f32, top: f32, opacity: f32) {
+        let scale = canvas.scale();
         for (button, rect) in self.rects(right, top, scale) {
             let is_hovered = self.hovered == Some(button);
             let radius = rect.height() / 2.0;
             let label_left = rect.left + PADDING * scale;
             match button {
-                BannerButton::Dismiss => {
-                    self.draw_secondary(canvas, rect, &self.dismiss_label, is_hovered, scale, opacity)
-                }
+                BannerButton::Dismiss => self.draw_secondary(canvas, rect, &self.dismiss_label, is_hovered, opacity),
                 BannerButton::Open if self.has_reply() => {
-                    self.draw_secondary(canvas, rect, &self.open_label, is_hovered, scale, opacity);
+                    self.draw_secondary(canvas, rect, &self.open_label, is_hovered, opacity);
                 }
                 BannerButton::Reply => {
                     let fill = if is_hovered { OPEN_FILL_HOVERED } else { Color::WHITE };
@@ -223,10 +223,10 @@ impl BannerButtons {
         }
     }
 
-    fn draw_secondary(&self, canvas: &Canvas, rect: Rect, label: &str, is_hovered: bool, scale: f32, opacity: f32) {
+    fn draw_secondary(&self, canvas: &Canvas, rect: Rect, label: &str, is_hovered: bool, opacity: f32) {
         let fill = if is_hovered { DISMISS_FILL_HOVERED } else { DISMISS_FILL };
         canvas.fill_rounded_rect(rect, rect.height() / 2.0, fill.faded(opacity));
-        let label_area = Rect { left: rect.left + PADDING * scale, ..rect };
+        let label_area = Rect { left: rect.left + PADDING * canvas.scale(), ..rect };
         canvas.text(&MEDIUM_13, label, label_area, Color::WHITE.faded(opacity));
     }
 }
@@ -234,6 +234,7 @@ impl BannerButtons {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gfx::test_support::render;
 
     const LABELS: BannerLabels = BannerLabels { dismiss: "Dismiss", reply: "Reply", open: "Open" };
 
@@ -305,6 +306,25 @@ mod tests {
         assert_eq!(rects[2].1.right, 380.0);
         assert_eq!(rects[1].1.right, rects[2].1.left - GAP);
         assert_eq!(rects[0].1.right, rects[1].1.left - GAP);
+    }
+
+    #[test]
+    fn buttons_drawn_in_device_pixels_match_the_same_buttons_drawn_in_units() {
+        let buttons = BannerButtons::new(&Fonts::new(1.0).unwrap(), LABELS);
+        let in_units = render(1.5, |canvas| {
+            canvas.in_units(Point::new(0.0, 0.0), |canvas| buttons.draw(canvas, 170.0, 0.0, 1.0));
+        });
+        let in_device_pixels = render(1.5, |canvas| buttons.draw(canvas, 170.0 * 1.5, 0.0, 1.0));
+        let inked = in_units
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(in_device_pixels.as_chunks::<4>().0)
+            .filter(|(a, b)| a[3] > 0 || b[3] > 0);
+        let (total, differing) =
+            inked.fold((0_usize, 0_usize), |(total, differing), (a, b)| (total + 1, differing + usize::from(a != b)));
+        assert!(total > 0, "nothing was drawn");
+        assert!(differing * 100 <= total, "{differing} of {total} inked pixels differ");
     }
 
     #[test]

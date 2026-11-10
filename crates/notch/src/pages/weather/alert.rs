@@ -274,7 +274,7 @@ impl Alert {
         }
         if self.is_pointer_over {
             let (right, top) = buttons_origin(area, self.lines.len());
-            self.buttons.draw(canvas, right, top, 1.0, opacity);
+            self.buttons.draw(canvas, right, top, opacity);
         }
     }
 }
