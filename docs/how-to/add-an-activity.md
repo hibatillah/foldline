@@ -25,14 +25,13 @@ listens to one Windows power setting and flashes a level bar when it changes.
 | `id()` | stable name; the settings key is `activity.<id>` |
 | `is_optional()` | false by default: required activities are always enabled; return true to expose a saved settings toggle |
 | `presence()` | what to show right now |
-| `draw()` | draw into the area the host gives; a companion's `draw` also serves the open header (see below) |
-| `uses_units()` | false by default; an interim migration aid, removed once every activity is converted. True makes `draw`, `draw_header_status` and `on_pointer` receive a unit area (from zero), a canvas at scale 1 and unit points |
+| `draw()` | draw into the area the host gives, in device-independent units from zero on a canvas whose `scale()` is 1; a companion's `draw` also serves the open header (see below) |
 | `header_status_width()`, `draw_header_status()`, `header_status_rank()` | optional: a small mark kept at the right edge of the header, icon only, while something lasts (muted speakers, Caps Lock on); `None` for no mark. The rank orders the group in the pill and the header |
 | `header_status_page()` | optional: the id of the page a click on the header mark opens; `None` (the default) opens nothing, as for muted and Caps Lock |
 | `on_start()` | begin listening; called once, and only if the activity is switched on |
 | `on_timer()`, `on_notify()` | a timer fired; a background thread used the `Notifier` |
 | `on_hover_changed()` | the pointer entered or left the notch |
-| `on_pointer()` | pointer input over this activity's banner while the notch is collapsed, in the `area` and `scale` `draw()` got; `PointerEvent::Left` means the pointer left the banner. `ui::BannerButtons` draws and hit-tests the Dismiss and Open pair (the notification card) |
+| `on_pointer()` | pointer input over this activity's banner while the notch is collapsed, in the unit `area` `draw()` got, with points in units from its top-left; `PointerEvent::Left` means the pointer left the banner. `ui::BannerButtons` draws and hit-tests the Dismiss and Open pair (the notification card) |
 | `on_key()`, `on_keyboard_lost()` | typing, after `context.take_keyboard()` from a click (the notification banner's reply field); the keyboard went elsewhere |
 | `on_system_message()` | a power setting or the clipboard changed (see below) |
 | `on_language_changed()` | on a started activity, once per change of `general.language`; rebuild any message or width cached from `tr!` |

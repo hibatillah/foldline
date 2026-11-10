@@ -103,7 +103,7 @@ owns a small struct for it, defined beside its logic and held by `Notch` (`sprin
 | `resting_row.rs` | the idle row and the claimed pill's row: the group, the battery ring, the dot column, short badges, their drawing | `RestingRow` |
 | `row_motion.rs` | one spring per row item and for the clocks, so items slide when the row changes | `RowMotion` |
 | `header_row.rs` | the open header: the gear, the icons, the group, what a click on them does | |
-| `units.rs` | opening the device-independent unit space around a page's or activity's draw and pointer hooks when it answers `uses_units` (interim migration aid), and the conversion of frames, areas and points | |
+| `units.rs` | opening the device-independent unit space around every page and activity draw and pointer hook (all but `draw_backdrop`), and the conversion of frames, areas and points | |
 | `paint.rs` | drawing the pill, the header, the banner, the badges and the shadow | |
 | `tests/` | behavior tests (`hiding_rules.rs`, `screen_mode.rs`, `settings_reload.rs`, `page_navigation.rs`, `page_states.rs`, `clipboard_states.rs`, `resting_row.rs`, `row_motion.rs`, `header_row.rs`) and the pictures (`images.rs`) on an off-screen `Notch` built in `tests/mod.rs` | |
 

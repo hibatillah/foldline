@@ -77,7 +77,7 @@ impl Page for GreetingPage {
 
     fn draw_resting(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
         let bounds = frame.bounds;
-        let row = Rect::new(bounds.left, bounds.top, bounds.right, bounds.top + RESTING_HEIGHT * frame.scale);
+        let row = Rect::new(bounds.left, bounds.top, bounds.right, bounds.top + RESTING_HEIGHT);
         canvas.text(&RESTING_STYLE, self.text(), row, Color::WHITE.faded(opacity));
     }
 
@@ -122,11 +122,9 @@ What each part does:
 - `sizes` is the size you want, in device-independent pixels. Ask again whenever your content changes size; the host
   asks after every event and animates the change.
 - Resting content uses `RESTING_HEIGHT` (33 DIP); the host adds 3 DIP below it and enforces a minimum collapsed width of 150 DIP. `resting_width` is your content only: when a page claims the pill, the host adds 12 DIP at each edge and room for the dot column and for any badges. A page that draws something at its left end can answer `resting_lead_width()` and read `Frame::lead_gap` for the gap the host keeps after it; the media page does this (see [page API](../reference/page-api.md)).
-- `draw_resting` and `draw_expanded` draw your content. Multiply sizes by `frame.scale` to get device pixels, and fade
-  your colors with the `opacity` you are given so the content follows the open and close animation.
-  A page that answers `uses_units` with `true` (an interim migration aid, removed once every page is converted)
-  writes plain units instead: its draw hooks other than `draw_backdrop` get a unit `Frame` (`scale` 1, bounds from
-  zero) and a canvas whose `scale()` is 1, and its pointer hooks get unit points.
+- `draw_resting` and `draw_expanded` draw your content in device-independent units: `frame.bounds` starts at zero,
+  the host turns units into pixels, and the canvas's `scale()` is 1. Fade your colors with the `opacity` you are
+  given so the content follows the open and close animation. Only `draw_backdrop` draws in device pixels.
   During navigation, each visible page keeps its requested width in `frame.bounds` and `frame.expanded.width`.
   The notch clips the visible portion; do not stretch your content to the neighbouring page's width. Pointer events
   use the same shifted frame as drawing, including while the user rests between pages.
@@ -144,7 +142,7 @@ What each part does:
   `on_presence_pointer` (the rain alert's Dismiss and Open buttons, and a press on its badge; both call `context.request_open()`, which
   opens the notch on the calling page).
 - A page that uses right-click answers `uses_right_click` for those points and then gets `PointerEvent::SecondaryReleased`; the shelf does this for its files. A right-click elsewhere does nothing.
-  Positions are in the same space as its own shifted `frame.bounds`.
+  Positions are units in the same space as its own `frame.bounds`, from the page's top-left.
 - A page with a scrolling area answers `claims_scroll` for the points where the vertical wheel or a touchpad swipe scrolls it and then gets `PointerEvent::Scrolled { notches }` (positive moves toward later content, one wheel notch is 1.0); the calendar's event list does this. Elsewhere the wheel still switches pages, and a horizontal swipe always does.
 - A page that must not hold anything while it is off (the clipboard page) answers `on_enabled_changed`, which runs at start and whenever the settings window switches the page. A page that wants a Windows message (the clipboard) calls `context.listen_to_clipboard()` in `on_start` and reads it in `on_system_message`; only a page that is on gets it. `context.request_close()` closes the notch.
 - A page that takes typing (the todo page's add field) calls `context.take_keyboard()` from a click, never on hover,
