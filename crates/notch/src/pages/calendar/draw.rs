@@ -31,25 +31,20 @@ const NO_LINK_HINT_LINES: f32 = 2.0;
 
 impl CalendarPage {
     pub(super) fn draw_month(&self, canvas: &Canvas, bounds: Rect, opacity: f32) {
-        let scale = canvas.scale();
         let rows = self.grid.rows();
-        let header = header(bounds, scale, rows);
+        let header = header(bounds, rows);
         let month_name = self.labels.month.as_str();
         canvas.text(&MONTH, month_name, header, Color::WHITE.faded(opacity));
-        let month_width = canvas.measure(&MONTH, month_name) * scale;
-        let year_bottom = header.bottom - YEAR_LIFT * scale;
-        let year_area = Rect::new(
-            header.left + month_width + YEAR_GAP * scale,
-            year_bottom - YEAR_HEIGHT * scale,
-            header.right,
-            year_bottom,
-        );
+        let month_width = canvas.measure(&MONTH, month_name);
+        let year_bottom = header.bottom - YEAR_LIFT;
+        let year_area =
+            Rect::new(header.left + month_width + YEAR_GAP, year_bottom - YEAR_HEIGHT, header.right, year_bottom);
         canvas.text(&YEAR, &self.labels.year, year_area, GRAY.faded(opacity));
 
-        let letters = weekday_row(bounds, scale, rows);
+        let letters = weekday_row(bounds, rows);
         for (column, letter) in self.labels.weekday_letters.iter().enumerate() {
-            let left = letters.left + column as f32 * CELL_WIDTH * scale;
-            let area = Rect::new(left, letters.top, left + CELL_WIDTH * scale, letters.bottom);
+            let left = letters.left + column as f32 * CELL_WIDTH;
+            let area = Rect::new(left, letters.top, left + CELL_WIDTH, letters.bottom);
             canvas.text(&DAY_LETTER, letter, area, GRAY.faded(opacity));
         }
 
@@ -57,7 +52,7 @@ impl CalendarPage {
         for date_index in 0..self.grid.day_count as usize {
             let cell_index = self.grid.leading + date_index;
             let day = self.grid.first_day + date_index as i64;
-            let circle = day_circle(day_cell(cell_index, rows, bounds, scale), scale);
+            let circle = day_circle(day_cell(cell_index, rows, bounds));
             let center = Point::new(circle.center_x(), circle.center_y());
             let radius = circle.width() / 2.0;
             let is_today = day == self.today;
@@ -66,7 +61,7 @@ impl CalendarPage {
                 canvas.fill_circle(center, radius, TODAY_BLUE.faded(opacity));
             } else if day == selected {
                 canvas.fill_circle(center, radius, BLUE.with_alpha(SELECTED_CIRCLE_ALPHA * opacity));
-            } else if self.hovered_cell == Some(cell_index) {
+            } else if self.hovered_cell.is(cell_index) {
                 canvas.fill_circle(center, radius, Color::WHITE.with_alpha(HOVER_WASH_ALPHA * opacity));
             }
             let Some(number) = self.labels.day_numbers.get(date_index) else { continue };
@@ -81,19 +76,18 @@ impl CalendarPage {
 
     /// The right column when no event shows: done for today, an empty day or no linked calendar.
     pub(super) fn draw_events_message(&self, canvas: &Canvas, area: Rect, opacity: f32) {
-        let scale = canvas.scale();
         if self.link.is_some() && self.agenda.is_done {
             let title_width = canvas.measure(&MESSAGE_LEADING, &self.labels.done_title);
             let detail_width = canvas.measure(&MESSAGE_DETAIL, &self.labels.done_detail);
             let total = DONE_ICON_SIZE + DONE_GAP + title_width + DONE_GAP + detail_width;
-            let left = area.center_x() - total * scale / 2.0;
-            let icon = Point::new(left + DONE_ICON_SIZE * scale / 2.0, area.center_y());
-            Icon::CircleCheck.draw(canvas, icon, DONE_ICON_SIZE * scale, DIM, opacity);
-            let title_left = left + (DONE_ICON_SIZE + DONE_GAP) * scale;
-            let title_right = title_left + title_width * scale + 2.0 * scale;
+            let left = area.center_x() - total / 2.0;
+            let icon = Point::new(left + DONE_ICON_SIZE / 2.0, area.center_y());
+            Icon::CircleCheck.draw(canvas, icon, DONE_ICON_SIZE, DIM, opacity);
+            let title_left = left + (DONE_ICON_SIZE + DONE_GAP);
+            let title_right = title_left + title_width + 2.0;
             let line = |left: f32, right: f32| Rect::new(left, area.top, right, area.bottom);
             canvas.text(&MESSAGE_LEADING, &self.labels.done_title, line(title_left, title_right), LIGHT.faded(opacity));
-            let detail_left = title_left + (title_width + DONE_GAP) * scale;
+            let detail_left = title_left + (title_width + DONE_GAP);
             canvas.text(&MESSAGE_DETAIL, &self.labels.done_detail, line(detail_left, area.right), DIM.faded(opacity));
             return;
         }
@@ -103,22 +97,22 @@ impl CalendarPage {
         let below_title =
             if has_link { EMPTY_GAP + DETAIL_LINE_HEIGHT } else { HINT_GAP + NO_LINK_HINT_LINES * HINT_LINE_HEIGHT };
         let total = EMPTY_ICON_SIZE + EMPTY_GAP + TITLE_LINE_HEIGHT + below_title;
-        let top = area.center_y() - total * scale / 2.0;
-        let icon_size = EMPTY_ICON_SIZE * scale;
+        let top = area.center_y() - total / 2.0;
+        let icon_size = EMPTY_ICON_SIZE;
         Icon::Calendar.draw(canvas, Point::new(area.center_x(), top + icon_size / 2.0), icon_size, GRAY, opacity);
-        let title_top = top + (EMPTY_ICON_SIZE + EMPTY_GAP) * scale;
-        let title_area = Rect::new(area.left, title_top, area.right, title_top + TITLE_LINE_HEIGHT * scale);
+        let title_top = top + (EMPTY_ICON_SIZE + EMPTY_GAP);
+        let title_area = Rect::new(area.left, title_top, area.right, title_top + TITLE_LINE_HEIGHT);
         canvas.text(&EMPTY_TITLE, title, title_area, Color::WHITE.faded(opacity));
         if has_link {
-            let detail_top = title_area.bottom + EMPTY_GAP * scale;
-            let detail_area = Rect::new(area.left, detail_top, area.right, detail_top + DETAIL_LINE_HEIGHT * scale);
+            let detail_top = title_area.bottom + EMPTY_GAP;
+            let detail_area = Rect::new(area.left, detail_top, area.right, detail_top + DETAIL_LINE_HEIGHT);
             canvas.text(&EMPTY_DETAIL, &self.labels.empty_detail, detail_area, GRAY.faded(opacity));
         } else {
             let hint_area = Rect::new(
-                area.left + HINT_MARGIN * scale,
-                title_area.bottom + HINT_GAP * scale,
-                area.right - HINT_MARGIN * scale,
-                title_area.bottom + (HINT_GAP + NO_LINK_HINT_LINES * HINT_LINE_HEIGHT) * scale,
+                area.left + HINT_MARGIN,
+                title_area.bottom + HINT_GAP,
+                area.right - HINT_MARGIN,
+                title_area.bottom + (HINT_GAP + NO_LINK_HINT_LINES * HINT_LINE_HEIGHT),
             );
             canvas.text(&EMPTY_HINT, &self.labels.no_link_hint, hint_area, DIM.faded(opacity));
         }
@@ -126,11 +120,10 @@ impl CalendarPage {
 
     /// The cards, clipped to the viewport so a scrolled card is cut at its edge.
     pub(super) fn draw_rows(&self, canvas: &Canvas, bounds: Rect, opacity: f32) {
-        let scale = canvas.scale();
-        let viewport = events_area(bounds, scale, self.view);
+        let viewport = events_area(bounds, self.view);
         canvas.clipped(viewport, || {
             for (position, row) in self.agenda.rows.iter().enumerate() {
-                let area = row_rect(position, self.scroll.value(), bounds, scale, self.view);
+                let area = row_rect(position, self.scroll.value(), bounds, self.view);
                 if area.bottom > viewport.top && area.top < viewport.bottom {
                     self.draw_row(canvas, area, row, opacity);
                 }
@@ -139,16 +132,14 @@ impl CalendarPage {
     }
 
     fn draw_row(&self, canvas: &Canvas, area: Rect, row: &Row, opacity: f32) {
-        let scale = canvas.scale();
-        canvas.fill_rounded_rect(area, ROW_RADIUS * scale, ROW_BORDER.faded(opacity));
-        let inner = Rect::new(area.left + scale, area.top + scale, area.right - scale, area.bottom - scale);
-        canvas.fill_rounded_rect(inner, (ROW_RADIUS - 1.0) * scale, ROW.faded(opacity));
+        canvas.fill_rounded_rect(area, ROW_RADIUS, ROW_BORDER.faded(opacity));
+        let inner = Rect::new(area.left + 1.0, area.top + 1.0, area.right - 1.0, area.bottom - 1.0);
+        canvas.fill_rounded_rect(inner, ROW_RADIUS - 1.0, ROW.faded(opacity));
 
-        let time_left = area.left + ROW_PADDING * scale;
-        let time_area = Rect::new(time_left, area.top, time_left + TIME_WIDTH * scale, area.bottom);
+        let time_left = area.left + ROW_PADDING;
+        let time_area = Rect::new(time_left, area.top, time_left + TIME_WIDTH, area.bottom);
         canvas.text(&EVENT_TIME, &row.time, time_area, GRAY.faded(opacity));
-        let title_area =
-            Rect::new(time_area.right + TIME_GAP * scale, area.top, area.right - ROW_PADDING * scale, area.bottom);
+        let title_area = Rect::new(time_area.right + TIME_GAP, area.top, area.right - ROW_PADDING, area.bottom);
         canvas.text(&EVENT_TITLE, &row.occurrence.summary, title_area, Color::WHITE.faded(opacity));
     }
 }

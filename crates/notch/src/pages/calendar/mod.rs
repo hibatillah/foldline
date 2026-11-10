@@ -7,7 +7,7 @@ use crate::{
     activity::Presence,
     gfx::{Canvas, Color, Fonts, Point, Rect, Size},
     page::{Context, Frame, Mode, Notifier, Page, PageSizes, PointerEvent, Priority, TimerId},
-    ui::{Icon, ScrollOffset},
+    ui::{HoverTarget, Icon, ScrollOffset},
 };
 use geometry::{content_height, events_area, max_scroll, widest_form};
 use labels::Labels;
@@ -84,7 +84,7 @@ pub struct CalendarPage {
     /// The pointer height while a drag scrolls the list.
     drag_last_y: Option<f32>,
     selected_day: Option<i64>,
-    hovered_cell: Option<usize>,
+    hovered_cell: HoverTarget<usize>,
     fetch_interval_milliseconds: u32,
     is_shown: bool,
     last_fetch: Option<Instant>,
@@ -112,7 +112,7 @@ impl CalendarPage {
             scroll: ScrollOffset::default(),
             drag_last_y: None,
             selected_day: None,
-            hovered_cell: None,
+            hovered_cell: HoverTarget::default(),
             fetch_interval_milliseconds: minutes_to_milliseconds(DEFAULT_REFRESH_MINUTES),
             is_shown: false,
             last_fetch: None,
@@ -200,6 +200,10 @@ impl Page for CalendarPage {
         "calendar"
     }
 
+    fn uses_units(&self) -> bool {
+        true
+    }
+
     fn name(&self) -> String {
         crate::i18n::tr!("page.calendar").into_owned()
     }
@@ -224,12 +228,12 @@ impl Page for CalendarPage {
         self.reminder.as_ref().map(|_| Icon::Calendar.size())
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
         if self.reminder.is_none() {
             return;
         }
         let center = Point::new(area.center_x(), area.center_y());
-        Icon::Calendar.draw(canvas, center, Icon::Calendar.size() * scale, Color::WHITE, opacity);
+        Icon::Calendar.draw(canvas, center, Icon::Calendar.size(), Color::WHITE, opacity);
     }
 
     fn header_status_page(&self) -> Option<&'static str> {
@@ -243,10 +247,10 @@ impl Page for CalendarPage {
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}
 
     fn draw_expanded(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
-        let (bounds, scale) = (frame.bounds, frame.scale);
+        let bounds = frame.bounds;
         self.draw_month(canvas, bounds, opacity);
         if self.agenda.rows.is_empty() {
-            self.draw_events_message(canvas, events_area(bounds, scale, self.view), opacity);
+            self.draw_events_message(canvas, events_area(bounds, self.view), opacity);
         } else {
             self.draw_rows(canvas, bounds, opacity);
         }
@@ -256,16 +260,16 @@ impl Page for CalendarPage {
         self.reminder.as_ref().map(|_| Presence::Badge { width: self.reminder_width })
     }
 
-    fn draw_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-        self.draw_badge(canvas, area, scale, opacity);
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+        self.draw_badge(canvas, area, opacity);
     }
 
     fn short_presence_width(&self) -> Option<f32> {
         self.reminder.as_ref().map(|_| self.reminder_short_width)
     }
 
-    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-        self.draw_short_badge(canvas, area, scale, opacity);
+    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+        self.draw_short_badge(canvas, area, opacity);
     }
 
     fn on_start(&mut self, context: &mut Context) {
@@ -329,7 +333,7 @@ impl Page for CalendarPage {
             self.fetch_when_due(context);
             context.request_repaint();
         } else {
-            self.hovered_cell = None;
+            self.hovered_cell.clear();
             self.drag_last_y = None;
             self.scroll.reset();
             self.selected_day = None;
@@ -363,8 +367,7 @@ impl Page for CalendarPage {
     }
 
     fn claims_scroll(&self, point: Point, frame: &Frame) -> bool {
-        max_scroll(self.agenda.rows.len(), self.view) > 0.0
-            && events_area(frame.bounds, frame.scale, self.view).contains(point)
+        max_scroll(self.agenda.rows.len(), self.view) > 0.0 && events_area(frame.bounds, self.view).contains(point)
     }
 
     fn on_timer(&mut self, timer: TimerId, context: &mut Context) {

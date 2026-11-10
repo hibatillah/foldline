@@ -45,53 +45,52 @@ pub(super) fn max_scroll(row_count: usize, view: View) -> f32 {
 }
 
 /// The viewport sits on the bottom of the page, right of the left column.
-pub(super) fn events_area(bounds: Rect, scale: f32, view: View) -> Rect {
+pub(super) fn events_area(bounds: Rect, view: View) -> Rect {
     Rect::new(
-        bounds.left + (LEFT_WIDTH + COLUMN_GAP) * scale,
-        bounds.bottom - view.viewport_height() * scale,
+        bounds.left + (LEFT_WIDTH + COLUMN_GAP),
+        bounds.bottom - view.viewport_height(),
         bounds.right,
         bounds.bottom,
     )
 }
 
 /// The month line and the year, above the weekday letters.
-pub(super) fn header(bounds: Rect, scale: f32, rows: usize) -> Rect {
-    let bottom = bounds.bottom - (rows as f32 * CELL_HEIGHT + WEEKDAY_GAP + WEEKDAY_HEIGHT + HEADER_GAP) * scale;
-    Rect::new(bounds.left, bottom - HEADER_HEIGHT * scale, bounds.left + LEFT_WIDTH * scale, bottom)
+pub(super) fn header(bounds: Rect, rows: usize) -> Rect {
+    let bottom = bounds.bottom - (rows as f32 * CELL_HEIGHT + WEEKDAY_GAP + WEEKDAY_HEIGHT + HEADER_GAP);
+    Rect::new(bounds.left, bottom - HEADER_HEIGHT, bounds.left + LEFT_WIDTH, bottom)
 }
 
 /// The row of weekday letters, 6 px above the first row of dates.
-pub(super) fn weekday_row(bounds: Rect, scale: f32, rows: usize) -> Rect {
-    let bottom = bounds.bottom - (rows as f32 * CELL_HEIGHT + WEEKDAY_GAP) * scale;
-    Rect::new(bounds.left, bottom - WEEKDAY_HEIGHT * scale, bounds.left + 7.0 * CELL_WIDTH * scale, bottom)
+pub(super) fn weekday_row(bounds: Rect, rows: usize) -> Rect {
+    let bottom = bounds.bottom - (rows as f32 * CELL_HEIGHT + WEEKDAY_GAP);
+    Rect::new(bounds.left, bottom - WEEKDAY_HEIGHT, bounds.left + 7.0 * CELL_WIDTH, bottom)
 }
 
 /// The cell of grid position `cell` (0 is the Monday of the first row).
-pub(super) fn day_cell(cell: usize, rows: usize, bounds: Rect, scale: f32) -> Rect {
+pub(super) fn day_cell(cell: usize, rows: usize, bounds: Rect) -> Rect {
     let (row, column) = (cell / 7, cell % 7);
-    let top = bounds.bottom - (rows - row) as f32 * CELL_HEIGHT * scale;
-    let left = bounds.left + column as f32 * CELL_WIDTH * scale;
-    Rect::new(left, top, left + CELL_WIDTH * scale, top + CELL_HEIGHT * scale)
+    let top = bounds.bottom - (rows - row) as f32 * CELL_HEIGHT;
+    let left = bounds.left + column as f32 * CELL_WIDTH;
+    Rect::new(left, top, left + CELL_WIDTH, top + CELL_HEIGHT)
 }
 
 /// The 20 px circle inside a cell.
-pub(super) fn day_circle(cell: Rect, scale: f32) -> Rect {
-    let inset = (cell.width() - CIRCLE_SIZE * scale) / 2.0;
+pub(super) fn day_circle(cell: Rect) -> Rect {
+    let inset = (cell.width() - CIRCLE_SIZE) / 2.0;
     Rect::new(cell.left + inset, cell.top, cell.right - inset, cell.bottom)
 }
 
 /// The grid position under `point`; only cells that hold a day count.
-pub(super) fn day_at(point: Point, grid: &DayGrid, bounds: Rect, scale: f32) -> Option<usize> {
+pub(super) fn day_at(point: Point, grid: &DayGrid, bounds: Rect) -> Option<usize> {
     let rows = grid.rows();
-    (grid.leading..grid.leading + grid.day_count as usize)
-        .find(|&cell| day_cell(cell, rows, bounds, scale).contains(point))
+    (grid.leading..grid.leading + grid.day_count as usize).find(|&cell| day_cell(cell, rows, bounds).contains(point))
 }
 
 /// Card `position` of the list, moved up by `scroll`; the list starts at the top of the viewport.
-pub(super) fn row_rect(position: usize, scroll: f32, bounds: Rect, scale: f32, view: View) -> Rect {
-    let area = events_area(bounds, scale, view);
-    let top = area.top + (position as f32 * (ROW_HEIGHT + ROW_GAP) - scroll) * scale;
-    Rect::new(area.left, top, area.right, top + ROW_HEIGHT * scale)
+pub(super) fn row_rect(position: usize, scroll: f32, bounds: Rect, view: View) -> Rect {
+    let area = events_area(bounds, view);
+    let top = area.top + (position as f32 * (ROW_HEIGHT + ROW_GAP) - scroll);
+    Rect::new(area.left, top, area.right, top + ROW_HEIGHT)
 }
 
 #[cfg(test)]
@@ -132,48 +131,48 @@ mod tests {
 
     #[test]
     fn the_fifth_card_shows_by_12_px_when_there_are_more_than_four_events() {
-        let fifth = row_rect(4, 0.0, BOUNDS, 1.0, View::Month);
+        let fifth = row_rect(4, 0.0, BOUNDS, View::Month);
         assert_eq!(BOUNDS.bottom - fifth.top, 12.0);
         assert_eq!(fifth.height(), 34.0);
-        assert_eq!(row_rect(0, 0.0, BOUNDS, 1.0, View::Month).top, BOUNDS.top);
+        assert_eq!(row_rect(0, 0.0, BOUNDS, View::Month).top, BOUNDS.top);
     }
 
     #[test]
     fn the_cards_start_at_the_top_of_the_viewport_and_move_up_with_the_scroll() {
         let tall = Rect::new(0.0, 0.0, 508.0, 170.0);
-        let first = row_rect(0, 0.0, tall, 1.0, View::Month);
+        let first = row_rect(0, 0.0, tall, View::Month);
         assert_eq!(first.top, 2.0);
-        assert_eq!(row_rect(1, 0.0, tall, 1.0, View::Month).top - first.bottom, ROW_GAP);
-        assert_eq!(row_rect(2, 39.0, tall, 1.0, View::Month).top, row_rect(1, 0.0, tall, 1.0, View::Month).top);
+        assert_eq!(row_rect(1, 0.0, tall, View::Month).top - first.bottom, ROW_GAP);
+        assert_eq!(row_rect(2, 39.0, tall, View::Month).top, row_rect(1, 0.0, tall, View::Month).top);
     }
 
     #[test]
     fn the_month_sits_on_the_bottom_edge_below_the_weekday_letters_and_the_month_line() {
         let rows = 6;
-        let last_row = day_cell(35, rows, BOUNDS, 1.0);
+        let last_row = day_cell(35, rows, BOUNDS);
         assert_eq!(last_row.bottom, BOUNDS.bottom);
         assert_eq!(last_row.left, BOUNDS.left);
-        assert_eq!(day_cell(6, rows, BOUNDS, 1.0).right, 7.0 * CELL_WIDTH);
-        assert_eq!(weekday_row(BOUNDS, 1.0, rows).bottom + 6.0, day_cell(0, rows, BOUNDS, 1.0).top);
-        assert_eq!(header(BOUNDS, 1.0, rows).bottom + 8.0, weekday_row(BOUNDS, 1.0, rows).top);
-        assert_eq!(header(BOUNDS, 1.0, rows).height(), HEADER_HEIGHT);
-        assert_eq!(day_circle(day_cell(0, rows, BOUNDS, 1.0), 1.0).width(), CIRCLE_SIZE);
+        assert_eq!(day_cell(6, rows, BOUNDS).right, 7.0 * CELL_WIDTH);
+        assert_eq!(weekday_row(BOUNDS, rows).bottom + 6.0, day_cell(0, rows, BOUNDS).top);
+        assert_eq!(header(BOUNDS, rows).bottom + 8.0, weekday_row(BOUNDS, rows).top);
+        assert_eq!(header(BOUNDS, rows).height(), HEADER_HEIGHT);
+        assert_eq!(day_circle(day_cell(0, rows, BOUNDS)).width(), CIRCLE_SIZE);
     }
 
     #[test]
     fn a_press_finds_only_the_days_of_the_month() {
         let month = DayGrid::month_of(days_from_civil(2026, 11, 13));
         let rows = month.rows();
-        let first = day_cell(month.leading, rows, BOUNDS, 1.0);
-        assert_eq!(day_at(Point::new(first.center_x(), first.center_y()), &month, BOUNDS, 1.0), Some(month.leading));
-        let blank = day_cell(0, rows, BOUNDS, 1.0);
-        assert_eq!(day_at(Point::new(blank.center_x(), blank.center_y()), &month, BOUNDS, 1.0), None);
-        assert_eq!(day_at(Point::new(LEFT_WIDTH + 40.0, 100.0), &month, BOUNDS, 1.0), None);
+        let first = day_cell(month.leading, rows, BOUNDS);
+        assert_eq!(day_at(Point::new(first.center_x(), first.center_y()), &month, BOUNDS), Some(month.leading));
+        let blank = day_cell(0, rows, BOUNDS);
+        assert_eq!(day_at(Point::new(blank.center_x(), blank.center_y()), &month, BOUNDS), None);
+        assert_eq!(day_at(Point::new(LEFT_WIDTH + 40.0, 100.0), &month, BOUNDS), None);
     }
 
     #[test]
     fn the_events_sit_16_px_to_the_right_of_the_left_column_on_the_bottom() {
-        let area = events_area(BOUNDS, 1.0, View::Month);
+        let area = events_area(BOUNDS, View::Month);
         assert_eq!(area.left, LEFT_WIDTH + COLUMN_GAP);
         assert_eq!((area.right, area.bottom, area.height()), (BOUNDS.right, BOUNDS.bottom, MONTH_VIEWPORT_HEIGHT));
     }
