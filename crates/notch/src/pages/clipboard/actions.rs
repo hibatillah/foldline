@@ -8,7 +8,7 @@ use super::{
     dib,
     history::MAX_TEXT_BYTES,
     item::Content,
-    layout::Target,
+    layout::{DOUBLE_CLICK_SLOP, Target},
     state::{Bar, Confirm},
 };
 use crate::{
@@ -50,7 +50,7 @@ impl ClipboardPage {
                     context.request_repaint();
                 }
                 let limit = platform::double_click_time();
-                if self.clicks.press(Instant::now(), point, limit, Self::layout(frame).slop()) {
+                if self.clicks.press(Instant::now(), point, limit, DOUBLE_CLICK_SLOP) {
                     self.paste_selected(context);
                 }
             }
@@ -156,7 +156,7 @@ impl ClipboardPage {
         self.history.clear();
         self.confirm = None;
         self.bar = None;
-        self.hovered = None;
+        self.hover.clear();
         self.clicks.reset();
         context.kill_timer(BAR_TIMER);
         context.kill_timer(CONFIRM_TIMER);

@@ -29,6 +29,7 @@ use crate::{
         Context, DEFAULT_CONTENT_HEIGHT, Frame, Mode, Page, PageSizes, PointerEvent, Priority, RESTING_MIN_WIDTH,
         TimerId,
     },
+    ui::HoverTarget,
 };
 
 const BAR_TIMER: TimerId = TimerId(0);
@@ -37,7 +38,7 @@ const CONFIRM_TIMER: TimerId = TimerId(1);
 pub struct ClipboardPage {
     history: History,
     is_enabled: bool,
-    hovered: Option<Target>,
+    hover: HoverTarget<Target>,
     confirm: Option<Confirm>,
     bar: Option<Bar>,
     clicks: DoubleClick,
@@ -49,7 +50,7 @@ impl ClipboardPage {
         Self {
             history: History::default(),
             is_enabled: false,
-            hovered: None,
+            hover: HoverTarget::default(),
             confirm: None,
             bar: None,
             clicks: DoubleClick::default(),
@@ -58,7 +59,7 @@ impl ClipboardPage {
     }
 
     fn layout(frame: &Frame) -> Layout {
-        Layout::new(frame.bounds, frame.scale)
+        Layout::new(frame.bounds)
     }
 
     fn target_at(&self, point: Point, frame: &Frame) -> Option<Target> {
@@ -70,6 +71,10 @@ impl ClipboardPage {
 impl Page for ClipboardPage {
     fn id(&self) -> &'static str {
         "clipboard"
+    }
+
+    fn uses_units(&self) -> bool {
+        true
     }
 
     fn name(&self) -> String {
@@ -92,7 +97,7 @@ impl Page for ClipboardPage {
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}
 
     fn draw_expanded(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
-        self.draw_page(canvas, frame.bounds, frame.scale, opacity);
+        self.draw_page(canvas, frame.bounds, opacity);
     }
 
     fn on_start(&mut self, context: &mut Context) {
@@ -117,7 +122,7 @@ impl Page for ClipboardPage {
             return;
         }
         self.confirm = None;
-        self.hovered = None;
+        self.hover.clear();
         self.clicks.reset();
         context.kill_timer(CONFIRM_TIMER);
         // The uploaded picture is dropped while closed; it is uploaded again when the page is next drawn.
@@ -130,14 +135,12 @@ impl Page for ClipboardPage {
         }
         match event {
             PointerEvent::Moved(point) => {
-                let target = self.target_at(point, frame);
-                if target != self.hovered {
-                    self.hovered = target;
+                if self.hover.set(self.target_at(point, frame)) {
                     context.request_repaint();
                 }
             }
             PointerEvent::Left | PointerEvent::CaptureLost => {
-                if self.hovered.take().is_some() {
+                if self.hover.clear() {
                     context.request_repaint();
                 }
             }

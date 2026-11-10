@@ -1,4 +1,4 @@
-//! Where everything sits, in the design's device-independent pixels scaled to the screen, and what a click lands on.
+//! Where everything sits, in the design's device-independent units, and what a click lands on.
 
 use std::time::{Duration, Instant};
 
@@ -20,7 +20,7 @@ const BUTTON_GAP: f32 = 6.0;
 /// "Paste" and "Pasted" share one width so the button does not jump when it turns green.
 const PASTE_WIDTH: f32 = 76.0;
 /// How far the pointer may move between the two presses of a double click.
-const DOUBLE_CLICK_SLOP: f32 = 4.0;
+pub(super) const DOUBLE_CLICK_SLOP: f32 = 4.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Target {
@@ -34,17 +34,16 @@ pub(super) enum Target {
 #[derive(Clone, Copy)]
 pub(super) struct Layout {
     bounds: Rect,
-    scale: f32,
 }
 
 impl Layout {
-    pub fn new(bounds: Rect, scale: f32) -> Self {
-        Self { bounds, scale }
+    pub fn new(bounds: Rect) -> Self {
+        Self { bounds }
     }
 
     fn column(&self, left: f32, top: f32, width: f32, height: f32) -> Rect {
-        let (left, top) = (self.bounds.left + left * self.scale, self.bounds.top + top * self.scale);
-        Rect::new(left, top, left + width * self.scale, top + height * self.scale)
+        let (left, top) = (self.bounds.left + left, self.bounds.top + top);
+        Rect::new(left, top, left + width, top + height)
     }
 
     pub fn row(&self, index: usize) -> Rect {
@@ -53,12 +52,12 @@ impl Layout {
 
     /// Sits over the bottom of the list, covering the last row; follows the page bottom, which is shorter when empty.
     pub fn bar(&self) -> Rect {
-        self.column(0.0, self.bounds.height() / self.scale - BAR_HEIGHT, LIST_WIDTH, BAR_HEIGHT)
+        self.column(0.0, self.bounds.height() - BAR_HEIGHT, LIST_WIDTH, BAR_HEIGHT)
     }
 
     fn undo_area(&self) -> Rect {
         let bar = self.bar();
-        Rect { left: bar.right - BAR_UNDO_WIDTH * self.scale, ..bar }
+        Rect { left: bar.right - BAR_UNDO_WIDTH, ..bar }
     }
 
     fn right_left(&self) -> f32 {
@@ -66,7 +65,7 @@ impl Layout {
     }
 
     pub fn right_width(&self) -> f32 {
-        self.bounds.width() / self.scale - self.right_left()
+        self.bounds.width() - self.right_left()
     }
 
     pub fn panel(&self) -> Rect {
@@ -79,25 +78,25 @@ impl Layout {
 
     pub fn paste_button(&self) -> Rect {
         let actions = self.actions();
-        Rect { left: actions.right - PASTE_WIDTH * self.scale, ..actions }
+        Rect { left: actions.right - PASTE_WIDTH, ..actions }
     }
 
     pub fn copy_button(&self) -> Rect {
         let paste = self.paste_button();
-        let right = paste.left - BUTTON_GAP * self.scale;
-        Rect { left: right - BUTTON_SIZE * self.scale, right, ..paste }
+        let right = paste.left - BUTTON_GAP;
+        Rect { left: right - BUTTON_SIZE, right, ..paste }
     }
 
     pub fn delete_button(&self) -> Rect {
         let copy = self.copy_button();
-        let right = copy.left - BUTTON_GAP * self.scale;
-        Rect { left: right - BUTTON_SIZE * self.scale, right, ..copy }
+        let right = copy.left - BUTTON_GAP;
+        Rect { left: right - BUTTON_SIZE, right, ..copy }
     }
 
     /// The two-line details, left of the buttons.
     pub fn details(&self) -> Rect {
         let actions = self.actions();
-        Rect { right: self.delete_button().left - BUTTON_GAP * self.scale, ..actions }
+        Rect { right: self.delete_button().left - BUTTON_GAP, ..actions }
     }
 
     /// What a press at `point` lands on. A bar over the list takes the clicks on it, and the buttons exist only while
@@ -119,10 +118,6 @@ impl Layout {
         ]
         .into_iter()
         .find_map(|(target, area)| area.contains(point).then_some(target))
-    }
-
-    pub fn slop(&self) -> f32 {
-        DOUBLE_CLICK_SLOP * self.scale
     }
 }
 
@@ -154,7 +149,7 @@ mod tests {
     use super::*;
 
     fn layout() -> Layout {
-        Layout::new(Rect::new(100.0, 50.0, 100.0 + CONTENT_WIDTH, 50.0 + CONTENT_HEIGHT), 1.0)
+        Layout::new(Rect::new(100.0, 50.0, 100.0 + CONTENT_WIDTH, 50.0 + CONTENT_HEIGHT))
     }
 
     #[test]
@@ -190,13 +185,6 @@ mod tests {
     }
 
     #[test]
-    fn layout_scales_with_the_display() {
-        let layout = Layout::new(Rect::new(0.0, 0.0, CONTENT_WIDTH * 2.0, CONTENT_HEIGHT * 2.0), 2.0);
-        assert_eq!(layout.row(0).height(), 46.0);
-        assert_eq!(layout.row(0).width(), 428.0);
-    }
-
-    #[test]
     fn a_press_lands_on_the_row_button_or_nothing() {
         let layout = layout();
         let center = |rect: Rect| Point::new(rect.center_x(), rect.center_y());
@@ -221,7 +209,7 @@ mod tests {
 
     #[test]
     fn the_bar_follows_the_page_bottom_when_the_page_is_short() {
-        let short = Layout::new(Rect::new(0.0, 0.0, CONTENT_WIDTH, 86.0), 1.0);
+        let short = Layout::new(Rect::new(0.0, 0.0, CONTENT_WIDTH, 86.0));
         assert_eq!(short.bar().bottom, 86.0);
         assert_eq!(layout().bar().bottom, 50.0 + CONTENT_HEIGHT);
     }
