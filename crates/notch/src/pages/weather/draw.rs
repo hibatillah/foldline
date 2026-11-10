@@ -87,7 +87,7 @@ impl WeatherPage {
     }
 
     pub(super) fn column_area(bounds: Rect, column: usize) -> Rect {
-        let left = bounds.left + (LEFT_WIDTH + LEFT_GAP);
+        let left = bounds.left + LEFT_WIDTH + LEFT_GAP;
         let width = (bounds.right - left - CELL_GAP * (COLUMNS - 1) as f32) / COLUMNS as f32;
         let cell_left = left + column as f32 * (width + CELL_GAP);
         Rect::new(cell_left, bounds.top, cell_left + width, bounds.bottom)
@@ -110,13 +110,12 @@ impl WeatherPage {
         let radius = MESSAGE_BADGE / 2.0;
         canvas.fill_circle(center, radius, SURFACE_BORDER.faded(opacity));
         canvas.fill_circle(center, radius - 1.0, SURFACE_BADGE.faded(opacity));
-        let size = ICON_SIZE;
         match message.kind {
             MessageKind::NoLocation => draw_strokes(
                 canvas,
                 &[Stroke::new(PIN, ACCENT_BLUE), Stroke::new(PIN_HOLE, ACCENT_BLUE)],
                 center,
-                size,
+                ICON_SIZE,
                 2.0,
                 opacity,
             ),
@@ -124,13 +123,13 @@ impl WeatherPage {
                 canvas,
                 &[Stroke::new(CLOUD_OFF, OFFLINE_ICON), Stroke::new(CLOUD_OFF_BODY, OFFLINE_ICON)],
                 center,
-                size,
+                ICON_SIZE,
                 2.0,
                 opacity,
             ),
         }
         let stack = stack_height(&[MESSAGE_TITLE_HEIGHT, MESSAGE_DETAIL_HEIGHT], MESSAGE_LINE_GAP);
-        let text_left = left + (MESSAGE_BADGE + MESSAGE_GAP);
+        let text_left = left + MESSAGE_BADGE + MESSAGE_GAP;
         let title_top = bounds.center_y() - stack / 2.0;
         let title_area =
             Rect::new(text_left, title_top, text_left + text_width + 2.0, title_top + MESSAGE_TITLE_HEIGHT);

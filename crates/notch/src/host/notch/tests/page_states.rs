@@ -56,7 +56,7 @@ fn page_state_snapshot_of_the_rain_alert_banner() {
                 Color::BLACK,
             );
             let area = Rect::new(bounds.left, bounds.top, bounds.right, bounds.bottom - RESTING_BOTTOM_PADDING * SCALE);
-            page.draw_presence(canvas, area, SCALE, 1.0);
+            crate::host::notch::units::draw_page_presence(page.as_ref(), canvas, area, SCALE, 1.0);
         })
         .unwrap();
     images::write_image(

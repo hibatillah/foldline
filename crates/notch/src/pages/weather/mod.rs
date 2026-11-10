@@ -204,7 +204,9 @@ impl Page for WeatherPage {
         self.read_settings(context);
         if self.location != previous {
             self.forecast = None;
-            self.hover.clear();
+            if matches!(self.hover.get(), Some(WeatherTarget::Cell(_))) {
+                self.hover.clear();
+            }
             self.alert.clear(context);
             self.is_offline = false;
             self.is_service_error = false;

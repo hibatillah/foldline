@@ -63,7 +63,7 @@ impl Badge {
         let text = if is_short { short_text(minutes) } else { long_text(minutes) };
         let center = Point::new(area.left + ICON_SIZE / 2.0, area.center_y());
         Icon::Cloud.draw(canvas, center, ICON_SIZE, ACCENT_BLUE_LIGHT, opacity);
-        let text_area = Rect::new(area.left + (ICON_SIZE + ICON_GAP), area.top, area.right, area.bottom);
+        let text_area = Rect::new(area.left + ICON_SIZE + ICON_GAP, area.top, area.right, area.bottom);
         canvas.text(&MEDIUM_13, &text, text_area, ACCENT_BLUE_LIGHT.faded(opacity));
     }
 }

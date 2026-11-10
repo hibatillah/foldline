@@ -254,8 +254,8 @@ impl Alert {
         let tile = Rect::new(
             area.left + PADDING,
             area.top + TOP_PADDING,
-            area.left + (PADDING + TILE_SIZE),
-            area.top + (TOP_PADDING + TILE_SIZE),
+            area.left + PADDING + TILE_SIZE,
+            area.top + TOP_PADDING + TILE_SIZE,
         );
         canvas.fill_rounded_rect(tile, TILE_RADIUS, TILE.faded(opacity));
         let layers = [Stroke::new(RAIN_CLOUD, Color::WHITE), Stroke::new(RAIN_DROPS, Color::WHITE)];
@@ -268,7 +268,7 @@ impl Alert {
         let app_left = left + title_width + TITLE_GAP;
         canvas.text(&REGULAR_14, "Weather", Rect { left: app_left, ..heading }, CARD_APP_NAME_TEXT.faded(opacity));
         for (index, line) in self.lines.iter().enumerate() {
-            let top = heading.bottom + (HEADING_GAP + index as f32 * BODY_LINE_HEIGHT);
+            let top = heading.bottom + HEADING_GAP + index as f32 * BODY_LINE_HEIGHT;
             let rect = Rect::new(left, top, right, top + BODY_LINE_HEIGHT);
             canvas.text(&REGULAR_13, line, rect, CARD_BODY_TEXT.faded(opacity));
         }
