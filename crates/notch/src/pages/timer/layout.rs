@@ -27,18 +27,17 @@ const BUTTON_GAP: f32 = 9.0;
 const TEXT_ZONE_HEIGHT: f32 = TIME_HEIGHT;
 
 pub struct Layout {
-    pub scale: f32,
     pub bounds: Rect,
 }
 
 impl Layout {
     fn rect(&self, left: f32, top: f32, right: f32, bottom: f32) -> Rect {
-        let (origin_x, origin_y, scale) = (self.bounds.left, self.bounds.top, self.scale);
-        Rect::new(origin_x + left * scale, origin_y + top * scale, origin_x + right * scale, origin_y + bottom * scale)
+        let (origin_x, origin_y) = (self.bounds.left, self.bounds.top);
+        Rect::new(origin_x + left, origin_y + top, origin_x + right, origin_y + bottom)
     }
 
     fn width(&self) -> f32 {
-        self.bounds.width() / self.scale
+        self.bounds.width()
     }
 
     fn words_left(&self, has_time: bool) -> f32 {
@@ -107,16 +106,13 @@ impl Layout {
 mod tests {
     use super::*;
 
-    fn layout(scale: f32) -> Layout {
-        Layout {
-            scale,
-            bounds: Rect::new(100.0, 0.0, 100.0 + EXPANDED_SIZE.width * scale, EXPANDED_SIZE.height * scale),
-        }
+    fn layout() -> Layout {
+        Layout { bounds: Rect::new(100.0, 0.0, 100.0 + EXPANDED_SIZE.width, EXPANDED_SIZE.height) }
     }
 
     #[test]
     fn the_buttons_share_the_width_evenly_and_fit_the_page() {
-        let layout = layout(1.0);
+        let layout = layout();
         let rects = layout.buttons(3);
         assert_eq!(rects.len(), 3);
         assert!((rects[0].width() - rects[2].width()).abs() < 0.01);
@@ -127,14 +123,14 @@ mod tests {
 
     #[test]
     fn two_buttons_are_wider_than_three() {
-        let layout = layout(1.0);
+        let layout = layout();
         assert!(layout.buttons(2)[0].width() > layout.buttons(3)[0].width());
         assert!(layout.buttons(0).is_empty());
     }
 
     #[test]
     fn a_press_finds_the_button_under_it() {
-        let layout = layout(1.0);
+        let layout = layout();
         let rects = layout.buttons(3);
         let inside = |rect: &Rect| Point::new(rect.center_x(), rect.center_y());
         assert_eq!(layout.button_at(3, inside(&rects[1])), Some(1));
@@ -143,7 +139,7 @@ mod tests {
 
     #[test]
     fn the_words_sit_right_of_the_time_only_when_there_is_one() {
-        let layout = layout(1.0);
+        let layout = layout();
         assert!(layout.title(true, true).left >= layout.time(true).right);
         assert!(layout.detail(true, true).left >= layout.time(true).right);
         assert_eq!(layout.title(false, true).left, layout.bounds.left);
@@ -151,7 +147,7 @@ mod tests {
 
     #[test]
     fn the_words_stack_above_the_buttons_in_every_state() {
-        let layout = layout(1.0);
+        let layout = layout();
         for (has_time, has_detail) in [(true, true), (true, false), (false, true)] {
             if has_detail {
                 assert!(layout.title(has_time, has_detail).bottom <= layout.detail(has_time, has_detail).top);
@@ -165,7 +161,7 @@ mod tests {
 
     #[test]
     fn the_detail_line_keeps_at_least_ten_px_clear_of_the_buttons() {
-        let layout = layout(1.0);
+        let layout = layout();
         let buttons_top = layout.buttons(3)[0].top;
         assert!(buttons_top - layout.detail(true, true).bottom >= 10.0);
         assert!(buttons_top - layout.detail(false, true).bottom >= 10.0);
@@ -174,7 +170,7 @@ mod tests {
 
     #[test]
     fn the_time_fills_its_row_and_a_headline_is_centered_in_it() {
-        let layout = layout(1.0);
+        let layout = layout();
         assert_eq!(layout.time(true).top, layout.time(false).top);
         assert_eq!(layout.time(true).height(), TIME_HEIGHT);
         assert!(layout.title(false, true).top > TIME_TOP);
@@ -183,7 +179,7 @@ mod tests {
 
     #[test]
     fn the_words_next_to_the_time_end_on_its_bottom_edge_with_a_12_px_gap() {
-        let layout = layout(1.0);
+        let layout = layout();
         assert!(layout.title(true, true).top > layout.title(false, true).top);
         assert_eq!(layout.title(true, true).left - layout.time(true).right, WORDS_GAP);
         assert_eq!(layout.detail(true, true).bottom, layout.time(true).bottom);
@@ -194,19 +190,14 @@ mod tests {
 
     #[test]
     fn the_buttons_end_at_the_bottom_of_the_page() {
-        let layout = layout(1.0);
+        let layout = layout();
         assert_eq!(layout.buttons(3)[0].bottom, layout.bounds.bottom);
-    }
-
-    #[test]
-    fn everything_scales_with_the_display() {
-        assert!((layout(2.0).buttons(3)[0].height() - 2.0 * layout(1.0).buttons(3)[0].height()).abs() < 0.01);
     }
 
     #[test]
     fn the_button_labels_fit_their_buttons_in_both_languages() {
         let fonts = crate::gfx::Fonts::new(1.0).unwrap();
-        let layout = layout(1.0);
+        let layout = layout();
         let (three, two) = (layout.buttons(3)[0].width(), layout.buttons(2)[0].width());
         for language in [store::language::Language::English, store::language::Language::Indonesian] {
             store::language::with_override(language, || {

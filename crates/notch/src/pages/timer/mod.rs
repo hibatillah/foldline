@@ -177,6 +177,10 @@ impl Page for TimerPage {
         (mode == Mode::Expanded).then_some(Priority::BACKGROUND)
     }
 
+    fn uses_units(&self) -> bool {
+        true
+    }
+
     fn sizes(&self) -> PageSizes {
         PageSizes { resting_width: RESTING_WIDTH, expanded: EXPANDED_SIZE }
     }
@@ -184,7 +188,7 @@ impl Page for TimerPage {
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}
 
     fn draw_expanded(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
-        let layout = Layout { scale: frame.scale, bounds: frame.bounds };
+        let layout = Layout { bounds: frame.bounds };
         let view = view::view(&self.timer, now_ms());
         let (has_time, has_detail) = (view.time.is_some(), view.detail.is_some());
         let (title_style, detail_style) = if has_time { (&MEDIUM_13, &REGULAR_11) } else { (&HEADLINE, &REGULAR_12) };
@@ -233,18 +237,13 @@ impl Page for TimerPage {
         self.compact.as_ref().map(|_| self.timer.remaining(now_ms()).unwrap_or(0) / 1000)
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
         let Some(compact) = &self.compact else { return };
         let center = crate::gfx::Point::new(area.center_x(), area.center_y());
-        Ring { center, diameter: RING_DIAMETER * scale }.draw(
-            canvas,
-            compact.fraction,
-            tone_color(compact.tone),
-            opacity,
-        );
+        Ring { center, diameter: RING_DIAMETER }.draw(canvas, compact.fraction, tone_color(compact.tone), opacity);
     }
 
-    fn draw_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
         if self.alert.is_visible() {
             ui::draw_message(
                 canvas,
@@ -259,10 +258,10 @@ impl Page for TimerPage {
         }
         let Some(compact) = &self.compact else { return };
         let color = tone_color(compact.tone);
-        let diameter = RING_DIAMETER * scale;
+        let diameter = RING_DIAMETER;
         let center = crate::gfx::Point::new(area.left + diameter / 2.0, area.center_y());
         Ring { center, diameter }.draw(canvas, compact.fraction, color, opacity);
-        let text_area = Rect::new(area.left + (RING_DIAMETER + RING_GAP) * scale, area.top, area.right, area.bottom);
+        let text_area = Rect::new(area.left + RING_DIAMETER + RING_GAP, area.top, area.right, area.bottom);
         canvas.text(&BADGE, &compact.text, text_area, color.faded(opacity));
     }
 
@@ -292,7 +291,7 @@ impl Page for TimerPage {
     }
 
     fn on_pointer(&mut self, event: PointerEvent, frame: &Frame, context: &mut Context) {
-        let layout = Layout { scale: frame.scale, bounds: frame.bounds };
+        let layout = Layout { bounds: frame.bounds };
         let view = view::view(&self.timer, now_ms());
         let count = view.buttons.len();
         match event {
