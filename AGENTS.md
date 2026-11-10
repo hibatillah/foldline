@@ -9,15 +9,16 @@ file code both programs share. Settings are edited only in the settings window; 
 
 ## Commands
 
-Root commands cover only the notch (the workspace's default member). GPUI builds only with the MSVC host toolchain, so
-run `crates/settings/` and `crates/store/` commands as `cargo +stable-x86_64-pc-windows-msvc ... -p settings` (or `--workspace`).
+Root commands cover only the notch (the workspace's default member). Build every crate with the MSVC host toolchain: GPUI
+needs it, and so does the notch's text lookup (rust-i18n). Add `-p settings` or `--workspace` to include `crates/settings/`
+and `crates/store/`.
 
 ```
-cargo build --release                     # target\x86_64-pc-windows-msvc\release\notch.exe
-cargo test                                # unit tests, no window needed
-cargo test snapshots -- --ignored         # writes pictures of the pages to target/snapshots
-cargo fmt --check
-cargo clippy --all-targets -- -D warnings
+cargo +stable-x86_64-pc-windows-msvc build --release                     # target\x86_64-pc-windows-msvc\release\notch.exe
+cargo +stable-x86_64-pc-windows-msvc test                                # unit tests, no window needed
+cargo +stable-x86_64-pc-windows-msvc test snapshots -- --ignored         # writes pictures of the pages to target/snapshots
+cargo +stable-x86_64-pc-windows-msvc fmt --check
+cargo +stable-x86_64-pc-windows-msvc clippy --all-targets -- -D warnings
 scripts/reload.sh [--debug]               # build, start the new build, close the old one (Git Bash)
 scripts/watch.sh                          # debug build of the notch, relaunched on every saved source file (Git Bash)
 scripts/test-build.sh                     # installer (zip without Inno Setup) of the current code in dist/ for a teammate (Git Bash)

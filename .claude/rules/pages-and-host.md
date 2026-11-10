@@ -53,7 +53,7 @@ Read `docs/how-to/add-a-page.md` before writing a page, `docs/how-to/add-an-acti
 
 ## Timer ids
 
-- Host timer ids are below 100 and live as `*_TIMER_ID` constants in `host/notch.rs` (1 to 4, 8, 9 and 10; the clock's
+- Host timer ids are below 100 and live as `*_TIMER_ID` constants in `host/notch.rs` (1 to 4, 8, 9, 10 and 11; the clock's
   6 is in `host/notch/timers.rs`); add a new one with the next free number and stop it as soon as its work ends.
 - Page timer ids are `100 + page_index * 16 + n` with `n` below 16, up to 999; activity timer ids are
   `1000 + activity_index * 16 + n`. `Context` computes them from the `TimerId(n)` a page or activity passes.
@@ -62,7 +62,7 @@ Read `docs/how-to/add-a-page.md` before writing a page, `docs/how-to/add-an-acti
 
 Each is a file or folder of its own in `host/`; keep a new job of this kind out of `notch.rs`.
 
-- `volume_flyout` (with `hook_thread`) hides Windows' volume flyout; `notification_banners` (with `backup` and
+- `location_tracker` (with `network`) keeps the saved city where the device is while `location.track` is on; `volume_flyout` (with `hook_thread`) hides Windows' volume flyout; `notification_banners` (with `backup` and
   `passes`) turns Windows' banners off and restores them; `screen_mode` (with `location_hook` and the pure `classify`) tracks the foreground
   window; `settings_launcher` starts `notch-settings.exe`. `window/focus.rs` holds the topmost and keyboard-focus calls.
 - The rows of the pill and header: `pill_row`, `claimed_row`, and in `host/notch/` `resting_row`, `header_row` and
