@@ -42,120 +42,108 @@ const ALL_CLEAR_CHECK: &str = "m8 12.5 2.8 2.8L16 9.5";
 
 impl TodoPage {
     /// The title and count at the top left, level on one baseline; Clear all and Add at the top right.
-    pub(super) fn draw_toolbar(&self, canvas: &Canvas, bounds: Rect, scale: f32, opacity: f32) {
-        let middle = bounds.top + super::layout::TOOLBAR_HEIGHT * scale / 2.0;
-        let title_area = Rect::new(
-            bounds.left,
-            middle - TITLE_HEIGHT * scale / 2.0,
-            bounds.right,
-            middle + TITLE_HEIGHT * scale / 2.0,
-        );
+    pub(super) fn draw_toolbar(&self, canvas: &Canvas, bounds: Rect, opacity: f32) {
+        let middle = bounds.top + super::layout::TOOLBAR_HEIGHT / 2.0;
+        let title_area = Rect::new(bounds.left, middle - TITLE_HEIGHT / 2.0, bounds.right, middle + TITLE_HEIGHT / 2.0);
         canvas.text(&TITLE, "Todo", title_area, Color::WHITE.faded(opacity));
-        let count_left = bounds.left + (canvas.measure(&TITLE, "Todo") + TITLE_GAP) * scale;
-        let count_middle = middle + COUNT_DROP * scale;
-        let count_area = Rect::new(
-            count_left,
-            count_middle - COUNT_HEIGHT * scale / 2.0,
-            bounds.right,
-            count_middle + COUNT_HEIGHT * scale / 2.0,
-        );
+        let count_left = bounds.left + canvas.measure(&TITLE, "Todo") + TITLE_GAP;
+        let count_middle = middle + COUNT_DROP;
+        let count_area =
+            Rect::new(count_left, count_middle - COUNT_HEIGHT / 2.0, bounds.right, count_middle + COUNT_HEIGHT / 2.0);
         canvas.text(&REGULAR_12, &self.count_text, count_area, TEXT_MUTED.faded(opacity));
         if !self.list.is_empty() {
-            self.draw_clear_button(canvas, clear_button(bounds, scale), scale, opacity);
+            self.draw_clear_button(canvas, clear_button(bounds), opacity);
         }
-        self.draw_add_button(canvas, add_button(bounds, scale), scale, opacity);
+        self.draw_add_button(canvas, add_button(bounds), opacity);
     }
 
-    fn draw_clear_button(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-        let radius = BUTTON_HEIGHT * scale / 2.0;
+    fn draw_clear_button(&self, canvas: &Canvas, area: Rect, opacity: f32) {
+        let radius = BUTTON_HEIGHT / 2.0;
         let fill = if self.hover.is(TodoTarget::ClearAll) { SURFACE_BORDER } else { SURFACE_HOVER };
         canvas.fill_rounded_rect(area, radius, SURFACE_BUTTON_BORDER.faded(opacity));
-        let inner = Rect::new(area.left + scale, area.top + scale, area.right - scale, area.bottom - scale);
-        canvas.fill_rounded_rect(inner, radius - scale, fill.faded(opacity));
+        let inner = Rect::new(area.left + 1.0, area.top + 1.0, area.right - 1.0, area.bottom - 1.0);
+        canvas.fill_rounded_rect(inner, radius - 1.0, fill.faded(opacity));
         canvas.text(&CLEAR_LABEL, &tr!("todo.clear_all"), area, TEXT_LIGHT.faded(opacity));
     }
 
-    fn draw_add_button(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+    fn draw_add_button(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         let fill = if self.hover.is(TodoTarget::Add) { Color::gray(0.85) } else { Color::WHITE };
         let text = Color::BLACK;
         canvas.fill_rounded_rect(area, area.height() / 2.0, fill.faded(opacity));
-        let plus_width = canvas.measure(&REGULAR_14, "+") * scale;
-        let content = plus_width + BUTTON_CONTENT_GAP * scale + canvas.measure(&MEDIUM_12, &tr!("todo.add")) * scale;
+        let plus_width = canvas.measure(&REGULAR_14, "+");
+        let content = plus_width + BUTTON_CONTENT_GAP + canvas.measure(&MEDIUM_12, &tr!("todo.add"));
         let left = area.center_x() - content / 2.0;
-        canvas.text(&REGULAR_14, "+", Rect { left, right: left + plus_width + scale, ..area }, text.faded(opacity));
-        let label = Rect { left: left + plus_width + BUTTON_CONTENT_GAP * scale, right: area.right, ..area };
+        canvas.text(&REGULAR_14, "+", Rect { left, right: left + plus_width + 1.0, ..area }, text.faded(opacity));
+        let label = Rect { left: left + plus_width + BUTTON_CONTENT_GAP, right: area.right, ..area };
         canvas.text(&MEDIUM_12, &tr!("todo.add"), label, text.faded(opacity));
     }
 
     /// "All clear" with its check mark, centered under the toolbar.
-    pub(super) fn draw_empty(&self, canvas: &Canvas, bounds: Rect, scale: f32, opacity: f32) {
-        let area = empty_area(bounds, scale);
-        let text_width = canvas.measure(&MEDIUM_13, &tr!("todo.all_clear")) * scale;
-        let total = (MESSAGE_ICON_SIZE + MESSAGE_ICON_GAP) * scale + text_width;
+    pub(super) fn draw_empty(&self, canvas: &Canvas, bounds: Rect, opacity: f32) {
+        let area = empty_area(bounds);
+        let text_width = canvas.measure(&MEDIUM_13, &tr!("todo.all_clear"));
+        let total = MESSAGE_ICON_SIZE + MESSAGE_ICON_GAP + text_width;
         let left = area.center_x() - total / 2.0;
-        let icon_center = Point::new(left + MESSAGE_ICON_SIZE * scale / 2.0, area.center_y());
+        let icon_center = Point::new(left + MESSAGE_ICON_SIZE / 2.0, area.center_y());
         let layers = [Stroke::new(ALL_CLEAR_RING, TEXT_DIM), Stroke::new(ALL_CLEAR_CHECK, TEXT_DIM)];
-        draw_strokes(canvas, &layers, icon_center, MESSAGE_ICON_SIZE * scale, 1.6, opacity);
+        draw_strokes(canvas, &layers, icon_center, MESSAGE_ICON_SIZE, 1.6, opacity);
         let text_area = Rect::new(
-            left + (MESSAGE_ICON_SIZE + MESSAGE_ICON_GAP) * scale,
-            area.center_y() - MESSAGE_HEIGHT * scale / 2.0,
+            left + MESSAGE_ICON_SIZE + MESSAGE_ICON_GAP,
+            area.center_y() - MESSAGE_HEIGHT / 2.0,
             area.right,
-            area.center_y() + MESSAGE_HEIGHT * scale / 2.0,
+            area.center_y() + MESSAGE_HEIGHT / 2.0,
         );
         canvas.text(&MEDIUM_13, &tr!("todo.all_clear"), text_area, LIGHT_GRAY.faded(opacity));
     }
 
     pub(super) fn draw_row(&self, canvas: &Canvas, row: Row, rect: Rect, position: usize, opacity: f32) {
-        let scale = canvas.scale();
-        let text_area = Rect { left: rect.left + TEXT_LEFT * scale, right: rect.right - 36.0 * scale, ..rect };
+        let text_area = Rect { left: rect.left + TEXT_LEFT, right: rect.right - 36.0, ..rect };
         let is_hovered = self.hover.is(TodoTarget::Row(position));
         let fill = if is_hovered { SURFACE_HOVER } else { SURFACE_ROW };
         match row {
             Row::Field => {
-                canvas.fill_rounded_rect(rect, ROW_RADIUS * scale, FIELD_BORDER.faded(opacity));
-                let border = FIELD_BORDER_WIDTH * scale;
+                canvas.fill_rounded_rect(rect, ROW_RADIUS, FIELD_BORDER.faded(opacity));
+                let border = FIELD_BORDER_WIDTH;
                 let inner = Rect::new(rect.left + border, rect.top + border, rect.right - border, rect.bottom - border);
-                canvas.fill_rounded_rect(inner, (ROW_RADIUS - FIELD_BORDER_WIDTH) * scale, SURFACE_ROW.faded(opacity));
-                canvas.text(&PLUS, "+", check_rect(rect, scale), FIELD_BORDER.faded(opacity));
-                let field_area = Rect { right: rect.right - (HINT_WIDTH + ROW_PADDING) * scale, ..text_area };
+                canvas.fill_rounded_rect(inner, ROW_RADIUS - FIELD_BORDER_WIDTH, SURFACE_ROW.faded(opacity));
+                canvas.text(&PLUS, "+", check_rect(rect), FIELD_BORDER.faded(opacity));
+                let field_area = Rect { right: rect.right - (HINT_WIDTH + ROW_PADDING), ..text_area };
                 let hint_text = tr!("todo.field_hint");
                 let look = FieldLook { style: &REGULAR_13, color: Color::WHITE, placeholder: &hint_text };
                 self.field.draw(canvas, field_area, &look, self.has_keyboard, opacity);
-                let hint_area =
-                    Rect { left: rect.right - HINT_WIDTH * scale, right: rect.right - ROW_PADDING * scale, ..rect };
+                let hint_area = Rect { left: rect.right - HINT_WIDTH, right: rect.right - ROW_PADDING, ..rect };
                 canvas.text(&HINT, &tr!("todo.enter_hint"), hint_area, TEXT_DIM.faded(opacity));
             }
             Row::Item(index) => {
                 let Some(item) = self.list.item(index) else { return };
                 if !item.is_done || is_hovered {
-                    canvas.fill_rounded_rect(rect, ROW_RADIUS * scale, fill.faded(opacity));
+                    canvas.fill_rounded_rect(rect, ROW_RADIUS, fill.faded(opacity));
                 }
-                let check = check_rect(rect, scale);
+                let check = check_rect(rect);
                 let center = Point::new(check.center_x(), check.center_y());
-                let half = CHECK_SIZE * scale / 2.0;
+                let half = CHECK_SIZE / 2.0;
                 if item.is_done {
                     canvas.fill_circle(center, half, SUCCESS_GREEN.faded(opacity));
                     let mark = [Stroke::new(CHECK, Color::BLACK)];
-                    draw_strokes(canvas, &mark, center, 9.0 * scale, 3.5, opacity);
+                    draw_strokes(canvas, &mark, center, 9.0, 3.5, opacity);
                 } else {
                     canvas.fill_circle(center, half, TEXT_DIM.faded(opacity));
-                    canvas.fill_circle(center, half - 1.5 * scale, fill.faded(opacity));
+                    canvas.fill_circle(center, half - 1.5, fill.faded(opacity));
                 }
                 let color = if item.is_done { TEXT_DIM } else { Color::WHITE };
                 canvas.text(&REGULAR_13, &item.text, text_area, color.faded(opacity));
                 if item.is_done {
-                    let width = (canvas.measure(&REGULAR_13, &item.text) * scale).min(text_area.width());
+                    let width = canvas.measure(&REGULAR_13, &item.text).min(text_area.width());
                     let line_y = rect.center_y();
-                    let line =
-                        Rect::new(text_area.left, line_y - 0.5 * scale, text_area.left + width, line_y + 0.5 * scale);
-                    canvas.fill_rounded_rect(line, 0.5 * scale, TEXT_DIM.faded(opacity));
+                    let line = Rect::new(text_area.left, line_y - 0.5, text_area.left + width, line_y + 0.5);
+                    canvas.fill_rounded_rect(line, 0.5, TEXT_DIM.faded(opacity));
                 }
                 if is_hovered {
-                    let delete = delete_rect(rect, scale);
+                    let delete = delete_rect(rect);
                     canvas.fill_rounded_rect(delete, delete.height() / 2.0, REMOVE_BUTTON_FILL.faded(opacity));
                     let center = Point::new(delete.center_x(), delete.center_y());
                     let cross = [Stroke::new(CLOSE, LIGHT_GRAY)];
-                    draw_strokes(canvas, &cross, center, 10.0 * scale, 2.5, opacity);
+                    draw_strokes(canvas, &cross, center, 10.0, 2.5, opacity);
                 }
             }
         }

@@ -119,26 +119,23 @@ impl TodoPage {
     }
 
     /// The row under `point`, when the point is in the list area and not under the toolbar.
-    fn row_at(&self, bounds: Rect, scale: f32, point: Point) -> Option<(usize, Row)> {
-        if !empty_area(bounds, scale).contains(point) {
+    fn row_at(&self, bounds: Rect, point: Point) -> Option<(usize, Row)> {
+        if !empty_area(bounds).contains(point) {
             return None;
         }
         let scroll = self.scroll.value();
-        self.rows()
-            .into_iter()
-            .enumerate()
-            .find(|&(position, _)| row_rect(bounds, scale, position, scroll).contains(point))
+        self.rows().into_iter().enumerate().find(|&(position, _)| row_rect(bounds, position, scroll).contains(point))
     }
 
     /// What the pointer is over at `point`; the buttons and the list area never overlap.
-    fn target_at(&self, bounds: Rect, scale: f32, point: Point) -> Option<TodoTarget> {
-        if add_button(bounds, scale).contains(point) {
+    fn target_at(&self, bounds: Rect, point: Point) -> Option<TodoTarget> {
+        if add_button(bounds).contains(point) {
             return Some(TodoTarget::Add);
         }
-        if !self.list.is_empty() && clear_button(bounds, scale).contains(point) {
+        if !self.list.is_empty() && clear_button(bounds).contains(point) {
             return Some(TodoTarget::ClearAll);
         }
-        self.row_at(bounds, scale, point)
+        self.row_at(bounds, point)
             .filter(|(_, row)| matches!(row, Row::Item(_)))
             .map(|(position, _)| TodoTarget::Row(position))
     }
@@ -193,6 +190,10 @@ impl Page for TodoPage {
         (mode == Mode::Expanded).then_some(Priority::BACKGROUND)
     }
 
+    fn uses_units(&self) -> bool {
+        true
+    }
+
     fn sizes(&self) -> PageSizes {
         PageSizes {
             resting_width: RESTING_WIDTH,
@@ -203,15 +204,15 @@ impl Page for TodoPage {
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}
 
     fn draw_expanded(&self, canvas: &Canvas, frame: &Frame, opacity: f32) {
-        let (bounds, scale) = (frame.bounds, frame.scale);
-        self.draw_toolbar(canvas, bounds, scale, opacity);
+        let bounds = frame.bounds;
+        self.draw_toolbar(canvas, bounds, opacity);
         if self.is_empty_view() {
-            self.draw_empty(canvas, bounds, scale, opacity);
+            self.draw_empty(canvas, bounds, opacity);
             return;
         }
-        canvas.clipped(empty_area(bounds, scale), || {
+        canvas.clipped(empty_area(bounds), || {
             for (position, row) in self.rows().into_iter().enumerate() {
-                self.draw_row(canvas, row, row_rect(bounds, scale, position, self.scroll.value()), position, opacity);
+                self.draw_row(canvas, row, row_rect(bounds, position, self.scroll.value()), position, opacity);
             }
         });
     }
@@ -222,19 +223,19 @@ impl Page for TodoPage {
     }
 
     fn on_pointer(&mut self, event: PointerEvent, frame: &Frame, context: &mut Context) {
-        let (bounds, scale) = (frame.bounds, frame.scale);
+        let bounds = frame.bounds;
         match event {
             PointerEvent::Moved(point) => {
-                if self.hover.set(self.target_at(bounds, scale, point)) {
+                if self.hover.set(self.target_at(bounds, point)) {
                     context.request_repaint();
                 }
             }
             PointerEvent::Pressed(point) if frame.is_open() => {
-                if add_button(bounds, scale).contains(point) {
+                if add_button(bounds).contains(point) {
                     self.start_adding(context);
                     return;
                 }
-                if !self.list.is_empty() && clear_button(bounds, scale).contains(point) {
+                if !self.list.is_empty() && clear_button(bounds).contains(point) {
                     self.list.clear();
                     self.clear_row_hover();
                     self.scroll.reset();
@@ -242,11 +243,11 @@ impl Page for TodoPage {
                     context.request_repaint();
                     return;
                 }
-                let Some((position, row)) = self.row_at(bounds, scale, point) else { return };
+                let Some((position, row)) = self.row_at(bounds, point) else { return };
                 match row {
                     Row::Item(index) => {
-                        let rect = row_rect(bounds, scale, position, self.scroll.value());
-                        if self.hover.is(TodoTarget::Row(position)) && delete_rect(rect, scale).contains(point) {
+                        let rect = row_rect(bounds, position, self.scroll.value());
+                        if self.hover.is(TodoTarget::Row(position)) && delete_rect(rect).contains(point) {
                             self.list.remove(index);
                             self.hover.clear();
                         } else {
@@ -294,7 +295,7 @@ impl Page for TodoPage {
     }
 
     fn claims_scroll(&self, point: Point, frame: &Frame) -> bool {
-        max_scroll(self.rows().len()) > 0.0 && empty_area(frame.bounds, frame.scale).contains(point)
+        max_scroll(self.rows().len()) > 0.0 && empty_area(frame.bounds).contains(point)
     }
 
     fn on_keyboard_lost(&mut self, context: &mut Context) {
@@ -385,15 +386,15 @@ mod tests {
     #[test]
     fn moving_from_a_row_to_the_add_button_repaints_once() {
         let mut page = page_with(3, 0);
-        let (bounds, scale) = (Rect::new(0.0, 0.0, CONTENT_WIDTH, 144.0), 1.0);
+        let bounds = Rect::new(0.0, 0.0, CONTENT_WIDTH, 144.0);
         let center = |rect: Rect| Point::new(rect.center_x(), rect.center_y());
-        let on_row = center(row_rect(bounds, scale, 1, 0.0));
-        let on_add = center(add_button(bounds, scale));
-        assert!(page.hover.set(page.target_at(bounds, scale, on_row)), "entering the row repaints");
+        let on_row = center(row_rect(bounds, 1, 0.0));
+        let on_add = center(add_button(bounds));
+        assert!(page.hover.set(page.target_at(bounds, on_row)), "entering the row repaints");
         assert_eq!(page.hover.get(), Some(TodoTarget::Row(1)));
-        assert!(page.hover.set(page.target_at(bounds, scale, on_add)), "the move to Add repaints");
+        assert!(page.hover.set(page.target_at(bounds, on_add)), "the move to Add repaints");
         assert_eq!(page.hover.get(), Some(TodoTarget::Add));
-        assert!(!page.hover.set(page.target_at(bounds, scale, on_add)), "staying on Add does not repaint");
+        assert!(!page.hover.set(page.target_at(bounds, on_add)), "staying on Add does not repaint");
     }
 
     #[test]

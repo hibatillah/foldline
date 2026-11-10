@@ -54,42 +54,42 @@ pub(super) fn max_scroll(row_count: usize) -> f32 {
 }
 
 /// Every row runs the full width, under the toolbar, moved up by `scroll` DIP.
-pub(super) fn row_rect(bounds: Rect, scale: f32, position: usize, scroll: f32) -> Rect {
-    let top = bounds.top + (TOOLBAR_HEIGHT + TOOLBAR_GAP + position as f32 * (ROW_HEIGHT + ROW_GAP) - scroll) * scale;
-    Rect::new(bounds.left, top, bounds.right, top + ROW_HEIGHT * scale)
+pub(super) fn row_rect(bounds: Rect, position: usize, scroll: f32) -> Rect {
+    let top = bounds.top + TOOLBAR_HEIGHT + TOOLBAR_GAP + position as f32 * (ROW_HEIGHT + ROW_GAP) - scroll;
+    Rect::new(bounds.left, top, bounds.right, top + ROW_HEIGHT)
 }
 
 /// The room under the toolbar: the rows are drawn and scrolled in it, and the empty page says "All clear" in it.
-pub(super) fn empty_area(bounds: Rect, scale: f32) -> Rect {
-    Rect::new(bounds.left, bounds.top + (TOOLBAR_HEIGHT + TOOLBAR_GAP) * scale, bounds.right, bounds.bottom)
+pub(super) fn empty_area(bounds: Rect) -> Rect {
+    Rect::new(bounds.left, bounds.top + TOOLBAR_HEIGHT + TOOLBAR_GAP, bounds.right, bounds.bottom)
 }
 
-fn button_rect(bounds: Rect, scale: f32, right_inset: f32, width: f32) -> Rect {
-    let top = bounds.top + (TOOLBAR_HEIGHT - BUTTON_HEIGHT) / 2.0 * scale;
-    let right = bounds.right - right_inset * scale;
-    Rect::new(right - width * scale, top, right, top + BUTTON_HEIGHT * scale)
+fn button_rect(bounds: Rect, right_inset: f32, width: f32) -> Rect {
+    let top = bounds.top + (TOOLBAR_HEIGHT - BUTTON_HEIGHT) / 2.0;
+    let right = bounds.right - right_inset;
+    Rect::new(right - width, top, right, top + BUTTON_HEIGHT)
 }
 
 /// The Add pill, always at the top right.
-pub(super) fn add_button(bounds: Rect, scale: f32) -> Rect {
-    button_rect(bounds, scale, 0.0, ADD_WIDTH)
+pub(super) fn add_button(bounds: Rect) -> Rect {
+    button_rect(bounds, 0.0, ADD_WIDTH)
 }
 
 /// The Clear all pill, left of Add.
-pub(super) fn clear_button(bounds: Rect, scale: f32) -> Rect {
-    button_rect(bounds, scale, ADD_WIDTH + BUTTON_GAP, CLEAR_WIDTH)
+pub(super) fn clear_button(bounds: Rect) -> Rect {
+    button_rect(bounds, ADD_WIDTH + BUTTON_GAP, CLEAR_WIDTH)
 }
 
-pub(super) fn check_rect(row: Rect, scale: f32) -> Rect {
-    let left = row.left + ROW_PADDING * scale;
-    let top = row.center_y() - CHECK_SIZE * scale / 2.0;
-    Rect::new(left, top, left + CHECK_SIZE * scale, top + CHECK_SIZE * scale)
+pub(super) fn check_rect(row: Rect) -> Rect {
+    let left = row.left + ROW_PADDING;
+    let top = row.center_y() - CHECK_SIZE / 2.0;
+    Rect::new(left, top, left + CHECK_SIZE, top + CHECK_SIZE)
 }
 
-pub(super) fn delete_rect(row: Rect, scale: f32) -> Rect {
-    let right = row.right - DELETE_INSET * scale;
-    let top = row.center_y() - DELETE_SIZE * scale / 2.0;
-    Rect::new(right - DELETE_SIZE * scale, top, right, top + DELETE_SIZE * scale)
+pub(super) fn delete_rect(row: Rect) -> Rect {
+    let right = row.right - DELETE_INSET;
+    let top = row.center_y() - DELETE_SIZE / 2.0;
+    Rect::new(right - DELETE_SIZE, top, right, top + DELETE_SIZE)
 }
 
 #[cfg(test)]
@@ -131,30 +131,30 @@ mod tests {
     #[test]
     fn rows_run_the_full_width_below_the_toolbar_with_six_between() {
         let bounds = Rect::new(0.0, 0.0, CONTENT_WIDTH, 144.0);
-        let first = row_rect(bounds, 1.0, 0, 0.0);
-        let second = row_rect(bounds, 1.0, 1, 0.0);
+        let first = row_rect(bounds, 0, 0.0);
+        let second = row_rect(bounds, 1, 0.0);
         assert_eq!((first.left, first.right), (0.0, CONTENT_WIDTH));
         assert_eq!(first.top, TOOLBAR_HEIGHT + TOOLBAR_GAP);
         assert_eq!(second.top - first.bottom, ROW_GAP);
-        assert_eq!(row_rect(bounds, 1.0, 2, 0.0).bottom, bounds.bottom);
+        assert_eq!(row_rect(bounds, 2, 0.0).bottom, bounds.bottom);
     }
 
     #[test]
     fn the_buttons_sit_at_the_top_right_with_clear_all_left_of_add() {
         let bounds = Rect::new(0.0, 0.0, CONTENT_WIDTH, 144.0);
-        let (add, clear) = (add_button(bounds, 1.0), clear_button(bounds, 1.0));
+        let (add, clear) = (add_button(bounds), clear_button(bounds));
         assert_eq!(add.right, bounds.right);
         assert_eq!(add.height(), 26.0);
         assert_eq!(add.top, 1.0);
         assert_eq!(add.left - clear.right, BUTTON_GAP);
-        assert!(clear.bottom <= row_rect(bounds, 1.0, 0, 0.0).top);
+        assert!(clear.bottom <= row_rect(bounds, 0, 0.0).top);
     }
 
     #[test]
     fn the_empty_page_keeps_its_buttons_on_top_and_its_message_below() {
         let bounds = Rect::new(0.0, 0.0, CONTENT_WIDTH, 86.0);
-        assert_eq!(add_button(bounds, 1.0).right, CONTENT_WIDTH);
-        assert_eq!(empty_area(bounds, 1.0).top, 36.0);
-        assert_eq!(empty_area(bounds, 1.0).bottom, 86.0);
+        assert_eq!(add_button(bounds).right, CONTENT_WIDTH);
+        assert_eq!(empty_area(bounds).top, 36.0);
+        assert_eq!(empty_area(bounds).bottom, 86.0);
     }
 }
