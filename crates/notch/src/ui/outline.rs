@@ -99,7 +99,7 @@ fn dashes(rect: Rect, radius: f32, thickness: f32, dash: f32, gap: f32) -> Vec<D
         .collect()
 }
 
-/// All sizes and coordinates are device pixels.
+/// Sizes and coordinates are in the canvas's space (units inside `Canvas::in_units`).
 pub fn draw_dashed_outline(
     canvas: &Canvas,
     rect: Rect,

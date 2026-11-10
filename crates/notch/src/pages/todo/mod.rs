@@ -190,10 +190,6 @@ impl Page for TodoPage {
         (mode == Mode::Expanded).then_some(Priority::BACKGROUND)
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn sizes(&self) -> PageSizes {
         PageSizes {
             resting_width: RESTING_WIDTH,

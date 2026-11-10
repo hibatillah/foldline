@@ -73,10 +73,6 @@ impl Page for ClipboardPage {
         "clipboard"
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn name(&self) -> String {
         crate::i18n::tr!("page.clipboard").into_owned()
     }

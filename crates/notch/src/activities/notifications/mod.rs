@@ -185,10 +185,6 @@ impl Activity for NotificationsActivity {
         "notifications"
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn is_optional(&self) -> bool {
         true
     }
@@ -198,7 +194,7 @@ impl Activity for NotificationsActivity {
         self.flash.is_visible().then_some(Presence::Banner { width: WIDTH, height: card.height(self.shows_buttons()) })
     }
 
-    fn draw(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         let (Some(item), Some(card)) = (&self.item, &self.card) else { return };
         let look = DrawLook { area, opacity, shows_buttons: self.shows_buttons() };
         card.draw(canvas, item, look, &self.reply);
@@ -235,7 +231,7 @@ impl Activity for NotificationsActivity {
         }
     }
 
-    fn on_pointer(&mut self, event: PointerEvent, area: Rect, _scale: f32, context: &mut Context) {
+    fn on_pointer(&mut self, event: PointerEvent, area: Rect, context: &mut Context) {
         if !self.flash.is_visible() {
             return;
         }

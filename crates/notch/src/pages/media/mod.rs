@@ -141,10 +141,6 @@ impl Page for MediaPage {
         "media"
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn name(&self) -> String {
         crate::i18n::tr!("page.media").into_owned()
     }
@@ -183,7 +179,7 @@ impl Page for MediaPage {
         self.is_wave_in_pill().then_some(Presence::Badge { width: wave::WIDTH })
     }
 
-    fn draw_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         let center = Point::new(area.center_x(), area.center_y());
         let wave_area = Rect::around(center, wave::WIDTH / 2.0, wave::HEIGHT / 2.0);
         wave::draw(canvas, wave_area, wave::now_seconds(), opacity);
@@ -193,7 +189,7 @@ impl Page for MediaPage {
         self.is_wave_shown().then_some(wave::WIDTH)
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         wave::draw(canvas, area, wave::now_seconds(), opacity);
     }
 
@@ -282,10 +278,11 @@ impl Page for MediaPage {
         is_following || is_fading
     }
 
-    /// The host draws the backdrop in device pixels, so `frame.scale` is the display scale here.
-    fn draw_backdrop(&self, canvas: &Canvas, frame: &Frame, pill: Rect, radius: f32, opacity: f32) {
+    /// The host draws the backdrop in device pixels, so `canvas.scale()` is the display scale here.
+    fn draw_backdrop(&self, canvas: &Canvas, _frame: &Frame, pill: Rect, radius: f32, opacity: f32) {
         if let Some(color) = self.theme_color {
-            backdrop::draw(canvas, pill, radius, frame.scale, color, self.backdrop.position.clamp(0.0, 1.0) * opacity);
+            let amount = self.backdrop.position.clamp(0.0, 1.0) * opacity;
+            backdrop::draw(canvas, pill, radius, canvas.scale(), color, amount);
         }
     }
 }

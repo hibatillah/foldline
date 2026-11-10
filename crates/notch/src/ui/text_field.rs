@@ -99,7 +99,7 @@ impl TextField {
         self.text[self.caret..].chars().next().map(|character| self.caret + character.len_utf8())
     }
 
-    /// Draws the text left-aligned in `area` (device pixels), scrolled so the caret stays visible.
+    /// Draws the text left-aligned in `area` (the canvas's space), scrolled so the caret stays visible.
     pub fn draw(&self, canvas: &Canvas, area: Rect, look: &FieldLook, has_keyboard: bool, opacity: f32) {
         let (scale, style) = (canvas.scale(), look.style);
         canvas.clipped(area, || {

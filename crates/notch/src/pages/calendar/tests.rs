@@ -80,13 +80,7 @@ fn only_a_list_of_more_than_four_cards_claims_the_wheel_in_the_month_view() {
     let fonts = Fonts::new(1.0).unwrap();
     let mut page = CalendarPage::sample(&fonts);
     let bounds = Rect::new(0.0, 0.0, EXPANDED_WIDTH, content_height(page.grid.rows(), page.view));
-    let frame = Frame {
-        scale: 1.0,
-        bounds,
-        expansion: 1.0,
-        expanded: Size::new(EXPANDED_WIDTH, bounds.height()),
-        lead_gap: 0.0,
-    };
+    let frame = Frame { bounds, expansion: 1.0, expanded: Size::new(EXPANDED_WIDTH, bounds.height()), lead_gap: 0.0 };
     let inside = Point::new(bounds.right - 20.0, bounds.bottom - 20.0);
     assert!(!page.claims_scroll(inside, &frame), "three events fit the viewport");
     page.agenda.rows = (0..9)
@@ -180,13 +174,7 @@ fn a_week_list_of_more_than_three_cards_claims_the_wheel() {
     let fonts = Fonts::new(1.0).unwrap();
     let mut page = week_page(&fonts);
     let bounds = Rect::new(0.0, 0.0, EXPANDED_WIDTH, page.sizes().expanded.height);
-    let frame = Frame {
-        scale: 1.0,
-        bounds,
-        expansion: 1.0,
-        expanded: Size::new(EXPANDED_WIDTH, bounds.height()),
-        lead_gap: 0.0,
-    };
+    let frame = Frame { bounds, expansion: 1.0, expanded: Size::new(EXPANDED_WIDTH, bounds.height()), lead_gap: 0.0 };
     let inside = Point::new(bounds.right - 20.0, bounds.bottom - 20.0);
     assert!(!page.claims_scroll(inside, &frame), "three events fill the week list");
     page.agenda.rows = (0..4)

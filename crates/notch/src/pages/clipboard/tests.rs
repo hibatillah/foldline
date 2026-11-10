@@ -13,7 +13,6 @@ use crate::{
 
 fn frame() -> Frame {
     Frame {
-        scale: 1.0,
         bounds: Rect::new(0.0, 0.0, CONTENT_WIDTH, CONTENT_HEIGHT),
         expansion: 1.0,
         expanded: Size::new(CONTENT_WIDTH, CONTENT_HEIGHT),

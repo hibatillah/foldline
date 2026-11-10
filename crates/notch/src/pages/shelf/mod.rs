@@ -130,10 +130,6 @@ impl Page for ShelfPage {
         "shelf"
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn name(&self) -> String {
         crate::i18n::tr!("page.shelf").into_owned()
     }
@@ -159,7 +155,7 @@ impl Page for ShelfPage {
         self.alert.is_visible().then_some(Presence::Transient { width: self.alert_width })
     }
 
-    fn draw_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         ui::draw_message(canvas, area, opacity, Icon::Folder, Color::WHITE, &self.alert_title, Some(&self.alert_value));
     }
 

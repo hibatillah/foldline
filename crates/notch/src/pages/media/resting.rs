@@ -66,7 +66,6 @@ mod tests {
     #[test]
     fn the_line_starts_after_the_artwork_and_the_gap_the_host_reserved() {
         let frame = |lead_gap| Frame {
-            scale: 1.0,
             bounds: Rect::new(100.0, 0.0, 350.0, 37.0),
             expansion: 0.0,
             expanded: Size::new(0.0, 0.0),

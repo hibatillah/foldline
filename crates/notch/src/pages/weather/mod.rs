@@ -101,10 +101,6 @@ impl Page for WeatherPage {
         "weather"
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn name(&self) -> String {
         crate::i18n::tr!("page.weather").into_owned()
     }
@@ -143,7 +139,7 @@ impl Page for WeatherPage {
         self.alert.presence(self.now())
     }
 
-    fn draw_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         self.alert.draw(canvas, area, opacity, self.now());
     }
 
@@ -151,7 +147,7 @@ impl Page for WeatherPage {
         self.alert.short_badge_width(self.now())
     }
 
-    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         self.alert.draw_short_badge(canvas, area, opacity, self.now());
     }
 
@@ -168,7 +164,7 @@ impl Page for WeatherPage {
         self.alert.has_badge(self.now()).then_some(self.id())
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         if self.alert.has_badge(self.now()) {
             let center = Point::new(area.center_x(), area.center_y());
             Icon::Cloud.draw(canvas, center, Icon::Cloud.size(), ACCENT_BLUE_LIGHT, opacity);
@@ -183,7 +179,7 @@ impl Page for WeatherPage {
         self.alert.on_hover_changed(is_hovering, context);
     }
 
-    fn on_presence_pointer(&mut self, event: PointerEvent, area: Rect, _scale: f32, context: &mut Context) {
+    fn on_presence_pointer(&mut self, event: PointerEvent, area: Rect, context: &mut Context) {
         self.alert.on_pointer(event, area, self.now(), context);
     }
 

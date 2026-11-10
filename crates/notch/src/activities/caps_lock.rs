@@ -91,10 +91,6 @@ impl Activity for CapsLockActivity {
         "caps_lock"
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn presence(&self) -> Option<Presence> {
         if self.flash.is_visible() {
             Some(Presence::Transient { width: self.width })
@@ -107,9 +103,9 @@ impl Activity for CapsLockActivity {
         1
     }
 
-    fn draw(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         if !self.flash.is_visible() {
-            self.draw_header_status(canvas, area, 1.0, opacity);
+            self.draw_header_status(canvas, area, opacity);
             return;
         }
         let tint = if self.is_on { Color::WHITE } else { Color::gray(0.6) };
@@ -120,7 +116,7 @@ impl Activity for CapsLockActivity {
         self.is_on.then_some(Icon::CapsLock.size())
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         let center = Point::new(area.center_x(), area.center_y());
         Icon::CapsLock.draw(canvas, center, Icon::CapsLock.size(), Color::WHITE, opacity);
     }

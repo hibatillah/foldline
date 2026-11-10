@@ -23,8 +23,8 @@ use super::{
 
 const MIN_VISIBLE_ALPHA: f32 = 0.01;
 
-/// What a page draws with. Coordinates are device pixels, so multiply device-independent sizes by `scale`; inside
-/// `in_units` they are device-independent units and `scale` is 1.
+/// What the host and pages draw with. Coordinates are device pixels at `scale`; inside `in_units` (every page and
+/// activity draw hook but `Page::draw_backdrop`) they are device-independent units and `scale` is 1.
 pub struct Canvas<'a> {
     target: &'a ID2D1DCRenderTarget,
     brush: &'a ID2D1SolidColorBrush,

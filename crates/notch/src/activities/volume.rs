@@ -160,10 +160,6 @@ impl Activity for VolumeActivity {
         "volume"
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn presence(&self) -> Option<Presence> {
         if self.flash.is_visible() {
             let width = if self.is_muted { self.muted_width } else { ui::LEVEL_WIDTH };
@@ -177,9 +173,9 @@ impl Activity for VolumeActivity {
         2
     }
 
-    fn draw(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         if !self.flash.is_visible() {
-            self.draw_header_status(canvas, area, 1.0, opacity);
+            self.draw_header_status(canvas, area, opacity);
         } else if self.is_muted {
             ui::draw_message(canvas, area, opacity, Icon::SpeakerMuted, Color::WHITE, &tr!("volume.muted"), None);
         } else {
@@ -191,7 +187,7 @@ impl Activity for VolumeActivity {
         self.is_muted.then_some(Icon::SpeakerMuted.size())
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         let center = Point::new(area.center_x(), area.center_y());
         Icon::SpeakerMuted.draw(canvas, center, Icon::SpeakerMuted.size(), Color::WHITE, opacity);
     }

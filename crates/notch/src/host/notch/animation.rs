@@ -145,7 +145,6 @@ impl Notch {
             bounded(sized(resting_height, full_height, amount) * self.scale, resting_height * self.scale, room_height);
         let left = (WINDOW_WIDTH * self.scale - width) / 2.0;
         Frame {
-            scale: self.scale,
             bounds: Rect::new(left, 0.0, left + width, height),
             expansion: self.springs.expansion.position,
             expanded: Size::new(

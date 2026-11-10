@@ -165,15 +165,11 @@ impl Activity for MicrophoneActivity {
         "microphone"
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn presence(&self) -> Option<Presence> {
         self.privacy.presence()
     }
 
-    fn draw(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         self.privacy.draw(canvas, area, opacity);
     }
 

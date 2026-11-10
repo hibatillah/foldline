@@ -198,7 +198,7 @@ impl Notch {
     pub(super) fn draw_badge(&self, source: Source, canvas: &Canvas, area: Rect, short: bool, opacity: f32) {
         match source {
             Source::Page(index) if short => {
-                units::draw_page_short_presence(self.pages[index].as_ref(), canvas, area, self.scale, opacity)
+                units::draw_page_short_presence(self.pages[index].as_ref(), canvas, area, opacity)
             }
             _ => self.draw_source(source, canvas, area, opacity),
         }
@@ -207,11 +207,9 @@ impl Notch {
     pub(super) fn draw_source(&self, source: Source, canvas: &Canvas, area: Rect, opacity: f32) {
         match source {
             Source::Activity(index) => {
-                units::draw_activity(self.activities[index].activity.as_ref(), canvas, area, self.scale, opacity)
+                units::draw_activity(self.activities[index].activity.as_ref(), canvas, area, opacity)
             }
-            Source::Page(index) => {
-                units::draw_page_presence(self.pages[index].as_ref(), canvas, area, self.scale, opacity)
-            }
+            Source::Page(index) => units::draw_page_presence(self.pages[index].as_ref(), canvas, area, opacity),
         }
     }
 }

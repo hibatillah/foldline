@@ -34,7 +34,7 @@ impl Page for BadgePage {
         Some(Presence::Badge { width: 40.0 })
     }
 
-    fn on_presence_pointer(&mut self, event: PointerEvent, _area: Rect, _scale: f32, context: &mut Context) {
+    fn on_presence_pointer(&mut self, event: PointerEvent, _area: Rect, context: &mut Context) {
         self.heard.borrow_mut().push(event);
         if matches!(event, PointerEvent::Pressed(_)) {
             context.request_open();

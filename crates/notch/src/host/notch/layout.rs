@@ -25,7 +25,7 @@ impl Notch {
     pub(super) fn page_uses_right_click(&self, point: Point) -> bool {
         let Some(index) = self.expanded_index else { return false };
         let frame = self.natural_page_frame(index, &self.frame(), 0.0);
-        units::page_uses_right_click(self.pages[index].as_ref(), point, &frame)
+        units::page_uses_right_click(self.pages[index].as_ref(), point, &frame, self.scale)
     }
 
     /// Whether the open page scrolls something at `point` with the vertical wheel.
@@ -36,7 +36,7 @@ impl Notch {
             return false;
         }
         let frame = self.natural_page_frame(index, &viewport, 0.0);
-        units::page_claims_scroll(self.pages[index].as_ref(), point, &frame)
+        units::page_claims_scroll(self.pages[index].as_ref(), point, &frame, self.scale)
     }
 
     /// A page's own frame: its requested width and height from the top of the content area, shifted `center_offset` DIP.

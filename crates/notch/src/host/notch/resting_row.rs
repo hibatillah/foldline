@@ -194,7 +194,7 @@ impl Notch {
             let Some(area) = self.badge_rect(frame.bounds, source, width) else { continue };
             match source {
                 Source::Page(index) if self.countdown_icon_width(source).is_some() => {
-                    units::draw_page_header_status(self.pages[index].as_ref(), canvas, area, self.scale, opacity);
+                    units::draw_page_header_status(self.pages[index].as_ref(), canvas, area, opacity);
                 }
                 _ => self.draw_badge(source, canvas, area, false, opacity),
             }

@@ -177,10 +177,6 @@ impl Page for TimerPage {
         (mode == Mode::Expanded).then_some(Priority::BACKGROUND)
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn sizes(&self) -> PageSizes {
         PageSizes { resting_width: RESTING_WIDTH, expanded: EXPANDED_SIZE }
     }
@@ -237,13 +233,13 @@ impl Page for TimerPage {
         self.compact.as_ref().map(|_| self.timer.remaining(now_ms()).unwrap_or(0) / 1000)
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         let Some(compact) = &self.compact else { return };
         let center = crate::gfx::Point::new(area.center_x(), area.center_y());
         Ring { center, diameter: RING_DIAMETER }.draw(canvas, compact.fraction, tone_color(compact.tone), opacity);
     }
 
-    fn draw_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         if self.alert.is_visible() {
             ui::draw_message(
                 canvas,

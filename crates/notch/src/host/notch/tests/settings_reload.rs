@@ -141,7 +141,7 @@ impl Activity for CountingActivity {
         Some(Presence::Badge { width: 20.0 })
     }
 
-    fn draw(&self, _canvas: &Canvas, _area: Rect, _scale: f32, _opacity: f32) {}
+    fn draw(&self, _canvas: &Canvas, _area: Rect, _opacity: f32) {}
 
     fn on_start(&mut self, _context: &mut Context) {
         self.starts.set(self.starts.get() + 1);

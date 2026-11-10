@@ -200,10 +200,6 @@ impl Page for CalendarPage {
         "calendar"
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn name(&self) -> String {
         crate::i18n::tr!("page.calendar").into_owned()
     }
@@ -228,7 +224,7 @@ impl Page for CalendarPage {
         self.reminder.as_ref().map(|_| Icon::Calendar.size())
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         if self.reminder.is_none() {
             return;
         }
@@ -260,7 +256,7 @@ impl Page for CalendarPage {
         self.reminder.as_ref().map(|_| Presence::Badge { width: self.reminder_width })
     }
 
-    fn draw_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         self.draw_badge(canvas, area, opacity);
     }
 
@@ -268,7 +264,7 @@ impl Page for CalendarPage {
         self.reminder.as_ref().map(|_| self.reminder_short_width)
     }
 
-    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         self.draw_short_badge(canvas, area, opacity);
     }
 

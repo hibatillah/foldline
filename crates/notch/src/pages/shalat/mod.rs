@@ -171,10 +171,6 @@ impl Page for ShalatPage {
         "shalat"
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn name(&self) -> String {
         crate::i18n::tr!("page.shalat").into_owned()
     }
@@ -200,7 +196,7 @@ impl Page for ShalatPage {
         self.badge.as_ref().map(|_| Icon::Moon.size())
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         if self.badge.is_none() {
             return;
         }
@@ -235,7 +231,7 @@ impl Page for ShalatPage {
         }
     }
 
-    fn draw_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         if self.alert.is_visible() {
             ui::draw_message(canvas, area, opacity, Icon::Moon, MINT_GREEN, &self.alert_title, Some(&self.alert_value));
         } else if let Some(text) = &self.badge {
@@ -247,9 +243,9 @@ impl Page for ShalatPage {
         self.badge_short.as_ref().map(|_| self.badge_short_width)
     }
 
-    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         if self.alert.is_visible() {
-            self.draw_presence(canvas, area, _scale, opacity);
+            self.draw_presence(canvas, area, opacity);
         } else if let Some(text) = self.badge_short.as_ref().or(self.badge.as_ref()) {
             self.draw_badge(canvas, area, opacity, text);
         }

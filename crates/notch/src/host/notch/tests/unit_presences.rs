@@ -1,4 +1,4 @@
-//! Banners, badges and header marks of unit activities and pages are drawn and hear the pointer in units of their own area.
+//! Banners, badges and header marks of activities and pages are drawn and hear the pointer in units of their own area.
 
 use std::cell::{Cell, RefCell};
 
@@ -9,17 +9,16 @@ use crate::{
     page::{Frame, Mode, PageSizes, PointerEvent, Priority},
 };
 
-/// The area, the `scale` argument and the canvas scale one draw call received.
+/// The area and the canvas scale one draw call received.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Drawn {
     area: Rect,
-    scale: f32,
     canvas_scale: f32,
 }
 
 impl Drawn {
-    fn of(canvas: &Canvas, area: Rect, scale: f32) -> Self {
-        Self { area, scale, canvas_scale: canvas.scale() }
+    fn of(canvas: &Canvas, area: Rect) -> Self {
+        Self { area, canvas_scale: canvas.scale() }
     }
 }
 
@@ -28,12 +27,11 @@ struct Heard {
     drawn: Cell<Option<Drawn>>,
     short_drawn: Cell<Option<Drawn>>,
     header_drawn: Cell<Option<Drawn>>,
-    pointer: RefCell<Vec<(PointerEvent, Rect, f32)>>,
+    pointer: RefCell<Vec<(PointerEvent, Rect)>>,
 }
 
 /// An activity that shows a banner and a header mark and records what the host hands it.
 struct BannerRecorder {
-    in_units: bool,
     heard: Rc<Heard>,
 }
 
@@ -42,32 +40,28 @@ impl Activity for BannerRecorder {
         "banner_recorder"
     }
 
-    fn uses_units(&self) -> bool {
-        self.in_units
-    }
-
     fn presence(&self) -> Option<Presence> {
         Some(Presence::Banner { width: 200.0, height: 60.0 })
     }
 
-    fn draw(&self, canvas: &Canvas, area: Rect, scale: f32, _opacity: f32) {
-        self.heard.drawn.set(Some(Drawn::of(canvas, area, scale)));
+    fn draw(&self, canvas: &Canvas, area: Rect, _opacity: f32) {
+        self.heard.drawn.set(Some(Drawn::of(canvas, area)));
     }
 
     fn header_status_width(&self) -> Option<f32> {
         Some(16.0)
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, scale: f32, _opacity: f32) {
-        self.heard.header_drawn.set(Some(Drawn::of(canvas, area, scale)));
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _opacity: f32) {
+        self.heard.header_drawn.set(Some(Drawn::of(canvas, area)));
     }
 
-    fn on_pointer(&mut self, event: PointerEvent, area: Rect, scale: f32, _context: &mut Context) {
-        self.heard.pointer.borrow_mut().push((event, area, scale));
+    fn on_pointer(&mut self, event: PointerEvent, area: Rect, _context: &mut Context) {
+        self.heard.pointer.borrow_mut().push((event, area));
     }
 }
 
-/// A unit page whose pill presence a test picks and that records its presence calls.
+/// A page whose pill presence a test picks and that records its presence calls.
 struct PresenceRecorder {
     presence: Presence,
     heard: Rc<Heard>,
@@ -86,10 +80,6 @@ impl Page for PresenceRecorder {
         PageSizes { resting_width: 0.0, expanded: Size::new(200.0, 86.0) }
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}
 
     fn draw_expanded(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}
@@ -98,31 +88,31 @@ impl Page for PresenceRecorder {
         Some(self.presence)
     }
 
-    fn draw_presence(&self, canvas: &Canvas, area: Rect, scale: f32, _opacity: f32) {
-        self.heard.drawn.set(Some(Drawn::of(canvas, area, scale)));
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, _opacity: f32) {
+        self.heard.drawn.set(Some(Drawn::of(canvas, area)));
     }
 
     fn short_presence_width(&self) -> Option<f32> {
         Some(20.0)
     }
 
-    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, scale: f32, _opacity: f32) {
-        self.heard.short_drawn.set(Some(Drawn::of(canvas, area, scale)));
+    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, _opacity: f32) {
+        self.heard.short_drawn.set(Some(Drawn::of(canvas, area)));
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, scale: f32, _opacity: f32) {
-        self.heard.header_drawn.set(Some(Drawn::of(canvas, area, scale)));
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _opacity: f32) {
+        self.heard.header_drawn.set(Some(Drawn::of(canvas, area)));
     }
 
-    fn on_presence_pointer(&mut self, event: PointerEvent, area: Rect, scale: f32, _context: &mut Context) {
-        self.heard.pointer.borrow_mut().push((event, area, scale));
+    fn on_presence_pointer(&mut self, event: PointerEvent, area: Rect, _context: &mut Context) {
+        self.heard.pointer.borrow_mut().push((event, area));
     }
 }
 
 /// A collapsed notch whose only activity is a started `BannerRecorder`.
-fn banner_activity_rig(in_units: bool) -> (Notch, Rc<Heard>) {
+fn banner_activity_rig() -> (Notch, Rc<Heard>) {
     let heard = Rc::new(Heard::default());
-    let activity = BannerRecorder { in_units, heard: heard.clone() };
+    let activity = BannerRecorder { heard: heard.clone() };
     let mut notch = configured_rig(SampleOptions::default(), Settings::at(None), vec![Box::new(activity)]);
     for slot in &mut notch.activities {
         slot.is_started = true;
@@ -154,77 +144,68 @@ fn inside(area: Rect, x: f32, y: f32) -> Point {
 }
 
 #[test]
-fn a_unit_activity_banner_hears_the_pointer_in_units_from_the_banner_top_left() {
-    let (mut notch, heard) = banner_activity_rig(true);
+fn an_activity_banner_hears_the_pointer_in_units_from_the_banner_top_left() {
+    let (mut notch, heard) = banner_activity_rig();
     let area = banner_area(&notch);
     assert_ne!(area.left, 0.0, "the banner sits away from the window edge, so its own origin matters");
     notch.route_pointer(PointerEvent::Pressed(inside(area, 12.0, 8.0)));
-    let expected = (PointerEvent::Pressed(Point::new(12.0, 8.0)), unit_size_of(area), 1.0);
+    let expected = (PointerEvent::Pressed(Point::new(12.0, 8.0)), unit_size_of(area));
     assert_eq!(*heard.pointer.borrow(), [expected]);
 }
 
 #[test]
-fn an_activity_that_does_not_use_units_hears_its_banner_in_device_pixels() {
-    let (mut notch, heard) = banner_activity_rig(false);
-    let area = banner_area(&notch);
-    let point = inside(area, 12.0, 8.0);
-    notch.route_pointer(PointerEvent::Pressed(point));
-    assert_eq!(*heard.pointer.borrow(), [(PointerEvent::Pressed(point), area, SCALE)]);
-}
-
-#[test]
-fn a_unit_activity_banner_draws_into_a_unit_area_on_a_canvas_at_scale_one() {
-    let (notch, heard) = banner_activity_rig(true);
+fn an_activity_banner_draws_into_a_unit_area_on_a_canvas_at_scale_one() {
+    let (notch, heard) = banner_activity_rig();
     let area = banner_area(&notch);
     notch.paint();
     let drawn = heard.drawn.get().expect("the banner drew");
-    assert_eq!(drawn, Drawn { area: unit_size_of(area), scale: 1.0, canvas_scale: 1.0 });
+    assert_eq!(drawn, Drawn { area: unit_size_of(area), canvas_scale: 1.0 });
     assert_eq!(drawn.area.width(), 200.0);
 }
 
 #[test]
-fn a_unit_activity_header_mark_draws_into_a_unit_area_on_a_canvas_at_scale_one() {
-    let (notch, heard) = banner_activity_rig(true);
+fn an_activity_header_mark_draws_into_a_unit_area_on_a_canvas_at_scale_one() {
+    let (notch, heard) = banner_activity_rig();
     let device_area = Rect::new(40.0, 4.0, 40.0 + 16.0 * SCALE, 4.0 + 32.0 * SCALE);
     let activity = notch.activities[0].activity.as_ref();
-    render(SCALE, |canvas| units::draw_activity_header_status(activity, canvas, device_area, SCALE, 1.0));
-    let expected = Drawn { area: Rect::new(0.0, 0.0, 16.0, 32.0), scale: 1.0, canvas_scale: 1.0 };
+    render(SCALE, |canvas| units::draw_activity_header_status(activity, canvas, device_area, 1.0));
+    let expected = Drawn { area: Rect::new(0.0, 0.0, 16.0, 32.0), canvas_scale: 1.0 };
     assert_eq!(heard.header_drawn.get(), Some(expected));
 }
 
 #[test]
-fn a_unit_page_banner_hears_the_pointer_and_draws_in_units_of_the_banner() {
+fn a_page_banner_hears_the_pointer_and_draws_in_units_of_the_banner() {
     let (mut notch, heard) = presence_page_rig(Presence::Banner { width: 220.0, height: 50.0 });
     let area = banner_area(&notch);
     notch.route_pointer(PointerEvent::Moved(inside(area, 30.0, 10.0)));
-    let expected = (PointerEvent::Moved(Point::new(30.0, 10.0)), unit_size_of(area), 1.0);
+    let expected = (PointerEvent::Moved(Point::new(30.0, 10.0)), unit_size_of(area));
     assert_eq!(*heard.pointer.borrow(), [expected]);
     notch.paint();
-    assert_eq!(heard.drawn.get(), Some(Drawn { area: unit_size_of(area), scale: 1.0, canvas_scale: 1.0 }));
+    assert_eq!(heard.drawn.get(), Some(Drawn { area: unit_size_of(area), canvas_scale: 1.0 }));
 }
 
 #[test]
-fn a_unit_page_badge_hears_the_pointer_in_units_from_the_badge_top_left() {
+fn a_page_badge_hears_the_pointer_in_units_from_the_badge_top_left() {
     let (mut notch, heard) = presence_page_rig(Presence::Badge { width: 40.0 });
     notch.hover.is_hovering = true;
     let (_, area) = notch.page_badge_areas(&notch.frame()).into_iter().next().expect("the badge shows");
     notch.route_pointer(PointerEvent::Moved(inside(area, 6.0, 4.0)));
     let heard_events = heard.pointer.borrow();
-    let (event, unit_area, scale) = heard_events.first().copied().expect("the badge heard the move");
-    assert_eq!((event, unit_area, scale), (PointerEvent::Moved(Point::new(6.0, 4.0)), unit_size_of(area), 1.0));
+    let (event, unit_area) = heard_events.first().copied().expect("the badge heard the move");
+    assert_eq!((event, unit_area), (PointerEvent::Moved(Point::new(6.0, 4.0)), unit_size_of(area)));
 }
 
 #[test]
-fn a_unit_page_short_badge_and_header_mark_draw_into_unit_areas_on_a_canvas_at_scale_one() {
+fn a_page_short_badge_and_header_mark_draw_into_unit_areas_on_a_canvas_at_scale_one() {
     let (notch, heard) = presence_page_rig(Presence::Badge { width: 40.0 });
     let page = notch.pages[0].as_ref();
     let short_area = Rect::new(60.0, 6.0, 60.0 + 20.0 * SCALE, 6.0 + 24.0 * SCALE);
     let header_area = Rect::new(90.0, 2.0, 90.0 + 14.0 * SCALE, 2.0 + 32.0 * SCALE);
     render(SCALE, |canvas| {
-        units::draw_page_short_presence(page, canvas, short_area, SCALE, 1.0);
-        units::draw_page_header_status(page, canvas, header_area, SCALE, 1.0);
+        units::draw_page_short_presence(page, canvas, short_area, 1.0);
+        units::draw_page_header_status(page, canvas, header_area, 1.0);
     });
-    let unit = |width, height| Some(Drawn { area: Rect::new(0.0, 0.0, width, height), scale: 1.0, canvas_scale: 1.0 });
+    let unit = |width, height| Some(Drawn { area: Rect::new(0.0, 0.0, width, height), canvas_scale: 1.0 });
     assert_eq!(heard.short_drawn.get(), unit(20.0, 24.0));
     assert_eq!(heard.header_drawn.get(), unit(14.0, 32.0));
 }

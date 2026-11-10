@@ -35,15 +35,11 @@ impl Activity for ClipboardActivity {
         "clipboard"
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn presence(&self) -> Option<Presence> {
         self.flash.is_visible().then_some(Presence::Transient { width: self.width })
     }
 
-    fn draw(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         ui::draw_message(canvas, area, opacity, Icon::Copy, Color::WHITE, &tr!("clipboard.copied"), None);
     }
 

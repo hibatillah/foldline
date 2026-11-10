@@ -50,7 +50,7 @@ impl Activity for ActivityRecorder {
         None
     }
 
-    fn draw(&self, _canvas: &Canvas, _area: Rect, _scale: f32, _opacity: f32) {}
+    fn draw(&self, _canvas: &Canvas, _area: Rect, _opacity: f32) {}
 
     fn on_language_changed(&mut self, _context: &mut Context) {
         self.changes.set(self.changes.get() + 1);

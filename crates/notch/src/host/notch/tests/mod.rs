@@ -164,8 +164,8 @@ impl Mark {
     }
 }
 
-fn draw_disc(canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-    let size = area.width().min(14.0 * scale);
+fn draw_disc(canvas: &Canvas, area: Rect, opacity: f32) {
+    let size = area.width().min(14.0);
     let disc = Rect::around(Point::new(area.center_x(), area.center_y()), size / 2.0, size / 2.0);
     canvas.fill_rounded_rect(disc, size / 2.0, Color::WHITE.faded(opacity));
 }
@@ -187,12 +187,12 @@ impl Activity for Mark {
         self.header_width
     }
 
-    fn draw(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-        draw_disc(canvas, area, scale, opacity);
+    fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32) {
+        draw_disc(canvas, area, opacity);
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-        draw_disc(canvas, area, scale, opacity);
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, opacity: f32) {
+        draw_disc(canvas, area, opacity);
     }
 }
 

@@ -183,7 +183,8 @@ impl Notch {
         // During a swap only the arriving page takes input, at the place it is moving to.
         let Some(index) = self.expanded_index else { return };
         let frame = self.natural_page_frame(index, &viewport, 0.0);
-        self.with_page(index, |page, context| units::page_pointer(page, event, &frame, context));
+        let scale = self.scale;
+        self.with_page(index, |page, context| units::page_pointer(page, event, &frame, scale, context));
     }
 
     fn leave_badge(&mut self) {

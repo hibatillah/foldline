@@ -60,8 +60,7 @@ pub struct PageSizes {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Frame {
-    pub scale: f32,
-    /// Device pixels, shared with pointer input; visible pages keep their natural width during swipes.
+    /// Units, starting at zero; pointer input uses the same space.
     pub bounds: Rect,
     /// 0 collapsed, 1 fully open; the spring can overshoot a little past 1.
     pub expansion: f32,
@@ -94,13 +93,6 @@ pub trait Page {
 
     /// Re-evaluated after every event; None means unavailable in this mode.
     fn priority(&self, mode: Mode) -> Option<Priority>;
-
-    /// Interim migration aid until every page is converted: true makes the host open the unit space for this page, so
-    /// its draw hooks (except `draw_backdrop`) get a unit `Frame` or area, a canvas at scale 1 and pointer hooks get
-    /// unit points.
-    fn uses_units(&self) -> bool {
-        false
-    }
 
     /// Re-evaluated after every event; sizes describe content without host chrome.
     fn sizes(&self) -> PageSizes;
@@ -183,12 +175,12 @@ pub trait Page {
         0.0
     }
 
-    /// Draws what `presence` asked for into `area` (device pixels), faded by `opacity`.
-    fn draw_presence(&self, _canvas: &Canvas, _area: Rect, _scale: f32, _opacity: f32) {}
+    /// Draws what `presence` asked for into `area` (units, starting at zero), faded by `opacity`.
+    fn draw_presence(&self, _canvas: &Canvas, _area: Rect, _opacity: f32) {}
 
-    /// Pointer input over this page's banner or badge while the notch is collapsed; `area` and `scale` are what the
-    /// presence was drawn with. `PointerEvent::Left` means the pointer left it.
-    fn on_presence_pointer(&mut self, _event: PointerEvent, _area: Rect, _scale: f32, _context: &mut Context) {}
+    /// Pointer input over this page's banner or badge while the notch is collapsed; `area` is what the presence was
+    /// drawn with. `PointerEvent::Left` means the pointer left it.
+    fn on_presence_pointer(&mut self, _event: PointerEvent, _area: Rect, _context: &mut Context) {}
 
     /// Width in DIP of the badge in its short form, used when several badges share the pill; `None` has no short form.
     fn short_presence_width(&self) -> Option<f32> {
@@ -196,8 +188,8 @@ pub trait Page {
     }
 
     /// Draws the badge in its short form into `area`; the long form when the page has no short one.
-    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-        self.draw_presence(canvas, area, scale, opacity);
+    fn draw_short_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
+        self.draw_presence(canvas, area, opacity);
     }
 
     /// The id of the page a click on this page's header status opens; `None` when it opens nothing.
@@ -210,8 +202,8 @@ pub trait Page {
         None
     }
 
-    /// Draws behind the header and content; pill is the whole notch, frame is this page's content.
-    /// Bounds and radius are device pixels.
+    /// Draws behind the header and content; pill is the whole notch, frame is this page's content. Unlike every other
+    /// draw hook it draws in device pixels: bounds and radius are device pixels and `canvas.scale()` is the display scale.
     fn draw_backdrop(&self, _canvas: &Canvas, _frame: &Frame, _pill: Rect, _radius: f32, _opacity: f32) {}
 
     /// Changing text the user is reading may keep the pill visible over a maximized window.
@@ -229,8 +221,8 @@ pub trait Page {
         0
     }
 
-    /// Draws the status mark into `area` (device pixels, as high as the header), faded by `opacity`.
-    fn draw_header_status(&self, _canvas: &Canvas, _area: Rect, _scale: f32, _opacity: f32) {}
+    /// Draws the status mark into `area` (units, starting at zero, as high as the header), faded by `opacity`.
+    fn draw_header_status(&self, _canvas: &Canvas, _area: Rect, _opacity: f32) {}
 
     /// What the settings window's page list calls the page.
     fn name(&self) -> String {
@@ -448,13 +440,8 @@ mod tests {
 
     #[test]
     fn the_notch_counts_as_open_from_80_percent() {
-        let frame = |expansion| Frame {
-            scale: 1.0,
-            bounds: Rect::default(),
-            expansion,
-            expanded: Size::new(0.0, 0.0),
-            lead_gap: 0.0,
-        };
+        let frame =
+            |expansion| Frame { bounds: Rect::default(), expansion, expanded: Size::new(0.0, 0.0), lead_gap: 0.0 };
         assert!(!frame(0.79).is_open());
         assert!(frame(0.8).is_open());
         assert!(frame(1.05).is_open());

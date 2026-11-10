@@ -220,10 +220,6 @@ impl Page for StatsPage {
         (mode == Mode::Expanded).then_some(Priority::BACKGROUND)
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn sizes(&self) -> PageSizes {
         PageSizes { resting_width: RESTING_WIDTH, expanded: Size::new(expanded_width(&self.tiles()), CARD_HEIGHT) }
     }

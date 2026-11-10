@@ -31,15 +31,11 @@ impl Activity for BrightnessActivity {
         "brightness"
     }
 
-    fn uses_units(&self) -> bool {
-        true
-    }
-
     fn presence(&self) -> Option<Presence> {
         self.flash.is_visible().then_some(Presence::Transient { width: ui::LEVEL_WIDTH })
     }
 
-    fn draw(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+    fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         ui::draw_level(canvas, area, opacity, Icon::Sun, self.percent as f32 / 100.0, &self.percent.to_string());
     }
 

@@ -1,6 +1,6 @@
 use crate::gfx::Point;
 
-/// Pointer input, delivered to visible open pages in their own shifted frames. Positions are device pixels.
+/// Pointer input, delivered to visible open pages in their own shifted frames. Positions are units from the page's top-left.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PointerEvent {
     Moved(Point),

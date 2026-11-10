@@ -105,15 +105,11 @@ impl Notch {
             let area = Rect::new(left, center_y - half_height, left + width * scale, center_y + half_height);
             match source {
                 Source::Page(index) => {
-                    units::draw_page_header_status(self.pages[index].as_ref(), canvas, area, scale, opacity)
+                    units::draw_page_header_status(self.pages[index].as_ref(), canvas, area, opacity)
                 }
-                Source::Activity(index) => units::draw_activity_header_status(
-                    self.activities[index].activity.as_ref(),
-                    canvas,
-                    area,
-                    scale,
-                    opacity,
-                ),
+                Source::Activity(index) => {
+                    units::draw_activity_header_status(self.activities[index].activity.as_ref(), canvas, area, opacity)
+                }
             }
         }
         if let Some(inset) = self.row_motion.header.position(RowItem::Gear) {

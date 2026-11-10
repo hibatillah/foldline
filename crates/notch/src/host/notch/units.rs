@@ -1,4 +1,4 @@
-//! Opens the device-independent unit space for pages and activities that answer `uses_units`.
+//! Opens the device-independent unit space around every page and activity hook and converts pointer points into it.
 
 use crate::{
     activity::Activity,
@@ -6,9 +6,9 @@ use crate::{
     page::{Context, Frame, Page, PointerEvent},
 };
 
-/// A frame whose bounds start at zero and are measured in units; scale is 1.
-pub(super) fn unit_frame(frame: &Frame) -> Frame {
-    Frame { scale: 1.0, bounds: unit_area(frame.bounds, frame.scale), ..*frame }
+/// A frame whose bounds (device pixels at `scale`) start at zero and are measured in units.
+pub(super) fn unit_frame(frame: &Frame, scale: f32) -> Frame {
+    Frame { bounds: unit_area(frame.bounds, scale), ..*frame }
 }
 
 /// An area (device pixels) as a rect starting at zero, measured in units.
@@ -37,78 +37,46 @@ fn top_left(area: Rect) -> Point {
     Point::new(area.left, area.top)
 }
 
+/// The canvas passed to these is outside the unit space, so its scale is the display scale.
 pub(super) fn draw_page_resting(page: &dyn Page, canvas: &Canvas, frame: &Frame, opacity: f32) {
-    if page.uses_units() {
-        canvas.in_units(top_left(frame.bounds), |canvas| page.draw_resting(canvas, &unit_frame(frame), opacity));
-    } else {
-        page.draw_resting(canvas, frame, opacity);
-    }
+    let unit = unit_frame(frame, canvas.scale());
+    canvas.in_units(top_left(frame.bounds), |canvas| page.draw_resting(canvas, &unit, opacity));
 }
 
 pub(super) fn draw_page_expanded(page: &dyn Page, canvas: &Canvas, frame: &Frame, opacity: f32) {
-    if page.uses_units() {
-        canvas.in_units(top_left(frame.bounds), |canvas| page.draw_expanded(canvas, &unit_frame(frame), opacity));
-    } else {
-        page.draw_expanded(canvas, frame, opacity);
-    }
+    let unit = unit_frame(frame, canvas.scale());
+    canvas.in_units(top_left(frame.bounds), |canvas| page.draw_expanded(canvas, &unit, opacity));
 }
 
-pub(super) fn draw_page_presence(page: &dyn Page, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-    if page.uses_units() {
-        canvas.in_units(top_left(area), |canvas| page.draw_presence(canvas, unit_area(area, scale), 1.0, opacity));
-    } else {
-        page.draw_presence(canvas, area, scale, opacity);
-    }
+pub(super) fn draw_page_presence(page: &dyn Page, canvas: &Canvas, area: Rect, opacity: f32) {
+    let unit = unit_area(area, canvas.scale());
+    canvas.in_units(top_left(area), |canvas| page.draw_presence(canvas, unit, opacity));
 }
 
-pub(super) fn draw_page_short_presence(page: &dyn Page, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-    if page.uses_units() {
-        canvas
-            .in_units(top_left(area), |canvas| page.draw_short_presence(canvas, unit_area(area, scale), 1.0, opacity));
-    } else {
-        page.draw_short_presence(canvas, area, scale, opacity);
-    }
+pub(super) fn draw_page_short_presence(page: &dyn Page, canvas: &Canvas, area: Rect, opacity: f32) {
+    let unit = unit_area(area, canvas.scale());
+    canvas.in_units(top_left(area), |canvas| page.draw_short_presence(canvas, unit, opacity));
 }
 
-pub(super) fn draw_page_header_status(page: &dyn Page, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-    if page.uses_units() {
-        canvas.in_units(top_left(area), |canvas| page.draw_header_status(canvas, unit_area(area, scale), 1.0, opacity));
-    } else {
-        page.draw_header_status(canvas, area, scale, opacity);
-    }
+pub(super) fn draw_page_header_status(page: &dyn Page, canvas: &Canvas, area: Rect, opacity: f32) {
+    let unit = unit_area(area, canvas.scale());
+    canvas.in_units(top_left(area), |canvas| page.draw_header_status(canvas, unit, opacity));
 }
 
-pub(super) fn draw_activity(activity: &dyn Activity, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-    if activity.uses_units() {
-        canvas.in_units(top_left(area), |canvas| activity.draw(canvas, unit_area(area, scale), 1.0, opacity));
-    } else {
-        activity.draw(canvas, area, scale, opacity);
-    }
+pub(super) fn draw_activity(activity: &dyn Activity, canvas: &Canvas, area: Rect, opacity: f32) {
+    let unit = unit_area(area, canvas.scale());
+    canvas.in_units(top_left(area), |canvas| activity.draw(canvas, unit, opacity));
 }
 
-pub(super) fn draw_activity_header_status(
-    activity: &dyn Activity,
-    canvas: &Canvas,
-    area: Rect,
-    scale: f32,
-    opacity: f32,
-) {
-    if activity.uses_units() {
-        canvas.in_units(top_left(area), |canvas| {
-            activity.draw_header_status(canvas, unit_area(area, scale), 1.0, opacity)
-        });
-    } else {
-        activity.draw_header_status(canvas, area, scale, opacity);
-    }
+pub(super) fn draw_activity_header_status(activity: &dyn Activity, canvas: &Canvas, area: Rect, opacity: f32) {
+    let unit = unit_area(area, canvas.scale());
+    canvas.in_units(top_left(area), |canvas| activity.draw_header_status(canvas, unit, opacity));
 }
 
-pub(super) fn page_pointer(page: &mut dyn Page, event: PointerEvent, frame: &Frame, context: &mut Context) {
-    if page.uses_units() {
-        let event = unit_event(event, top_left(frame.bounds), frame.scale);
-        page.on_pointer(event, &unit_frame(frame), context);
-    } else {
-        page.on_pointer(event, frame, context);
-    }
+/// `frame` and `event` are in device pixels at `scale`.
+pub(super) fn page_pointer(page: &mut dyn Page, event: PointerEvent, frame: &Frame, scale: f32, context: &mut Context) {
+    let event = unit_event(event, top_left(frame.bounds), scale);
+    page.on_pointer(event, &unit_frame(frame, scale), context);
 }
 
 pub(super) fn page_presence_pointer(
@@ -118,11 +86,7 @@ pub(super) fn page_presence_pointer(
     scale: f32,
     context: &mut Context,
 ) {
-    if page.uses_units() {
-        page.on_presence_pointer(unit_event(event, top_left(area), scale), unit_area(area, scale), 1.0, context);
-    } else {
-        page.on_presence_pointer(event, area, scale, context);
-    }
+    page.on_presence_pointer(unit_event(event, top_left(area), scale), unit_area(area, scale), context);
 }
 
 pub(super) fn activity_pointer(
@@ -132,27 +96,15 @@ pub(super) fn activity_pointer(
     scale: f32,
     context: &mut Context,
 ) {
-    if activity.uses_units() {
-        activity.on_pointer(unit_event(event, top_left(area), scale), unit_area(area, scale), 1.0, context);
-    } else {
-        activity.on_pointer(event, area, scale, context);
-    }
+    activity.on_pointer(unit_event(event, top_left(area), scale), unit_area(area, scale), context);
 }
 
-pub(super) fn page_uses_right_click(page: &dyn Page, point: Point, frame: &Frame) -> bool {
-    if page.uses_units() {
-        page.uses_right_click(unit_point(point, top_left(frame.bounds), frame.scale), &unit_frame(frame))
-    } else {
-        page.uses_right_click(point, frame)
-    }
+pub(super) fn page_uses_right_click(page: &dyn Page, point: Point, frame: &Frame, scale: f32) -> bool {
+    page.uses_right_click(unit_point(point, top_left(frame.bounds), scale), &unit_frame(frame, scale))
 }
 
-pub(super) fn page_claims_scroll(page: &dyn Page, point: Point, frame: &Frame) -> bool {
-    if page.uses_units() {
-        page.claims_scroll(unit_point(point, top_left(frame.bounds), frame.scale), &unit_frame(frame))
-    } else {
-        page.claims_scroll(point, frame)
-    }
+pub(super) fn page_claims_scroll(page: &dyn Page, point: Point, frame: &Frame, scale: f32) -> bool {
+    page.claims_scroll(unit_point(point, top_left(frame.bounds), scale), &unit_frame(frame, scale))
 }
 
 #[cfg(test)]
@@ -197,14 +149,12 @@ mod tests {
     #[test]
     fn a_unit_frame_keeps_expansion_and_content_size_and_starts_at_zero() {
         let frame = Frame {
-            scale: 1.25,
             bounds: Rect::new(100.0, 50.0, 350.0, 175.0),
             expansion: 0.9,
             expanded: Size::new(200.0, 100.0),
             lead_gap: 7.0,
         };
-        let unit = unit_frame(&frame);
-        assert_eq!(unit.scale, 1.0);
+        let unit = unit_frame(&frame, 1.25);
         assert_eq!(unit.bounds, Rect::new(0.0, 0.0, 200.0, 100.0));
         assert_eq!((unit.expansion, unit.expanded, unit.lead_gap), (0.9, Size::new(200.0, 100.0), 7.0));
     }

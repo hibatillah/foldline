@@ -52,17 +52,11 @@ pub trait Activity {
         false
     }
 
-    /// Interim migration aid until every activity is converted: true makes the host open the unit space, so `draw`
-    /// and `draw_header_status` get a unit area and a canvas at scale 1 and `on_pointer` gets unit points.
-    fn uses_units(&self) -> bool {
-        false
-    }
-
     /// What this activity shows right now; `None` means nothing. Asked again after every event.
     fn presence(&self) -> Option<Presence>;
 
-    /// Draws into `area` (device pixels), which is as wide as the width the presence asked for.
-    fn draw(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32);
+    /// Draws into `area` (units, starting at zero), which is as wide as the width the presence asked for.
+    fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32);
 
     /// Header status width in DIP, independent of page selection; None hides it.
     fn header_status_width(&self) -> Option<f32> {
@@ -74,8 +68,8 @@ pub trait Activity {
         0
     }
 
-    /// Draws the mark into `area` (device pixels, as high as the header), faded by `opacity`.
-    fn draw_header_status(&self, _canvas: &Canvas, _area: Rect, _scale: f32, _opacity: f32) {}
+    /// Draws the mark into `area` (units, starting at zero, as high as the header), faded by `opacity`.
+    fn draw_header_status(&self, _canvas: &Canvas, _area: Rect, _opacity: f32) {}
 
     /// The id of the page a click on this activity's header status opens; `None` when it opens nothing.
     fn header_status_page(&self) -> Option<&'static str> {
@@ -89,9 +83,9 @@ pub trait Activity {
 
     fn on_hover_changed(&mut self, _is_hovering: bool, _context: &mut Context) {}
 
-    /// Pointer input over this activity's banner while the notch is collapsed; `area` and `scale` are what `draw` got.
+    /// Pointer input over this activity's banner while the notch is collapsed; `area` is what `draw` got.
     /// `PointerEvent::Left` means the pointer left the banner.
-    fn on_pointer(&mut self, _event: PointerEvent, _area: Rect, _scale: f32, _context: &mut Context) {}
+    fn on_pointer(&mut self, _event: PointerEvent, _area: Rect, _context: &mut Context) {}
 
     /// Typing, delivered only while this activity holds the keyboard (`Context::take_keyboard`).
     fn on_key(&mut self, _key: KeyInput, _context: &mut Context) {}
