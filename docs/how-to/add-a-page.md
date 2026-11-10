@@ -124,6 +124,9 @@ What each part does:
 - Resting content uses `RESTING_HEIGHT` (33 DIP); the host adds 3 DIP below it and enforces a minimum collapsed width of 150 DIP. `resting_width` is your content only: when a page claims the pill, the host adds 12 DIP at each edge and room for the dot column and for any badges. A page that draws something at its left end can answer `resting_lead_width()` and read `Frame::lead_gap` for the gap the host keeps after it; the media page does this (see [page API](../reference/page-api.md)).
 - `draw_resting` and `draw_expanded` draw your content. Multiply sizes by `frame.scale` to get device pixels, and fade
   your colors with the `opacity` you are given so the content follows the open and close animation.
+  A page that answers `uses_units` with `true` (an interim migration aid, removed once every page is converted)
+  writes plain units instead: its draw hooks other than `draw_backdrop` get a unit `Frame` (`scale` 1, bounds from
+  zero) and a canvas whose `scale()` is 1, and its pointer hooks get unit points.
   During navigation, each visible page keeps its requested width in `frame.bounds` and `frame.expanded.width`.
   The notch clips the visible portion; do not stretch your content to the neighbouring page's width. Pointer events
   use the same shifted frame as drawing, including while the user rests between pages.

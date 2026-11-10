@@ -26,6 +26,7 @@ listens to one Windows power setting and flashes a level bar when it changes.
 | `is_optional()` | false by default: required activities are always enabled; return true to expose a saved settings toggle |
 | `presence()` | what to show right now |
 | `draw()` | draw into the area the host gives; a companion's `draw` also serves the open header (see below) |
+| `uses_units()` | false by default; an interim migration aid, removed once every activity is converted. True makes `draw`, `draw_header_status` and `on_pointer` receive a unit area (from zero), a canvas at scale 1 and unit points |
 | `header_status_width()`, `draw_header_status()`, `header_status_rank()` | optional: a small mark kept at the right edge of the header, icon only, while something lasts (muted speakers, Caps Lock on); `None` for no mark. The rank orders the group in the pill and the header |
 | `header_status_page()` | optional: the id of the page a click on the header mark opens; `None` (the default) opens nothing, as for muted and Caps Lock |
 | `on_start()` | begin listening; called once, and only if the activity is switched on |
