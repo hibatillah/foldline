@@ -23,14 +23,13 @@ fn bar_fractions(seconds: f32) -> [f32; BARS] {
     })
 }
 
-pub fn draw(canvas: &Canvas, area: Rect, scale: f32, seconds: f32, opacity: f32) {
+pub fn draw(canvas: &Canvas, area: Rect, seconds: f32, opacity: f32) {
     let gap = (WIDTH - BARS as f32 * BAR_WIDTH) / (BARS - 1) as f32;
     for (index, fraction) in bar_fractions(seconds).into_iter().enumerate() {
-        let left = area.left + index as f32 * (BAR_WIDTH + gap) * scale;
-        let half_height = fraction * HEIGHT * scale / 2.0;
-        let bar =
-            Rect::new(left, area.center_y() - half_height, left + BAR_WIDTH * scale, area.center_y() + half_height);
-        canvas.fill_rounded_rect(bar, BAR_WIDTH * scale / 2.0, Color::WHITE.faded(opacity));
+        let left = area.left + index as f32 * (BAR_WIDTH + gap);
+        let half_height = fraction * HEIGHT / 2.0;
+        let bar = Rect::new(left, area.center_y() - half_height, left + BAR_WIDTH, area.center_y() + half_height);
+        canvas.fill_rounded_rect(bar, BAR_WIDTH / 2.0, Color::WHITE.faded(opacity));
     }
 }
 

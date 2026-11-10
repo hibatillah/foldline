@@ -5,6 +5,7 @@ use crate::{
     gfx::{Canvas, Color, ImageSlot, Point, Rect, Size, Spring},
     log,
     page::{Context, Frame, Mode, Page, PageSizes, PointerEvent, Priority, TimerId},
+    ui::HoverTarget,
 };
 use controls::Control;
 use layout::Layout;
@@ -55,7 +56,7 @@ pub struct MediaPage {
     app_icon: ImageSlot,
     follower: LyricFollower,
     lyrics_enabled: bool,
-    hovered_control: Option<Control>,
+    hovered_control: HoverTarget<Control>,
     is_hovered: bool,
     theme_color: Option<Color>,
     theme_version: u64,
@@ -77,7 +78,7 @@ impl MediaPage {
             app_icon: ImageSlot::default(),
             follower: LyricFollower::new(),
             lyrics_enabled: true,
-            hovered_control: None,
+            hovered_control: HoverTarget::default(),
             is_hovered: false,
             theme_color: None,
             theme_version: 0,
@@ -140,6 +141,10 @@ impl Page for MediaPage {
         "media"
     }
 
+    fn uses_units(&self) -> bool {
+        true
+    }
+
     fn name(&self) -> String {
         crate::i18n::tr!("page.media").into_owned()
     }
@@ -178,18 +183,18 @@ impl Page for MediaPage {
         self.is_wave_in_pill().then_some(Presence::Badge { width: wave::WIDTH })
     }
 
-    fn draw_presence(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
+    fn draw_presence(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
         let center = Point::new(area.center_x(), area.center_y());
-        let wave_area = Rect::around(center, wave::WIDTH * scale / 2.0, wave::HEIGHT * scale / 2.0);
-        wave::draw(canvas, wave_area, scale, wave::now_seconds(), opacity);
+        let wave_area = Rect::around(center, wave::WIDTH / 2.0, wave::HEIGHT / 2.0);
+        wave::draw(canvas, wave_area, wave::now_seconds(), opacity);
     }
 
     fn header_status_width(&self) -> Option<f32> {
         self.is_wave_shown().then_some(wave::WIDTH)
     }
 
-    fn draw_header_status(&self, canvas: &Canvas, area: Rect, scale: f32, opacity: f32) {
-        wave::draw(canvas, area, scale, wave::now_seconds(), opacity);
+    fn draw_header_status(&self, canvas: &Canvas, area: Rect, _scale: f32, opacity: f32) {
+        wave::draw(canvas, area, wave::now_seconds(), opacity);
     }
 
     fn header_status_rank(&self) -> u8 {
@@ -234,13 +239,12 @@ impl Page for MediaPage {
     }
 
     fn on_pointer(&mut self, event: PointerEvent, frame: &Frame, context: &mut Context) {
-        let layout = Layout::new(frame, self.title_lines.len(), self.text_width);
+        let layout = Layout::new(frame.bounds, frame.expanded.width, self.title_lines.len(), self.text_width);
         let can_use_controls = frame.is_open() && self.info.available;
         match event {
             PointerEvent::Moved(point) => {
                 let hovered = if can_use_controls { controls::hit_test(&layout, point) } else { None };
-                if hovered != self.hovered_control {
-                    self.hovered_control = hovered;
+                if self.hovered_control.set(hovered) {
                     context.request_repaint();
                 }
             }
@@ -250,7 +254,7 @@ impl Page for MediaPage {
                 }
             }
             PointerEvent::Left | PointerEvent::CaptureLost => {
-                self.hovered_control = None;
+                self.hovered_control.clear();
                 context.request_repaint();
             }
             _ => {}
@@ -278,6 +282,7 @@ impl Page for MediaPage {
         is_following || is_fading
     }
 
+    /// The host draws the backdrop in device pixels, so `frame.scale` is the display scale here.
     fn draw_backdrop(&self, canvas: &Canvas, frame: &Frame, pill: Rect, radius: f32, opacity: f32) {
         if let Some(color) = self.theme_color {
             backdrop::draw(canvas, pill, radius, frame.scale, color, self.backdrop.position.clamp(0.0, 1.0) * opacity);

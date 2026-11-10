@@ -1,10 +1,7 @@
 use super::controls::Control;
-use crate::{
-    gfx::{Point, Rect, lerp},
-    page::Frame,
-};
+use crate::gfx::{Point, Rect, lerp};
 
-// Layout converts content DIP to device pixels; the host adds padding and the header.
+// Layout is in units; the host adds padding and the header.
 pub const PLAIN_HEIGHT: f32 = crate::page::DEFAULT_CONTENT_HEIGHT;
 pub const TEXT_MAX_WIDTH: f32 = 170.0;
 /// A short title never narrows the column below the control row, so the content block has no empty strip on its right.
@@ -51,17 +48,17 @@ pub fn title_width(has_lyrics: bool) -> f32 {
 }
 
 pub struct Layout {
-    pub scale: f32,
     pub bounds: Rect,
     blend: f32,
     title_lines: usize,
 }
 
 impl Layout {
-    pub fn new(frame: &Frame, title_lines: usize, text_width: f32) -> Self {
+    /// `expanded_width` is the width the pill is opening towards; it blends the text column into the lyric layout.
+    pub fn new(bounds: Rect, expanded_width: f32, title_lines: usize, text_width: f32) -> Self {
         let plain = plain_width(text_width);
-        let blend = ((frame.expanded.width - plain) / (LYRICS_WIDTH - plain)).clamp(0.0, 1.0);
-        Self { scale: frame.scale, bounds: frame.bounds, blend, title_lines: title_lines.clamp(1, TITLE_MAX_LINES) }
+        let blend = ((expanded_width - plain) / (LYRICS_WIDTH - plain)).clamp(0.0, 1.0);
+        Self { bounds, blend, title_lines: title_lines.clamp(1, TITLE_MAX_LINES) }
     }
 
     pub fn lyric_blend(&self) -> f32 {
@@ -78,48 +75,43 @@ impl Layout {
     }
 
     pub fn artwork(&self) -> Rect {
-        Rect::new(
-            self.bounds.left,
-            self.bounds.top,
-            self.bounds.left + ARTWORK_SIZE * self.scale,
-            self.bounds.top + ARTWORK_SIZE * self.scale,
-        )
+        Rect::new(self.bounds.left, self.bounds.top, self.bounds.left + ARTWORK_SIZE, self.bounds.top + ARTWORK_SIZE)
     }
 
     pub fn artwork_radius(&self) -> f32 {
-        ARTWORK_RADIUS * self.scale
+        ARTWORK_RADIUS
     }
 
     pub fn app_badge(&self) -> Rect {
         let artwork = self.artwork();
-        let right = artwork.right + BADGE_OVERHANG * self.scale;
-        let bottom = artwork.bottom + BADGE_OVERHANG * self.scale;
-        Rect::new(right - BADGE_SIZE * self.scale, bottom - BADGE_SIZE * self.scale, right, bottom)
+        let right = artwork.right + BADGE_OVERHANG;
+        let bottom = artwork.bottom + BADGE_OVERHANG;
+        Rect::new(right - BADGE_SIZE, bottom - BADGE_SIZE, right, bottom)
     }
 
     pub fn app_badge_radius(&self) -> f32 {
-        BADGE_RADIUS * self.scale
+        BADGE_RADIUS
     }
 
     pub fn app_badge_ring(&self) -> (Rect, f32) {
         let badge = self.app_badge();
-        let ring = BADGE_RING * self.scale;
+        let ring = BADGE_RING;
         let rect = Rect::new(badge.left - ring, badge.top - ring, badge.right + ring, badge.bottom + ring);
         (rect, self.app_badge_radius() + ring)
     }
 
     fn text_left(&self) -> f32 {
-        self.bounds.left + (ARTWORK_SIZE + TEXT_GAP) * self.scale
+        self.bounds.left + ARTWORK_SIZE + TEXT_GAP
     }
 
     fn text_right(&self) -> f32 {
-        let with_lyrics = self.text_left() + COLUMN_WIDTH_WITH_LYRICS * self.scale;
+        let with_lyrics = self.text_left() + COLUMN_WIDTH_WITH_LYRICS;
         lerp(self.bounds.right, with_lyrics, self.blend).min(self.bounds.right)
     }
 
     fn row(&self, top: f32, height: f32) -> Rect {
-        let top = self.bounds.top + (self.stack_top() + top) * self.scale;
-        Rect::new(self.text_left(), top, self.text_right(), top + height * self.scale)
+        let top = self.bounds.top + self.stack_top() + top;
+        Rect::new(self.text_left(), top, self.text_right(), top + height)
     }
 
     pub fn title_line(&self, index: usize) -> Rect {
@@ -138,47 +130,40 @@ impl Layout {
             + CONTROLS_GAP
             + CONTROLS_HEIGHT / 2.0;
         let nudge = if control == Control::Lyrics { LYRICS_NUDGE } else { 0.0 };
-        let x = self.text_left() + (CONTROL_FIRST_CENTER + control.slot() * CONTROL_PITCH + nudge) * self.scale;
-        Point::new(x, self.bounds.top + top * self.scale)
+        let x = self.text_left() + CONTROL_FIRST_CENTER + control.slot() * CONTROL_PITCH + nudge;
+        Point::new(x, self.bounds.top + top)
     }
 
     /// The app icon inside the badge's dark tile.
     pub fn app_badge_icon(&self) -> Rect {
         let badge = self.app_badge();
-        let inset = BADGE_ICON_INSET * self.scale;
+        let inset = BADGE_ICON_INSET;
         Rect::new(badge.left + inset, badge.top + inset, badge.right - inset, badge.bottom - inset)
     }
 
     pub fn app_badge_icon_radius(&self) -> f32 {
-        (BADGE_RADIUS - 1.0) * self.scale
+        BADGE_RADIUS - 1.0
     }
 
     pub fn lyric_panel(&self) -> Rect {
-        let left = self.text_left() + (COLUMN_WIDTH_WITH_LYRICS + LYRIC_GAP) * self.scale;
-        Rect::new(left, self.bounds.top, self.bounds.right, self.bounds.top + PLAIN_HEIGHT * self.scale)
+        let left = self.text_left() + COLUMN_WIDTH_WITH_LYRICS + LYRIC_GAP;
+        Rect::new(left, self.bounds.top, self.bounds.right, self.bounds.top + PLAIN_HEIGHT)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gfx::Size;
 
     const TEXT_WIDTH: f32 = 170.0;
     const PLAIN_WIDTH: f32 = ARTWORK_SIZE + TEXT_GAP + TEXT_WIDTH;
 
-    fn frame(expanded_width: f32) -> Frame {
-        Frame {
-            scale: 2.0,
-            bounds: Rect::new(100.0, 0.0, 100.0 + PLAIN_WIDTH * 2.0, PLAIN_HEIGHT * 2.0),
-            expansion: 1.0,
-            expanded: Size::new(expanded_width, PLAIN_HEIGHT),
-            lead_gap: 0.0,
-        }
+    fn bounds(width: f32) -> Rect {
+        Rect::new(100.0, 0.0, 100.0 + width, PLAIN_HEIGHT)
     }
 
     fn plain(title_lines: usize) -> Layout {
-        Layout::new(&frame(PLAIN_WIDTH), title_lines, TEXT_WIDTH)
+        Layout::new(bounds(PLAIN_WIDTH), PLAIN_WIDTH, title_lines, TEXT_WIDTH)
     }
 
     #[test]
@@ -186,16 +171,16 @@ mod tests {
         let artwork = plain(2).artwork();
         assert_eq!(artwork.left, 100.0);
         assert_eq!(artwork.width(), artwork.height());
-        assert_eq!(artwork.height(), PLAIN_HEIGHT * 2.0);
+        assert_eq!(artwork.height(), PLAIN_HEIGHT);
     }
 
     #[test]
     fn the_app_icon_hangs_slightly_past_the_artwork_bottom_right_corner() {
         let layout = plain(2);
         let (artwork, badge) = (layout.artwork(), layout.app_badge());
-        let overhang = BADGE_OVERHANG * 2.0;
-        assert_eq!(badge.right - artwork.right, overhang);
-        assert_eq!(badge.bottom - artwork.bottom, overhang);
+        let overhang = badge.right - artwork.right;
+        assert_eq!(overhang, BADGE_OVERHANG);
+        assert_eq!(badge.bottom - artwork.bottom, BADGE_OVERHANG);
         assert!(overhang < badge.width() / 2.0, "most of the icon stays over the artwork");
         assert!(badge.left > artwork.left && badge.top > artwork.top);
         let (ring, _) = layout.app_badge_ring();
@@ -206,7 +191,7 @@ mod tests {
     fn the_app_icon_sits_inside_the_dark_tile_of_the_badge() {
         let layout = plain(2);
         let (badge, icon) = (layout.app_badge(), layout.app_badge_icon());
-        assert_eq!(icon.width(), (BADGE_SIZE - 2.0 * BADGE_ICON_INSET) * 2.0);
+        assert_eq!(icon.width(), BADGE_SIZE - 2.0 * BADGE_ICON_INSET);
         assert!(
             icon.left > badge.left && icon.right < badge.right && icon.top > badge.top && icon.bottom < badge.bottom
         );
@@ -216,7 +201,7 @@ mod tests {
     #[test]
     fn the_controls_are_18_px_icons_with_a_20_px_gap_and_a_slightly_wider_last_one() {
         let layout = plain(2);
-        let x = |control| (layout.control_center(control).x - layout.title_line(0).left) / layout.scale;
+        let x = |control| layout.control_center(control).x - layout.title_line(0).left;
         assert_eq!(x(Control::Previous), 9.0);
         assert_eq!(x(Control::PlayPause) - x(Control::Previous), 38.0);
         assert_eq!(x(Control::Next) - x(Control::PlayPause), 38.0);
@@ -233,7 +218,7 @@ mod tests {
     #[test]
     fn two_title_lines_nearly_fill_the_page_and_stack_above_the_detail_and_the_buttons() {
         let layout = plain(2);
-        assert!(layout.title_line(0).top - layout.bounds.top <= 2.0 * layout.scale);
+        assert!(layout.title_line(0).top - layout.bounds.top <= 2.0);
         assert!(layout.title_line(0).bottom <= layout.title_line(1).top);
         assert!(layout.title_line(1).bottom <= layout.detail().top);
         let button = layout.control_center(Control::PlayPause);
@@ -245,7 +230,7 @@ mod tests {
     fn a_one_line_title_leaves_equal_space_above_and_below_the_text() {
         let layout = plain(1);
         let above = layout.title_line(0).top - layout.bounds.top;
-        let buttons_bottom = layout.control_center(Control::PlayPause).y + CONTROLS_HEIGHT * layout.scale / 2.0;
+        let buttons_bottom = layout.control_center(Control::PlayPause).y + CONTROLS_HEIGHT / 2.0;
         let below = layout.bounds.bottom - buttons_bottom;
         assert!((above - below).abs() < 0.01);
         assert!(above > 0.0);
@@ -263,18 +248,17 @@ mod tests {
     #[test]
     fn the_text_column_is_at_most_the_text_width_without_lyrics_and_narrows_with_them() {
         let without = plain(2);
-        let with = Layout::new(&frame(LYRICS_WIDTH), 2, TEXT_WIDTH);
-        assert_eq!(without.title_line(0).width(), TEXT_WIDTH * 2.0);
+        let with = Layout::new(bounds(PLAIN_WIDTH), LYRICS_WIDTH, 2, TEXT_WIDTH);
+        assert_eq!(without.title_line(0).width(), TEXT_WIDTH);
         assert!(with.title_line(0).right < with.lyric_panel().left);
-        assert_eq!(with.title_line(0).width(), COLUMN_WIDTH_WITH_LYRICS * 2.0);
+        assert_eq!(with.title_line(0).width(), COLUMN_WIDTH_WITH_LYRICS);
     }
 
     #[test]
     fn a_short_title_leaves_equal_space_left_of_the_artwork_and_right_of_the_controls() {
         let width = plain_width(TEXT_MIN_WIDTH);
-        let narrow = Frame { bounds: Rect::new(100.0, 0.0, 100.0 + width * 2.0, PLAIN_HEIGHT * 2.0), ..frame(width) };
-        let layout = Layout::new(&narrow, 1, TEXT_MIN_WIDTH);
-        let controls_right = layout.control_center(Control::Lyrics).x + 10.0 * layout.scale;
+        let layout = Layout::new(bounds(width), width, 1, TEXT_MIN_WIDTH);
+        let controls_right = layout.control_center(Control::Lyrics).x + 10.0;
         assert_eq!(controls_right, layout.bounds.right);
     }
 
@@ -294,23 +278,19 @@ mod tests {
 
     #[test]
     fn the_lyric_panel_starts_a_gap_after_the_text_and_ends_at_the_page_edge() {
-        let wide = Frame {
-            bounds: Rect::new(100.0, 0.0, 100.0 + LYRICS_WIDTH * 2.0, PLAIN_HEIGHT * 2.0),
-            ..frame(LYRICS_WIDTH)
-        };
-        let layout = Layout::new(&wide, 2, TEXT_WIDTH);
-        assert_eq!(layout.lyric_panel().left - layout.title_line(0).right, LYRIC_GAP * 2.0);
+        let layout = Layout::new(bounds(LYRICS_WIDTH), LYRICS_WIDTH, 2, TEXT_WIDTH);
+        assert_eq!(layout.lyric_panel().left - layout.title_line(0).right, LYRIC_GAP);
         assert_eq!(layout.lyric_panel().right, layout.bounds.right);
-        assert_eq!(layout.lyric_panel().width() / 2.0, lyric_panel_width());
+        assert_eq!(layout.lyric_panel().width(), lyric_panel_width());
     }
 
     #[test]
     fn the_layout_changes_gradually_while_the_pill_widens() {
         let halfway = (PLAIN_WIDTH + LYRICS_WIDTH) / 2.0;
         let (narrow, middle, wide) = (
-            Layout::new(&frame(PLAIN_WIDTH), 2, TEXT_WIDTH).lyric_blend(),
-            Layout::new(&frame(halfway), 2, TEXT_WIDTH).lyric_blend(),
-            Layout::new(&frame(LYRICS_WIDTH), 2, TEXT_WIDTH).lyric_blend(),
+            Layout::new(bounds(PLAIN_WIDTH), PLAIN_WIDTH, 2, TEXT_WIDTH).lyric_blend(),
+            Layout::new(bounds(PLAIN_WIDTH), halfway, 2, TEXT_WIDTH).lyric_blend(),
+            Layout::new(bounds(PLAIN_WIDTH), LYRICS_WIDTH, 2, TEXT_WIDTH).lyric_blend(),
         );
         assert_eq!((narrow, wide), (0.0, 1.0));
         assert!(middle > 0.0 && middle < 1.0);

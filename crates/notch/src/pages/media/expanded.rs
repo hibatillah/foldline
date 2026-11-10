@@ -8,7 +8,7 @@ use crate::{
 const BADGE_TILE: Color = Color::gray(0.047);
 
 pub fn draw(page: &MediaPage, canvas: &Canvas, frame: &Frame, opacity: f32) {
-    let layout = Layout::new(frame, page.title_lines.len(), page.text_width);
+    let layout = Layout::new(frame.bounds, frame.expanded.width, page.title_lines.len(), page.text_width);
 
     let artwork = layout.artwork();
     match page.artwork.brush() {

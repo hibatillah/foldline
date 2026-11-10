@@ -30,7 +30,6 @@ fn center_of(row: i64, anchor: i64, height: &impl Fn(i64, i64) -> f32) -> f32 {
 
 pub fn draw(page: &MediaPage, canvas: &Canvas, layout: &Layout, opacity: f32) {
     let Some(lines) = page.visible_lyric_lines() else { return };
-    let scale = layout.scale;
     let panel = layout.lyric_panel();
     let transition = page.follower.transition().clamp(0.0, 1.0);
     // Before the first line starts, the "current" position sits just above line zero.
@@ -55,7 +54,7 @@ pub fn draw(page: &MediaPage, canvas: &Canvas, layout: &Layout, opacity: f32) {
             let rows_from_center = relative as f32 + (1.0 - transition);
             let distance = rows_from_center.abs();
             let offset = lerp(center_of(relative, -1, &row_height), center_of(relative, 0, &row_height), transition);
-            let center = Point::new(panel.center_x(), panel.center_y() + offset * scale);
+            let center = Point::new(panel.center_x(), panel.center_y() + offset);
             let alpha = line_alpha(distance);
 
             // Widen scaled neighbour rows so their text still fills the panel.
@@ -66,13 +65,12 @@ pub fn draw(page: &MediaPage, canvas: &Canvas, layout: &Layout, opacity: f32) {
             let half_width = panel.width() / text_scale / 2.0;
             canvas.scaled_about(center, text_scale, || {
                 for (index, text) in shown.iter().enumerate() {
-                    let line_center =
-                        center.y + (index as f32 - (shown.len() as f32 - 1.0) / 2.0) * LINE_HEIGHT * scale;
+                    let line_center = center.y + (index as f32 - (shown.len() as f32 - 1.0) / 2.0) * LINE_HEIGHT;
                     let row = Rect::new(
                         center.x - half_width,
-                        line_center - LINE_HEIGHT * scale / 2.0,
+                        line_center - LINE_HEIGHT / 2.0,
                         center.x + half_width,
-                        line_center + LINE_HEIGHT * scale / 2.0,
+                        line_center + LINE_HEIGHT / 2.0,
                     );
                     canvas.text(&styles::LYRIC_LINE, text, row, Color::WHITE.with_alpha(opacity * alpha));
                 }
