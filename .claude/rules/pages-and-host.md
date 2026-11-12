@@ -41,7 +41,7 @@ Read `docs/how-to/add-a-page.md` before writing a page, `docs/how-to/add-an-acti
   the wheel), `on_key` after `Context::take_keyboard`, `on_system_message` for the messages the page listens to
   (`Context::listen_to_clipboard`, `listen_to_power_setting`), and `on_enabled_changed` when the user switches the
   page on or off (also once at start). A page closes or opens the notch with `Context::request_close` and
-  `Context::request_open`; it never touches the window (`Context::window` is crate-private).
+  `Context::request_open` (`request_close` does nothing while the user has pinned the notch open); it never touches the window (`Context::window` is crate-private).
 - A page that holds user data off by default (`Page::is_opt_in`, the clipboard page) reads nothing while it is off and
   drops what it holds when `on_enabled_changed(false)` arrives.
 
@@ -61,7 +61,7 @@ Read `docs/how-to/add-a-page.md` before writing a page, `docs/how-to/add-an-acti
 
 ## Timer ids
 
-- Host timer ids are below 100 and live as `*_TIMER_ID` constants in `host/notch.rs` (1 to 4, 8, 9, 10 and 11; the clock's
+- Host timer ids are below 100 and live as `*_TIMER_ID` constants in `host/notch.rs` (1 to 4, 8, 9, 10, 11 and 12 (the pause end); the clock's
   6 is in `host/notch/timers.rs`); add a new one with the next free number and stop it as soon as its work ends.
 - Page timer ids are `100 + page_index * 16 + n` with `n` below 16, up to 999; activity timer ids are
   `1000 + activity_index * 16 + n`. `Context` computes them from the `TimerId(n)` a page or activity passes.

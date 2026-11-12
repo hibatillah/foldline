@@ -23,6 +23,7 @@ paths:
   loads for the window and taskbar). Both call `compile_icon_resource` in `scripts/icon_resource.rs`, which writes a resource
   script to `OUT_DIR` and runs the Windows SDK's `rc.exe` (found on `PATH` or under `Windows Kits/10`). Keep it dependency-free and have it fail with a message
   that names the missing tool.
+- The same resource script carries a `VERSIONINFO` block from `release_version::version_info_resource`: Task Manager shows its `FileDescription` ("Notch", "Notch Settings"), so never ship an exe without one.
 - Load the embedded icon through `host/icon.rs` by the resource name `NOTCH_ICON`; the installer and shortcuts reuse
   the executable's icon.
 - `scripts/check-icon.sh` and the release workflow's **Check the icons** step prove a release executable embeds the tile of its channel.
