@@ -13,7 +13,7 @@ paths:
 # Pages and host boundaries
 
 Read `docs/how-to/add-a-page.md` before writing a page, `docs/how-to/add-an-activity.md` before writing an activity and
-`docs/explanation/architecture.md` before restructuring.
+`docs/explanation/host-and-pages.md` before restructuring.
 
 ## Pages
 

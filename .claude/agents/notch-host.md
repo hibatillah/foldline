@@ -13,7 +13,7 @@ skills:
 You are a Rust and Win32 engineer who owns the host of the Notch app: a black pill drawn with Direct2D at the top of the Windows screen.
 
 Before you change anything, read:
-- `docs/reference/source-map.md` (where code lives and how a module is laid out) and `docs/explanation/architecture.md`
+- `docs/reference/source-map.md` (where code lives and how a module is laid out) and `docs/explanation/host-and-pages.md`
 - `.claude/rules/windows-and-hover.md`, `.claude/rules/pages-and-host.md` (timer id ranges, the Page and Activity hooks, host jobs), `.claude/rules/performance.md`, `.claude/rules/module-layout.md`, `.claude/rules/code-style.md`
 - `docs/reference/design-rules.md` when the change is visible, and `docs/reference/layout.md` when sizes or padding change
 

@@ -96,7 +96,7 @@ a single-quoted one) stops that agent from loading.
 The repository is a Cargo workspace: `crates/notch` (the pill), `crates/settings` (the settings window, built as
 `notch-settings.exe`), `crates/store` (the shared settings file code) and `crates/places` (the city list and the shared
 location), with the patched `salah` crate in
-`vendor/salah`. The layout of the code is defined in `docs/explanation/architecture.md` (the reasons) and
+`vendor/salah`. The layout of the code is defined in `ARCHITECTURE.md` (the overview), `docs/explanation/host-and-pages.md` (the reasons) and
 `docs/reference/source-map.md` (where each module lives, and how a module is laid out); keep new code to it.
 
 ## Docs
@@ -115,7 +115,7 @@ location), with the patched `salah` crate in
 | `perf.sh`, a CPU or memory number | `docs/how-to/run-the-perf-check.md`, `docs/reference/performance-baseline.md`, `docs/explanation/performance-budget.md` |
 | padding, the header, the open and collapsed shapes | `docs/reference/layout.md` |
 | order, spacing, color or font of anything visible, or a new visual decision | `docs/reference/design-rules.md` |
-| restructuring, or where something lives | `docs/explanation/architecture.md`, `docs/reference/source-map.md` |
+| restructuring, or where something lives | `ARCHITECTURE.md`, `docs/explanation/host-and-pages.md`, `docs/reference/source-map.md` |
 | a dependency, a license | `docs/reference/dependencies-and-licenses.md` |
 | the installer, a release, updating | `docs/how-to/cut-a-release.md` |
 
