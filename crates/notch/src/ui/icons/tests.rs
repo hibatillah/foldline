@@ -1,7 +1,7 @@
 use super::{paths::Paint, *};
 use crate::gfx::Path;
 
-const ALL: [Icon; 29] = [
+const ALL: [Icon; 30] = [
     Icon::Lyrics,
     Icon::Previous,
     Icon::Play,
@@ -31,6 +31,7 @@ const ALL: [Icon; 29] = [
     Icon::Gamepad,
     Icon::Pen,
     Icon::CircleCheck,
+    Icon::Pin,
 ];
 
 #[test]
@@ -111,4 +112,16 @@ fn next_mirrors_previous() {
 
 fn extent(path: &Path) -> (f32, f32) {
     path.points().fold((f32::MAX, f32::MIN), |(low, high), point| (low.min(point.x), high.max(point.x)))
+}
+
+#[test]
+fn the_pin_has_a_head_above_a_needle_that_reaches_down_the_middle() {
+    let (path, paint) = Icon::Pin.path(Point::default(), 24.0);
+    assert_eq!(paint, Paint::Line);
+    let figures = path.flatten();
+    assert_eq!(figures.len(), 2, "the head and the needle");
+    let needle = &figures[1].points;
+    assert!(needle.iter().all(|point| point.x.abs() < 0.01 && point.y >= 5.0), "{needle:?}");
+    let head_bottom = figures[0].points.iter().map(|point| point.y).fold(f32::MIN, f32::max);
+    assert!(head_bottom <= 5.01, "the head ends where the needle starts: {head_bottom}");
 }

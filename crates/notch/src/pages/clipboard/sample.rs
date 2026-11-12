@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 use super::{
     ClipboardPage,
     item::{Content, StoredImage},
+    layout::Target,
     state::{Bar, Confirm},
 };
 use crate::{gfx::ImageData, pages::clipboard::capture::Skip};
@@ -16,6 +17,10 @@ pub(super) const COPIED: u8 = 3;
 pub(super) const REMOVED: u8 = 4;
 pub(super) const SKIPPED: u8 = 5;
 pub(super) const EMPTY: u8 = 6;
+/// Two copies pinned and an unpinned row hovered, which offers its pin.
+pub(super) const PINNED: u8 = 7;
+/// Three copies pinned and an unpinned row hovered, which offers no pin.
+pub(super) const PINNED_FULL: u8 = 8;
 
 const IMAGE_ROW: usize = 4;
 
@@ -71,6 +76,14 @@ impl ClipboardPage {
                 page.bar = Some(Bar::Removed);
             }
             SKIPPED => page.bar = Some(Bar::Skipped(Skip::Excluded)),
+            PINNED | PINNED_FULL => {
+                page.history.toggle_pin(2);
+                page.history.toggle_pin(5);
+                if state == PINNED_FULL {
+                    page.history.toggle_pin(6);
+                }
+                page.hover.set(Some(Target::Row(4)));
+            }
             _ => {}
         }
         page

@@ -26,7 +26,7 @@ pub(super) struct Springs {
     pub(super) activity_blend: Spring,
     /// Distance of a claimed page's content from the pill's right edge: the group, the dot column and the edge.
     pub(super) claim_right_inset: Spring,
-    /// Room a claimed page keeps between its lead and its line, so the line slides when a dot joins the lead.
+    /// Room a claimed page keeps between its lead and its line.
     pub(super) claim_lead_gap: Spring,
 }
 

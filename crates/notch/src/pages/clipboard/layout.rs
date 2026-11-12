@@ -19,12 +19,16 @@ pub(super) const BUTTON_SIZE: f32 = 26.0;
 const BUTTON_GAP: f32 = 6.0;
 /// "Paste" and "Pasted" share one width so the button does not jump when it turns green.
 const PASTE_WIDTH: f32 = 76.0;
+/// The pin button's square at the right end of a row, as high as the row.
+pub(super) const PIN_AREA_SIZE: f32 = ROW_HEIGHT;
 /// How far the pointer may move between the two presses of a double click.
 pub(super) const DOUBLE_CLICK_SLOP: f32 = 4.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Target {
     Row(usize),
+    /// The pin button of the row at that index.
+    Pin(usize),
     Delete,
     Copy,
     Paste,
@@ -48,6 +52,12 @@ impl Layout {
 
     pub fn row(&self, index: usize) -> Rect {
         self.column(0.0, index as f32 * (ROW_HEIGHT + ROW_GAP), LIST_WIDTH, ROW_HEIGHT)
+    }
+
+    /// The pin button inside the row at `index`, at its right end, so the row's own click area is what is left of it.
+    pub fn pin_area(&self, index: usize) -> Rect {
+        let row = self.row(index);
+        Rect { left: row.right - PIN_AREA_SIZE, ..row }
     }
 
     /// Sits over the bottom of the list, covering the last row; follows the page bottom, which is shorter when empty.
@@ -99,14 +109,22 @@ impl Layout {
         Rect { right: self.delete_button().left - BUTTON_GAP, ..actions }
     }
 
-    /// What a press at `point` lands on. A bar over the list takes the clicks on it, and the buttons exist only while
-    /// the list has an item.
-    pub fn hit(&self, point: Point, row_count: usize, has_bar: bool, has_undo: bool) -> Option<Target> {
+    /// What a press at `point` lands on. A bar over the list takes the clicks on it, a row's pin button exists where
+    /// `has_pin_button` says so, and the buttons exist only while the list has an item.
+    pub fn hit(
+        &self,
+        point: Point,
+        row_count: usize,
+        has_pin_button: impl Fn(usize) -> bool,
+        has_bar: bool,
+        has_undo: bool,
+    ) -> Option<Target> {
         if has_bar && self.bar().contains(point) {
             return (has_undo && self.undo_area().contains(point)).then_some(Target::Undo);
         }
         if let Some(index) = (0..row_count).find(|&index| self.row(index).contains(point)) {
-            return Some(Target::Row(index));
+            let is_on_pin = has_pin_button(index) && self.pin_area(index).contains(point);
+            return Some(if is_on_pin { Target::Pin(index) } else { Target::Row(index) });
         }
         if row_count == 0 {
             return None;
@@ -188,23 +206,46 @@ mod tests {
     fn a_press_lands_on_the_row_button_or_nothing() {
         let layout = layout();
         let center = |rect: Rect| Point::new(rect.center_x(), rect.center_y());
-        assert_eq!(layout.hit(center(layout.row(2)), 3, false, false), Some(Target::Row(2)));
-        assert_eq!(layout.hit(center(layout.row(4)), 3, false, false), None);
-        assert_eq!(layout.hit(center(layout.paste_button()), 3, false, false), Some(Target::Paste));
-        assert_eq!(layout.hit(center(layout.copy_button()), 3, false, false), Some(Target::Copy));
-        assert_eq!(layout.hit(center(layout.delete_button()), 3, false, false), Some(Target::Delete));
-        assert_eq!(layout.hit(center(layout.paste_button()), 0, false, false), None);
+        assert_eq!(layout.hit(center(layout.row(2)), 3, |_| false, false, false), Some(Target::Row(2)));
+        assert_eq!(layout.hit(center(layout.row(4)), 3, |_| false, false, false), None);
+        assert_eq!(layout.hit(center(layout.paste_button()), 3, |_| false, false, false), Some(Target::Paste));
+        assert_eq!(layout.hit(center(layout.copy_button()), 3, |_| false, false, false), Some(Target::Copy));
+        assert_eq!(layout.hit(center(layout.delete_button()), 3, |_| false, false, false), Some(Target::Delete));
+        assert_eq!(layout.hit(center(layout.paste_button()), 0, |_| false, false, false), None);
     }
 
     #[test]
     fn the_bar_covers_the_last_row_and_only_its_right_end_undoes() {
         let layout = layout();
         let on_last_row = Point::new(layout.row(6).left + 20.0, layout.row(6).center_y());
-        assert_eq!(layout.hit(on_last_row, 7, true, true), None);
-        assert_eq!(layout.hit(on_last_row, 7, false, false), Some(Target::Row(6)));
+        assert_eq!(layout.hit(on_last_row, 7, |_| false, true, true), None);
+        assert_eq!(layout.hit(on_last_row, 7, |_| false, false, false), Some(Target::Row(6)));
         let on_undo = Point::new(layout.bar().right - 10.0, layout.bar().center_y());
-        assert_eq!(layout.hit(on_undo, 7, true, true), Some(Target::Undo));
-        assert_eq!(layout.hit(on_undo, 7, true, false), None);
+        assert_eq!(layout.hit(on_undo, 7, |_| false, true, true), Some(Target::Undo));
+        assert_eq!(layout.hit(on_undo, 7, |_| false, true, false), None);
+    }
+
+    #[test]
+    fn a_row_pin_button_takes_its_right_end_and_leaves_the_rest_to_the_row() {
+        let layout = layout();
+        let pin = layout.pin_area(2);
+        assert_eq!(pin.right, layout.row(2).right);
+        assert_eq!((pin.top, pin.bottom), (layout.row(2).top, layout.row(2).bottom));
+        assert_eq!(pin.width(), pin.height());
+        let on_pin = Point::new(pin.center_x(), pin.center_y());
+        let just_left = Point::new(pin.left - 1.0, pin.center_y());
+        assert_eq!(layout.hit(on_pin, 3, |_| true, false, false), Some(Target::Pin(2)));
+        assert_eq!(layout.hit(just_left, 3, |_| true, false, false), Some(Target::Row(2)));
+        assert_eq!(layout.hit(on_pin, 3, |index| index != 2, false, false), Some(Target::Row(2)));
+    }
+
+    #[test]
+    fn the_pin_buttons_stay_inside_the_list_and_clear_of_the_preview() {
+        let layout = layout();
+        for index in 0..7 {
+            assert!(layout.pin_area(index).right < layout.panel().left);
+            assert!(layout.pin_area(index).left > layout.row(index).left + 100.0, "most of the row stays clickable");
+        }
     }
 
     #[test]

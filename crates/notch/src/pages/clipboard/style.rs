@@ -45,6 +45,10 @@ pub(super) const UNDO_BLUE: Color = ACCENT_BLUE_LIGHT;
 pub(super) const BADGE_FILL: Color = SURFACE_BADGE;
 pub(super) const BADGE_BORDER: Color = SURFACE_BORDER;
 pub(super) const HINT: Color = TEXT_MUTED;
+/// The pin offered on a hovered row, lighter while the pointer is on it; a pinned row's pin is the accent blue.
+pub(super) const PIN_OFFERED: Color = ICON;
+pub(super) const PIN_OFFERED_HOVER: Color = TEXT_LIGHT;
+pub(super) const PINNED: Color = ACCENT_BLUE_LIGHT;
 
 pub(super) const TEXT_ICON: &str =
     "M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM8 8h8M8 12h8M8 16h5";

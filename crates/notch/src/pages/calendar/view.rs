@@ -1,10 +1,5 @@
-use super::{
-    dates::DayGrid,
-    geometry::{MONTH_VIEWPORT_HEIGHT, stack_height},
-};
-
-/// Event cards the week view's list shows at once.
-const WEEK_CARDS: usize = 3;
+use super::{dates::DayGrid, geometry::MONTH_VIEWPORT_HEIGHT};
+use crate::page::DEFAULT_CONTENT_HEIGHT;
 
 /// How much of the calendar the left column shows, set by `calendar.view`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -35,7 +30,7 @@ impl View {
     pub fn viewport_height(self) -> f32 {
         match self {
             View::Month => MONTH_VIEWPORT_HEIGHT,
-            View::Week => stack_height(WEEK_CARDS),
+            View::Week => DEFAULT_CONTENT_HEIGHT,
         }
     }
 }
@@ -53,8 +48,8 @@ mod tests {
     }
 
     #[test]
-    fn the_week_view_lists_three_cards_and_the_month_view_keeps_its_height() {
-        assert_eq!(View::Week.viewport_height(), 112.0);
+    fn the_week_view_is_as_tall_as_the_default_page_and_the_month_view_keeps_its_height() {
+        assert_eq!(View::Week.viewport_height(), DEFAULT_CONTENT_HEIGHT);
         assert_eq!(View::Month.viewport_height(), 168.0);
     }
 

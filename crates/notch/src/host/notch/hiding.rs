@@ -7,7 +7,8 @@ use windows::Win32::UI::WindowsAndMessaging::{KillTimer, SW_HIDE, SW_SHOWNOACTIV
 
 use crate::host::{
     screen_mode::ScreenMode,
-    visibility::{self, Showing},
+    visibility::{self, Collapsed, Showing},
+    volume_flyout,
 };
 use crate::{log, page::PointerEvent};
 
@@ -18,6 +19,8 @@ pub(super) struct HidingState {
     pub(super) fullscreen_showing: Showing,
     pub(super) opens_on_hover_over_maximized: bool,
     pub(super) opens_on_hover_over_fullscreen: bool,
+    /// `notch.hide_windows_volume_popup`: while the notch replaces Windows' flyout, volume and brightness always show.
+    pub(super) replaces_windows_flyout: bool,
     /// The mode the notch follows; a mode that would show more waits in `pending_screen_mode` first.
     pub(super) screen_mode: ScreenMode,
     pub(super) pending_screen_mode: Option<ScreenMode>,
@@ -32,6 +35,7 @@ impl HidingState {
             fullscreen_showing: read_showing(settings, visibility::FULLSCREEN_KEY, visibility::DEFAULT_FULLSCREEN),
             opens_on_hover_over_maximized: settings.get_bool(visibility::HOVER_MAXIMIZED_KEY, true),
             opens_on_hover_over_fullscreen: settings.get_bool(visibility::HOVER_FULLSCREEN_KEY, true),
+            replaces_windows_flyout: volume_flyout::wants_hidden(settings),
             screen_mode: ScreenMode::Normal,
             pending_screen_mode: None,
             is_revealed: false,
@@ -47,6 +51,7 @@ impl HidingState {
             settings.get_bool(visibility::HOVER_MAXIMIZED_KEY, self.opens_on_hover_over_maximized);
         self.opens_on_hover_over_fullscreen =
             settings.get_bool(visibility::HOVER_FULLSCREEN_KEY, self.opens_on_hover_over_fullscreen);
+        self.replaces_windows_flyout = settings.get_bool(volume_flyout::SETTING_KEY, self.replaces_windows_flyout);
     }
 }
 
@@ -69,18 +74,26 @@ impl Notch {
         if self.hiding.is_revealed || self.springs.expansion.target != 0.0 {
             return false;
         }
-        // In every mode only a message counts as activity; a lasting mark (muted, Caps Lock, a countdown, a privacy
-        // dot) is state and would keep the pill up for as long as it lasts.
-        let has_message = !self.presences.transients.is_empty() || self.presences.banner.is_some();
-        match self.current_showing() {
-            None => self.hiding.hides_when_idle && !has_message && !self.has_resting_content,
-            // The suppressed window draws nothing; a full-size layout avoids a strip growing back when it returns.
-            Some(Showing::Hidden) => false,
-            Some(showing) => {
-                let has_lyrics = self.resting_index.is_some_and(|index| self.pages[index].shows_live_text());
-                !visibility::allows(showing, has_message, self.has_resting_content, has_lyrics)
-            }
-        }
+        let collapsed = Collapsed {
+            has_message: !self.presences.transients.is_empty() || self.presences.banner.is_some(),
+            has_resting_content: self.has_resting_content,
+            has_lyrics: self.resting_index.is_some_and(|index| self.pages[index].shows_live_text()),
+        };
+        visibility::hides_to_strip(
+            self.current_showing(),
+            self.hiding.hides_when_idle,
+            collapsed,
+            self.priority_shows(),
+        )
+    }
+
+    /// A priority activity's presence (a volume or brightness level, the muted badge) overrides the word now.
+    fn priority_shows(&self) -> bool {
+        visibility::priority_shows(
+            self.hiding.screen_mode,
+            self.hiding.replaces_windows_flyout,
+            self.presences.has_priority,
+        )
     }
 
     /// `None` over a regular window, where `notch.hide_when_idle` decides instead.
@@ -88,16 +101,18 @@ impl Notch {
         visibility::showing_for(self.hiding.screen_mode, self.hiding.maximized_showing, self.hiding.fullscreen_showing)
     }
 
+    /// Under the word `hidden` the pointer never opens the notch, even while a priority activity shows it.
     pub(super) fn opens_on_hover(&self) -> bool {
-        visibility::opens_on_hover(
-            self.hiding.screen_mode,
-            self.hiding.opens_on_hover_over_maximized,
-            self.hiding.opens_on_hover_over_fullscreen,
-        )
+        self.current_showing() != Some(Showing::Hidden)
+            && visibility::opens_on_hover(
+                self.hiding.screen_mode,
+                self.hiding.opens_on_hover_over_maximized,
+                self.hiding.opens_on_hover_over_fullscreen,
+            )
     }
 
     pub(super) fn is_suppressed(&self) -> bool {
-        self.current_showing() == Some(Showing::Hidden)
+        !self.stays_on_screen_in(self.hiding.screen_mode)
     }
 
     pub(super) fn hidden_height(&self) -> f32 {
@@ -108,10 +123,19 @@ impl Notch {
         if self.hiding.hides_when_idle { REVEAL_DELAY_MILLISECONDS } else { REVEAL_DELAY_OVER_WINDOW_MILLISECONDS }
     }
 
+    /// Whether the notch stays on screen in front of a window in `mode`, so it must raise itself above that window.
+    pub(super) fn stays_on_screen_in(&self, mode: ScreenMode) -> bool {
+        visibility::stays_on_screen(
+            mode,
+            self.hiding.maximized_showing,
+            self.hiding.fullscreen_showing,
+            self.hiding.replaces_windows_flyout,
+            self.presences.has_priority,
+        )
+    }
+
     pub fn set_screen_mode(&mut self, mode: ScreenMode) {
-        if visibility::showing_for(mode, self.hiding.maximized_showing, self.hiding.fullscreen_showing)
-            != Some(Showing::Hidden)
-        {
+        if self.stays_on_screen_in(mode) {
             crate::host::window::raise_topmost(self.window);
             unsafe { SetTimer(Some(self.window), RAISE_TIMER_ID, RAISE_DELAY_MILLISECONDS, None) };
         }

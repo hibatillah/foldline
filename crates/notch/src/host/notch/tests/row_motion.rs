@@ -67,5 +67,9 @@ fn opening_slides_the_header_icons_into_place_when_one_joins_while_open() {
     assert_eq!(notch.row_motion.header.position(timer), Some(before), "the timer icon has not jumped");
     settle(&mut notch);
     let after = notch.row_motion.header.position(timer).unwrap();
-    assert_eq!(after, before + 6.0 + crate::host::pill_row::HEADER_ITEM_GAP, "it moved left by the dot and a gap");
+    assert_eq!(
+        after,
+        before + 6.0 + crate::host::pill_row::RING_DOTS_GAP,
+        "it moved left by the dot and the 4 after the ring"
+    );
 }

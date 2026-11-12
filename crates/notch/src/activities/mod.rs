@@ -19,6 +19,12 @@ pub fn sample_notification(fonts: &crate::gfx::Fonts) -> Box<dyn Activity> {
     Box::new(notifications::NotificationsActivity::sample(fonts))
 }
 
+/// The volume activity in the middle of its level message.
+#[cfg(test)]
+pub fn sample_volume(volume: f32, is_muted: bool) -> Box<dyn Activity> {
+    Box::new(volume::VolumeActivity::sample(volume, is_muted))
+}
+
 pub fn all() -> Vec<Box<dyn Activity>> {
     vec![
         Box::new(volume::VolumeActivity::new()),

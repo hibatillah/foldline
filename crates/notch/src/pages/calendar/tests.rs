@@ -2,6 +2,7 @@ use super::{
     dates::{civil_from_days, month_name, weekday, weekday_name},
     *,
 };
+use crate::page::DEFAULT_CONTENT_HEIGHT;
 
 #[test]
 fn a_new_page_has_a_label_for_every_date_of_its_month_before_any_refresh() {
@@ -152,10 +153,10 @@ fn the_week_view_draws_one_row_of_seven_days_that_holds_today() {
 }
 
 #[test]
-fn the_week_view_is_three_cards_high_and_as_wide_as_the_month_view() {
+fn the_week_view_is_as_tall_as_the_default_page_and_as_wide_as_the_month_view() {
     let fonts = Fonts::new(1.0).unwrap();
     let page = week_page(&fonts);
-    assert_eq!(page.sizes().expanded.height, 112.0);
+    assert_eq!(page.sizes().expanded.height, DEFAULT_CONTENT_HEIGHT);
     assert_eq!(page.sizes().expanded.width, EXPANDED_WIDTH);
 }
 
@@ -170,14 +171,14 @@ fn a_day_picked_in_another_week_is_forgotten_when_the_view_turns_to_week() {
 }
 
 #[test]
-fn a_week_list_of_more_than_three_cards_claims_the_wheel() {
+fn a_week_list_of_more_than_two_cards_claims_the_wheel() {
     let fonts = Fonts::new(1.0).unwrap();
     let mut page = week_page(&fonts);
     let bounds = Rect::new(0.0, 0.0, EXPANDED_WIDTH, page.sizes().expanded.height);
     let frame = Frame { bounds, expansion: 1.0, expanded: Size::new(EXPANDED_WIDTH, bounds.height()), lead_gap: 0.0 };
     let inside = Point::new(bounds.right - 20.0, bounds.bottom - 20.0);
-    assert!(!page.claims_scroll(inside, &frame), "three events fill the week list");
-    page.agenda.rows = (0..4)
+    assert!(!page.claims_scroll(inside, &frame), "two events fit the week list");
+    page.agenda.rows = (0..3)
         .map(|index| agenda::Row { occurrence: page.agenda.rows[0].occurrence.clone(), time: format!("{index}") })
         .collect();
     assert!(page.claims_scroll(inside, &frame));

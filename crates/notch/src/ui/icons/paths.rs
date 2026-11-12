@@ -2,6 +2,8 @@ use super::{GRID, Icon};
 use crate::gfx::{Path, Point};
 
 const CORNER_RADIUS: f32 = 1.8;
+/// Lucide "pin" (ISC license, https://lucide.dev): the head, then the needle.
+const PIN: &str = "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1zM12 17v5";
 
 #[derive(Debug, PartialEq)]
 pub(super) enum Paint {
@@ -231,6 +233,10 @@ impl Icon {
             ),
             Icon::CircleCheck => {
                 (join(circle(at(12.0, 12.0), 9.0 * unit), line(&[(8.0, 12.5), (10.8, 15.3), (16.0, 9.5)])), Paint::Line)
+            }
+            Icon::Pin => {
+                let corner = Point::new(center.x - size / 2.0, center.y - size / 2.0);
+                (Path::from_svg(PIN, corner, unit), Paint::Line)
             }
             Icon::Lyrics => {
                 let bubble = solid(

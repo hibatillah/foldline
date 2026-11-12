@@ -7,7 +7,7 @@ use crate::host::{
     chrome,
     claimed_row::ClaimedRow,
     clock,
-    pill_row::{self, Row, RowInput},
+    pill_row::{self, Row, RowInput, Run},
 };
 use crate::{
     gfx::{Canvas, Point, Rect, lerp},
@@ -46,6 +46,21 @@ impl RestingRow {
         let ring = self.ring.iter().map(|&(source, width)| (RowItem::Source(source), width));
         let dots = (!self.dots.is_empty()).then(|| (RowItem::Dots, self.dots_width()));
         ring.chain(dots).collect()
+    }
+
+    /// The widths of `items` and the room between each pair of neighbours: `item_gap`, or `RING_DOTS_GAP` from the
+    /// battery ring to the dot column right after it.
+    pub(super) fn spacing(&self, items: &[(RowItem, f32)], item_gap: f32) -> (Vec<f32>, Vec<f32>) {
+        let widths = items.iter().map(|&(_, width)| width).collect();
+        let gaps = items
+            .windows(2)
+            .map(|pair| pill_row::gap_between(self.is_ring(pair[0].0), pair[1].0 == RowItem::Dots, item_gap))
+            .collect();
+        (widths, gaps)
+    }
+
+    fn is_ring(&self, item: RowItem) -> bool {
+        matches!(item, RowItem::Source(source) if self.ring.iter().any(|&(ring, _)| ring == source))
     }
 }
 
@@ -126,10 +141,10 @@ impl Notch {
     }
 
     pub(super) fn refresh_resting_row(&mut self) {
-        let group_widths: Vec<f32> = self.idle_items().iter().map(|&(_, width)| width).collect();
+        let (widths, gaps) = self.resting_row.spacing(&self.idle_items(), pill_row::ITEM_GAP);
         self.resting_row.layout = pill_row::idle_row(&RowInput {
             clock_width: clock::layout_width(&self.fonts),
-            group_widths: &group_widths,
+            group: Run { widths: &widths, gaps: &gaps },
             minimum_width: clock::RESTING_WIDTH,
         });
         let lead_width = self.resting_index.map_or(0.0, |index| self.pages[index].resting_lead_width());

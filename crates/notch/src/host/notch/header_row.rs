@@ -3,7 +3,7 @@
 use super::{Notch, Source, row_motion::RowItem, units};
 use crate::host::{
     chrome, clock,
-    pill_row::{self, HeaderInput, HeaderRow},
+    pill_row::{self, HeaderInput, HeaderRow, Run},
     settings_launcher,
 };
 use crate::{
@@ -66,24 +66,23 @@ impl Notch {
 
     /// The width the header's content needs with its gaps and the side padding.
     pub(super) fn header_min_width(&self) -> f32 {
-        let end_widths: Vec<f32> = self.resting_row.right_end().iter().map(|&(_, width)| width).collect();
+        let (widths, gaps) = self.resting_row.spacing(&self.resting_row.right_end(), pill_row::HEADER_ITEM_GAP);
         let content = pill_row::header_content_width(
             chrome::dots_width(self.navigable.len()),
             clock::layout_width(&self.fonts),
-            &end_widths,
+            Run { widths: &widths, gaps: &gaps },
         );
         content + chrome::WIDTH_EXTRA
     }
 
     pub(super) fn header_row_between(&self, left: f32, right: f32) -> HeaderRow {
-        let icon_widths: Vec<f32> = self.header_marks.icons.iter().map(|&(width, _)| width).collect();
-        let end_widths: Vec<f32> = self.resting_row.right_end().iter().map(|&(_, width)| width).collect();
+        let (widths, gaps) = self.resting_row.spacing(&self.header_group(), pill_row::HEADER_ITEM_GAP);
         pill_row::header_row(&HeaderInput {
             left,
             right,
             clock_width: clock::layout_width(&self.fonts),
-            icon_widths: &icon_widths,
-            end_widths: &end_widths,
+            group: Run { widths: &widths, gaps: &gaps },
+            icon_count: self.header_marks.icons.len(),
         })
     }
 
@@ -119,7 +118,7 @@ impl Notch {
     }
 
     /// Every item a click can land on, left to right: the shown group, then the gear.
-    fn header_targets(&self, row: &HeaderRow) -> Vec<(f32, f32, HeaderTarget)> {
+    pub(super) fn header_targets(&self, row: &HeaderRow) -> Vec<(f32, f32, HeaderTarget)> {
         let items = self.shown_header_group(row).into_iter().chain([(RowItem::Gear, pill_row::GEAR_SIZE)]);
         let lefts = row.group_lefts.iter().copied().chain([row.gear_left]);
         items

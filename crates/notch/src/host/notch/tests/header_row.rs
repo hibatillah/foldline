@@ -88,6 +88,22 @@ fn the_header_group_keeps_the_idle_order_and_its_dots_end_10_before_the_gear() {
 }
 
 #[test]
+fn the_header_dots_sit_4_after_the_battery_ring_and_a_press_in_their_shared_area_finds_the_nearer_one() {
+    let notch = open_header(SampleOptions::default());
+    let ring = RowItem::Source(Source::Activity(1));
+    let (ring_left, ring_width) = item_place(&notch, ring);
+    let (dots_left, dots_width) = item_place(&notch, RowItem::Dots);
+    assert!((dots_left - (ring_left + ring_width) - pill_row::RING_DOTS_GAP).abs() < 0.001);
+    let targets = notch.header_targets(&notch.header_layout(notch.frame().bounds));
+    let lefts: Vec<(f32, f32)> = targets.iter().map(|&(left, width, _)| (left, width)).collect();
+    let ring_position = lefts.iter().position(|&place| place == (ring_left, ring_width));
+    let dots_position = lefts.iter().position(|&place| place == (dots_left, dots_width));
+    let midpoint = (ring_left + ring_width / 2.0 + dots_left + dots_width / 2.0) / 2.0;
+    assert_eq!(pill_row::hit_item(&lefts, midpoint - 1.0), ring_position, "just left of the midpoint");
+    assert_eq!(pill_row::hit_item(&lefts, midpoint + 1.0), dots_position, "just right of the midpoint");
+}
+
+#[test]
 fn the_header_springs_settle_on_the_header_layout() {
     let notch = open_header(SampleOptions { timer: true, ..SampleOptions::default() });
     let right = header(&notch).right / notch.scale;
@@ -159,11 +175,12 @@ fn timer_open_width(notch: &Notch) -> f32 {
 #[test]
 fn the_header_floor_is_the_centered_clock_with_the_wider_side_twice_and_the_side_padding() {
     let notch = open_header(SampleOptions::default());
-    let end: Vec<f32> = notch.resting_row.right_end().iter().map(|&(_, width)| width).collect();
+    let (widths, gaps) = notch.resting_row.spacing(&notch.resting_row.right_end(), pill_row::HEADER_ITEM_GAP);
+    assert_eq!(gaps, [pill_row::RING_DOTS_GAP], "the ring and the dots sit 4 apart");
     let content = pill_row::header_content_width(
         chrome::dots_width(notch.navigable.len()),
         clock::layout_width(&notch.fonts),
-        &end,
+        pill_row::Run { widths: &widths, gaps: &gaps },
     );
     assert!((notch.header_min_width() - (content + chrome::WIDTH_EXTRA)).abs() < 0.001);
 }

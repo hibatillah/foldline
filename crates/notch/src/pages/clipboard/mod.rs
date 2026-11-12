@@ -1,4 +1,5 @@
-//! Opt-in clipboard history: the last seven copies in memory, a preview and paste. Nothing is read while it is off.
+//! Opt-in clipboard history: the last seven copies in memory, up to three pinned, a preview and paste. Nothing is read
+//! while it is off.
 
 mod actions;
 mod capture;
@@ -64,7 +65,8 @@ impl ClipboardPage {
 
     fn target_at(&self, point: Point, frame: &Frame) -> Option<Target> {
         let has_undo = self.bar.is_some_and(Bar::has_undo) && self.history.can_undo();
-        Self::layout(frame).hit(point, self.history.items().len(), self.bar.is_some(), has_undo)
+        let has_pin_button = |index| self.history.has_pin_button(index);
+        Self::layout(frame).hit(point, self.history.items().len(), has_pin_button, self.bar.is_some(), has_undo)
     }
 }
 
@@ -144,7 +146,7 @@ impl Page for ClipboardPage {
             PointerEvent::Pressed(point) => self.press(point, frame, context),
             PointerEvent::Released(point) => self.release(point, frame, context),
             PointerEvent::SecondaryReleased(point) => {
-                if let Some(Target::Row(index)) = self.target_at(point, frame) {
+                if let Some(Target::Row(index) | Target::Pin(index)) = self.target_at(point, frame) {
                     self.remove(index, context);
                 }
             }
@@ -152,7 +154,7 @@ impl Page for ClipboardPage {
     }
 
     fn uses_right_click(&self, point: Point, frame: &Frame) -> bool {
-        matches!(self.target_at(point, frame), Some(Target::Row(_)))
+        matches!(self.target_at(point, frame), Some(Target::Row(_) | Target::Pin(_)))
     }
 
     fn on_timer(&mut self, timer: TimerId, context: &mut Context) {

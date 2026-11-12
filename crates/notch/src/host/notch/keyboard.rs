@@ -14,14 +14,16 @@ pub(super) struct KeyboardState {
     pub(super) pending_high_surrogate: Option<u16>,
 }
 
-/// The keys a text field uses; Ctrl+V pastes the clipboard's text on one line.
+/// The keys a text field uses; Ctrl+V pastes the clipboard's text on one line, Ctrl+Backspace and Ctrl+Delete remove a word.
 pub(super) fn key_input(virtual_key: u16, is_control_down: bool) -> Option<KeyInput> {
     use windows::Win32::UI::Input::KeyboardAndMouse::{
         VK_BACK, VK_DELETE, VK_END, VK_ESCAPE, VK_HOME, VK_LEFT, VK_RETURN, VK_RIGHT,
     };
     const VK_V: u16 = 0x56;
     Some(match virtual_key {
+        key if key == VK_BACK.0 && is_control_down => KeyInput::BackspaceWord,
         key if key == VK_BACK.0 => KeyInput::Backspace,
+        key if key == VK_DELETE.0 && is_control_down => KeyInput::DeleteWord,
         key if key == VK_DELETE.0 => KeyInput::Delete,
         key if key == VK_LEFT.0 => KeyInput::Left,
         key if key == VK_RIGHT.0 => KeyInput::Right,
@@ -42,6 +44,11 @@ pub(super) fn single_line(text: &str) -> String {
         .filter(|character| !character.is_control())
         .collect();
     joined.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// The characters of a `WM_CHAR` a field takes: control characters go, among them the 0x7F that Ctrl+Backspace sends.
+fn printable(units: Vec<u16>) -> String {
+    char::decode_utf16(units).filter_map(Result::ok).filter(|character| !character.is_control()).collect()
 }
 
 impl Notch {
@@ -112,8 +119,7 @@ impl Notch {
             (Some(high), 0xDC00..=0xDFFF) => vec![high, unit],
             _ => vec![unit],
         };
-        let typed: String =
-            char::decode_utf16(units).filter_map(Result::ok).filter(|character| !character.is_control()).collect();
+        let typed = printable(units);
         if typed.is_empty() {
             return;
         }
@@ -148,5 +154,21 @@ mod tests {
         assert_eq!(key_input(VK_ESCAPE.0, false), Some(KeyInput::Escape));
         assert_eq!(key_input(VK_F5.0, false), None);
         assert_eq!(key_input(0x56, false), None);
+    }
+
+    #[test]
+    fn ctrl_backspace_and_ctrl_delete_remove_a_word() {
+        use windows::Win32::UI::Input::KeyboardAndMouse::{VK_BACK, VK_DELETE};
+        assert_eq!(key_input(VK_BACK.0, true), Some(KeyInput::BackspaceWord));
+        assert_eq!(key_input(VK_DELETE.0, true), Some(KeyInput::DeleteWord));
+        assert_eq!(key_input(VK_DELETE.0, false), Some(KeyInput::Delete));
+    }
+
+    #[test]
+    fn the_character_ctrl_backspace_sends_is_not_typed_into_the_field() {
+        assert_eq!(printable(vec![0x7F]), "");
+        assert_eq!(printable(vec![0x08]), "");
+        assert_eq!(printable(vec![0x61]), "a");
+        assert_eq!(printable(vec![0xD83C, 0xDF75]), "🍵");
     }
 }

@@ -214,7 +214,7 @@ fn a_banner_or_a_short_message_still_shows_over_a_maximized_window() {
 }
 
 /// A hiding notch over each kind of window: a regular one with Hide when idle, then maximized and full screen.
-fn hiding_in_every_mode(notch: &mut Notch) -> Vec<(ScreenMode, Showing)> {
+pub(super) fn hiding_in_every_mode(notch: &mut Notch) -> Vec<(ScreenMode, Showing)> {
     notch.hiding.hides_when_idle = true;
     let mut modes = vec![(ScreenMode::Normal, Showing::ActivitiesOnly)];
     for showing in [Showing::ActivitiesOnly, Showing::MusicWithLyrics] {
@@ -225,7 +225,7 @@ fn hiding_in_every_mode(notch: &mut Notch) -> Vec<(ScreenMode, Showing)> {
 }
 
 #[test]
-fn a_muted_speaker_or_a_privacy_dot_does_not_keep_the_notch_up_over_any_window() {
+fn an_ordinary_badge_or_a_privacy_dot_does_not_keep_the_notch_up_over_any_window() {
     let mut notch = rig(SampleOptions::default());
     notch.presences.badges = vec![(Source::Activity(0), 16.0)];
     notch.resting_row.dots = vec![(Source::Activity(1), 6.0)];

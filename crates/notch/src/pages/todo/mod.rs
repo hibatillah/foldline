@@ -1,33 +1,39 @@
-//! A short todo list: add a task by typing in the notch, tick it off, delete it.
+//! A short todo list: add a task by typing in the notch, tick it off, copy it, delete it and undo the delete.
 
+mod actions;
 mod draw;
 mod layout;
 mod list;
-
 #[cfg(test)]
-use self::list::Item;
+mod sample;
+#[cfg(test)]
+mod tests;
+
 use self::{
     layout::{
-        CONTENT_WIDTH, Row, WHEEL_NOTCH_DISTANCE, add_button, clear_button, content_height, delete_rect, empty_area,
-        max_scroll, plan_rows, row_rect,
+        CONTENT_WIDTH, Row, WHEEL_NOTCH_DISTANCE, add_button, clear_button, content_height, empty_area, max_scroll,
+        plan_rows, row_rect, undo_button,
     },
     list::TodoList,
 };
 use crate::i18n::tr;
 use crate::{
     gfx::{Canvas, Point, Rect, Size},
-    page::{Context, Frame, KeyInput, Mode, Page, PageSizes, PointerEvent, Priority},
+    page::{Context, Frame, KeyInput, Mode, Page, PageSizes, PointerEvent, Priority, TimerId},
     ui::{FieldOutcome, HoverTarget, ScrollOffset, TextField},
 };
 
 const RESTING_WIDTH: f32 = 150.0;
 const MAX_CHARACTERS: usize = 120;
+/// Ends the undo of the last removal.
+const UNDO_TIMER: TimerId = TimerId(0);
 
 /// What the pointer is over: a toolbar button or a row, by its position in the list.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum TodoTarget {
     Add,
     ClearAll,
+    Undo,
     Row(usize),
 }
 
@@ -75,40 +81,6 @@ impl TodoPage {
         self.scroll.jump_to_end(max_scroll(self.rows().len()));
     }
 
-    #[cfg(test)]
-    pub fn sample(scenario: u8) -> Self {
-        let item = |text: &str, is_done| Item { text: text.to_owned(), is_done };
-        let open = || {
-            vec![
-                item("Check hover on the 1440p monitor", false),
-                item("Write the v0.5 release notes", false),
-                item("Buy a code-signing certificate", false),
-            ]
-        };
-        let items = match scenario {
-            1 | 2 => Vec::new(),
-            3 => [open(), vec![item("Send the invoice to the client", false), item("Book the Jakarta flight", false)]]
-                .concat(),
-            4 => [open(), vec![item("Send the invoice to the client", false)]].concat(),
-            5 => [
-                open(),
-                vec![item("Send the invoice to the client", true), item("Reply to Rafi about the deploy", true)],
-            ]
-            .concat(),
-            _ => [open(), vec![item("Reply to Rafi about the deploy", true)]].concat(),
-        };
-
-        let mut page = Self::with_list(TodoList::with_items(items));
-        page.is_adding = matches!(scenario, 2 | 4);
-        if scenario == 4 {
-            page.field.apply(&KeyInput::Text("Call the notary".to_owned()));
-            page.has_keyboard = true;
-        }
-        page.hover.set((scenario == 0).then_some(TodoTarget::Row(1)));
-        page.refresh_texts();
-        page
-    }
-
     /// An empty list that is not being added to shows the "All clear" message under the buttons.
     fn is_empty_view(&self) -> bool {
         self.list.is_empty() && !self.is_adding
@@ -134,6 +106,9 @@ impl TodoPage {
         }
         if !self.list.is_empty() && clear_button(bounds).contains(point) {
             return Some(TodoTarget::ClearAll);
+        }
+        if self.list.can_undo() && undo_button(bounds).contains(point) {
+            return Some(TodoTarget::Undo);
         }
         self.row_at(bounds, point)
             .filter(|(_, row)| matches!(row, Row::Item(_)))
@@ -226,35 +201,7 @@ impl Page for TodoPage {
                     context.request_repaint();
                 }
             }
-            PointerEvent::Pressed(point) if frame.is_open() => {
-                if add_button(bounds).contains(point) {
-                    self.start_adding(context);
-                    return;
-                }
-                if !self.list.is_empty() && clear_button(bounds).contains(point) {
-                    self.list.clear();
-                    self.clear_row_hover();
-                    self.scroll.reset();
-                    self.refresh_texts();
-                    context.request_repaint();
-                    return;
-                }
-                let Some((position, row)) = self.row_at(bounds, point) else { return };
-                match row {
-                    Row::Item(index) => {
-                        let rect = row_rect(bounds, position, self.scroll.value());
-                        if self.hover.is(TodoTarget::Row(position)) && delete_rect(rect).contains(point) {
-                            self.list.remove(index);
-                            self.hover.clear();
-                        } else {
-                            self.list.toggle(index);
-                        }
-                        self.refresh_texts();
-                        context.request_repaint();
-                    }
-                    Row::Field => {}
-                }
-            }
+            PointerEvent::Pressed(point) if frame.is_open() => self.press(bounds, point, context),
             PointerEvent::Scrolled { notches } => {
                 if self.scroll.scroll_by(notches * WHEEL_NOTCH_DISTANCE, max_scroll(self.rows().len())) {
                     self.clear_row_hover();
@@ -294,6 +241,12 @@ impl Page for TodoPage {
         max_scroll(self.rows().len()) > 0.0 && empty_area(frame.bounds).contains(point)
     }
 
+    fn on_timer(&mut self, timer: TimerId, context: &mut Context) {
+        if timer == UNDO_TIMER {
+            self.expire_undo(context);
+        }
+    }
+
     fn on_keyboard_lost(&mut self, context: &mut Context) {
         self.has_keyboard = false;
         self.stop_adding(context);
@@ -304,104 +257,5 @@ impl Page for TodoPage {
             self.clear_row_hover();
             self.stop_adding(context);
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{layout::VISIBLE_ROWS, *};
-
-    fn page_with(open: usize, done: usize) -> TodoPage {
-        let items = (0..open)
-            .map(|index| Item { text: format!("open {index}"), is_done: false })
-            .chain((0..done).map(|index| Item { text: format!("done {index}"), is_done: true }))
-            .collect();
-        TodoPage::with_list(TodoList::with_items(items))
-    }
-
-    #[test]
-    fn an_empty_list_is_as_wide_as_a_full_one_and_keeps_the_usual_height() {
-        let mut page = page_with(0, 0);
-        assert_eq!(page.sizes().expanded.width, CONTENT_WIDTH);
-        assert_eq!(page.sizes().expanded.height, 86.0);
-        page.is_adding = true;
-        assert_eq!(page.sizes().expanded.width, CONTENT_WIDTH);
-        assert_eq!(page.rows(), [Row::Field]);
-    }
-
-    #[test]
-    fn the_page_height_follows_the_toolbar_and_the_task_rows() {
-        assert_eq!(page_with(3, 0).sizes().expanded.height, 144.0);
-        assert_eq!(page_with(5, 0).sizes().expanded.height, 220.0);
-        assert_eq!(page_with(2, 0).sizes().expanded.width, CONTENT_WIDTH);
-        let mut adding = page_with(4, 0);
-        adding.is_adding = true;
-        assert_eq!(adding.sizes().expanded.height, 220.0, "the input is a fifth row");
-    }
-
-    #[test]
-    fn the_list_takes_any_number_of_tasks_and_the_page_stops_growing_at_five_rows() {
-        let mut page = page_with(0, 0);
-        for index in 0..12 {
-            assert!(page.list.add(&format!("task {index}")));
-        }
-        assert_eq!(page.list.len(), 12);
-        assert_eq!(page.sizes().expanded.height, 220.0);
-    }
-
-    #[test]
-    fn scrolling_stops_at_the_last_row_and_a_cleared_list_returns_to_the_top() {
-        let mut page = page_with(8, 0);
-        page.scroll.jump_to_end(max_scroll(page.rows().len()));
-        assert_eq!(page.scroll.value(), 3.0 * WHEEL_NOTCH_DISTANCE);
-        page.list.clear();
-        page.refresh_texts();
-        assert_eq!(page.scroll.value(), 0.0);
-    }
-
-    #[test]
-    fn finished_items_follow_open_ones_and_the_input_comes_last() {
-        let mut page = page_with(1, 2);
-        assert_eq!(page.rows(), [Row::Item(0), Row::Item(1), Row::Item(2)]);
-        page.is_adding = true;
-        assert_eq!(page.rows().last(), Some(&Row::Field));
-        assert!(page.list.item(1).is_some_and(|item| item.is_done));
-        assert!(page.rows().len() <= VISIBLE_ROWS);
-    }
-
-    #[test]
-    fn clearing_the_list_empties_it_and_the_count_and_shows_the_empty_message() {
-        let mut page = page_with(2, 1);
-        page.list.clear();
-        page.refresh_texts();
-        assert_eq!(page.count_text, "0 left");
-        assert!(page.is_empty_view());
-        assert_eq!(page.sizes().expanded.width, CONTENT_WIDTH);
-    }
-
-    #[test]
-    fn moving_from_a_row_to_the_add_button_repaints_once() {
-        let mut page = page_with(3, 0);
-        let bounds = Rect::new(0.0, 0.0, CONTENT_WIDTH, 144.0);
-        let center = |rect: Rect| Point::new(rect.center_x(), rect.center_y());
-        let on_row = center(row_rect(bounds, 1, 0.0));
-        let on_add = center(add_button(bounds));
-        assert!(page.hover.set(page.target_at(bounds, on_row)), "entering the row repaints");
-        assert_eq!(page.hover.get(), Some(TodoTarget::Row(1)));
-        assert!(page.hover.set(page.target_at(bounds, on_add)), "the move to Add repaints");
-        assert_eq!(page.hover.get(), Some(TodoTarget::Add));
-        assert!(!page.hover.set(page.target_at(bounds, on_add)), "staying on Add does not repaint");
-    }
-
-    #[test]
-    fn the_todo_count_reads_in_indonesian() {
-        store::language::with_override(store::language::Language::Indonesian, || {
-            let mut page = page_with(2, 1);
-            page.refresh_texts();
-            assert_eq!(page.count_text, "2 tersisa \u{b7} 1 selesai");
-            let mut open_only = page_with(3, 0);
-            open_only.refresh_texts();
-            assert_eq!(open_only.count_text, "3 tersisa");
-        });
     }
 }

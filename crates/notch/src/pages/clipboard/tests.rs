@@ -3,7 +3,7 @@ use std::time::Instant;
 use super::item::Content;
 
 use super::{
-    sample::{COPIED, EMPTY, IMAGE_SELECTED, PASTED, REMOVED, SKIPPED, TEXT_SELECTED},
+    sample::{COPIED, EMPTY, IMAGE_SELECTED, PASTED, PINNED, PINNED_FULL, REMOVED, SKIPPED, TEXT_SELECTED},
     *,
 };
 use crate::{
@@ -151,4 +151,34 @@ fn only_the_removed_bar_makes_its_right_end_an_undo_button() {
     let on_undo = Point::new(layout.bar().right - 10.0, layout.bar().center_y());
     assert_eq!(ClipboardPage::sample(REMOVED).target_at(on_undo, &frame), Some(Target::Undo));
     assert_eq!(ClipboardPage::sample(SKIPPED).target_at(on_undo, &frame), None);
+}
+
+#[test]
+fn the_pinned_sample_lists_its_pins_first_and_offers_a_pin_on_the_hovered_row() {
+    let page = ClipboardPage::sample(PINNED);
+    let frame = frame();
+    let layout = ClipboardPage::layout(&frame);
+    assert!(page.history.is_pinned(0) && page.history.is_pinned(1) && !page.history.is_pinned(2));
+    let pin_of = |row: usize| Point::new(layout.pin_area(row).center_x(), layout.pin_area(row).center_y());
+    assert_eq!(page.target_at(pin_of(4), &frame), Some(Target::Pin(4)));
+    assert_eq!(page.target_at(pin_of(0), &frame), Some(Target::Pin(0)));
+}
+
+#[test]
+fn with_three_pins_only_the_pinned_rows_answer_on_their_pin() {
+    let page = ClipboardPage::sample(PINNED_FULL);
+    let frame = frame();
+    let layout = ClipboardPage::layout(&frame);
+    let pin_of = |row: usize| Point::new(layout.pin_area(row).center_x(), layout.pin_area(row).center_y());
+    assert_eq!(page.target_at(pin_of(2), &frame), Some(Target::Pin(2)));
+    assert_eq!(page.target_at(pin_of(4), &frame), Some(Target::Row(4)));
+}
+
+#[test]
+fn right_click_on_a_pin_removes_the_row_like_anywhere_else_on_it() {
+    let page = ClipboardPage::sample(PINNED);
+    let frame = frame();
+    let layout = ClipboardPage::layout(&frame);
+    let on_pin = Point::new(layout.pin_area(0).center_x(), layout.pin_area(0).center_y());
+    assert!(page.uses_right_click(on_pin, &frame));
 }

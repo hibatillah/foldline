@@ -1,8 +1,8 @@
 use super::{
     TodoPage, TodoTarget,
     layout::{
-        BUTTON_HEIGHT, CHECK_SIZE, ROW_PADDING, Row, TEXT_LEFT, add_button, check_rect, clear_button, delete_rect,
-        empty_area,
+        BUTTON_HEIGHT, CHECK_SIZE, DELETE_INSET, ROW_PADDING, Row, TEXT_LEFT, add_button, check_rect, clear_button,
+        copy_rect, delete_rect, empty_area, undo_button,
     },
 };
 use crate::i18n::tr;
@@ -13,7 +13,7 @@ use crate::ui::palette::{
 use crate::ui::type_styles::{MEDIUM_12, MEDIUM_13, REGULAR_12, REGULAR_13, REGULAR_14};
 use crate::{
     gfx::{Align, Canvas, Color, FontStyle, Point, Rect, UI_FONT, Weight},
-    ui::{FieldLook, Stroke, draw_strokes},
+    ui::{FieldLook, Icon, Stroke, draw_strokes},
 };
 
 const ROW_RADIUS: f32 = 10.0;
@@ -28,6 +28,8 @@ const BUTTON_CONTENT_GAP: f32 = 5.0;
 const MESSAGE_ICON_SIZE: f32 = 18.0;
 const MESSAGE_ICON_GAP: f32 = 8.0;
 const MESSAGE_HEIGHT: f32 = 18.0;
+/// The copy icon in its 22 unit button, a little larger than the 10 unit cross so both read as the same weight.
+const COPY_ICON_SIZE: f32 = 12.0;
 
 const TITLE: FontStyle = FontStyle::new(UI_FONT, 20.0, Weight::Medium, Align::Leading);
 const PLUS: FontStyle = FontStyle::new(UI_FONT, 15.0, Weight::Regular, Align::Center);
@@ -52,18 +54,14 @@ impl TodoPage {
             Rect::new(count_left, count_middle - COUNT_HEIGHT / 2.0, bounds.right, count_middle + COUNT_HEIGHT / 2.0);
         canvas.text(&REGULAR_12, &self.count_text, count_area, TEXT_MUTED.faded(opacity));
         if !self.list.is_empty() {
-            self.draw_clear_button(canvas, clear_button(bounds), opacity);
+            let is_hovered = self.hover.is(TodoTarget::ClearAll);
+            draw_secondary_pill(canvas, clear_button(bounds), &tr!("todo.clear_all"), is_hovered, opacity);
+        }
+        if self.list.can_undo() {
+            let is_hovered = self.hover.is(TodoTarget::Undo);
+            draw_secondary_pill(canvas, undo_button(bounds), &tr!("todo.undo"), is_hovered, opacity);
         }
         self.draw_add_button(canvas, add_button(bounds), opacity);
-    }
-
-    fn draw_clear_button(&self, canvas: &Canvas, area: Rect, opacity: f32) {
-        let radius = BUTTON_HEIGHT / 2.0;
-        let fill = if self.hover.is(TodoTarget::ClearAll) { SURFACE_BORDER } else { SURFACE_HOVER };
-        canvas.fill_rounded_rect(area, radius, SURFACE_BUTTON_BORDER.faded(opacity));
-        let inner = Rect::new(area.left + 1.0, area.top + 1.0, area.right - 1.0, area.bottom - 1.0);
-        canvas.fill_rounded_rect(inner, radius - 1.0, fill.faded(opacity));
-        canvas.text(&CLEAR_LABEL, &tr!("todo.clear_all"), area, TEXT_LIGHT.faded(opacity));
     }
 
     fn draw_add_button(&self, canvas: &Canvas, area: Rect, opacity: f32) {
@@ -97,8 +95,9 @@ impl TodoPage {
     }
 
     pub(super) fn draw_row(&self, canvas: &Canvas, row: Row, rect: Rect, position: usize, opacity: f32) {
-        let text_area = Rect { left: rect.left + TEXT_LEFT, right: rect.right - 36.0, ..rect };
         let is_hovered = self.hover.is(TodoTarget::Row(position));
+        let text_right = if is_hovered { copy_rect(rect).left - DELETE_INSET } else { rect.right - 36.0 };
+        let text_area = Rect { left: rect.left + TEXT_LEFT, right: text_right, ..rect };
         let fill = if is_hovered { SURFACE_HOVER } else { SURFACE_ROW };
         match row {
             Row::Field => {
@@ -139,6 +138,10 @@ impl TodoPage {
                     canvas.fill_rounded_rect(line, 0.5, TEXT_DIM.faded(opacity));
                 }
                 if is_hovered {
+                    let copy = copy_rect(rect);
+                    canvas.fill_rounded_rect(copy, copy.height() / 2.0, REMOVE_BUTTON_FILL.faded(opacity));
+                    let center = Point::new(copy.center_x(), copy.center_y());
+                    Icon::Copy.draw(canvas, center, COPY_ICON_SIZE, LIGHT_GRAY, opacity);
                     let delete = delete_rect(rect);
                     canvas.fill_rounded_rect(delete, delete.height() / 2.0, REMOVE_BUTTON_FILL.faded(opacity));
                     let center = Point::new(delete.center_x(), delete.center_y());
@@ -150,9 +153,19 @@ impl TodoPage {
     }
 }
 
+/// Clear all and Undo: a bordered dark pill with its label centered, lighter while hovered.
+fn draw_secondary_pill(canvas: &Canvas, area: Rect, label: &str, is_hovered: bool, opacity: f32) {
+    let radius = BUTTON_HEIGHT / 2.0;
+    let fill = if is_hovered { SURFACE_BORDER } else { SURFACE_HOVER };
+    canvas.fill_rounded_rect(area, radius, SURFACE_BUTTON_BORDER.faded(opacity));
+    let inner = Rect::new(area.left + 1.0, area.top + 1.0, area.right - 1.0, area.bottom - 1.0);
+    canvas.fill_rounded_rect(inner, radius - 1.0, fill.faded(opacity));
+    canvas.text(&CLEAR_LABEL, label, area, TEXT_LIGHT.faded(opacity));
+}
+
 #[cfg(test)]
 mod tests {
-    use super::super::layout::{ADD_WIDTH, CLEAR_WIDTH};
+    use super::super::layout::{ADD_WIDTH, CLEAR_WIDTH, UNDO_WIDTH};
     use super::*;
     use crate::gfx::Fonts;
     use crate::pages::todo::list::{Item, TodoList};
@@ -185,12 +198,14 @@ mod tests {
     const SIDE: f32 = 6.0;
 
     #[test]
-    fn the_clear_all_and_add_buttons_fit_their_pills_in_both_languages() {
+    fn the_clear_all_undo_and_add_buttons_fit_their_pills_in_both_languages() {
         let fonts = Fonts::new(1.0).unwrap();
         for language in [store::language::Language::English, store::language::Language::Indonesian] {
             store::language::with_override(language, || {
                 let clear = fonts.measure(&CLEAR_LABEL, &tr!("todo.clear_all"));
                 assert!(clear <= CLEAR_WIDTH - 2.0 * SIDE, "{language:?}: Clear all is {clear} px in {CLEAR_WIDTH}");
+                let undo = fonts.measure(&CLEAR_LABEL, &tr!("todo.undo"));
+                assert!(undo <= UNDO_WIDTH - 2.0 * SIDE, "{language:?}: Undo is {undo} px in {UNDO_WIDTH}");
                 let add =
                     fonts.measure(&REGULAR_14, "+") + BUTTON_CONTENT_GAP + fonts.measure(&MEDIUM_12, &tr!("todo.add"));
                 assert!(add <= ADD_WIDTH - 2.0 * SIDE, "{language:?}: Add is {add} px in {ADD_WIDTH}");

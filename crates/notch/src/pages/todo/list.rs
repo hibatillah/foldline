@@ -1,4 +1,5 @@
 //! The todo list and its file, `%APPDATA%\notch\todo.txt`, one markdown checkbox per line so it reads in any editor.
+//! The last removal (one task or a clear) is held in memory for undo; the file never holds removed tasks.
 
 use std::{fs, io::ErrorKind, path::PathBuf};
 
@@ -18,6 +19,8 @@ pub struct TodoList {
     /// In file order: the order items were added.
     items: Vec<Item>,
     path: Option<PathBuf>,
+    /// The tasks the last removal took, with their places in `items`, in ascending order.
+    removed: Vec<(usize, Item)>,
 }
 
 impl TodoList {
@@ -35,12 +38,12 @@ impl TodoList {
             }
             _ => Vec::new(),
         };
-        Self { items, path }
+        Self { items, path, removed: Vec::new() }
     }
 
     #[cfg(test)]
     pub fn with_items(items: Vec<Item>) -> Self {
-        Self { items, path: None }
+        Self { items, path: None, removed: Vec::new() }
     }
 
     #[cfg(test)]
@@ -89,19 +92,41 @@ impl TodoList {
         }
     }
 
+    /// Removes the task and keeps it for `undo`, replacing what an earlier removal kept.
     pub fn remove(&mut self, index: usize) {
         if index < self.items.len() {
-            self.items.remove(index);
+            self.removed = vec![(index, self.items.remove(index))];
             self.save();
         }
     }
 
-    /// Removes every task, done or not.
+    /// Removes every task, done or not, and keeps them all for `undo`.
     pub fn clear(&mut self) {
         if !self.items.is_empty() {
-            self.items.clear();
+            self.removed = std::mem::take(&mut self.items).into_iter().enumerate().collect();
             self.save();
         }
+    }
+
+    pub fn can_undo(&self) -> bool {
+        !self.removed.is_empty()
+    }
+
+    /// Puts the tasks the last removal took back at their places (or at the end when the list got shorter) and saves.
+    pub fn undo(&mut self) -> bool {
+        if self.removed.is_empty() {
+            return false;
+        }
+        for (index, item) in std::mem::take(&mut self.removed) {
+            let index = index.min(self.items.len());
+            self.items.insert(index, item);
+        }
+        self.save();
+        true
+    }
+
+    pub fn forget_removed(&mut self) {
+        self.removed.clear();
     }
 
     fn save(&self) {
@@ -199,6 +224,66 @@ mod tests {
         assert!(list.is_empty());
         list.clear();
         assert_eq!((list.open_count(), list.done_count()), (0, 0));
+    }
+
+    fn texts(list: &TodoList) -> Vec<&str> {
+        (0..list.len()).filter_map(|index| list.item(index)).map(|item| item.text.as_str()).collect()
+    }
+
+    #[test]
+    fn undo_puts_a_removed_task_back_in_its_place_with_its_tick() {
+        let mut list = TodoList::with_items(vec![item("a", false), item("b", true), item("c", false)]);
+        list.remove(1);
+        assert!(list.can_undo());
+        assert!(list.undo());
+        assert_eq!(list.item(1), Some(&item("b", true)));
+        assert_eq!(texts(&list), ["a", "b", "c"]);
+        assert!(!list.can_undo());
+        assert!(!list.undo());
+    }
+
+    #[test]
+    fn undo_after_clearing_brings_every_task_back_in_order() {
+        let mut list = TodoList::with_items(vec![item("a", false), item("b", true), item("c", false)]);
+        list.clear();
+        assert!(list.is_empty());
+        list.add("d");
+        assert!(list.undo());
+        assert_eq!(texts(&list), ["a", "b", "c", "d"]);
+        assert_eq!(list.done_count(), 1);
+    }
+
+    #[test]
+    fn a_second_removal_replaces_what_the_first_could_undo() {
+        let mut list = TodoList::with_items(vec![item("a", false), item("b", false), item("c", false)]);
+        list.remove(0);
+        list.remove(1);
+        assert!(list.undo());
+        assert_eq!(texts(&list), ["b", "c"]);
+        list.clear();
+        list.forget_removed();
+        assert!(!list.undo());
+        assert!(list.is_empty());
+    }
+
+    #[test]
+    fn a_removed_task_stays_off_the_file_until_it_is_undone() {
+        let path = std::env::temp_dir().join(format!("notch-todo-undo-{}.txt", std::process::id()));
+        let _ = fs::remove_file(&path);
+        let mut list = TodoList::at(Some(path.clone()));
+        list.add("keep");
+        list.add("gone for now");
+        list.remove(1);
+        let after_remove = TodoList::at(Some(path.clone()));
+        list.undo();
+        let after_undo = TodoList::at(Some(path.clone()));
+        list.clear();
+        let after_clear = TodoList::at(Some(path.clone()));
+        let _ = fs::remove_file(&path);
+        assert_eq!(texts(&after_remove), ["keep"]);
+        assert_eq!(texts(&after_undo), ["keep", "gone for now"]);
+        assert!(after_clear.is_empty());
+        assert!(!after_clear.can_undo(), "the undo lives in memory only");
     }
 
     #[test]

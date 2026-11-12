@@ -52,6 +52,11 @@ pub trait Activity {
         false
     }
 
+    /// Whether its presence shows over a window that hides the notch, while the notch replaces Windows' volume flyout.
+    fn is_priority(&self) -> bool {
+        false
+    }
+
     /// What this activity shows right now; `None` means nothing. Asked again after every event.
     fn presence(&self) -> Option<Presence>;
 

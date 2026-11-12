@@ -22,6 +22,10 @@ pub enum KeyInput {
     Text(String),
     Backspace,
     Delete,
+    /// Ctrl+Backspace: the word before the caret.
+    BackspaceWord,
+    /// Ctrl+Delete: the word after the caret.
+    DeleteWord,
     Left,
     Right,
     Home,

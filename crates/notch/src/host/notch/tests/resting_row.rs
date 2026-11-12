@@ -67,7 +67,7 @@ fn the_clock_glides_to_the_left_edge_when_the_first_item_appears_and_back_when_t
 }
 
 #[test]
-fn a_dot_appearing_slides_the_ring_left_by_the_dot_and_a_gap_instead_of_jumping() {
+fn a_dot_appearing_slides_the_ring_left_by_the_dot_and_the_4_between_them_instead_of_jumping() {
     let (ring, _) = Mark::showing(Some(RING));
     let (dot, shared) = Mark::showing(None);
     let mut notch = marked_rig(SampleOptions::default(), vec![ring, dot]);
@@ -81,7 +81,31 @@ fn a_dot_appearing_slides_the_ring_left_by_the_dot_and_a_gap_instead_of_jumping(
     notch.advance_by(1.0 / 30.0);
     assert!(resting_inset(&notch, ring).unwrap() > before, "the ring is sliding left");
     settle(&mut notch);
-    assert_eq!(resting_inset(&notch, ring), Some(before + 6.0 + pill_row::ITEM_GAP));
+    assert_eq!(resting_inset(&notch, ring), Some(before + 6.0 + pill_row::RING_DOTS_GAP));
+}
+
+#[test]
+fn the_dot_sits_4_after_the_battery_ring_in_the_idle_row() {
+    let (ring, _) = Mark::showing(Some(RING));
+    let (dot, _) = Mark::showing(Some(DOT));
+    let notch = marked_rig(SampleOptions::default(), vec![ring, dot]);
+    let (_, gaps) = notch.resting_row.spacing(&notch.idle_items(), pill_row::ITEM_GAP);
+    assert_eq!(gaps, [pill_row::RING_DOTS_GAP]);
+    let ring = RowItem::Source(Source::Activity(0));
+    let expected = pill_row::PILL_EDGE + 6.0 + pill_row::RING_DOTS_GAP + 14.0;
+    assert_eq!(resting_inset(&notch, ring), Some(expected));
+}
+
+#[test]
+fn a_dot_after_a_badge_without_a_battery_ring_keeps_the_8_gap() {
+    let (muted, _) = badge(2, 16.0);
+    let (dot, _) = Mark::showing(Some(DOT));
+    let notch = marked_rig(SampleOptions::default(), vec![muted, dot]);
+    let (_, gaps) = notch.resting_row.spacing(&notch.idle_items(), pill_row::ITEM_GAP);
+    assert_eq!(gaps, [pill_row::ITEM_GAP]);
+    let muted = RowItem::Source(Source::Activity(0));
+    let expected = pill_row::PILL_EDGE + 6.0 + pill_row::ITEM_GAP + 16.0;
+    assert_eq!(resting_inset(&notch, muted), Some(expected));
 }
 
 #[test]
@@ -195,17 +219,23 @@ fn the_lyric_pill_shows_the_countdown_as_its_icon_alone() {
 }
 
 #[test]
-fn a_dot_in_the_lyric_pill_sits_10_after_the_artwork() {
+fn a_dot_in_the_lyric_pill_sits_at_the_far_right_as_in_the_idle_row() {
     let (notch, _) = lyric_rig(Some(DOT));
-    let width = notch.springs.resting_width.target;
-    let dots_left = pill_row::PILL_EDGE + 20.0 + claimed_row::LEAD_DOTS_GAP;
-    assert_eq!(resting_inset(&notch, RowItem::Dots), Some(width - dots_left));
+    assert_eq!(resting_inset(&notch, RowItem::Dots), Some(pill_row::PILL_EDGE + 6.0));
 }
 
 #[test]
-fn a_dot_in_the_lyric_pill_leaves_the_line_24_after_the_dot() {
+fn a_dot_in_the_lyric_pill_sits_8_after_the_countdown() {
     let (notch, _) = lyric_rig(Some(DOT));
-    assert_eq!(notch.resting_row.claim.lead_gap(), claimed_row::LEAD_DOTS_GAP + 6.0 + claimed_row::CONTENT_GAP);
+    let &(countdown, width) = notch.resting_row.claimed_group.last().unwrap();
+    let expected = pill_row::PILL_EDGE + 6.0 + pill_row::ITEM_GAP + width;
+    assert_eq!(resting_inset(&notch, RowItem::Source(countdown)), Some(expected));
+}
+
+#[test]
+fn a_dot_in_the_lyric_pill_leaves_the_line_24_after_the_artwork() {
+    let (notch, _) = lyric_rig(Some(DOT));
+    assert_eq!(notch.resting_row.claim.lead_gap(), claimed_row::CONTENT_GAP);
     assert_eq!(notch.resting_row.claim.left_inset(), pill_row::PILL_EDGE);
 }
 
@@ -219,18 +249,18 @@ fn without_a_dot_the_lyric_pill_reserves_no_dot_column() {
 }
 
 #[test]
-fn a_dot_appearing_in_the_lyric_pill_widens_it_and_slides_the_line_while_the_group_keeps_the_right_end() {
+fn a_dot_appearing_in_the_lyric_pill_widens_it_and_slides_the_group_left_while_the_line_keeps_its_place() {
     let (mut notch, shared) = lyric_rig(None);
     let &(countdown, _) = notch.resting_row.claimed_group.last().unwrap();
     let countdown = RowItem::Source(countdown);
     let (before_inset, before_width) = (resting_inset(&notch, countdown).unwrap(), notch.springs.resting_width.target);
-    let dot_room = claimed_row::LEAD_DOTS_GAP + 6.0;
+    let dot_room = pill_row::ITEM_GAP + 6.0;
     shared.set(Some(DOT));
     notch.refresh_layout();
     assert_eq!(notch.springs.resting_width.target, before_width + dot_room);
-    assert_eq!(notch.springs.claim_lead_gap.position, claimed_row::CONTENT_GAP, "the line has not jumped");
+    assert_eq!(resting_inset(&notch, countdown), Some(before_inset), "the group has not jumped");
     assert!(notch.frame_timer.is_running);
     settle(&mut notch);
-    assert_eq!(notch.springs.claim_lead_gap.position, claimed_row::CONTENT_GAP + dot_room);
-    assert_eq!(resting_inset(&notch, countdown), Some(before_inset), "the group stays at the right end");
+    assert_eq!(resting_inset(&notch, countdown), Some(before_inset + dot_room), "the dot takes the right end");
+    assert_eq!(notch.springs.claim_lead_gap.position, claimed_row::CONTENT_GAP, "the line stays after the artwork");
 }

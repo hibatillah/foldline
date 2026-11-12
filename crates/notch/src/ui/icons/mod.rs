@@ -41,6 +41,7 @@ pub enum Icon {
     Gamepad,
     Pen,
     CircleCheck,
+    Pin,
 }
 
 impl Icon {

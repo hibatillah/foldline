@@ -41,7 +41,8 @@ pub struct SampleOptions {
     /// The shelf holds six files (`0`), none (`1`), seven (`2`) or twelve (`3`).
     pub shelf: u8,
     /// The todo page shows its sample list (`0`), the empty page (`1`), the empty page being added to (`2`), five tasks
-    /// (`3`), four tasks and the input (`4`) or a list with done tasks (`5`).
+    /// (`3`), four tasks and the input (`4`), a list with done tasks (`5`) or a task just deleted with Undo and a hovered
+    /// row (`6`) or the list just cleared with Undo (`7`).
     pub todo: u8,
     /// The shalat page shows its collapsed mark (`1`) or its prayer-time message (`2`); `0` shows neither.
     /// `3` is the open page under ten minutes before Asr and `4` the open page after Isha.
@@ -50,7 +51,8 @@ pub struct SampleOptions {
     pub weather: u8,
     /// The devices page shows scenario `n` of the design (see `devices/sample.rs`); `0` is five devices.
     pub devices: u8,
-    /// The clipboard page shows scenario `n` of the design (see `clipboard/sample.rs`); `0` is the text selected.
+    /// The clipboard page shows scenario `n` of the design (see `clipboard/sample.rs`); `0` is the text selected, `7` two
+    /// pins and a hovered row, `8` three pins.
     pub clipboard: u8,
 }
 

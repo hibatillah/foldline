@@ -11,12 +11,13 @@ use super::{
 use crate::i18n::tr;
 use crate::{
     gfx::{Canvas, Color, FontStyle, ImageData, Point, Rect},
-    ui::{Stroke, draw_strokes},
+    ui::{Icon, Stroke, draw_strokes},
 };
 
 const ROW_RADIUS: f32 = 8.0;
 const ROW_PADDING: f32 = 8.0;
 const ROW_ICON_SIZE: f32 = 14.0;
+const PIN_ICON_SIZE: f32 = 13.0;
 const ROW_BADGE_SIZE: f32 = 15.0;
 const ROW_GAP: f32 = 7.0;
 const PANEL_PADDING_X: f32 = 10.0;
@@ -87,10 +88,19 @@ impl ClipboardPage {
             let selected = self.history.selected_index();
             for (index, item) in self.history.items().iter().enumerate() {
                 let is_selected = index == selected;
+                let is_pin_hovered = self.hover.is(Target::Pin(index));
+                let is_hovered = self.hover.is(Target::Row(index)) || is_pin_hovered;
+                let pin = match (self.history.is_pinned(index), is_hovered && self.history.has_pin_button(index)) {
+                    (true, _) => Some(PINNED),
+                    (false, true) if is_pin_hovered => Some(PIN_OFFERED_HOVER),
+                    (false, true) => Some(PIN_OFFERED),
+                    (false, false) => None,
+                };
                 let row = Row {
                     is_selected,
-                    is_hovered: self.hover.is(Target::Row(index)),
+                    is_hovered,
                     confirm: if is_selected { self.confirm } else { None },
+                    pin: pin.map(|color| (layout.pin_area(index), color)),
                 };
                 draw_row(canvas, layout.row(index), item, row, opacity);
             }
@@ -204,6 +214,8 @@ struct Row {
     is_selected: bool,
     is_hovered: bool,
     confirm: Option<Confirm>,
+    /// The pin button's area and icon color, when the row shows one.
+    pin: Option<(Rect, Color)>,
 }
 
 fn draw_row(canvas: &Canvas, rect: Rect, item: &Item, row: Row, opacity: f32) {
@@ -216,7 +228,13 @@ fn draw_row(canvas: &Canvas, rect: Rect, item: &Item, row: Row, opacity: f32) {
     bordered(canvas, rect, ROW_RADIUS, fill, border, opacity);
     let leading = rect.left + ROW_PADDING;
     let middle = rect.center_y();
-    let text_right = rect.right - ROW_PADDING;
+    let text_right = match row.pin {
+        Some((area, color)) => {
+            Icon::Pin.draw(canvas, Point::new(area.center_x(), area.center_y()), PIN_ICON_SIZE, color, opacity);
+            area.left
+        }
+        None => rect.right - ROW_PADDING,
+    };
     if let Some(confirm) = row.confirm {
         let center = Point::new(leading + ROW_ICON_SIZE / 2.0, middle);
         stroke_icon(canvas, CHECK_ICON, center, ROW_ICON_SIZE, 1.8, GREEN, opacity);

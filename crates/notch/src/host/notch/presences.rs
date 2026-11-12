@@ -14,6 +14,8 @@ pub(super) struct ShownPresences {
     /// The banner's owner, width and height.
     pub(super) banner: Option<(Source, f32, f32)>,
     pub(super) badges: Vec<(Source, f32)>,
+    /// Whether a priority activity (`Activity::is_priority`) shows anything, which can override the hiding word.
+    pub(super) has_priority: bool,
 }
 
 impl Notch {
@@ -29,6 +31,9 @@ impl Notch {
             .enumerate()
             .filter(|(_, slot)| slot.is_enabled && slot.is_started)
             .map(|(index, slot)| (Source::Activity(index), slot.activity.presence()));
+        let has_priority = self.activities.iter().any(|slot| {
+            slot.is_enabled && slot.is_started && slot.activity.is_priority() && slot.activity.presence().is_some()
+        });
         let page_presences = self
             .pages
             .iter()
@@ -81,7 +86,8 @@ impl Notch {
             || before != self.resting_row.ring
             || after != self.resting_row.dots
             || claimed != self.resting_row.claimed_group
-            || uses_short_badges != self.resting_row.uses_short_badges;
+            || uses_short_badges != self.resting_row.uses_short_badges
+            || has_priority != self.presences.has_priority;
         if shown != self.presences.transients || badges != self.presences.badges || banner != self.presences.banner {
             let ids = |sources: &[(Source, f32)]| sources.iter().map(|&(source, _)| self.source_id(source)).collect();
             let (transient_ids, badge_ids): (Vec<_>, Vec<_>) = (ids(&shown), ids(&badges));
@@ -95,6 +101,7 @@ impl Notch {
         self.presences.banner = banner;
         self.presences.transients = shown;
         self.presences.badges = badges;
+        self.presences.has_priority = has_priority;
         changed
     }
 

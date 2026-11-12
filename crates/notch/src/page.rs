@@ -66,7 +66,7 @@ pub struct Frame {
     pub expansion: f32,
     /// The content size in device-independent pixels; visible pages retain their own width during navigation.
     pub expanded: Size,
-    /// Width in DIP the host keeps free after `Page::resting_lead_width` while the page claims the pill (the dot column).
+    /// Width in DIP the host keeps free after `Page::resting_lead_width` while the page claims the pill.
     pub lead_gap: f32,
 }
 
@@ -170,7 +170,7 @@ pub trait Page {
         None
     }
 
-    /// Width in DIP of what the claimed pill draws at its left end; the host leaves the dot column after it.
+    /// Width in DIP of what the claimed pill draws at its left end; the host leaves `Frame::lead_gap` after it.
     fn resting_lead_width(&self) -> f32 {
         0.0
     }

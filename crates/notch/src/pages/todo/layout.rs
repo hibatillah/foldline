@@ -9,6 +9,8 @@ pub(super) const BUTTON_HEIGHT: f32 = 26.0;
 pub(super) const BUTTON_GAP: f32 = 8.0;
 pub(super) const ADD_WIDTH: f32 = 72.0;
 pub(super) const CLEAR_WIDTH: f32 = 80.0;
+/// Wide enough for "Urungkan" in the Clear all style.
+pub(super) const UNDO_WIDTH: f32 = 80.0;
 pub(super) const ROW_HEIGHT: f32 = 32.0;
 pub(super) const ROW_GAP: f32 = 6.0;
 pub(super) const ROW_PADDING: f32 = 10.0;
@@ -16,6 +18,9 @@ pub(super) const CHECK_SIZE: f32 = 14.0;
 pub(super) const TEXT_LEFT: f32 = ROW_PADDING + CHECK_SIZE + 10.0;
 pub(super) const DELETE_SIZE: f32 = 22.0;
 pub(super) const DELETE_INSET: f32 = 6.0;
+/// Between the copy and delete buttons of a row, wider than the button gaps elsewhere so a press does not land on the
+/// wrong one.
+pub(super) const COPY_DELETE_GAP: f32 = 10.0;
 /// Rows the open notch shows at most; a longer list scrolls, with no bar and no hint of the rows beyond.
 pub(super) const VISIBLE_ROWS: usize = 5;
 /// One wheel notch scrolls one row.
@@ -80,6 +85,12 @@ pub(super) fn clear_button(bounds: Rect) -> Rect {
     button_rect(bounds, ADD_WIDTH + BUTTON_GAP, CLEAR_WIDTH)
 }
 
+/// The Undo pill, always left of Clear all's place, which stays empty while the list is, so a second press on Clear
+/// all never lands on Undo.
+pub(super) fn undo_button(bounds: Rect) -> Rect {
+    button_rect(bounds, ADD_WIDTH + BUTTON_GAP + CLEAR_WIDTH + BUTTON_GAP, UNDO_WIDTH)
+}
+
 pub(super) fn check_rect(row: Rect) -> Rect {
     let left = row.left + ROW_PADDING;
     let top = row.center_y() - CHECK_SIZE / 2.0;
@@ -90,6 +101,13 @@ pub(super) fn delete_rect(row: Rect) -> Rect {
     let right = row.right - DELETE_INSET;
     let top = row.center_y() - DELETE_SIZE / 2.0;
     Rect::new(right - DELETE_SIZE, top, right, top + DELETE_SIZE)
+}
+
+/// The copy button, left of the delete button with `COPY_DELETE_GAP` between them.
+pub(super) fn copy_rect(row: Rect) -> Rect {
+    let delete = delete_rect(row);
+    let right = delete.left - COPY_DELETE_GAP;
+    Rect { left: right - DELETE_SIZE, right, ..delete }
 }
 
 #[cfg(test)]
@@ -148,6 +166,25 @@ mod tests {
         assert_eq!(add.top, 1.0);
         assert_eq!(add.left - clear.right, BUTTON_GAP);
         assert!(clear.bottom <= row_rect(bounds, 0, 0.0).top);
+    }
+
+    #[test]
+    fn a_row_has_copy_then_delete_at_its_right_end_with_a_wider_gap_between_them() {
+        let row = row_rect(Rect::new(0.0, 0.0, CONTENT_WIDTH, 144.0), 0, 0.0);
+        let (copy, delete) = (copy_rect(row), delete_rect(row));
+        assert_eq!(delete.right, row.right - DELETE_INSET);
+        assert_eq!(delete.left - copy.right, 10.0);
+        assert_eq!((copy.width(), copy.height()), (delete.width(), delete.height()));
+        assert_eq!(copy.center_y(), row.center_y());
+        assert!(copy.left > check_rect(row).right, "the buttons stay clear of the ring");
+    }
+
+    #[test]
+    fn undo_sits_left_of_clear_all_and_never_overlaps_it() {
+        let bounds = Rect::new(0.0, 0.0, CONTENT_WIDTH, 144.0);
+        let undo = undo_button(bounds);
+        assert_eq!(clear_button(bounds).left - undo.right, BUTTON_GAP);
+        assert_eq!((undo.top, undo.height()), (add_button(bounds).top, BUTTON_HEIGHT));
     }
 
     #[test]

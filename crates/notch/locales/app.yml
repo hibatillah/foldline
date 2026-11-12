@@ -65,9 +65,6 @@ battery.low:
 clipboard.copied:
   en: "Copied"
   id: "Tersalin"
-volume.muted:
-  en: "Muted"
-  id: "Senyap"
 bluetooth.connected:
   en: "%{name} connected"
   id: "%{name} tersambung"
@@ -212,6 +209,9 @@ todo.clear_all:
 todo.add:
   en: "Add"
   id: "Tambah"
+todo.undo:
+  en: "Undo"
+  id: "Urungkan"
 todo.all_clear:
   en: "All clear"
   id: "Semua beres"

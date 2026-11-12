@@ -1,7 +1,8 @@
 //! Where the items of the idle pill's row and of the open header sit; all sizes in DIP.
 //!
 //! The group is one right-anchored run in the order the caller gives: badges by rank, the battery ring, the dot
-//! column. A new item joins between the clock and the items already there, so nothing right of it moves.
+//! column. A new item joins between the clock and the items already there, so nothing right of it moves. Items sit
+//! one gap apart, except `RING_DOTS_GAP` between the battery ring and the dot column.
 
 /// The least room between the idle clock and the group.
 pub(super) const GAP: f32 = 24.0;
@@ -12,18 +13,60 @@ pub(super) const PILL_EDGE: f32 = 12.0;
 pub(super) const EMPTY_SIDE: f32 = 28.0;
 /// Between two items of the open header's group, and between the group and the gear.
 pub(super) const HEADER_ITEM_GAP: f32 = 10.0;
+/// Between the battery ring and the dot column right after it, in the idle row and the open header alike.
+pub(super) const RING_DOTS_GAP: f32 = 4.0;
 /// The least room between the header clock and the nearest icon; icons nearer than this are dropped.
 pub(super) const HEADER_CLOCK_GAP: f32 = 40.0;
 /// The least room between the page dots and the header clock.
 pub(super) const PAGE_DOTS_CLOCK_GAP: f32 = 40.0;
-pub(super) const GEAR_SIZE: f32 = 14.0;
-/// Edge of the square a click on a header icon lands in; neighbours 10 apart never overlap it.
+/// The gear's hexagon fills less of its square than the battery ring does, so 18 shows it about as wide as the
+/// ring's 14.
+pub(super) const GEAR_SIZE: f32 = 18.0;
+/// Edge of the square a click on a header icon lands in; where neighbours' squares overlap, the nearer item wins.
 pub(super) const HIT_SIZE: f32 = 24.0;
+
+/// The room between two neighbours of a row whose items otherwise sit `item_gap` apart.
+pub(super) fn gap_between(after_ring: bool, before_dots: bool, item_gap: f32) -> f32 {
+    if after_ring && before_dots { RING_DOTS_GAP } else { item_gap }
+}
+
+/// Items left to right and the room after each one but the last: `gaps[i]` sits between item `i` and item `i + 1`.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct Run<'a> {
+    pub widths: &'a [f32],
+    pub gaps: &'a [f32],
+}
+
+impl<'a> Run<'a> {
+    pub(super) fn width(self) -> f32 {
+        debug_assert_eq!(self.gaps.len(), self.widths.len().saturating_sub(1), "one gap between each pair");
+        self.widths.iter().sum::<f32>() + self.gaps.iter().sum::<f32>()
+    }
+
+    /// The run without its first `count` items and the gaps after them.
+    fn without_first(self, count: usize) -> Run<'a> {
+        Run { widths: &self.widths[count..], gaps: &self.gaps[count.min(self.gaps.len())..] }
+    }
+
+    /// Left edges of the items when the last one ends at `right`.
+    pub(super) fn lefts_ending_at(self, right: f32) -> Vec<f32> {
+        let mut x = right - self.width();
+        self.widths
+            .iter()
+            .enumerate()
+            .map(|(index, &width)| {
+                let left = x;
+                x += width + self.gaps.get(index).copied().unwrap_or(0.0);
+                left
+            })
+            .collect()
+    }
+}
 
 pub(super) struct RowInput<'a> {
     pub clock_width: f32,
     /// Left to right: badges lowest rank first, then the battery ring, then the dot column.
-    pub group_widths: &'a [f32],
+    pub group: Run<'a>,
     pub minimum_width: f32,
 }
 
@@ -32,36 +75,19 @@ pub(super) struct RowInput<'a> {
 pub(super) struct Row {
     pub width: f32,
     pub clock_left: f32,
-    /// In the order of `RowInput::group_widths`.
+    /// In the order of `RowInput::group`.
     pub group_lefts: Vec<f32>,
-}
-
-fn run_width(widths: &[f32], gap: f32) -> f32 {
-    widths.iter().sum::<f32>() + widths.len().saturating_sub(1) as f32 * gap
-}
-
-/// Left edges of a run of `widths`, `gap` apart, whose last item ends at `right`.
-fn lefts_ending_at(right: f32, widths: &[f32], gap: f32) -> Vec<f32> {
-    let mut x = right - run_width(widths, gap);
-    widths
-        .iter()
-        .map(|&width| {
-            let left = x;
-            x += width + gap;
-            left
-        })
-        .collect()
 }
 
 /// The idle row. With a group: the clock at the left edge and the group right-anchored, in a pill of at least
 /// `minimum_width`. Without one: the clock in the middle of a pill that hugs it with `EMPTY_SIDE` on each side.
 pub(super) fn idle_row(input: &RowInput) -> Row {
-    if input.group_widths.is_empty() {
+    if input.group.widths.is_empty() {
         return Row { width: input.clock_width + 2.0 * EMPTY_SIDE, clock_left: EMPTY_SIDE, group_lefts: Vec::new() };
     }
-    let content = input.clock_width + GAP + run_width(input.group_widths, ITEM_GAP);
+    let content = input.clock_width + GAP + input.group.width();
     let width = input.minimum_width.max(content + 2.0 * PILL_EDGE);
-    Row { width, clock_left: PILL_EDGE, group_lefts: lefts_ending_at(width - PILL_EDGE, input.group_widths, ITEM_GAP) }
+    Row { width, clock_left: PILL_EDGE, group_lefts: input.group.lefts_ending_at(width - PILL_EDGE) }
 }
 
 pub(super) struct HeaderInput<'a> {
@@ -69,10 +95,11 @@ pub(super) struct HeaderInput<'a> {
     pub left: f32,
     pub right: f32,
     pub clock_width: f32,
-    /// The ranked icons, lowest rank (nearest the clock) first; the first ones are dropped when room runs out.
-    pub icon_widths: &'a [f32],
-    /// The battery ring and the dot column after the icons; never dropped, `header_content_width` keeps room for them.
-    pub end_widths: &'a [f32],
+    /// The ranked icons, lowest rank (nearest the clock) first, then the battery ring and the dot column.
+    pub group: Run<'a>,
+    /// How many items at the start of `group` are icons, which are dropped first-to-last when room runs out; the
+    /// ring and the dots after them are never dropped, `header_content_width` keeps room for them.
+    pub icon_count: usize,
 }
 
 /// Positions in the coordinates of the edges it was given.
@@ -95,10 +122,9 @@ pub(super) fn header_row(input: &HeaderInput) -> HeaderRow {
     let nearest_allowed = clock_center + input.clock_width / 2.0 + HEADER_CLOCK_GAP;
     let mut dropped_icons = 0;
     loop {
-        let shown: Vec<f32> = input.icon_widths[dropped_icons..].iter().chain(input.end_widths).copied().collect();
-        let group_lefts = lefts_ending_at(gear_left - HEADER_ITEM_GAP, &shown, HEADER_ITEM_GAP);
+        let group_lefts = input.group.without_first(dropped_icons).lefts_ending_at(gear_left - HEADER_ITEM_GAP);
         let fits = group_lefts.first().is_none_or(|&left| left >= nearest_allowed - 0.001);
-        if fits || dropped_icons == input.icon_widths.len() {
+        if fits || dropped_icons == input.icon_count {
             return HeaderRow { clock_center, dropped_icons, group_lefts, gear_left };
         }
         dropped_icons += 1;
@@ -107,9 +133,9 @@ pub(super) fn header_row(input: &HeaderInput) -> HeaderRow {
 
 /// The least width the header's content needs with the clock in the middle: the page dots and their gap on one
 /// side, the end items (battery ring, dot column) and the gear on the other, whichever is wider, on both sides.
-pub(super) fn header_content_width(page_dots_width: f32, clock_width: f32, end_widths: &[f32]) -> f32 {
+pub(super) fn header_content_width(page_dots_width: f32, clock_width: f32, end: Run) -> f32 {
     let page_dots_room = if page_dots_width > 0.0 { page_dots_width + PAGE_DOTS_CLOCK_GAP } else { 0.0 };
-    let end_run = if end_widths.is_empty() { 0.0 } else { run_width(end_widths, HEADER_ITEM_GAP) + HEADER_ITEM_GAP };
+    let end_run = if end.widths.is_empty() { 0.0 } else { end.width() + HEADER_ITEM_GAP };
     let end_room = HEADER_CLOCK_GAP + end_run + GEAR_SIZE;
     clock_width + 2.0 * page_dots_room.max(end_room)
 }
@@ -137,8 +163,29 @@ mod tests {
     const RING: f32 = 14.0;
     const DOTS: f32 = 6.0;
 
-    fn row(group_widths: &[f32]) -> Row {
-        idle_row(&RowInput { clock_width: CLOCK, group_widths, minimum_width: 150.0 })
+    /// The gaps of a run where an item `RING` wide is the battery ring and one `DOTS` wide is the dot column.
+    fn gaps_of(widths: &[f32], item_gap: f32) -> Vec<f32> {
+        widths.windows(2).map(|pair| gap_between(pair[0] == RING, pair[1] == DOTS, item_gap)).collect()
+    }
+
+    fn row(widths: &[f32]) -> Row {
+        let gaps = gaps_of(widths, ITEM_GAP);
+        idle_row(&RowInput { clock_width: CLOCK, group: Run { widths, gaps: &gaps }, minimum_width: 150.0 })
+    }
+
+    #[test]
+    fn only_the_battery_ring_directly_before_the_dots_narrows_their_gap_to_4() {
+        assert_eq!(gap_between(true, true, ITEM_GAP), RING_DOTS_GAP);
+        assert_eq!(gap_between(true, true, HEADER_ITEM_GAP), RING_DOTS_GAP);
+        assert_eq!(gap_between(false, true, ITEM_GAP), ITEM_GAP);
+        assert_eq!(gap_between(true, false, HEADER_ITEM_GAP), HEADER_ITEM_GAP);
+    }
+
+    #[test]
+    fn a_run_without_its_first_items_drops_the_gaps_after_them() {
+        let run = Run { widths: &[16.0, 20.0, RING, DOTS], gaps: &[10.0, 10.0, RING_DOTS_GAP] };
+        assert_eq!(run.without_first(2).width(), RING + RING_DOTS_GAP + DOTS);
+        assert_eq!(run.without_first(4).width(), 0.0);
     }
 
     #[test]
@@ -159,13 +206,26 @@ mod tests {
     }
 
     #[test]
-    fn the_group_is_right_anchored_8_apart_and_ends_12_from_the_edge() {
+    fn the_group_is_right_anchored_8_apart_with_4_from_the_ring_to_the_dots_and_ends_12_from_the_edge() {
         let row = row(&[30.0, 40.0, RING, DOTS]);
         let lefts = &row.group_lefts;
         assert_eq!(lefts[1] - (lefts[0] + 30.0), ITEM_GAP);
         assert_eq!(lefts[2] - (lefts[1] + 40.0), ITEM_GAP);
-        assert_eq!(lefts[3] - (lefts[2] + RING), ITEM_GAP);
+        assert_eq!(lefts[3] - (lefts[2] + RING), RING_DOTS_GAP);
         assert_eq!(lefts[3] + DOTS, row.width - PILL_EDGE);
+    }
+
+    #[test]
+    fn dots_without_the_ring_before_them_keep_the_8_from_the_badge_before_them() {
+        let row = row(&[30.0, DOTS]);
+        assert_eq!(row.group_lefts[1] - (row.group_lefts[0] + 30.0), ITEM_GAP);
+    }
+
+    #[test]
+    fn the_narrow_ring_to_dots_gap_narrows_a_crowded_pill_by_the_difference() {
+        let crowded = row(&[50.0, 50.0, RING, DOTS]);
+        let content = CLOCK + GAP + 50.0 + ITEM_GAP + 50.0 + ITEM_GAP + RING + RING_DOTS_GAP + DOTS;
+        assert_eq!(crowded.width, content + 2.0 * PILL_EDGE);
     }
 
     #[test]
@@ -190,19 +250,26 @@ mod tests {
     }
 
     #[test]
-    fn the_dot_column_reserves_no_width_so_the_group_shifts_left_by_the_dot_and_a_gap() {
+    fn the_dot_column_reserves_no_width_so_the_group_shifts_left_by_the_dot_and_the_4_after_the_ring() {
         let without = row(&[50.0, 50.0, RING]);
         let with = row(&[50.0, 50.0, RING, DOTS]);
-        assert_eq!(with.width - without.width, DOTS + ITEM_GAP);
+        assert_eq!(with.width - without.width, DOTS + RING_DOTS_GAP);
         let ring_inset = |row: &Row| row.width - row.group_lefts[2];
-        assert_eq!(ring_inset(&with) - ring_inset(&without), DOTS + ITEM_GAP);
+        assert_eq!(ring_inset(&with) - ring_inset(&without), DOTS + RING_DOTS_GAP);
     }
 
     const LEFT: f32 = 16.0;
     const RIGHT: f32 = 416.0;
 
     fn header(icon_widths: &[f32], end_widths: &[f32]) -> HeaderRow {
-        header_row(&HeaderInput { left: LEFT, right: RIGHT, clock_width: CLOCK, icon_widths, end_widths })
+        let widths: Vec<f32> = icon_widths.iter().chain(end_widths).copied().collect();
+        let gaps = gaps_of(&widths, HEADER_ITEM_GAP);
+        let group = Run { widths: &widths, gaps: &gaps };
+        header_row(&HeaderInput { left: LEFT, right: RIGHT, clock_width: CLOCK, group, icon_count: icon_widths.len() })
+    }
+
+    fn end_run(widths: &[f32]) -> f32 {
+        header_content_width(0.0, CLOCK, Run { widths, gaps: &gaps_of(widths, HEADER_ITEM_GAP) })
     }
 
     #[test]
@@ -212,10 +279,11 @@ mod tests {
     }
 
     #[test]
-    fn the_header_group_runs_10_apart_and_ends_10_before_the_gear_in_the_idle_order() {
+    fn the_header_group_runs_10_apart_with_4_from_the_ring_to_the_dots_and_ends_10_before_the_gear() {
         let header = header(&[16.0, 16.0], &[RING, DOTS]);
         assert_eq!(header.gear_left - (header.group_lefts[3] + DOTS), HEADER_ITEM_GAP);
-        assert_eq!(header.group_lefts[3] - (header.group_lefts[2] + RING), HEADER_ITEM_GAP);
+        assert_eq!(header.group_lefts[3] - (header.group_lefts[2] + RING), RING_DOTS_GAP);
+        assert_eq!(header.group_lefts[2] - (header.group_lefts[1] + 16.0), HEADER_ITEM_GAP);
         assert_eq!(header.group_lefts[1] - (header.group_lefts[0] + 16.0), HEADER_ITEM_GAP);
     }
 
@@ -223,7 +291,8 @@ mod tests {
     fn the_gear_shifts_every_group_item_left_by_its_width_and_a_gap() {
         let group = [16.0, RING, DOTS];
         let with_gear = header(&group[..1], &group[1..]);
-        let edge_anchored = lefts_ending_at(RIGHT, &group, HEADER_ITEM_GAP);
+        let gaps = gaps_of(&group, HEADER_ITEM_GAP);
+        let edge_anchored = Run { widths: &group, gaps: &gaps }.lefts_ending_at(RIGHT);
         for (left, edge_left) in with_gear.group_lefts.iter().zip(&edge_anchored) {
             assert_eq!(edge_left - left, GEAR_SIZE + HEADER_ITEM_GAP);
         }
@@ -258,13 +327,10 @@ mod tests {
 
     #[test]
     fn the_battery_ring_and_the_dots_are_never_dropped() {
-        let header = header_row(&HeaderInput {
-            left: 0.0,
-            right: 60.0,
-            clock_width: CLOCK,
-            icon_widths: &[16.0, 16.0],
-            end_widths: &[RING, DOTS],
-        });
+        let widths = [16.0, 16.0, RING, DOTS];
+        let gaps = gaps_of(&widths, HEADER_ITEM_GAP);
+        let group = Run { widths: &widths, gaps: &gaps };
+        let header = header_row(&HeaderInput { left: 0.0, right: 60.0, clock_width: CLOCK, group, icon_count: 2 });
         assert_eq!(header.dropped_icons, 2);
         assert_eq!(header.group_lefts.len(), 2);
     }
@@ -272,16 +338,24 @@ mod tests {
     #[test]
     fn the_least_header_width_puts_the_wider_side_on_both_sides_of_the_clock() {
         let dots_side = 96.0 + PAGE_DOTS_CLOCK_GAP;
-        assert_eq!(header_content_width(96.0, CLOCK, &[RING]), CLOCK + 2.0 * dots_side);
-        let end_side = HEADER_CLOCK_GAP + RING + HEADER_ITEM_GAP + DOTS + HEADER_ITEM_GAP + GEAR_SIZE;
-        assert_eq!(header_content_width(0.0, CLOCK, &[RING, DOTS]), CLOCK + 2.0 * end_side);
-        assert_eq!(header_content_width(0.0, CLOCK, &[]), CLOCK + 2.0 * (HEADER_CLOCK_GAP + GEAR_SIZE));
+        let ring = Run { widths: &[RING], gaps: &[] };
+        assert_eq!(header_content_width(96.0, CLOCK, ring), CLOCK + 2.0 * dots_side);
+        let end_side = HEADER_CLOCK_GAP + RING + RING_DOTS_GAP + DOTS + HEADER_ITEM_GAP + GEAR_SIZE;
+        assert_eq!(end_run(&[RING, DOTS]), CLOCK + 2.0 * end_side);
+        assert_eq!(end_run(&[]), CLOCK + 2.0 * (HEADER_CLOCK_GAP + GEAR_SIZE));
+    }
+
+    #[test]
+    fn dots_without_a_ring_keep_the_10_in_the_least_header_width() {
+        let end_side = HEADER_CLOCK_GAP + DOTS + HEADER_ITEM_GAP + GEAR_SIZE;
+        assert_eq!(end_run(&[DOTS]), CLOCK + 2.0 * end_side);
     }
 
     #[test]
     fn nine_page_dots_and_a_37_px_clock_need_a_341_px_panel() {
         let nine_dots = 8.0 * 10.0 + 16.0;
-        assert_eq!(header_content_width(nine_dots, 37.0, &[RING]) + 32.0, 341.0);
+        let ring = Run { widths: &[RING], gaps: &[] };
+        assert_eq!(header_content_width(nine_dots, 37.0, ring) + 32.0, 341.0);
     }
 
     #[test]

@@ -99,12 +99,62 @@ pub(super) fn migrate(settings: &mut Settings) {
 
 /// An activity (a notification banner, a volume change) shows in every mode except Hidden; Music keeps the pill up
 /// even with nothing playing, so the idle clock stays visible.
-pub(super) fn allows(showing: Showing, has_activity: bool, is_playing: bool, has_lyrics: bool) -> bool {
+fn allows(showing: Showing, has_activity: bool, is_playing: bool, has_lyrics: bool) -> bool {
     match showing {
         Showing::Hidden => false,
         Showing::ActivitiesOnly => has_activity,
         Showing::MusicWithLyrics => has_activity || (is_playing && has_lyrics),
         Showing::Music => true,
+    }
+}
+
+/// What the collapsed notch has to show besides a priority activity.
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct Collapsed {
+    /// A short message or a banner; a lasting mark (muted, Caps Lock, a privacy dot) is state and does not count.
+    pub(super) has_message: bool,
+    pub(super) has_resting_content: bool,
+    pub(super) has_lyrics: bool,
+}
+
+/// Whether a priority activity (volume, brightness) shows where the word or hide-when-idle would hide it: only while
+/// the notch replaces Windows' own flyout, and never over a screenshot overlay.
+pub(super) fn priority_shows(mode: ScreenMode, replaces_windows_flyout: bool, has_priority_presence: bool) -> bool {
+    has_priority_presence && replaces_windows_flyout && mode != ScreenMode::Capture
+}
+
+/// Whether the window goes off screen: the word `hidden` or a screenshot overlay, unless a priority activity shows.
+pub(super) fn suppresses(showing: Option<Showing>, priority_shows: bool) -> bool {
+    showing == Some(Showing::Hidden) && !priority_shows
+}
+
+/// Whether the notch stays on screen (is not suppressed) in front of a window in `mode`.
+pub(super) fn stays_on_screen(
+    mode: ScreenMode,
+    maximized: Showing,
+    fullscreen: Showing,
+    replaces_windows_flyout: bool,
+    has_priority_presence: bool,
+) -> bool {
+    let priority = priority_shows(mode, replaces_windows_flyout, has_priority_presence);
+    !suppresses(showing_for(mode, maximized, fullscreen), priority)
+}
+
+/// Whether the collapsed notch shrinks to the strip; `None` is a regular window, where hide-when-idle decides.
+pub(super) fn hides_to_strip(
+    showing: Option<Showing>,
+    hides_when_idle: bool,
+    collapsed: Collapsed,
+    priority_shows: bool,
+) -> bool {
+    if priority_shows {
+        return false;
+    }
+    match showing {
+        None => hides_when_idle && !collapsed.has_message && !collapsed.has_resting_content,
+        // The suppressed window draws nothing; a full-size layout avoids a strip growing back when it returns.
+        Some(Showing::Hidden) => false,
+        Some(showing) => !allows(showing, collapsed.has_message, collapsed.has_resting_content, collapsed.has_lyrics),
     }
 }
 
@@ -247,6 +297,78 @@ mod tests {
     #[test]
     fn music_keeps_the_pill_up_even_with_nothing_playing() {
         assert!(allows(Showing::Music, false, false, false));
+    }
+
+    const EVERY_MODE: [ScreenMode; 4] =
+        [ScreenMode::Normal, ScreenMode::Maximized, ScreenMode::Fullscreen, ScreenMode::Capture];
+    const EVERY_WORD: [Showing; 4] =
+        [Showing::Hidden, Showing::ActivitiesOnly, Showing::MusicWithLyrics, Showing::Music];
+
+    /// Whether an idle notch with hide-when-idle on is on screen at full size.
+    fn is_shown(mode: ScreenMode, word: Showing, replaces_windows_flyout: bool, has_priority_presence: bool) -> bool {
+        let showing = showing_for(mode, word, word);
+        let priority = priority_shows(mode, replaces_windows_flyout, has_priority_presence);
+        !suppresses(showing, priority) && !hides_to_strip(showing, true, Collapsed::default(), priority)
+    }
+
+    #[test]
+    fn a_priority_activity_shows_over_every_word_and_mode_except_a_screenshot_only_while_the_flyout_is_replaced() {
+        for mode in EVERY_MODE {
+            for word in EVERY_WORD {
+                let shown_without_priority = is_shown(mode, word, true, false);
+                assert_eq!(
+                    is_shown(mode, word, true, true),
+                    mode != ScreenMode::Capture,
+                    "{word:?} over {mode:?} with the flyout replaced"
+                );
+                assert_eq!(
+                    is_shown(mode, word, false, true),
+                    shown_without_priority,
+                    "{word:?} over {mode:?} with Windows' flyout: the word applies"
+                );
+                let expected_without_priority =
+                    mode != ScreenMode::Capture && word == Showing::Music && mode != ScreenMode::Normal;
+                assert_eq!(shown_without_priority, expected_without_priority, "{word:?} over {mode:?} idle");
+            }
+        }
+    }
+
+    #[test]
+    fn hidden_suppresses_the_window_until_a_priority_activity_shows_but_the_screenshot_overlay_always_does() {
+        for mode in [ScreenMode::Maximized, ScreenMode::Fullscreen] {
+            let showing = showing_for(mode, Showing::Hidden, Showing::Hidden);
+            assert!(suppresses(showing, priority_shows(mode, true, false)));
+            assert!(!suppresses(showing, priority_shows(mode, true, true)));
+            assert!(suppresses(showing, priority_shows(mode, false, true)));
+        }
+        let capture = showing_for(ScreenMode::Capture, Showing::Music, Showing::Music);
+        assert!(suppresses(capture, priority_shows(ScreenMode::Capture, true, true)));
+        assert!(!suppresses(None, false), "a regular window never suppresses");
+    }
+
+    #[test]
+    fn the_notch_stays_on_screen_over_a_hidden_window_only_with_a_priority_presence_and_never_over_a_screenshot() {
+        let hidden = Showing::Hidden;
+        assert!(!stays_on_screen(ScreenMode::Fullscreen, Showing::Music, hidden, true, false));
+        assert!(stays_on_screen(ScreenMode::Fullscreen, Showing::Music, hidden, true, true));
+        assert!(!stays_on_screen(ScreenMode::Fullscreen, Showing::Music, hidden, false, true));
+        assert!(stays_on_screen(ScreenMode::Maximized, hidden, hidden, true, true));
+        assert!(stays_on_screen(ScreenMode::Fullscreen, Showing::Music, Showing::ActivitiesOnly, true, false));
+        assert!(stays_on_screen(ScreenMode::Normal, hidden, hidden, false, false));
+        assert!(!stays_on_screen(ScreenMode::Capture, Showing::Music, Showing::Music, true, true));
+    }
+
+    #[test]
+    fn a_message_keeps_a_hiding_word_up_but_lasting_state_does_not() {
+        let message = Collapsed { has_message: true, ..Collapsed::default() };
+        let playing = Collapsed { has_resting_content: true, ..Collapsed::default() };
+        assert!(!hides_to_strip(None, true, message, false));
+        assert!(!hides_to_strip(None, true, playing, false));
+        assert!(hides_to_strip(None, true, Collapsed::default(), false));
+        assert!(!hides_to_strip(None, false, Collapsed::default(), false));
+        assert!(!hides_to_strip(Some(Showing::ActivitiesOnly), false, message, false));
+        assert!(hides_to_strip(Some(Showing::ActivitiesOnly), false, playing, false));
+        assert!(!hides_to_strip(Some(Showing::Hidden), true, Collapsed::default(), false));
     }
 
     #[test]

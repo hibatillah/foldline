@@ -104,6 +104,7 @@ impl Notch {
             self.pages.iter().map(|page| page.priority(Mode::Expanded)).collect();
         self.navigable = self.page_list.navigable(&expanded_priorities);
         let expanded_index = navigation::choose(self.selected_page, &self.page_list.effective(&expanded_priorities));
+        let was_suppressed = self.is_suppressed();
         let presences_changed = self.refresh_presences();
         let selection_changed =
             resting_index != self.resting_index || expanded_index != self.expanded_index || presences_changed;
@@ -158,6 +159,13 @@ impl Notch {
         targets_changed |= self.retarget_rows(expanded_width);
         if targets_changed {
             self.start_animation();
+        }
+        if self.is_suppressed() != was_suppressed {
+            // A priority activity brings the window back already at its own size, without a morph from the old pill.
+            for spring in self.layout_springs() {
+                spring.snap_to_target();
+            }
+            self.apply_suppression(was_suppressed);
         }
         selection_changed
     }

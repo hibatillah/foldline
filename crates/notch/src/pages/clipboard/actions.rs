@@ -64,7 +64,16 @@ impl ClipboardPage {
             Some(Target::Copy) => self.copy_selected(context),
             Some(Target::Paste) => self.paste_selected(context),
             Some(Target::Undo) => self.undo(context),
+            Some(Target::Pin(index)) => self.toggle_pin(index, point, frame, context),
             Some(Target::Row(_)) | None => {}
+        }
+    }
+
+    /// Pins or unpins the row's copy; the rows move, so the hover is found again under the pointer.
+    fn toggle_pin(&mut self, index: usize, point: Point, frame: &Frame, context: &mut Context) {
+        if self.history.toggle_pin(index) {
+            self.hover.set(self.target_at(point, frame));
+            context.request_repaint();
         }
     }
 

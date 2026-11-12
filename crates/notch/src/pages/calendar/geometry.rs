@@ -97,6 +97,7 @@ pub(super) fn row_rect(position: usize, scroll: f32, bounds: Rect, view: View) -
 mod tests {
     use super::super::dates::{DayGrid, days_from_civil};
     use super::*;
+    use crate::page::DEFAULT_CONTENT_HEIGHT;
 
     const BOUNDS: Rect = Rect::new(0.0, 0.0, 508.0, 168.0);
 
@@ -111,8 +112,10 @@ mod tests {
     }
 
     #[test]
-    fn the_week_page_is_three_cards_high() {
-        assert_eq!(content_height(1, View::Week), 112.0);
+    fn the_week_view_is_as_tall_as_the_default_page_and_its_list_scrolls() {
+        assert_eq!(content_height(1, View::Week), DEFAULT_CONTENT_HEIGHT);
+        assert_eq!(max_scroll(4, View::Week), stack_height(4) - 86.0);
+        assert!(left_height(1) < DEFAULT_CONTENT_HEIGHT, "the week row fits the page");
     }
 
     #[test]
@@ -124,9 +127,10 @@ mod tests {
     }
 
     #[test]
-    fn the_week_list_scrolls_past_three_cards() {
-        assert_eq!(max_scroll(3, View::Week), 0.0);
-        assert_eq!(max_scroll(4, View::Week), 39.0);
+    fn the_week_list_scrolls_past_two_cards() {
+        assert_eq!(max_scroll(2, View::Week), 0.0);
+        assert_eq!(max_scroll(3, View::Week), 26.0);
+        assert_eq!(max_scroll(4, View::Week), 65.0);
     }
 
     #[test]

@@ -13,6 +13,8 @@ fn clipboard_state_snapshots() {
         ("state-clipboard-removed", 4),
         ("state-clipboard-skipped", 5),
         ("state-clipboard-empty", 6),
+        ("state-clipboard-pinned", 7),
+        ("state-clipboard-pinned-full", 8),
     ];
     for (name, clipboard) in scenarios {
         let mut notch = rig(SampleOptions { clipboard, ..SampleOptions::default() });

@@ -1,6 +1,5 @@
 //! Core Audio callbacks store volume changes and wake the UI thread without polling.
 
-use crate::i18n::tr;
 use std::sync::{Arc, Mutex};
 
 use windows::{
@@ -98,7 +97,6 @@ pub struct VolumeActivity {
     notifier: Option<Notifier>,
     volume: f32,
     is_muted: bool,
-    muted_width: f32,
     flash: Flash,
 }
 
@@ -110,9 +108,15 @@ impl VolumeActivity {
             notifier: None,
             volume: 0.0,
             is_muted: false,
-            muted_width: 0.0,
             flash: Flash::default(),
         }
+    }
+
+    #[cfg(test)]
+    pub fn sample(volume: f32, is_muted: bool) -> Self {
+        let mut activity = Self::new();
+        (activity.volume, activity.is_muted, activity.flash) = (volume, is_muted, Flash::visible());
+        activity
     }
 
     fn attach(&mut self) -> Result<()> {
@@ -162,11 +166,14 @@ impl Activity for VolumeActivity {
 
     fn presence(&self) -> Option<Presence> {
         if self.flash.is_visible() {
-            let width = if self.is_muted { self.muted_width } else { ui::LEVEL_WIDTH };
-            Some(Presence::Transient { width })
+            Some(Presence::Transient { width: ui::LEVEL_WIDTH })
         } else {
             self.is_muted.then_some(Presence::Badge { width: Icon::SpeakerMuted.size() })
         }
+    }
+
+    fn is_priority(&self) -> bool {
+        true
     }
 
     fn header_status_rank(&self) -> u8 {
@@ -176,10 +183,10 @@ impl Activity for VolumeActivity {
     fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         if !self.flash.is_visible() {
             self.draw_header_status(canvas, area, opacity);
-        } else if self.is_muted {
-            ui::draw_message(canvas, area, opacity, Icon::SpeakerMuted, Color::WHITE, &tr!("volume.muted"), None);
         } else {
-            ui::draw_level(canvas, area, opacity, Icon::Speaker, self.volume, &value_text(self.volume));
+            // Like Windows' own flyout, muting swaps the icon and keeps the remembered level.
+            let icon = if self.is_muted { Icon::SpeakerMuted } else { Icon::Speaker };
+            ui::draw_level(canvas, area, opacity, icon, self.volume, &value_text(self.volume));
         }
     }
 
@@ -213,7 +220,6 @@ impl Activity for VolumeActivity {
         if let Some((volume, is_muted)) = level {
             self.volume = volume;
             self.is_muted = is_muted;
-            self.muted_width = ui::message_width(context.fonts(), &tr!("volume.muted"), None);
             self.flash.show(context, SHOW_MILLISECONDS);
         }
     }
@@ -231,14 +237,27 @@ mod tests {
     }
 
     #[test]
-    fn a_muted_output_stays_as_an_icon_badge_after_its_message_ends() {
+    fn a_muted_output_stays_as_an_icon_badge_after_its_level_message_ends() {
         let mut activity = VolumeActivity::new();
         assert_eq!(activity.presence(), None);
         activity.is_muted = true;
-        activity.muted_width = 60.0;
         assert_eq!(activity.presence(), Some(Presence::Badge { width: Icon::SpeakerMuted.size() }));
         activity.flash = Flash::visible();
-        assert_eq!(activity.presence(), Some(Presence::Transient { width: 60.0 }));
+        assert_eq!(activity.presence(), Some(Presence::Transient { width: ui::LEVEL_WIDTH }));
+    }
+
+    #[test]
+    fn muting_and_a_volume_change_show_the_same_level_message() {
+        let mut activity = VolumeActivity::new();
+        activity.flash = Flash::visible();
+        let unmuted = activity.presence();
+        activity.is_muted = true;
+        assert_eq!(activity.presence(), unmuted);
+    }
+
+    #[test]
+    fn volume_overrides_the_hiding_words() {
+        assert!(VolumeActivity::new().is_priority());
     }
 
     #[test]

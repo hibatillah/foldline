@@ -4,8 +4,9 @@ use crate::gfx::{Point, Rect, lerp};
 // Layout is in units; the host adds padding and the header.
 pub const PLAIN_HEIGHT: f32 = crate::page::DEFAULT_CONTENT_HEIGHT;
 pub const TEXT_MAX_WIDTH: f32 = 170.0;
-/// A short title never narrows the column below the control row, so the content block has no empty strip on its right.
-pub const TEXT_MIN_WIDTH: f32 = CONTROLS_WIDTH;
+/// The narrowest text column, so a short title keeps the page 240 wide: the width the earlier, larger control row set
+/// (9 + 3 x 38 + 1 + 10), kept when the controls shrank so the open page does not change size.
+pub const TEXT_MIN_WIDTH: f32 = 134.0;
 const ARTWORK_SIZE: f32 = 86.0;
 const ARTWORK_RADIUS: f32 = 12.0;
 const TEXT_GAP: f32 = 20.0;
@@ -20,15 +21,18 @@ const DETAIL_LINE_HEIGHT: f32 = 15.0;
 const DETAIL_GAP: f32 = 2.0;
 const CONTROLS_GAP: f32 = 12.0;
 /// The lyrics icon is the tallest control, so it sets the height of the control row.
-const CONTROLS_HEIGHT: f32 = 20.0;
-/// Center of the first control from the text column edge: half of its 18 px icon.
-const CONTROL_FIRST_CENTER: f32 = 9.0;
-/// Distance between control centers: an 18 px icon and a 20 px gap.
-const CONTROL_PITCH: f32 = 38.0;
-/// The 20 px lyrics icon is 2 px wider than the others, so its center sits 1 px further along.
+const CONTROLS_HEIGHT: f32 = 18.0;
+/// Center of the first control from the text column edge: half of its 16 unit icon, so the icon lines up with the text.
+const CONTROL_FIRST_CENTER: f32 = 8.0;
+/// Distance between control centers: a 16 unit icon and a 14 unit gap.
+const CONTROL_PITCH: f32 = 30.0;
+/// The 18 unit lyrics icon is 2 wider than the others, so its center sits 1 further along.
 const LYRICS_NUDGE: f32 = 1.0;
 /// Width of the control row from the text column edge to the right edge of the lyrics icon.
-const CONTROLS_WIDTH: f32 = CONTROL_FIRST_CENTER + 3.0 * CONTROL_PITCH + LYRICS_NUDGE + 10.0;
+const CONTROLS_WIDTH: f32 = CONTROL_FIRST_CENTER + 3.0 * CONTROL_PITCH + LYRICS_NUDGE + 9.0;
+const _: () = assert!(CONTROLS_WIDTH <= TEXT_MIN_WIDTH, "the control row fits the narrowest text column");
+/// Half the height of a control's click area; its width is the pitch, so neighboring areas meet without overlapping.
+const CONTROL_HIT_HALF_HEIGHT: f32 = 15.0;
 const LYRIC_GAP: f32 = 20.0;
 pub const LYRIC_MAX_LINES: usize = 2;
 const BADGE_SIZE: f32 = 19.0;
@@ -134,6 +138,11 @@ impl Layout {
         Point::new(x, self.bounds.top + top)
     }
 
+    /// Where a press counts for `control`: one pitch wide around its center, so the areas tile the row.
+    pub fn control_hit_area(&self, control: Control) -> Rect {
+        Rect::around(self.control_center(control), CONTROL_PITCH / 2.0, CONTROL_HIT_HALF_HEIGHT)
+    }
+
     /// The app icon inside the badge's dark tile.
     pub fn app_badge_icon(&self) -> Rect {
         let badge = self.app_badge();
@@ -199,13 +208,24 @@ mod tests {
     }
 
     #[test]
-    fn the_controls_are_18_px_icons_with_a_20_px_gap_and_a_slightly_wider_last_one() {
+    fn the_controls_are_16_unit_icons_30_apart_with_a_slightly_wider_last_one() {
         let layout = plain(2);
         let x = |control| layout.control_center(control).x - layout.title_line(0).left;
-        assert_eq!(x(Control::Previous), 9.0);
-        assert_eq!(x(Control::PlayPause) - x(Control::Previous), 38.0);
-        assert_eq!(x(Control::Next) - x(Control::PlayPause), 38.0);
-        assert_eq!(x(Control::Lyrics) - x(Control::Next), 39.0);
+        assert_eq!(x(Control::Previous), 8.0, "the first icon's left edge lines up with the text");
+        assert_eq!(x(Control::PlayPause) - x(Control::Previous), 30.0);
+        assert_eq!(x(Control::Next) - x(Control::PlayPause), 30.0);
+        assert_eq!(x(Control::Lyrics) - x(Control::Next), 31.0);
+    }
+
+    #[test]
+    fn the_click_areas_of_neighboring_controls_meet_without_overlapping() {
+        let layout = plain(1);
+        let areas: Vec<Rect> = Control::ALL.iter().map(|&control| layout.control_hit_area(control)).collect();
+        for pair in areas.windows(2) {
+            assert!(pair[0].right <= pair[1].left + 0.01, "{:?} overlaps {:?}", pair[0], pair[1]);
+            assert!(pair[1].left - pair[0].right < 1.01, "no dead strip between controls");
+        }
+        assert!(areas[0].left >= layout.bounds.left + ARTWORK_SIZE, "the first area stays clear of the artwork");
     }
 
     #[test]
@@ -255,11 +275,13 @@ mod tests {
     }
 
     #[test]
-    fn a_short_title_leaves_equal_space_left_of_the_artwork_and_right_of_the_controls() {
+    fn a_short_title_keeps_the_open_page_240_wide_with_the_controls_inside_it() {
         let width = plain_width(TEXT_MIN_WIDTH);
+        assert_eq!(width, 240.0);
         let layout = Layout::new(bounds(width), width, 1, TEXT_MIN_WIDTH);
-        let controls_right = layout.control_center(Control::Lyrics).x + 10.0;
-        assert_eq!(controls_right, layout.bounds.right);
+        let lyrics = layout.control_center(Control::Lyrics);
+        assert!(lyrics.x + 9.0 < layout.bounds.right, "the lyrics icon ends inside the page");
+        assert_eq!(layout.title_line(0).right, layout.bounds.right);
     }
 
     #[test]

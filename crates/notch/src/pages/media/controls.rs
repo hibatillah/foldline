@@ -7,9 +7,9 @@ use crate::{
 
 const ACCENT: Color = Color::rgb(0.118, 0.843, 0.376);
 const INACTIVE_HOVERED: Color = Color::gray(0.85);
-/// Icon edge in DIP; the lyrics icon is drawn 2 px larger than the transport icons.
-const ICON_SIZE: f32 = 18.0;
-const LYRICS_ICON_SIZE: f32 = 20.0;
+/// Icon edge in units; the lyrics icon is drawn 2 larger than the transport icons.
+const ICON_SIZE: f32 = 16.0;
+const LYRICS_ICON_SIZE: f32 = 18.0;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Control {
@@ -42,7 +42,7 @@ fn lyrics_color(is_on: bool, has_lyrics: bool, is_hovered: bool) -> Color {
 }
 
 pub fn hit_test(layout: &Layout, point: Point) -> Option<Control> {
-    Control::ALL.into_iter().find(|&control| IconButton::is_hit(layout.control_center(control), 1.0, point))
+    Control::ALL.into_iter().find(|&control| layout.control_hit_area(control).contains(point))
 }
 
 pub fn draw(page: &MediaPage, canvas: &Canvas, layout: &Layout, opacity: f32) {
@@ -78,6 +78,18 @@ mod tests {
             assert_eq!(hit_test(&layout, layout.control_center(control)), Some(control));
         }
         assert_eq!(hit_test(&layout, Point::new(10.0, 10.0)), None);
+    }
+
+    #[test]
+    fn a_press_between_two_controls_lands_on_the_nearer_one() {
+        let width = layout::plain_width(layout::TEXT_MIN_WIDTH);
+        let bounds = Rect::new(0.0, 0.0, width, layout::PLAIN_HEIGHT);
+        let layout = Layout::new(bounds, width, 1, layout::TEXT_MIN_WIDTH);
+        let (play, next) = (layout.control_center(Control::PlayPause), layout.control_center(Control::Next));
+        let near_play = Point::new(play.x + 13.0, play.y);
+        let near_next = Point::new(next.x - 13.0, next.y);
+        assert_eq!(hit_test(&layout, near_play), Some(Control::PlayPause));
+        assert_eq!(hit_test(&layout, near_next), Some(Control::Next));
     }
 
     #[test]

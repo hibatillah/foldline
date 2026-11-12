@@ -254,13 +254,13 @@ fn snapshots_of_the_short_lived_messages() {
     let orange = Color::rgb(1.0, 0.62, 0.04);
     let blue = Color::rgb(0.302, 0.671, 0.969);
     let level_width = ui::LEVEL_WIDTH;
-    pill(&notch, "hud-volume", level_width, |canvas, area| {
-        ui::draw_level(canvas, area, 1.0, Icon::Speaker, 0.42, "42")
-    });
-    let muted_width = ui::message_width(fonts, "Muted", None);
-    pill(&notch, "hud-muted", muted_width, |canvas, area| {
-        ui::draw_message(canvas, area, 1.0, Icon::SpeakerMuted, Color::WHITE, "Muted", None)
-    });
+    for (name, is_muted) in [("hud-volume", false), ("hud-muted", true)] {
+        let volume = crate::activities::sample_volume(0.42, is_muted);
+        let Some(Presence::Transient { width }) = volume.presence() else { panic!("the sample shows its level") };
+        pill(&notch, name, width, |canvas, area| {
+            crate::host::notch::units::draw_activity(volume.as_ref(), canvas, area, 1.0)
+        });
+    }
     pill(&notch, "hud-brightness", level_width, |canvas, area| ui::draw_level(canvas, area, 1.0, Icon::Sun, 0.7, "70"));
     let messages: [(&str, Icon, Color, &str, Option<&str>); 9] = [
         ("hud-charging", Icon::Bolt, green, "Charging", Some("56%")),
