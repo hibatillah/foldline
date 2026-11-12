@@ -1,11 +1,36 @@
 use std::ops::RangeInclusive;
 
+use store::Settings;
+
 use crate::i18n::tr;
 use crate::{
     field::{self, Kind},
     layout::{Group, Item, Page},
     location, startup,
 };
+
+const MONITOR_KEY: &str = "notch.monitor";
+const DEFAULT_MONITOR: &str = "main";
+
+pub struct MonitorChoice {
+    pub word: &'static str,
+    label: fn() -> &'static str,
+}
+
+const MONITOR_CHOICES: [MonitorChoice; 2] = [
+    MonitorChoice { word: "main", label: || tr!("general.monitor_main") },
+    MonitorChoice { word: "focused", label: || tr!("general.monitor_focused") },
+];
+
+/// The stored word when it is one of the choices, else the default (the notch reads any other word as `main`).
+fn shown_monitor_word(settings: &Settings) -> String {
+    let stored = settings.get_string(MONITOR_KEY);
+    MONITOR_CHOICES
+        .iter()
+        .find(|choice| Some(choice.word) == stored)
+        .map_or(DEFAULT_MONITOR, |choice| choice.word)
+        .to_owned()
+}
 
 fn minutes(
     title: &'static str,
@@ -36,6 +61,25 @@ pub fn page() -> Page {
                         .description(tr!("general.hide_when_idle_note")),
                 ],
             ),
+            Group::titled(tr!("pause.group"), vec![super::pause::item()]),
+            Group::titled(
+                tr!("general.group_screen"),
+                vec![
+                    Item::new(
+                        tr!("general.monitor"),
+                        field::choice(
+                            MONITOR_KEY,
+                            160.0,
+                            MONITOR_CHOICES
+                                .iter()
+                                .map(|choice| field::Choice { word: choice.word, label: (choice.label)().into() })
+                                .collect(),
+                            || shown_monitor_word(&Settings::load()),
+                        ),
+                    )
+                    .description(tr!("general.monitor_note")),
+                ],
+            ),
             Group::titled(
                 tr!("general.group_location"),
                 vec![
@@ -55,6 +99,8 @@ pub fn page() -> Page {
                         .description(tr!("general.show_notification_text_note")),
                     Item::new(tr!("general.device_battery"), field::toggle("activity.device_battery", true))
                         .description(tr!("general.device_battery_note")),
+                    Item::new(tr!("general.downloads"), field::toggle("activity.downloads", true))
+                        .description(tr!("general.downloads_note")),
                 ],
             ),
             Group::titled(
@@ -79,4 +125,32 @@ pub fn page() -> Page {
             ),
         ],
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use store::Settings;
+
+    #[test]
+    fn the_general_page_offers_main_and_focused_for_the_monitor_key() {
+        let words: Vec<&str> = MONITOR_CHOICES.iter().map(|choice| choice.word).collect();
+        assert_eq!(words, ["main", "focused"]);
+        assert_eq!(MONITOR_KEY, "notch.monitor");
+        assert_eq!(MONITOR_CHOICES[0].word, DEFAULT_MONITOR);
+    }
+
+    #[test]
+    fn a_missing_or_unknown_monitor_word_shows_main() {
+        let path = std::env::temp_dir().join(format!("notch-settings-monitor-{}.txt", std::process::id()));
+        std::fs::write(&path, "notch.monitor=banana\n").unwrap();
+        let unknown = Settings::at(Some(path.clone()));
+        std::fs::write(&path, "notch.monitor=focused\n").unwrap();
+        let focused = Settings::at(Some(path.clone()));
+        let _ = std::fs::remove_file(&path);
+        let missing = Settings::at(Some(path));
+        assert_eq!(shown_monitor_word(&unknown), "main");
+        assert_eq!(shown_monitor_word(&focused), "focused");
+        assert_eq!(shown_monitor_word(&missing), "main");
+    }
 }

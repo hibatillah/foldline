@@ -1,4 +1,5 @@
 pub mod language;
+pub mod pause;
 
 use std::{collections::BTreeMap, fs, io::ErrorKind, path::PathBuf};
 

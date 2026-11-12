@@ -14,5 +14,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     if let Some(version) = &version {
         println!("cargo:rustc-env=NOTCH_RELEASE_VERSION={version}");
     }
-    compile_icon_resource("../../assets/branding", "1", release_version::icon_for_version(version.as_deref()))
+    let version_text = version.clone().unwrap_or_else(|| env::var("CARGO_PKG_VERSION").unwrap_or_default());
+    let version_info =
+        release_version::version_info_resource("Notch Settings", "Notch", &version_text, "notch-settings.exe");
+    compile_icon_resource(
+        "../../assets/branding",
+        "1",
+        release_version::icon_for_version(version.as_deref()),
+        &version_info,
+    )
 }

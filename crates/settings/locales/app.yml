@@ -65,6 +65,21 @@ general.hide_when_idle:
 general.hide_when_idle_note:
   en: "Hides the notch when nothing is happening. Point at the top edge to bring it back."
   id: "Menyembunyikan notch saat tidak ada aktivitas. Arahkan kursor ke tepi atas untuk memunculkannya lagi."
+general.group_screen:
+  en: "Screen"
+  id: "Layar"
+general.monitor:
+  en: "Show the notch on"
+  id: "Tampilkan notch di"
+general.monitor_main:
+  en: "Main screen"
+  id: "Layar utama"
+general.monitor_focused:
+  en: "Focused screen"
+  id: "Layar yang aktif"
+general.monitor_note:
+  en: "Applied live. The distance from the top (Advanced) is measured from the top of this screen."
+  id: "Diterapkan langsung. Jarak dari atas (Lanjutan) diukur dari tepi atas layar ini."
 general.group_location:
   en: "Location"
   id: "Lokasi"
@@ -101,6 +116,12 @@ general.device_battery:
 general.device_battery_note:
   en: "Shows a message when a connected Bluetooth device reaches 20 % or 10 %."
   id: "Menampilkan pesan saat baterai perangkat Bluetooth yang terhubung mencapai 20 % atau 10 %."
+general.downloads:
+  en: "Browser downloads"
+  id: "Unduhan browser"
+general.downloads_note:
+  en: "Show when a browser download starts and finishes. Only file names in your Downloads folder are read."
+  id: "Tampilkan saat unduhan browser dimulai dan selesai. Hanya nama berkas di folder Unduhan yang dibaca."
 general.group_windows_popups:
   en: "Windows popups"
   id: "Popup Windows"
@@ -200,8 +221,8 @@ behavior.column_idle_pill:
 behavior.group_shows:
   en: "What the notch shows"
   id: "Apa yang ditampilkan notch"
-behavior.group_hover:
-  en: "Open on hover"
+behavior.group_open_by_pointer:
+  en: "Open by pointing"
   id: "Buka saat kursor diarahkan"
 behavior.description:
   en: "Choose what the notch shows, as a level, while a maximized or full-screen window is in front of it."
@@ -215,18 +236,18 @@ behavior.over_maximized:
 behavior.over_maximized_note:
   en: "Applies while a maximized window is in front."
   id: "Berlaku saat jendela yang dimaksimalkan ada di depan."
-behavior.hover_maximized_note:
-  en: "Pointing at the top edge opens the notch. Off: it never opens over a maximized window."
-  id: "Mengarahkan kursor ke tepi atas membuka notch. Mati: notch tidak pernah terbuka di atas jendela yang dimaksimalkan."
+behavior.open_by_pointer_maximized_note:
+  en: "Pointing at the top edge opens the notch. Off: pointing never opens it over a maximized window; a pinned notch stays open."
+  id: "Mengarahkan kursor ke tepi atas membuka notch. Mati: kursor tidak pernah membukanya di atas jendela yang dimaksimalkan; notch yang disematkan tetap terbuka."
 behavior.over_fullscreen:
   en: "Over a full-screen app"
   id: "Di atas aplikasi layar penuh"
 behavior.over_fullscreen_note:
   en: "Applies while a full-screen app or game is in front."
   id: "Berlaku saat aplikasi atau game layar penuh ada di depan."
-behavior.hover_fullscreen_note:
-  en: "Pointing at the top edge opens the notch. Off: it never opens over a full-screen app."
-  id: "Mengarahkan kursor ke tepi atas membuka notch. Mati: notch tidak pernah terbuka di atas aplikasi layar penuh."
+behavior.open_by_pointer_fullscreen_note:
+  en: "Pointing at the top edge opens the notch. Off: pointing never opens it over a full-screen app; a pinned notch stays open."
+  id: "Mengarahkan kursor ke tepi atas membuka notch. Mati: kursor tidak pernah membukanya di atas aplikasi layar penuh; notch yang disematkan tetap terbuka."
 calendar.view_month:
   en: "Month"
   id: "Bulan"
@@ -554,3 +575,33 @@ shalat.adjust_title:
 shalat.adjust_description:
   en: "Add or subtract minutes, from −30 to 30, to match your local mosque. The dots show where each prayer falls in the day."
   id: "Tambah atau kurangi menit, dari −30 sampai 30, agar sesuai dengan masjid setempat. Titik menunjukkan letak tiap waktu shalat dalam sehari."
+pause.group:
+  en: "Pause"
+  id: "Jeda"
+pause.title:
+  en: "Pause Notch"
+  id: "Jeda Notch"
+pause.note:
+  en: "Hide the notch completely. Windows' own volume flyout and notifications show meanwhile. A restart resumes it."
+  id: "Sembunyikan notch sepenuhnya. Flyout volume dan notifikasi bawaan Windows tampil selama itu. Memulai ulang akan melanjutkannya."
+pause.ten:
+  en: "10 min"
+  id: "10 mnt"
+pause.thirty:
+  en: "30 min"
+  id: "30 mnt"
+pause.hour:
+  en: "1 hour"
+  id: "1 jam"
+pause.manual:
+  en: "Until I resume"
+  id: "Sampai saya lanjutkan"
+pause.resume:
+  en: "Resume"
+  id: "Lanjutkan"
+pause.until:
+  en: "Paused until %{time}"
+  id: "Dijeda sampai %{time}"
+pause.until_resumed:
+  en: "Paused until you resume"
+  id: "Dijeda sampai Anda lanjutkan"

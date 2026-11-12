@@ -5,8 +5,9 @@ use gpui::{
     prelude::*, px,
 };
 use gpui_component::{
-    ActiveTheme as _,
+    ActiveTheme as _, IndexPath,
     input::{Input, InputEvent, InputState},
+    select::{Select, SelectEvent, SelectItem, SelectState},
     switch::Switch,
 };
 use store::Settings;
@@ -167,6 +168,70 @@ fn commit(key: &'static str, kind: &Kind, input: &Entity<InputState>, window: &m
         None => stored,
     };
     input.update(cx, |input, cx| input.set_value(shown, window, cx));
+}
+
+/// One option of a dropdown: the word written to the file and the text shown for it.
+#[derive(Clone)]
+pub struct Choice {
+    pub word: &'static str,
+    pub label: SharedString,
+}
+
+impl SelectItem for Choice {
+    type Value = &'static str;
+
+    fn title(&self) -> SharedString {
+        self.label.clone()
+    }
+
+    fn value(&self) -> &Self::Value {
+        &self.word
+    }
+}
+
+struct ChoiceBox {
+    select: Entity<SelectState<Vec<Choice>>>,
+    _subscription: Subscription,
+}
+
+fn choice_index(choices: &[Choice], word: &str) -> Option<IndexPath> {
+    choices.iter().position(|choice| choice.word == word).map(IndexPath::new)
+}
+
+/// A dropdown that writes the chosen word to `key`; `shown` gives the word to select, read again on every paint.
+pub fn choice(key: &'static str, width: f32, choices: Vec<Choice>, shown: impl Fn() -> String + 'static) -> Render {
+    Rc::new(move |window, cx| {
+        let selected = shown();
+        let state = window.use_keyed_state(SharedString::from(format!("choice-{key}")), cx, {
+            let (choices, selected) = (choices.clone(), selected.clone());
+            move |window, cx| {
+                let index = choice_index(&choices, &selected);
+                let select = cx.new(|cx| SelectState::new(choices, index, window, cx));
+                let _subscription = cx.subscribe_in(
+                    &select,
+                    window,
+                    move |_box: &mut ChoiceBox, _select, event: &SelectEvent<Vec<Choice>>, _window, cx| {
+                        let SelectEvent::Confirm(Some(word)) = event else { return };
+                        if Settings::load().get_string(key) != Some(*word) {
+                            write(key, word, cx);
+                        }
+                    },
+                );
+                ChoiceBox { select, _subscription }
+            }
+        });
+        let select = state.read(cx).select.clone();
+        // A hand edit or the tray's own write shows up here instead of a stale choice.
+        if select.read(cx).selected_value().copied() != Some(shown_static(&choices, &selected)) {
+            let index = choice_index(&choices, &selected);
+            select.update(cx, |select, cx| select.set_selected_index(index, window, cx));
+        }
+        div().w(px(width)).child(Select::new(&select)).into_any_element()
+    })
+}
+
+fn shown_static(choices: &[Choice], word: &str) -> &'static str {
+    choices.iter().find(|choice| choice.word == word).map_or("", |choice| choice.word)
 }
 
 #[cfg(test)]

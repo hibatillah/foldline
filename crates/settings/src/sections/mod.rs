@@ -5,6 +5,7 @@ mod calendar;
 mod general;
 mod language;
 mod pages;
+mod pause;
 mod shalat;
 mod stats;
 mod weather;

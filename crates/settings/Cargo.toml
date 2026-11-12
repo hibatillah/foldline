@@ -16,7 +16,7 @@ gpui-component = { version = "=0.5.1", default-features = false }
 gpui-component-assets = { version = "=0.5.1" }
 places = { path = "../places" }
 store = { path = "../store" }
-windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Registry", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging"] }
+windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Registry", "Win32_System_Threading", "Win32_System_Time", "Win32_UI_WindowsAndMessaging"] }
 
 [dev-dependencies]
 salah = "0.7.6"

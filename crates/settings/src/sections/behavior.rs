@@ -138,14 +138,15 @@ fn situation(
     key: &'static str,
     default: &'static str,
     backdrop: Backdrop,
-    hover_key: &'static str,
-    hover_description: &'static str,
+    open_by_pointer_key: &'static str,
+    open_by_pointer_description: &'static str,
 ) -> Group {
     Group::titled(
         heading,
         vec![
             choice_item(tr!("behavior.group_shows"), description, key, default, backdrop),
-            Item::new(tr!("behavior.group_hover"), field::toggle(hover_key, true)).description(hover_description),
+            Item::new(tr!("behavior.group_open_by_pointer"), field::toggle(open_by_pointer_key, true))
+                .description(open_by_pointer_description),
         ],
     )
 }
@@ -163,7 +164,7 @@ pub fn page() -> Page {
                 DEFAULT_MAXIMIZED,
                 Backdrop::MaximizedWindow,
                 HOVER_MAXIMIZED_KEY,
-                tr!("behavior.hover_maximized_note"),
+                tr!("behavior.open_by_pointer_maximized_note"),
             ),
             situation(
                 tr!("behavior.over_fullscreen"),
@@ -172,7 +173,7 @@ pub fn page() -> Page {
                 DEFAULT_FULLSCREEN,
                 Backdrop::FullScreenApp,
                 HOVER_FULLSCREEN_KEY,
-                tr!("behavior.hover_fullscreen_note"),
+                tr!("behavior.open_by_pointer_fullscreen_note"),
             ),
         ],
     )
@@ -215,7 +216,7 @@ mod tests {
     }
 
     #[test]
-    fn the_hover_keys_match_the_ones_the_host_reads() {
+    fn the_open_by_pointer_keys_match_the_ones_the_host_reads() {
         let host = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../notch/src/host/visibility.rs"))
             .expect("host visibility source");
         for key in [HOVER_MAXIMIZED_KEY, HOVER_FULLSCREEN_KEY] {
