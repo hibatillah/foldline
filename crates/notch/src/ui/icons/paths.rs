@@ -4,6 +4,9 @@ use crate::gfx::{Path, Point};
 const CORNER_RADIUS: f32 = 1.8;
 /// Lucide "pin" (ISC license, https://lucide.dev): the head, then the needle.
 const PIN: &str = "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1zM12 17v5";
+/// The shelf's download arrow and tray, on the same 24 grid.
+const DOWNLOAD_ARROW: &str = "M12 4v10M8 10l4 4 4-4";
+const DOWNLOAD_TRAY: &str = "M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3";
 
 #[derive(Debug, PartialEq)]
 pub(super) enum Paint {
@@ -237,6 +240,12 @@ impl Icon {
             Icon::Pin => {
                 let corner = Point::new(center.x - size / 2.0, center.y - size / 2.0);
                 (Path::from_svg(PIN, corner, unit), Paint::Line)
+            }
+            Icon::Download => {
+                let corner = Point::new(center.x - size / 2.0, center.y - size / 2.0);
+                let mut download = Path::from_svg(DOWNLOAD_ARROW, corner, unit);
+                download.append(Path::from_svg(DOWNLOAD_TRAY, corner, unit));
+                (download, Paint::Line)
             }
             Icon::Lyrics => {
                 let bubble = solid(

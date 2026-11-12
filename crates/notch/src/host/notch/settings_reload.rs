@@ -1,11 +1,11 @@
 use super::{Notch, activity_setting_key};
 use store::language::resolve_setting;
 
-use crate::host::{notification_banners, visibility, volume_flyout};
+use crate::host::{monitor, notification_banners, visibility, volume_flyout};
 
 impl Notch {
     /// Re-reads settings.txt after `WM_SETTINGS_CHANGED`; a missing or unreadable value keeps the current one.
-    /// Hover, the open page and the page shown stay as they are.
+    /// The open state, the open page and the page shown stay as they are.
     pub fn reload_settings(&mut self) {
         self.settings.reload();
         let language_before = self.language;
@@ -13,14 +13,18 @@ impl Notch {
         store::language::set_current(self.language);
         // A hand-edited old key still migrates while the notch runs.
         visibility::migrate(&mut self.settings);
+        self.apply_stored_pause(store::pause::now_unix());
         let was_suppressed = self.is_suppressed();
         self.hiding.reload(&self.settings);
-        volume_flyout::set_hidden(self.settings.get_bool(volume_flyout::SETTING_KEY, volume_flyout::is_hidden()));
-        let hides_banners = notification_banners::is_hidden();
-        let wants_banners_hidden = self.settings.get_bool(notification_banners::SETTING_KEY, hides_banners);
-        // Unchanged stays put: switching off restores, which every unrelated settings change must not repeat.
-        if wants_banners_hidden != hides_banners {
-            notification_banners::set_hidden(wants_banners_hidden);
+        // While paused the popups belong to Windows; a resume sets them again from these keys.
+        if !self.is_paused() {
+            volume_flyout::set_hidden(self.settings.get_bool(volume_flyout::SETTING_KEY, volume_flyout::is_hidden()));
+            let hides_banners = notification_banners::is_hidden();
+            let wants_banners_hidden = self.settings.get_bool(notification_banners::SETTING_KEY, hides_banners);
+            // Unchanged stays put: switching off restores, which every unrelated settings change must not repeat.
+            if wants_banners_hidden != hides_banners {
+                notification_banners::set_hidden(wants_banners_hidden);
+            }
         }
         self.sync_location_tracking();
         let navigable_before = self.navigable.clone();
@@ -45,12 +49,21 @@ impl Notch {
             self.language_changed();
         }
         self.apply_suppression(was_suppressed);
+        self.set_monitor_mode(monitor::read_mode(&self.settings, self.monitor.mode));
         self.keep_shown_page_in_place(&navigable_before);
         self.flush();
     }
 
-    /// Tells every page and started activity to rebuild cached text, and lists the pages again under their new names.
+    /// Lists the pages again under their new names after their cached text is rebuilt.
     fn language_changed(&mut self) {
+        self.rebuild_cached_text();
+        let ids = self.page_ids();
+        let opt_in: Vec<bool> = self.pages.iter().map(|page| page.is_opt_in()).collect();
+        self.publish_known_pages(&ids, &opt_in);
+    }
+
+    /// Tells every page and started activity to rebuild cached text: after a language change or a new scale.
+    pub(super) fn rebuild_cached_text(&mut self) {
         for index in 0..self.pages.len() {
             self.with_page(index, |page, context| page.on_language_changed(context));
         }
@@ -59,9 +72,6 @@ impl Notch {
                 self.with_activity(index, |activity, context| activity.on_language_changed(context));
             }
         }
-        let ids = self.page_ids();
-        let opt_in: Vec<bool> = self.pages.iter().map(|page| page.is_opt_in()).collect();
-        self.publish_known_pages(&ids, &opt_in);
         self.pending.repaint = true;
     }
 }

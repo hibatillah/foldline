@@ -40,6 +40,11 @@ impl BadgePointer {
         self.leave_with(PointerEvent::Left)
     }
 
+    #[cfg(test)]
+    pub(super) fn is_over_a_badge(&self) -> bool {
+        self.over.is_some()
+    }
+
     fn leave_with(&mut self, event: PointerEvent) -> Option<BadgeDelivery> {
         self.over.take().map(|(page_index, area)| BadgeDelivery { page_index, event, area })
     }

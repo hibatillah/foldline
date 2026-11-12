@@ -7,8 +7,8 @@ use super::{
 };
 use crate::i18n::tr;
 use crate::ui::palette::{
-    LIGHT_GRAY, REMOVE_BUTTON_FILL, SUCCESS_GREEN, SURFACE_BORDER, SURFACE_BUTTON_BORDER, SURFACE_HOVER, SURFACE_ROW,
-    TEXT_DIM, TEXT_LIGHT, TEXT_MUTED,
+    LIGHT_GRAY, MINT_GREEN, REMOVE_BUTTON_FILL, SUCCESS_GREEN, SURFACE_BORDER, SURFACE_BUTTON_BORDER, SURFACE_HOVER,
+    SURFACE_ROW, TEXT_DIM, TEXT_LIGHT, TEXT_MUTED,
 };
 use crate::ui::type_styles::{MEDIUM_12, MEDIUM_13, REGULAR_12, REGULAR_13, REGULAR_14};
 use crate::{
@@ -30,6 +30,8 @@ const MESSAGE_ICON_GAP: f32 = 8.0;
 const MESSAGE_HEIGHT: f32 = 18.0;
 /// The copy icon in its 22 unit button, a little larger than the 10 unit cross so both read as the same weight.
 const COPY_ICON_SIZE: f32 = 12.0;
+/// The line width, in grid units, of the green check that replaces the copy icon after a copy.
+const COPY_CHECK_WIDTH: f32 = 2.5;
 
 const TITLE: FontStyle = FontStyle::new(UI_FONT, 20.0, Weight::Medium, Align::Leading);
 const PLUS: FontStyle = FontStyle::new(UI_FONT, 15.0, Weight::Regular, Align::Center);
@@ -141,7 +143,12 @@ impl TodoPage {
                     let copy = copy_rect(rect);
                     canvas.fill_rounded_rect(copy, copy.height() / 2.0, REMOVE_BUTTON_FILL.faded(opacity));
                     let center = Point::new(copy.center_x(), copy.center_y());
-                    Icon::Copy.draw(canvas, center, COPY_ICON_SIZE, LIGHT_GRAY, opacity);
+                    if self.copy_check.shows(index) {
+                        let check = [Stroke::new(CHECK, MINT_GREEN)];
+                        draw_strokes(canvas, &check, center, COPY_ICON_SIZE, COPY_CHECK_WIDTH, opacity);
+                    } else {
+                        Icon::Copy.draw(canvas, center, COPY_ICON_SIZE, LIGHT_GRAY, opacity);
+                    }
                     let delete = delete_rect(rect);
                     canvas.fill_rounded_rect(delete, delete.height() / 2.0, REMOVE_BUTTON_FILL.faded(opacity));
                     let center = Point::new(delete.center_x(), delete.center_y());

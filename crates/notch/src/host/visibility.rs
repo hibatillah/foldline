@@ -68,7 +68,7 @@ pub(super) fn reveals_more(from: Option<Showing>, to: Option<Showing>) -> bool {
 }
 
 /// Whether the pointer may open the notch; a regular window always allows it.
-pub(super) fn opens_on_hover(mode: ScreenMode, over_maximized: bool, over_fullscreen: bool) -> bool {
+pub(super) fn opens_on_pointer(mode: ScreenMode, over_maximized: bool, over_fullscreen: bool) -> bool {
     match mode {
         ScreenMode::Normal => true,
         ScreenMode::Maximized => over_maximized,
@@ -123,9 +123,16 @@ pub(super) fn priority_shows(mode: ScreenMode, replaces_windows_flyout: bool, ha
     has_priority_presence && replaces_windows_flyout && mode != ScreenMode::Capture
 }
 
-/// Whether the window goes off screen: the word `hidden` or a screenshot overlay, unless a priority activity shows.
-pub(super) fn suppresses(showing: Option<Showing>, priority_shows: bool) -> bool {
-    showing == Some(Showing::Hidden) && !priority_shows
+/// Whether the user's pin shows the notch where the word or hide-when-idle would hide it; never over a screenshot
+/// overlay, so a screenshot never catches a pinned notch.
+pub(super) fn pin_shows(mode: ScreenMode, is_pinned: bool) -> bool {
+    is_pinned && mode != ScreenMode::Capture
+}
+
+/// Whether the window goes off screen: the word `hidden` or a screenshot overlay, unless a priority activity or the
+/// pin shows it.
+pub(super) fn suppresses(showing: Option<Showing>, priority_shows: bool, pin_shows: bool) -> bool {
+    showing == Some(Showing::Hidden) && !priority_shows && !pin_shows
 }
 
 /// Whether the notch stays on screen (is not suppressed) in front of a window in `mode`.
@@ -135,9 +142,10 @@ pub(super) fn stays_on_screen(
     fullscreen: Showing,
     replaces_windows_flyout: bool,
     has_priority_presence: bool,
+    is_pinned: bool,
 ) -> bool {
     let priority = priority_shows(mode, replaces_windows_flyout, has_priority_presence);
-    !suppresses(showing_for(mode, maximized, fullscreen), priority)
+    !suppresses(showing_for(mode, maximized, fullscreen), priority, pin_shows(mode, is_pinned))
 }
 
 /// Whether the collapsed notch shrinks to the strip; `None` is a regular window, where hide-when-idle decides.
@@ -146,8 +154,9 @@ pub(super) fn hides_to_strip(
     hides_when_idle: bool,
     collapsed: Collapsed,
     priority_shows: bool,
+    pin_shows: bool,
 ) -> bool {
-    if priority_shows {
+    if priority_shows || pin_shows {
         return false;
     }
     match showing {
@@ -199,18 +208,18 @@ mod tests {
     }
 
     #[test]
-    fn hover_opening_follows_the_switch_for_the_window_in_front_and_always_opens_over_a_regular_window() {
-        assert!(opens_on_hover(ScreenMode::Normal, false, false));
-        assert!(!opens_on_hover(ScreenMode::Maximized, false, true));
-        assert!(opens_on_hover(ScreenMode::Maximized, true, false));
-        assert!(!opens_on_hover(ScreenMode::Fullscreen, true, false));
-        assert!(opens_on_hover(ScreenMode::Fullscreen, false, true));
+    fn pointer_opening_follows_the_switch_for_the_window_in_front_and_always_opens_over_a_regular_window() {
+        assert!(opens_on_pointer(ScreenMode::Normal, false, false));
+        assert!(!opens_on_pointer(ScreenMode::Maximized, false, true));
+        assert!(opens_on_pointer(ScreenMode::Maximized, true, false));
+        assert!(!opens_on_pointer(ScreenMode::Fullscreen, true, false));
+        assert!(opens_on_pointer(ScreenMode::Fullscreen, false, true));
     }
 
     #[test]
-    fn a_screenshot_overlay_hides_the_notch_and_ignores_hover_whatever_the_settings_say() {
+    fn a_screenshot_overlay_hides_the_notch_and_ignores_the_pointer_whatever_the_settings_say() {
         assert_eq!(showing_for(ScreenMode::Capture, Showing::Music, Showing::Music), Some(Showing::Hidden));
-        assert!(!opens_on_hover(ScreenMode::Capture, true, true));
+        assert!(!opens_on_pointer(ScreenMode::Capture, true, true));
         assert!(reveals_more(showing_for(ScreenMode::Capture, Showing::Music, Showing::Music), None));
     }
 
@@ -304,11 +313,70 @@ mod tests {
     const EVERY_WORD: [Showing; 4] =
         [Showing::Hidden, Showing::ActivitiesOnly, Showing::MusicWithLyrics, Showing::Music];
 
-    /// Whether an idle notch with hide-when-idle on is on screen at full size.
+    /// Whether an idle, unpinned notch with hide-when-idle on is on screen at full size.
     fn is_shown(mode: ScreenMode, word: Showing, replaces_windows_flyout: bool, has_priority_presence: bool) -> bool {
+        is_shown_with(mode, word, true, replaces_windows_flyout && has_priority_presence, false)
+    }
+
+    /// Whether an idle notch is on screen at full size, with the flyout replaced when `has_priority_presence`.
+    fn is_shown_with(
+        mode: ScreenMode,
+        word: Showing,
+        hides_when_idle: bool,
+        has_priority_presence: bool,
+        is_pinned: bool,
+    ) -> bool {
         let showing = showing_for(mode, word, word);
-        let priority = priority_shows(mode, replaces_windows_flyout, has_priority_presence);
-        !suppresses(showing, priority) && !hides_to_strip(showing, true, Collapsed::default(), priority)
+        let priority = priority_shows(mode, true, has_priority_presence);
+        let pinned = pin_shows(mode, is_pinned);
+        let is_on_screen = stays_on_screen(mode, word, word, true, has_priority_presence, is_pinned);
+        assert_eq!(is_on_screen, !suppresses(showing, priority, pinned), "the two suppression paths agree");
+        is_on_screen && !hides_to_strip(showing, hides_when_idle, Collapsed::default(), priority, pinned)
+    }
+
+    #[test]
+    fn a_pinned_notch_is_never_suppressed_over_any_word_in_any_mode_except_capture() {
+        for mode in [ScreenMode::Normal, ScreenMode::Maximized, ScreenMode::Fullscreen] {
+            for word in EVERY_WORD {
+                for hides_when_idle in [false, true] {
+                    assert!(
+                        is_shown_with(mode, word, hides_when_idle, false, true),
+                        "{word:?} over {mode:?}, hide when idle {hides_when_idle}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_pinned_notch_is_hidden_during_a_screenshot_overlay() {
+        for word in EVERY_WORD {
+            for has_priority_presence in [false, true] {
+                assert!(!stays_on_screen(ScreenMode::Capture, word, word, true, has_priority_presence, true));
+                assert!(!is_shown_with(ScreenMode::Capture, word, false, has_priority_presence, true));
+            }
+        }
+        assert!(!pin_shows(ScreenMode::Capture, true));
+    }
+
+    #[test]
+    fn an_unpinned_notch_keeps_its_old_rule() {
+        for mode in EVERY_MODE {
+            assert!(!pin_shows(mode, false), "{mode:?}");
+            for word in EVERY_WORD {
+                for hides_when_idle in [false, true] {
+                    let showing = showing_for(mode, word, word);
+                    let expected = !suppresses(showing, false, false)
+                        && !(hides_when_idle && showing.is_none())
+                        && (showing.is_none() || word == Showing::Music);
+                    assert_eq!(
+                        is_shown_with(mode, word, hides_when_idle, false, false),
+                        expected,
+                        "{word:?} over {mode:?}, hide when idle {hides_when_idle}"
+                    );
+                }
+            }
+        }
     }
 
     #[test]
@@ -337,38 +405,38 @@ mod tests {
     fn hidden_suppresses_the_window_until_a_priority_activity_shows_but_the_screenshot_overlay_always_does() {
         for mode in [ScreenMode::Maximized, ScreenMode::Fullscreen] {
             let showing = showing_for(mode, Showing::Hidden, Showing::Hidden);
-            assert!(suppresses(showing, priority_shows(mode, true, false)));
-            assert!(!suppresses(showing, priority_shows(mode, true, true)));
-            assert!(suppresses(showing, priority_shows(mode, false, true)));
+            assert!(suppresses(showing, priority_shows(mode, true, false), false));
+            assert!(!suppresses(showing, priority_shows(mode, true, true), false));
+            assert!(suppresses(showing, priority_shows(mode, false, true), false));
         }
         let capture = showing_for(ScreenMode::Capture, Showing::Music, Showing::Music);
-        assert!(suppresses(capture, priority_shows(ScreenMode::Capture, true, true)));
-        assert!(!suppresses(None, false), "a regular window never suppresses");
+        assert!(suppresses(capture, priority_shows(ScreenMode::Capture, true, true), false));
+        assert!(!suppresses(None, false, false), "a regular window never suppresses");
     }
 
     #[test]
     fn the_notch_stays_on_screen_over_a_hidden_window_only_with_a_priority_presence_and_never_over_a_screenshot() {
         let hidden = Showing::Hidden;
-        assert!(!stays_on_screen(ScreenMode::Fullscreen, Showing::Music, hidden, true, false));
-        assert!(stays_on_screen(ScreenMode::Fullscreen, Showing::Music, hidden, true, true));
-        assert!(!stays_on_screen(ScreenMode::Fullscreen, Showing::Music, hidden, false, true));
-        assert!(stays_on_screen(ScreenMode::Maximized, hidden, hidden, true, true));
-        assert!(stays_on_screen(ScreenMode::Fullscreen, Showing::Music, Showing::ActivitiesOnly, true, false));
-        assert!(stays_on_screen(ScreenMode::Normal, hidden, hidden, false, false));
-        assert!(!stays_on_screen(ScreenMode::Capture, Showing::Music, Showing::Music, true, true));
+        assert!(!stays_on_screen(ScreenMode::Fullscreen, Showing::Music, hidden, true, false, false));
+        assert!(stays_on_screen(ScreenMode::Fullscreen, Showing::Music, hidden, true, true, false));
+        assert!(!stays_on_screen(ScreenMode::Fullscreen, Showing::Music, hidden, false, true, false));
+        assert!(stays_on_screen(ScreenMode::Maximized, hidden, hidden, true, true, false));
+        assert!(stays_on_screen(ScreenMode::Fullscreen, Showing::Music, Showing::ActivitiesOnly, true, false, false));
+        assert!(stays_on_screen(ScreenMode::Normal, hidden, hidden, false, false, false));
+        assert!(!stays_on_screen(ScreenMode::Capture, Showing::Music, Showing::Music, true, true, false));
     }
 
     #[test]
     fn a_message_keeps_a_hiding_word_up_but_lasting_state_does_not() {
         let message = Collapsed { has_message: true, ..Collapsed::default() };
         let playing = Collapsed { has_resting_content: true, ..Collapsed::default() };
-        assert!(!hides_to_strip(None, true, message, false));
-        assert!(!hides_to_strip(None, true, playing, false));
-        assert!(hides_to_strip(None, true, Collapsed::default(), false));
-        assert!(!hides_to_strip(None, false, Collapsed::default(), false));
-        assert!(!hides_to_strip(Some(Showing::ActivitiesOnly), false, message, false));
-        assert!(hides_to_strip(Some(Showing::ActivitiesOnly), false, playing, false));
-        assert!(!hides_to_strip(Some(Showing::Hidden), true, Collapsed::default(), false));
+        assert!(!hides_to_strip(None, true, message, false, false));
+        assert!(!hides_to_strip(None, true, playing, false, false));
+        assert!(hides_to_strip(None, true, Collapsed::default(), false, false));
+        assert!(!hides_to_strip(None, false, Collapsed::default(), false, false));
+        assert!(!hides_to_strip(Some(Showing::ActivitiesOnly), false, message, false, false));
+        assert!(hides_to_strip(Some(Showing::ActivitiesOnly), false, playing, false, false));
+        assert!(!hides_to_strip(Some(Showing::Hidden), true, Collapsed::default(), false, false));
     }
 
     #[test]

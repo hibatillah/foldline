@@ -8,6 +8,7 @@ mod display;
 mod drop_target;
 mod icon;
 mod location_tracker;
+mod monitor;
 mod motion;
 mod navigation;
 mod notch;

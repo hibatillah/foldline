@@ -170,6 +170,7 @@ impl ClipboardPage {
         context.kill_timer(BAR_TIMER);
         context.kill_timer(CONFIRM_TIMER);
         *self.preview.get_mut() = super::state::Preview::default();
+        self.thumbnails.clear();
         context.request_repaint();
     }
 }

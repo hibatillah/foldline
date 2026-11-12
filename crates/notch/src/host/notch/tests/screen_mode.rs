@@ -26,7 +26,7 @@ fn hover_restores_topmost_before_the_drop_target_hands_off_input() {
     let mut notch = rig(SampleOptions::default());
     notch.hiding.hides_when_idle = true;
     assert_eq!(unsafe { GetWindowLongW(notch.window, GWL_EXSTYLE) } as u32 & WS_EX_TOPMOST.0, 0);
-    notch.set_hovering(true);
+    notch.set_open(true);
     assert_ne!(unsafe { GetWindowLongW(notch.window, GWL_EXSTYLE) } as u32 & WS_EX_TOPMOST.0, 0);
 }
 
@@ -35,19 +35,19 @@ fn session_recovery_clears_stale_hover_and_allows_a_hidden_notch_to_open_again()
     let mut notch = rig(SampleOptions::default());
     notch.hiding.screen_mode = ScreenMode::Maximized;
     notch.hiding.hides_when_idle = true;
-    notch.hover.is_hovering = true;
+    notch.open.is_open = true;
     notch.hiding.is_revealed = true;
-    notch.hover.is_dragging_files = true;
-    notch.hover.is_close_pending = true;
+    notch.open.is_dragging_files = true;
+    notch.open.is_close_pending = true;
     notch.springs.expansion.jump_to(1.0);
     notch.reset_session_interaction();
-    assert!(!notch.hover.is_hovering);
+    assert!(!notch.open.is_open);
     assert!(!notch.hiding.is_revealed);
-    assert!(!notch.hover.is_dragging_files);
-    assert!(!notch.hover.is_close_pending);
+    assert!(!notch.open.is_dragging_files);
+    assert!(!notch.open.is_close_pending);
     assert_eq!(notch.springs.expansion.target, 0.0);
     assert!(notch.is_hidden());
-    notch.set_hovering(true);
+    notch.set_open(true);
     notch.timer_fired(REVEAL_TIMER_ID);
     assert!(notch.hiding.is_revealed);
     notch.timer_fired(EXPAND_TIMER_ID);

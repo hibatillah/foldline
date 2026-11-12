@@ -1,6 +1,6 @@
 use super::{
     ANIMATION_TIMER_ID, CLOSE_TIMER_ID, EXPAND_TIMER_ID, HOVER_WATCH_TIMER_ID, LOCATION_SETTLE_TIMER_ID, Notch,
-    RAISE_TIMER_ID, REVEAL_TIMER_ID, WINDOW_REVEAL_TIMER_ID,
+    PAUSE_TIMER_ID, RAISE_TIMER_ID, REVEAL_TIMER_ID, WINDOW_REVEAL_TIMER_ID,
 };
 use windows::Win32::UI::WindowsAndMessaging::{KillTimer, SetTimer};
 
@@ -12,7 +12,7 @@ use crate::{
 };
 
 const EXPAND_DELAY_MILLISECONDS: u32 = 450;
-const CLOCK_TIMER_ID: usize = 6;
+pub(super) const CLOCK_TIMER_ID: usize = 6;
 
 impl Notch {
     pub(super) fn arm_clock_timer(&self) {
@@ -23,6 +23,10 @@ impl Notch {
         match timer_key {
             ANIMATION_TIMER_ID => self.advance_animation(),
             CLOCK_TIMER_ID => {
+                if self.is_paused() {
+                    let _ = unsafe { KillTimer(Some(self.window), CLOCK_TIMER_ID) };
+                    return;
+                }
                 self.arm_clock_timer();
                 let layout_changed = self.refresh_layout();
                 if layout_changed || self.resting_index.is_none() || self.springs.expansion.position > 0.001 {
@@ -32,7 +36,7 @@ impl Notch {
             REVEAL_TIMER_ID => {
                 let _ = unsafe { KillTimer(Some(self.window), REVEAL_TIMER_ID) };
                 unsafe { SetTimer(Some(self.window), EXPAND_TIMER_ID, EXPAND_DELAY_MILLISECONDS, None) };
-                if self.hover.is_hovering && self.opens_on_hover() {
+                if self.open.is_open && self.opens_on_pointer() {
                     self.hiding.is_revealed = true;
                     self.flush();
                 }
@@ -40,14 +44,14 @@ impl Notch {
             EXPAND_TIMER_ID => {
                 let _ = unsafe { KillTimer(Some(self.window), EXPAND_TIMER_ID) };
                 // The window in front can change to one that refuses hover while this timer runs.
-                if self.hover.is_hovering && self.presences.banner.is_none() && self.opens_on_hover() {
+                if self.open.is_open && self.presences.banner.is_none() && self.opens_on_pointer() {
                     self.begin_opening();
                     self.start_animation();
                     self.flush();
                 }
             }
             HOVER_WATCH_TIMER_ID => {
-                if !self.hover.is_dragging_files && !self.hover.is_close_pending && !self.pointer_is_over_window() {
+                if !self.open.is_dragging_files && !self.open.is_close_pending && !self.pointer_is_over_window() {
                     let (cursor, bounds) = self.pointer_and_window_bounds();
                     log::debug(&format!(
                         "hover watch: pointer left the window; cursor=({},{}) window=({},{})-({},{}) expansion={:.2}",
@@ -70,17 +74,19 @@ impl Notch {
                 }
             }
             LOCATION_SETTLE_TIMER_ID => self.location_settled(),
+            PAUSE_TIMER_ID => self.pause_timer_fired(store::pause::now_unix()),
             WINDOW_REVEAL_TIMER_ID => {
                 let _ = unsafe { KillTimer(Some(self.window), WINDOW_REVEAL_TIMER_ID) };
                 self.finish_window_reveal();
             }
             CLOSE_TIMER_ID => {
                 let _ = unsafe { KillTimer(Some(self.window), CLOSE_TIMER_ID) };
-                self.hover.is_close_pending = false;
+                self.open.is_close_pending = false;
                 // The pointer may have come back without moving, which sends no message; a page that is typing keeps
                 // the notch open until it gives the keyboard back.
-                if !self.hover.is_dragging_files && self.keyboard.owner.is_none() && !self.pointer_is_over_window() {
-                    self.set_hovering(false);
+                let is_held_open = self.open.is_dragging_files || self.open.is_pinned || self.keyboard.owner.is_some();
+                if !is_held_open && !self.pointer_is_over_window() {
+                    self.set_open(false);
                     self.flush();
                 }
             }
@@ -159,11 +165,11 @@ mod tests {
         let mut notch = rig(SampleOptions::default());
         crate::host::notch::tests::settle(&mut notch);
         for _ in 0..3 {
-            notch.set_hovering(true);
+            notch.set_open(true);
             notch.timer_fired(EXPAND_TIMER_ID);
             run_animation_to_rest(&mut notch);
             assert!(notch.springs.expansion.position > 0.99, "the notch opened");
-            notch.set_hovering(false);
+            notch.set_open(false);
             run_animation_to_rest(&mut notch);
             assert_eq!(notch.springs.expansion.position, 0.0, "the notch closed");
             assert_eq!(armed_host_timers(&notch), Vec::<usize>::new());

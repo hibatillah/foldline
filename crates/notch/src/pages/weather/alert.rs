@@ -185,8 +185,8 @@ impl Alert {
     }
 
     /// Leaving the notch is leaving the banner, also when the notch had opened meanwhile and the banner got no `Left`.
-    pub(super) fn on_hover_changed(&mut self, is_hovering: bool, context: &mut Context) {
-        if !is_hovering {
+    pub(super) fn on_open_changed(&mut self, is_open: bool, context: &mut Context) {
+        if !is_open {
             self.pointer_left(context);
         }
     }

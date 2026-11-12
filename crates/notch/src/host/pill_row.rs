@@ -19,9 +19,14 @@ pub(super) const RING_DOTS_GAP: f32 = 4.0;
 pub(super) const HEADER_CLOCK_GAP: f32 = 40.0;
 /// The least room between the page dots and the header clock.
 pub(super) const PAGE_DOTS_CLOCK_GAP: f32 = 40.0;
-/// The gear's hexagon fills less of its square than the battery ring does, so 18 shows it about as wide as the
-/// ring's 14.
-pub(super) const GEAR_SIZE: f32 = 18.0;
+/// The gear's hexagon fills less of its square than the ring does, so 16 shows it a little narrower than the 14 ring.
+pub(super) const GEAR_SIZE: f32 = 16.0;
+/// The pin's box; its stroked outline shows about 9 x 12 in it, level with the ring.
+pub(super) const PIN_SIZE: f32 = 13.0;
+/// Pin box to gear box; with both glyphs' margins the visible gap is about 8.
+pub(super) const PIN_GEAR_GAP: f32 = 4.0;
+/// Group to pin box; the ring has no margin, so the visible gap is about 8.
+pub(super) const GROUP_PIN_GAP: f32 = 6.0;
 /// Edge of the square a click on a header icon lands in; where neighbours' squares overlap, the nearer item wins.
 pub(super) const HIT_SIZE: f32 = 24.0;
 
@@ -110,33 +115,36 @@ pub(super) struct HeaderRow {
     pub dropped_icons: usize,
     /// The shown icons, then the end items, left to right.
     pub group_lefts: Vec<f32>,
+    pub pin_left: f32,
     pub gear_left: f32,
 }
 
-/// The open header: the clock alone in the exact middle, the gear at the right edge with the group
-/// `HEADER_ITEM_GAP` before it. Icons that would come nearer the clock than `HEADER_CLOCK_GAP` are dropped, nearest
-/// the clock first, so the clock never moves.
+/// The open header: the clock alone in the exact middle, the gear at the right edge, the pin `PIN_GEAR_GAP`
+/// before it and the group `GROUP_PIN_GAP` before the pin. Icons that would come nearer the clock than
+/// `HEADER_CLOCK_GAP` are dropped, nearest the clock first, so the clock never moves; the pin and the gear never are.
 pub(super) fn header_row(input: &HeaderInput) -> HeaderRow {
     let gear_left = input.right - GEAR_SIZE;
+    let pin_left = gear_left - PIN_GEAR_GAP - PIN_SIZE;
     let clock_center = (input.left + input.right) / 2.0;
     let nearest_allowed = clock_center + input.clock_width / 2.0 + HEADER_CLOCK_GAP;
     let mut dropped_icons = 0;
     loop {
-        let group_lefts = input.group.without_first(dropped_icons).lefts_ending_at(gear_left - HEADER_ITEM_GAP);
+        let group_lefts = input.group.without_first(dropped_icons).lefts_ending_at(pin_left - GROUP_PIN_GAP);
         let fits = group_lefts.first().is_none_or(|&left| left >= nearest_allowed - 0.001);
         if fits || dropped_icons == input.icon_count {
-            return HeaderRow { clock_center, dropped_icons, group_lefts, gear_left };
+            return HeaderRow { clock_center, dropped_icons, group_lefts, pin_left, gear_left };
         }
         dropped_icons += 1;
     }
 }
 
 /// The least width the header's content needs with the clock in the middle: the page dots and their gap on one
-/// side, the end items (battery ring, dot column) and the gear on the other, whichever is wider, on both sides.
+/// side, the end items (battery ring, dot column), the pin and the gear on the other, whichever is wider, on both
+/// sides.
 pub(super) fn header_content_width(page_dots_width: f32, clock_width: f32, end: Run) -> f32 {
     let page_dots_room = if page_dots_width > 0.0 { page_dots_width + PAGE_DOTS_CLOCK_GAP } else { 0.0 };
-    let end_run = if end.widths.is_empty() { 0.0 } else { end.width() + HEADER_ITEM_GAP };
-    let end_room = HEADER_CLOCK_GAP + end_run + GEAR_SIZE;
+    let end_run = if end.widths.is_empty() { 0.0 } else { end.width() + GROUP_PIN_GAP };
+    let end_room = HEADER_CLOCK_GAP + end_run + PIN_SIZE + PIN_GEAR_GAP + GEAR_SIZE;
     clock_width + 2.0 * page_dots_room.max(end_room)
 }
 
@@ -279,22 +287,51 @@ mod tests {
     }
 
     #[test]
-    fn the_header_group_runs_10_apart_with_4_from_the_ring_to_the_dots_and_ends_10_before_the_gear() {
+    fn the_pin_sits_3_5_left_of_the_gear() {
+        let header = header(&[16.0], &[RING]);
+        assert_eq!(header.gear_left - (header.pin_left + PIN_SIZE), PIN_GEAR_GAP);
+    }
+
+    #[test]
+    fn the_pin_is_never_dropped_when_icons_are() {
+        let header = header(&[16.0; 12], &[RING, DOTS]);
+        assert!(header.dropped_icons > 0);
+        assert_eq!(header.pin_left, RIGHT - GEAR_SIZE - PIN_GEAR_GAP - PIN_SIZE);
+        let last_end = header.group_lefts.last().unwrap() + DOTS;
+        assert_eq!(header.pin_left - last_end, GROUP_PIN_GAP, "the group still ends before the pin");
+    }
+
+    #[test]
+    fn the_header_minimum_width_includes_the_pin() {
+        let without_end = end_run(&[]);
+        assert_eq!(without_end, CLOCK + 2.0 * (HEADER_CLOCK_GAP + PIN_SIZE + PIN_GEAR_GAP + GEAR_SIZE));
+    }
+
+    #[test]
+    fn a_press_between_the_pin_and_the_gear_finds_the_nearer_one() {
+        let header = header(&[], &[RING]);
+        let items = [(header.pin_left, PIN_SIZE), (header.gear_left, GEAR_SIZE)];
+        assert_eq!(hit_item(&items, header.pin_left + PIN_SIZE + 1.0), Some(0), "just right of the pin");
+        assert_eq!(hit_item(&items, header.gear_left - 0.5), Some(1), "just left of the gear");
+    }
+
+    #[test]
+    fn the_header_group_runs_10_apart_with_4_from_the_ring_to_the_dots_and_ends_6_before_the_pin() {
         let header = header(&[16.0, 16.0], &[RING, DOTS]);
-        assert_eq!(header.gear_left - (header.group_lefts[3] + DOTS), HEADER_ITEM_GAP);
+        assert_eq!(header.pin_left - (header.group_lefts[3] + DOTS), GROUP_PIN_GAP);
         assert_eq!(header.group_lefts[3] - (header.group_lefts[2] + RING), RING_DOTS_GAP);
         assert_eq!(header.group_lefts[2] - (header.group_lefts[1] + 16.0), HEADER_ITEM_GAP);
         assert_eq!(header.group_lefts[1] - (header.group_lefts[0] + 16.0), HEADER_ITEM_GAP);
     }
 
     #[test]
-    fn the_gear_shifts_every_group_item_left_by_its_width_and_a_gap() {
+    fn the_pin_and_the_gear_shift_every_group_item_left_by_their_widths_and_two_gaps() {
         let group = [16.0, RING, DOTS];
         let with_gear = header(&group[..1], &group[1..]);
         let gaps = gaps_of(&group, HEADER_ITEM_GAP);
         let edge_anchored = Run { widths: &group, gaps: &gaps }.lefts_ending_at(RIGHT);
         for (left, edge_left) in with_gear.group_lefts.iter().zip(&edge_anchored) {
-            assert_eq!(edge_left - left, GEAR_SIZE + HEADER_ITEM_GAP);
+            assert_eq!(edge_left - left, PIN_SIZE + PIN_GEAR_GAP + GEAR_SIZE + GROUP_PIN_GAP);
         }
     }
 
@@ -340,14 +377,14 @@ mod tests {
         let dots_side = 96.0 + PAGE_DOTS_CLOCK_GAP;
         let ring = Run { widths: &[RING], gaps: &[] };
         assert_eq!(header_content_width(96.0, CLOCK, ring), CLOCK + 2.0 * dots_side);
-        let end_side = HEADER_CLOCK_GAP + RING + RING_DOTS_GAP + DOTS + HEADER_ITEM_GAP + GEAR_SIZE;
+        let pin_and_gear = PIN_SIZE + PIN_GEAR_GAP + GEAR_SIZE;
+        let end_side = HEADER_CLOCK_GAP + RING + RING_DOTS_GAP + DOTS + GROUP_PIN_GAP + pin_and_gear;
         assert_eq!(end_run(&[RING, DOTS]), CLOCK + 2.0 * end_side);
-        assert_eq!(end_run(&[]), CLOCK + 2.0 * (HEADER_CLOCK_GAP + GEAR_SIZE));
     }
 
     #[test]
-    fn dots_without_a_ring_keep_the_10_in_the_least_header_width() {
-        let end_side = HEADER_CLOCK_GAP + DOTS + HEADER_ITEM_GAP + GEAR_SIZE;
+    fn dots_without_a_ring_keep_the_group_gap_in_the_least_header_width() {
+        let end_side = HEADER_CLOCK_GAP + DOTS + GROUP_PIN_GAP + PIN_SIZE + PIN_GEAR_GAP + GEAR_SIZE;
         assert_eq!(end_run(&[DOTS]), CLOCK + 2.0 * end_side);
     }
 

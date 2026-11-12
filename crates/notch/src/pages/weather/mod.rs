@@ -175,8 +175,8 @@ impl Page for WeatherPage {
         self.alert.countdown_seconds(self.now())
     }
 
-    fn on_hover_changed(&mut self, is_hovering: bool, context: &mut Context) {
-        self.alert.on_hover_changed(is_hovering, context);
+    fn on_open_changed(&mut self, is_open: bool, context: &mut Context) {
+        self.alert.on_open_changed(is_open, context);
     }
 
     fn on_presence_pointer(&mut self, event: PointerEvent, area: Rect, context: &mut Context) {

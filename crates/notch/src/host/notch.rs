@@ -1,6 +1,9 @@
 use std::cell::Cell;
 
-use store::language::{Language, resolve_setting};
+use store::{
+    language::{Language, resolve_setting},
+    pause::PAUSED_UNTIL_KEY,
+};
 
 use windows::Win32::Foundation::{HWND, POINT};
 
@@ -24,10 +27,12 @@ use animation::{FrameTimer, Springs};
 use badge_pointer::BadgePointer;
 use header_row::HeaderMarks;
 use hiding::HidingState;
-use hover::HoverState;
 use keyboard::KeyboardState;
+pub(super) use monitor_state::MonitorState;
+use open_state::OpenState;
 use page_hotkeys::PageHotkeys;
 use pages::activity_setting_key;
+use pause::PauseState;
 use presences::ShownPresences;
 use resting_row::RestingRow;
 use row_motion::RowMotion;
@@ -36,15 +41,19 @@ mod animation;
 mod badge_pointer;
 mod header_row;
 mod hiding;
-mod hover;
 mod input;
 mod keyboard;
 mod layout;
 mod location;
+mod monitor_state;
+mod open_state;
 mod page_hotkeys;
 mod pages;
 mod paint;
+mod pause;
+mod pin;
 mod presences;
+mod relocate;
 mod resting_row;
 mod row_motion;
 mod settings_reload;
@@ -82,6 +91,8 @@ const RAISE_TIMER_ID: usize = 9;
 const WINDOW_REVEAL_TIMER_ID: usize = 10;
 /// One-shot: network changes come in bursts, so the position is read once they have been quiet for a while.
 const LOCATION_SETTLE_TIMER_ID: usize = 11;
+/// One-shot: ends a timed pause; killed on resume and never armed for a pause until resumed.
+const PAUSE_TIMER_ID: usize = 12;
 const LAST_PAGE_SETTING: &str = "navigation.page";
 const PAGE_ORDER_SETTING: &str = "navigation.order";
 const PAGES_OFF_SETTING: &str = "navigation.disabled";
@@ -129,12 +140,14 @@ pub(super) struct Notch {
     /// Whether the saved city follows the device; see `location_tracker`.
     is_tracking_location: bool,
     has_resting_content: bool,
-    hover: HoverState,
+    open: OpenState,
+    pause: PauseState,
     badge_pointer: BadgePointer,
     frame_timer: FrameTimer,
     keyboard: KeyboardState,
     page_hotkeys: PageHotkeys,
     region_origin: Cell<(i32, i32)>,
+    monitor: MonitorState,
 }
 
 pub(super) struct NotchParts {
@@ -148,6 +161,7 @@ pub(super) struct NotchParts {
     pub activities: Vec<Box<dyn Activity>>,
     pub ticks_per_second: i64,
     pub system_language: Language,
+    pub monitor: MonitorState,
 }
 
 impl Notch {
@@ -163,6 +177,7 @@ impl Notch {
             activities,
             ticks_per_second,
             system_language,
+            monitor,
         } = parts;
         visibility::migrate(&mut settings);
         let activities = activities
@@ -204,16 +219,22 @@ impl Notch {
             hiding,
             is_tracking_location: false,
             has_resting_content: false,
-            hover: HoverState::default(),
+            open: OpenState::default(),
+            pause: PauseState::default(),
             badge_pointer: BadgePointer::default(),
             frame_timer: FrameTimer::new(ticks_per_second, display::frame_interval_milliseconds()),
             keyboard: KeyboardState::default(),
             page_hotkeys: PageHotkeys::default(),
             region_origin: Cell::new((0, 0)),
+            monitor,
         }
     }
 
     pub fn start(&mut self) {
+        // A restart never keeps a pause, so a key left by a quit or a crash is cleared before anything reads it.
+        if self.settings.get_string(PAUSED_UNTIL_KEY).is_some_and(|stored| !stored.is_empty()) {
+            self.settings.set_string(PAUSED_UNTIL_KEY, "");
+        }
         for (index, page) in self.pages.iter().enumerate() {
             log::debug(&format!("page {index}: {}", page.id()));
         }

@@ -49,7 +49,7 @@ fn badge_rig() -> (Notch, usize, Rc<RefCell<Vec<PointerEvent>>>) {
     notch.pages.push(Box::new(BadgePage { heard: heard.clone() }));
     notch.page_list = PageList::new(notch.pages.len());
     settle(&mut notch);
-    notch.hover.is_hovering = true;
+    notch.open.is_open = true;
     let index = notch.pages.len() - 1;
     (notch, index, heard)
 }

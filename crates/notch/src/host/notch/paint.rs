@@ -35,7 +35,7 @@ impl Notch {
         let header_opacity = ramp(frame.expansion, HEADER_FADE);
         let expanded_opacity = ramp(frame.expansion, CONTENT_FADE);
 
-        if !self.hover.is_hovering && frame.expansion <= 0.001 {
+        if !self.open.is_open && frame.expansion <= 0.001 {
             crate::host::drop_target::set_resting_area(RECT {
                 left: self.screen_position.x + region.left,
                 top: self.screen_position.y + region.top,

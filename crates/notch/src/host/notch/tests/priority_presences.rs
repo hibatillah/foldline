@@ -49,7 +49,7 @@ fn a_volume_change_shows_over_a_hidden_full_screen_window_and_the_window_hides_a
     assert!(!notch.is_suppressed(), "the level shows although the word is hidden");
     assert!(!notch.is_hidden());
     assert_eq!(notch.springs.resting_width.position, notch.springs.resting_width.target, "no morph from the old pill");
-    assert!(!notch.opens_on_hover(), "the pointer still follows the word");
+    assert!(!notch.opens_on_pointer(), "the pointer still follows the word");
     level.set(None);
     notch.flush();
     assert!(notch.is_suppressed(), "the window hides again when the level ends");
@@ -143,4 +143,100 @@ fn a_hidden_full_screen_window_coming_to_the_front_while_muted_raises_the_notch_
     assert!(!notch.is_suppressed());
     notch.timer_fired(RAISE_TIMER_ID);
     assert!(!notch.is_suppressed());
+}
+
+/// A stand-in for a notification: a banner that goes away for good when the host dismisses it.
+struct DismissibleBanner(Rc<Cell<bool>>);
+
+impl Activity for DismissibleBanner {
+    fn id(&self) -> &'static str {
+        "dismissible_banner"
+    }
+
+    fn presence(&self) -> Option<Presence> {
+        self.0.get().then_some(Presence::Banner { width: 340.0, height: 60.0 })
+    }
+
+    fn dismiss_banner(&mut self, _context: &mut Context) {
+        self.0.set(false);
+    }
+
+    fn draw(&self, _canvas: &Canvas, _area: Rect, _opacity: f32) {}
+}
+
+type Shared = Rc<Cell<Option<Presence>>>;
+
+/// The notch, the level, whether the banner is up and an ordinary activity's presence.
+fn banner_rig() -> (Notch, Shared, Rc<Cell<bool>>, Shared) {
+    let level = Rc::new(Cell::new(None));
+    let banner = Rc::new(Cell::new(true));
+    let (ordinary, ordinary_presence) = Mark::showing(None);
+    let mut notch = configured_rig(
+        SampleOptions::default(),
+        Settings::at(None),
+        vec![Box::new(PriorityLevel(level.clone())), Box::new(DismissibleBanner(banner.clone())), Box::new(ordinary)],
+    );
+    for slot in &mut notch.activities {
+        slot.is_started = true;
+    }
+    settle(&mut notch);
+    notch.flush();
+    (notch, level, banner, ordinary_presence)
+}
+
+#[test]
+fn a_priority_presence_brings_down_a_showing_banner_and_the_banner_does_not_return() {
+    let (mut notch, level, banner, _) = banner_rig();
+    assert!(notch.presences.banner.is_some(), "the banner shows first");
+    level.set(Some(LEVEL));
+    notch.flush();
+    assert!(notch.presences.banner.is_none(), "the banner is brought down at once");
+    assert_eq!(notch.presences.transients.len(), 1, "the level shows in its place");
+    assert!(!banner.get(), "the activity dropped its banner");
+    level.set(None);
+    notch.flush();
+    assert!(notch.presences.banner.is_none(), "the banner does not return after the level ends");
+}
+
+#[test]
+fn a_normal_transient_still_waits_behind_a_banner() {
+    let (mut notch, _, banner, ordinary) = banner_rig();
+    ordinary.set(Some(Presence::Transient { width: 100.0 }));
+    notch.flush();
+    assert!(notch.presences.banner.is_some());
+    assert!(notch.presences.transients.is_empty(), "the transient waits");
+    assert!(banner.get(), "the banner stays up");
+}
+
+#[test]
+fn a_muted_badge_does_not_bring_down_a_banner() {
+    let (mut notch, level, banner, _) = banner_rig();
+    level.set(Some(MUTED_BADGE));
+    notch.flush();
+    assert!(notch.presences.banner.is_some());
+    assert!(banner.get());
+}
+
+#[test]
+fn a_priority_level_brings_down_a_download_banner_and_the_running_badge_stays() {
+    let level = Rc::new(Cell::new(None));
+    let fonts = Fonts::new(SCALE).unwrap();
+    let mut notch = configured_rig(
+        SampleOptions::default(),
+        Settings::at(None),
+        vec![Box::new(PriorityLevel(level.clone())), crate::activities::sample_download_started(&fonts)],
+    );
+    for slot in &mut notch.activities {
+        slot.is_started = true;
+    }
+    settle(&mut notch);
+    notch.flush();
+    assert!(notch.presences.banner.is_some(), "the start banner shows first");
+    level.set(Some(LEVEL));
+    notch.flush();
+    assert!(notch.presences.banner.is_none(), "the volume level brings the download banner down");
+    level.set(None);
+    notch.flush();
+    assert!(notch.presences.banner.is_none(), "the banner does not return after the level ends");
+    assert_eq!(notch.activities[1].activity.presence(), Some(Presence::Badge { width: Icon::Download.size() }));
 }

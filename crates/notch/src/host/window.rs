@@ -30,15 +30,18 @@ use windows::{
 };
 
 use super::{
-    display, drop_target,
+    drop_target,
     icon::Icon,
     location_tracker::{WM_LOCATION_FOUND, WM_NETWORK_CHANGED},
-    notch::{Notch, NotchParts, WINDOW_HEIGHT, WINDOW_WIDTH},
+    monitor,
+    notch::{MonitorState, Notch, NotchParts},
     notification_banners, registry,
     screen_mode::{self, ScreenMode},
     settings::Settings,
     settings_launcher, startup, tray, volume_flyout,
 };
+use store::pause::Pause;
+
 use crate::{
     activity::{Activity, SystemMessage, WM_ACTIVITY_NOTIFY},
     gfx::{Fonts, Surface},
@@ -73,11 +76,19 @@ fn with_notch<R>(action: impl FnOnce(&mut Notch) -> R) -> Option<R> {
 }
 
 fn show_menu(window: HWND) {
-    let state = tray::MenuState { starts_with_windows: startup::is_enabled() };
-    match tray::show_context_menu(window, state) {
+    let paused_line = with_notch(|notch| tray::paused_line(notch.pause())).flatten();
+    let state = tray::MenuState { starts_with_windows: startup::is_enabled(), paused_line };
+    match tray::show_context_menu(window, &state) {
         Some(tray::MenuChoice::ToggleStartWithWindows) => startup::set_enabled(!state.starts_with_windows),
         Some(tray::MenuChoice::OpenSettings) => settings_launcher::open_settings_window(),
         Some(tray::MenuChoice::Quit) => unsafe { PostQuitMessage(0) },
+        Some(tray::MenuChoice::Pause(choice)) => {
+            let now_unix = store::pause::now_unix();
+            with_notch(|notch| notch.set_pause(choice.pause_from(now_unix), now_unix));
+        }
+        Some(tray::MenuChoice::Resume) => {
+            with_notch(|notch| notch.set_pause(Pause::Off, store::pause::now_unix()));
+        }
         None => {}
     }
 }
@@ -212,7 +223,9 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
             if wparam.0 == PBT_APMRESUMEAUTOMATIC as usize {
                 screen_mode::refresh_foreground();
                 with_notch(|notch| {
+                    notch.apply_stored_pause(store::pause::now_unix());
                     notch.reset_session_interaction();
+                    notch.relocate_if_needed();
                     notch.request_location();
                 });
             }
@@ -223,7 +236,22 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
             if wparam.0 == WTS_SESSION_UNLOCK as usize {
                 screen_mode::refresh_foreground();
             }
-            with_notch(|notch| notch.reset_session_interaction());
+            with_notch(|notch| {
+                notch.apply_stored_pause(store::pause::now_unix());
+                notch.reset_session_interaction();
+                notch.relocate_if_needed();
+            });
+            LRESULT(0)
+        }
+        // A screen plugged in or out, a new resolution or primary, or a new scale of the notch's monitor.
+        WM_DISPLAYCHANGE => {
+            with_notch(|notch| notch.relocate_if_needed());
+            LRESULT(0)
+        }
+        // The notch sizes itself per monitor, so Windows' suggested rectangle is not applied; during the notch's own
+        // move the notch is borrowed and `with_notch` skips, which keeps this from looping.
+        WM_DPICHANGED => {
+            with_notch(|notch| notch.relocate_if_needed());
             LRESULT(0)
         }
         WM_LOCATION_FOUND => {
@@ -277,7 +305,7 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
 }
 
 fn on_screen_mode(mode: ScreenMode) {
-    with_notch(|notch| notch.set_screen_mode(mode));
+    with_notch(|notch| notch.foreground_changed(mode));
 }
 
 /// Returns the class icons, which must stay alive while the window runs.
@@ -312,14 +340,17 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
     let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
     unsafe { RoInitialize(RO_INIT_MULTITHREADED) }?;
 
-    let scale = display::system_scale();
+    let settings = Settings::load();
+    let monitor_mode = monitor::read_mode(&settings, Default::default());
+    let top_offset = top_offset();
+    let (start_monitor, start) = monitor::start_placement(monitor_mode, top_offset);
+    let scale = start.scale;
     let instance: HINSTANCE = unsafe { GetModuleHandleW(None) }?.into();
     let _class_icons = register_window_class(scale, instance)?;
     TASKBAR_CREATED_MESSAGE.store(unsafe { RegisterWindowMessageW(w!("TaskbarCreated")) }, Ordering::Relaxed);
 
-    let width = (WINDOW_WIDTH * scale).round() as i32;
-    let height = (WINDOW_HEIGHT * scale).round() as i32;
-    let screen_position = POINT { x: (unsafe { GetSystemMetrics(SM_CXSCREEN) } - width) / 2, y: top_offset() };
+    let (width, height) = (start.width, start.height);
+    let screen_position = POINT { x: start.left, y: start.top };
     // A previous instance is asked to close only after this one is visible, so a rebuild swaps without a gap.
     let previous_window = unsafe { FindWindowW(w!("NotchWindow"), None) }.ok();
     let window = unsafe {
@@ -344,7 +375,6 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
     let mut ticks_per_second = 0;
     unsafe { QueryPerformanceFrequency(&mut ticks_per_second) }?;
 
-    let settings = Settings::load();
     let system_language = store::language::system_language();
     store::language::set_current(store::language::resolve_setting(&settings, system_language));
     let pages = registry::enabled_pages(pages, &settings);
@@ -359,6 +389,7 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
         activities,
         ticks_per_second,
         system_language,
+        monitor: MonitorState::new(monitor_mode, start_monitor, start_monitor.map(|_| start), top_offset),
     });
     NOTCH.with(|cell| *cell.borrow_mut() = Some(notch));
     match unsafe { WTSRegisterSessionNotification(window, NOTIFY_FOR_THIS_SESSION) } {
@@ -370,6 +401,7 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
     with_notch(|notch| notch.start());
 
     let _ = unsafe { ShowWindow(window, SW_SHOWNOACTIVATE) };
+    screen_mode::set_judged_monitor(start_monitor);
     screen_mode::start(on_screen_mode);
     if let Err(error) = tray::add(window) {
         log::debug(&format!("tray icon unavailable: {error}"));

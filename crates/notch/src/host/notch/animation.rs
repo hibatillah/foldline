@@ -81,8 +81,9 @@ pub(super) fn ramp(expansion: f32, range: (f32, f32)) -> f32 {
 }
 
 impl Notch {
+    /// Nothing is drawn while paused; a resume snaps the springs instead.
     pub(super) fn start_animation(&mut self) {
-        if self.frame_timer.is_running {
+        if self.frame_timer.is_running || self.is_paused() {
             return;
         }
         self.frame_timer.is_running = true;

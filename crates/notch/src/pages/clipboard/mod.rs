@@ -15,6 +15,7 @@ mod state;
 mod style;
 #[cfg(test)]
 mod tests;
+mod thumbnails;
 
 use std::cell::RefCell;
 
@@ -22,6 +23,7 @@ use self::{
     history::History,
     layout::{CONTENT_HEIGHT, CONTENT_WIDTH, DoubleClick, Layout, Target},
     state::{Bar, Confirm, Preview},
+    thumbnails::Thumbnails,
 };
 use crate::{
     activity::SystemMessage,
@@ -44,6 +46,7 @@ pub struct ClipboardPage {
     bar: Option<Bar>,
     clicks: DoubleClick,
     preview: RefCell<Preview>,
+    thumbnails: Thumbnails,
 }
 
 impl ClipboardPage {
@@ -56,6 +59,7 @@ impl ClipboardPage {
             bar: None,
             clicks: DoubleClick::default(),
             preview: RefCell::new(Preview::default()),
+            thumbnails: Thumbnails::default(),
         }
     }
 

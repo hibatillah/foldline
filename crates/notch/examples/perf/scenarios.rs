@@ -1,4 +1,5 @@
-//! The scenarios after the shelf check: the devices and stats pages, and the opt-in screen-mode run.
+//! The scenarios after the shelf check: the devices and stats pages, the pinned notch, and the opt-in screen-mode
+//! run.
 
 use std::{
     path::Path,
@@ -7,11 +8,14 @@ use std::{
 };
 
 use windows::Win32::{
-    Foundation::HWND,
-    UI::WindowsAndMessaging::{
-        CreateWindowExW, DestroyWindow, DispatchMessageW, GetForegroundWindow, MSG, PM_REMOVE, PeekMessageW,
-        SW_RESTORE, SW_SHOWMAXIMIZED, SetForegroundWindow, ShowWindow, TranslateMessage, WINDOW_EX_STYLE,
-        WS_OVERLAPPEDWINDOW,
+    Foundation::{HWND, LPARAM, RECT, WPARAM},
+    UI::{
+        HiDpi::GetDpiForWindow,
+        WindowsAndMessaging::{
+            CreateWindowExW, DestroyWindow, DispatchMessageW, GetForegroundWindow, GetWindowRect, MSG, PM_REMOVE,
+            PeekMessageW, PostMessageW, SW_RESTORE, SW_SHOWMAXIMIZED, SetForegroundWindow, ShowWindow,
+            TranslateMessage, WINDOW_EX_STYLE, WM_LBUTTONDOWN, WM_LBUTTONUP, WS_OVERLAPPEDWINDOW,
+        },
     },
 };
 use windows::core::w;
@@ -66,6 +70,95 @@ pub(super) fn stats_page(executable: &Path, log: &Path, center_x: i32, report: &
     report.check("stats: CPU while idle after closing", notch.idle_cpu_percent(), MAX_IDLE_CPU_PERCENT, "%");
     let end = notch.measure();
     report.check("stats: handle growth", f64::from(end.handles) - f64::from(before.handles), MAX_HANDLE_GROWTH, "");
+}
+
+/// The open window's margin past the pill's right edge, as `pill_region` builds it (`host/notch/animation.rs`):
+/// 2 px, then the 12 DIP flare and the 20 DIP shadow (10 layers of 2), each rounded up to whole pixels.
+const WINDOW_MARGIN_PIXELS: i32 = 2;
+const EXPANDED_FLARE: f32 = 12.0;
+const SHADOW_SIDE: f32 = 20.0;
+/// From the pill's right edge to the pin's center, in DIP (`host/chrome.rs`, `host/pill_row.rs`): the side padding 16,
+/// the gear 16, the 4 gap and half the 13 wide pin square.
+const PIN_CENTER_FROM_PILL_RIGHT: f32 = 16.0 + 16.0 + 4.0 + 13.0 / 2.0;
+/// The header's center line below the top edge: the top padding 10 and half the 16 high header.
+const PIN_CENTER_FROM_TOP: f32 = 18.0;
+/// How long the open window may keep resizing before the press gives up on it settling.
+const WINDOW_SETTLE_TIMEOUT: Duration = Duration::from_secs(3);
+
+fn window_bounds(window: HWND) -> RECT {
+    let mut bounds = RECT::default();
+    unsafe { GetWindowRect(window, &mut bounds) }.expect("test window bounds");
+    bounds
+}
+
+/// The window's bounds once two reads 100 ms apart agree, so the pill's open springs have settled.
+fn settled_window_bounds(window: HWND) -> RECT {
+    let deadline = Instant::now() + WINDOW_SETTLE_TIMEOUT;
+    let mut previous = window_bounds(window);
+    while Instant::now() < deadline {
+        sleep(Duration::from_millis(100));
+        let current = window_bounds(window);
+        if current == previous {
+            return current;
+        }
+        previous = current;
+    }
+    previous
+}
+
+/// The pin's center relative to the window, whose right edge is `window_width` from its left, at `scale`.
+fn pin_center_in_window(window_width: i32, scale: f32) -> (i32, i32) {
+    let margin = WINDOW_MARGIN_PIXELS + (EXPANDED_FLARE * scale).ceil() as i32 + (SHADOW_SIDE * scale).ceil() as i32;
+    let x = window_width - margin - (PIN_CENTER_FROM_PILL_RIGHT * scale).round() as i32;
+    (x, (PIN_CENTER_FROM_TOP * scale).round() as i32)
+}
+
+/// Waits for the open pill to settle, rests the pointer on the pin, then presses it in window coordinates (the notch
+/// reads clicks relative to its window). Resting there first keeps the notch open and the press on a still target.
+fn press_pin(window: HWND) {
+    let scale = unsafe { GetDpiForWindow(window) } as f32 / 96.0;
+    let bounds = settled_window_bounds(window);
+    let (x, y) = pin_center_in_window(bounds.right - bounds.left, scale);
+    move_pointer(bounds.left + x, bounds.top + y);
+    sleep(Duration::from_millis(300));
+    let position = LPARAM(((y as u32 as isize) << 16) | (x as u32 as isize & 0xffff));
+    for message in [WM_LBUTTONDOWN, WM_LBUTTONUP] {
+        unsafe { PostMessageW(Some(window), message, WPARAM(0), position) }.expect("press the pin");
+    }
+}
+
+/// A pinned notch stays open with the pointer away; it must arm no timer and use no CPU while it idles. The stats page
+/// is switched on but not shown, so its sampler must stay off while the notch is pinned on the shelf.
+pub(super) fn pinned_idle(executable: &Path, log: &Path, center_x: i32, report: &mut Report) {
+    println!("Shelf and stats pages, pinned open on the shelf, pointer away:");
+    let notch = RunningNotch::start_with_settings(executable, log, Some("shelf,stats"), "navigation.page=shelf\n");
+    report.require("pinned: settles after start-up", notch.wait_until_quiet(), "");
+    // Read from before the pointer opens it, so the `open=true` of that opening is among the lines checked.
+    let log_length_before = notch.log_text().len();
+    move_pointer(center_x, HOVER_Y);
+    sleep(Duration::from_millis(1000));
+    press_pin(notch.window());
+    sleep(Duration::from_millis(500));
+    park_pointer();
+    sleep(Duration::from_millis(1000));
+    let log_text = notch.log_text();
+    let new_lines = log_text.get(log_length_before..).unwrap_or_default();
+    let is_pinned = new_lines.contains("pinned=true");
+    report.require("pinned: the press on the pin pinned it", is_pinned, "");
+    if !is_pinned {
+        println!("    log:\n{new_lines}");
+        return;
+    }
+    let opened = new_lines.contains("open=true") && !new_lines.contains("open=false");
+    report.require("pinned: the notch is open and held open", opened, "");
+    let before = notch.measure();
+    report.require("pinned: settles while pinned", notch.wait_until_quiet(), "");
+    report.check("pinned: CPU while idle", notch.idle_cpu_percent(), MAX_IDLE_CPU_PERCENT, "%");
+    let end = notch.measure();
+    report.check("pinned: handle growth", f64::from(end.handles) - f64::from(before.handles), MAX_HANDLE_GROWTH, "");
+    let log_text = notch.log_text();
+    let stayed_open = !log_text.get(log_length_before..).unwrap_or_default().contains("open=false");
+    report.require("pinned: stays open with the pointer away", stayed_open, "");
 }
 
 /// Handles the messages of the test window for `duration`, so it answers while the notch reacts to it.

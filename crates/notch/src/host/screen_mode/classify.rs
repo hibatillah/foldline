@@ -148,4 +148,13 @@ mod tests {
         desktop.is_ignored = true;
         assert_eq!(classify(&desktop), ScreenMode::Normal);
     }
+
+    #[test]
+    fn the_same_foreground_rectangle_is_fullscreen_on_its_own_monitor_and_normal_on_another() {
+        let second_monitor = Bounds { left: 1920, top: 0, right: 3840, bottom: 1080 };
+        let on_its_own = Facts { monitor: second_monitor, ..facts(second_monitor, false, false) };
+        let against_the_primary = facts(second_monitor, false, false);
+        assert_eq!(classify(&on_its_own), ScreenMode::Fullscreen);
+        assert_eq!(classify(&against_the_primary), ScreenMode::Normal);
+    }
 }

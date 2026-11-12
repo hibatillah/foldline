@@ -1,6 +1,7 @@
 //! A short todo list: add a task by typing in the notch, tick it off, copy it, delete it and undo the delete.
 
 mod actions;
+mod copy_check;
 mod draw;
 mod layout;
 mod list;
@@ -10,6 +11,7 @@ mod sample;
 mod tests;
 
 use self::{
+    copy_check::CopyCheck,
     layout::{
         CONTENT_WIDTH, Row, WHEEL_NOTCH_DISTANCE, add_button, clear_button, content_height, empty_area, max_scroll,
         plan_rows, row_rect, undo_button,
@@ -27,6 +29,8 @@ const RESTING_WIDTH: f32 = 150.0;
 const MAX_CHARACTERS: usize = 120;
 /// Ends the undo of the last removal.
 const UNDO_TIMER: TimerId = TimerId(0);
+/// Ends the green check on a copied row.
+const COPY_CHECK_TIMER: TimerId = TimerId(1);
 
 /// What the pointer is over: a toolbar button or a row, by its position in the list.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -43,6 +47,8 @@ pub struct TodoPage {
     is_adding: bool,
     has_keyboard: bool,
     hover: HoverTarget<TodoTarget>,
+    /// The task whose copy button shows the check.
+    copy_check: CopyCheck,
     /// The count under the title, rebuilt by `refresh_texts` when the list or the field changes.
     count_text: String,
     /// How far the rows are scrolled up, in DIP.
@@ -61,6 +67,7 @@ impl TodoPage {
             is_adding: false,
             has_keyboard: false,
             hover: HoverTarget::default(),
+            copy_check: CopyCheck::default(),
             count_text: String::new(),
             scroll: ScrollOffset::default(),
         };
@@ -244,6 +251,8 @@ impl Page for TodoPage {
     fn on_timer(&mut self, timer: TimerId, context: &mut Context) {
         if timer == UNDO_TIMER {
             self.expire_undo(context);
+        } else if timer == COPY_CHECK_TIMER {
+            self.expire_copy_check(context);
         }
     }
 
@@ -255,6 +264,7 @@ impl Page for TodoPage {
     fn on_shown_changed(&mut self, is_shown: bool, context: &mut Context) {
         if !is_shown {
             self.clear_row_hover();
+            self.forget_copy_check(context);
             self.stop_adding(context);
         }
     }

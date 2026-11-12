@@ -50,7 +50,7 @@ impl Notch {
         } else {
             center - size.width * self.scale / 2.0
         };
-        let growth = if self.hover.is_dragging_files { DRAG_GROWTH.height } else { 0.0 };
+        let growth = if self.open.is_dragging_files { DRAG_GROWTH.height } else { 0.0 };
         let height = content_height(size.height) + growth;
         frame.bounds.left = left;
         frame.bounds.right = left + size.width * self.scale;
@@ -74,7 +74,7 @@ impl Notch {
     /// Starts a swap when the open page changes while the notch shows it; closed, the new page is simply there.
     fn begin_page_swap(&mut self, previous: Option<usize>) {
         let (Some(leaving), Some(arriving)) = (previous, self.expanded_index) else { return };
-        if leaving == arriving || !self.hover.is_hovering || self.springs.expansion.position <= 0.0 {
+        if leaving == arriving || !self.open.is_open || self.springs.expansion.position <= 0.0 {
             return;
         }
         let direction = self.track.target - self.track.position;
@@ -84,7 +84,7 @@ impl Notch {
 
     pub(super) fn sync_shown_page(&mut self) -> bool {
         let is_typing_in_a_page = matches!(self.keyboard.owner, Some(KeyboardOwner::Page(_)));
-        let shown = (self.hover.is_hovering || is_typing_in_a_page).then_some(self.expanded_index).flatten();
+        let shown = (self.open.is_open || is_typing_in_a_page).then_some(self.expanded_index).flatten();
         if shown == self.shown_page {
             return false;
         }
@@ -137,7 +137,7 @@ impl Notch {
         let banner_height = banner.map_or(RESTING_PILL_HEIGHT, |(_, _, height)| height + RESTING_BOTTOM_PADDING);
         let (resting_target, resting_height_target) =
             if is_hidden { (HIDDEN_WIDTH, self.hidden_height()) } else { (resting_target, banner_height) };
-        let growth = if self.hover.is_dragging_files { DRAG_GROWTH } else { Size::new(0.0, 0.0) };
+        let growth = if self.open.is_dragging_files { DRAG_GROWTH } else { Size::new(0.0, 0.0) };
         let mut targets_changed = false;
         for (spring, target) in [
             (&mut self.springs.resting_width, resting_target),
@@ -194,7 +194,7 @@ impl Notch {
         if gap.abs() < 0.01 {
             return;
         }
-        if self.hover.is_hovering {
+        if self.open.is_open {
             self.track.target += gap;
             self.start_animation();
         } else {

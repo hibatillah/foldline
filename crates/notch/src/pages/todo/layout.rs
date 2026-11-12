@@ -18,9 +18,9 @@ pub(super) const CHECK_SIZE: f32 = 14.0;
 pub(super) const TEXT_LEFT: f32 = ROW_PADDING + CHECK_SIZE + 10.0;
 pub(super) const DELETE_SIZE: f32 = 22.0;
 pub(super) const DELETE_INSET: f32 = 6.0;
-/// Between the copy and delete buttons of a row, wider than the button gaps elsewhere so a press does not land on the
+/// Between the copy and delete buttons of a row: a dead band, so a press between them does nothing and cannot land on the
 /// wrong one.
-pub(super) const COPY_DELETE_GAP: f32 = 10.0;
+pub(super) const COPY_DELETE_GAP: f32 = 6.0;
 /// Rows the open notch shows at most; a longer list scrolls, with no bar and no hint of the rows beyond.
 pub(super) const VISIBLE_ROWS: usize = 5;
 /// One wheel notch scrolls one row.
@@ -169,11 +169,11 @@ mod tests {
     }
 
     #[test]
-    fn a_row_has_copy_then_delete_at_its_right_end_with_a_wider_gap_between_them() {
+    fn a_row_has_copy_then_delete_at_its_right_end_with_a_gap_between_them() {
         let row = row_rect(Rect::new(0.0, 0.0, CONTENT_WIDTH, 144.0), 0, 0.0);
         let (copy, delete) = (copy_rect(row), delete_rect(row));
         assert_eq!(delete.right, row.right - DELETE_INSET);
-        assert_eq!(delete.left - copy.right, 10.0);
+        assert_eq!(delete.left - copy.right, 6.0);
         assert_eq!((copy.width(), copy.height()), (delete.width(), delete.height()));
         assert_eq!(copy.center_y(), row.center_y());
         assert!(copy.left > check_rect(row).right, "the buttons stay clear of the ring");

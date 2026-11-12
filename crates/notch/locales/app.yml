@@ -8,6 +8,30 @@ tray.settings:
 tray.quit:
   en: Quit Notch
   id: Keluar dari Notch
+tray.pause:
+  en: Pause Notch
+  id: Jeda Notch
+tray.pause_10:
+  en: For 10 minutes
+  id: Selama 10 menit
+tray.pause_30:
+  en: For 30 minutes
+  id: Selama 30 menit
+tray.pause_60:
+  en: For 1 hour
+  id: Selama 1 jam
+tray.pause_manual:
+  en: Until I resume
+  id: Sampai saya lanjutkan
+tray.resume:
+  en: Resume Notch
+  id: Lanjutkan Notch
+tray.paused_until:
+  en: Paused until %{time}
+  id: Dijeda sampai %{time}
+tray.paused:
+  en: Paused
+  id: Dijeda
 page.calendar:
   en: Calendar
   id: Kalender
@@ -569,3 +593,18 @@ devices.bluetooth_off_detail:
 stats.memory:
   en: "Memory"
   id: "Memori"
+downloads.preparing:
+  en: "Preparing download…"
+  id: "Menyiapkan unduhan…"
+downloads.started:
+  en: "Download started"
+  id: "Unduhan dimulai"
+downloads.done:
+  en: "Downloaded · %{size}"
+  id: "Terunduh · %{size}"
+downloads.open:
+  en: "Open"
+  id: "Buka"
+downloads.show_in_folder:
+  en: "Show in folder"
+  id: "Tampilkan di folder"

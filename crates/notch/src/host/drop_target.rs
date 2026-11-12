@@ -1,5 +1,5 @@
 //! OLE drops need an STA thread; the WinRT host uses MTA, so a separate overlay receives drops.
-//! The overlay forwards hover while collapsed and steps aside when the notch opens.
+//! The overlay forwards pointer hover while collapsed and steps aside when the notch opens.
 
 use std::{
     cell::Cell,
@@ -39,10 +39,11 @@ pub(super) const WM_DRAG_DROPPED: u32 = WM_APP + 12;
 /// Relative to the notch; not a mouse message, so it must not arm leave tracking on the notch.
 pub(super) const WM_POINTER_MOVED: u32 = WM_APP + 13;
 
-const MESSAGE_HOVERING: u32 = WM_APP + 20;
+const MESSAGE_OPEN: u32 = WM_APP + 20;
 const MESSAGE_RESTING_AREA: u32 = WM_APP + 21;
 const MESSAGE_SUPPRESSED: u32 = WM_APP + 22;
 const MESSAGE_RESET_INTERACTION: u32 = WM_APP + 23;
+const MESSAGE_PLACEMENT: u32 = WM_APP + 24;
 
 const DRAG_WIDTH: f32 = 720.0;
 const DRAG_HEIGHT: f32 = 230.0;
@@ -68,7 +69,7 @@ impl Placement {
 thread_local! {
     static PLACEMENT: Cell<Option<Placement>> = const { Cell::new(None) };
     static IS_DRAGGING: Cell<bool> = const { Cell::new(false) };
-    static IS_NOTCH_HOVERED: Cell<bool> = const { Cell::new(false) };
+    static IS_NOTCH_OPEN: Cell<bool> = const { Cell::new(false) };
     static IS_SUPPRESSED: Cell<bool> = const { Cell::new(false) };
 }
 
@@ -84,8 +85,8 @@ pub(super) fn start(notch_window: HWND, scale: f32, center_x: i32, top: i32) {
         .ok();
 }
 
-pub(super) fn set_hovering(is_hovering: bool) {
-    post(MESSAGE_HOVERING, WPARAM(usize::from(is_hovering)));
+pub(super) fn set_open(is_open: bool) {
+    post(MESSAGE_OPEN, WPARAM(usize::from(is_open)));
 }
 
 pub(super) fn set_suppressed(is_suppressed: bool) {
@@ -94,6 +95,26 @@ pub(super) fn set_suppressed(is_suppressed: bool) {
 
 pub(super) fn reset_interaction() {
     post(MESSAGE_RESET_INTERACTION, WPARAM(0));
+}
+
+/// The notch moved to another monitor: the drag area follows its new center, top and scale.
+pub(super) fn set_placement(scale: f32, center_x: i32, top: i32) {
+    let (wparam, lparam) = placement_words(scale, center_x, top);
+    let window = TARGET_WINDOW.load(Ordering::Relaxed);
+    if window != 0 {
+        let _ = unsafe { PostMessageW(Some(HWND(window as *mut _)), MESSAGE_PLACEMENT, wparam, lparam) };
+    }
+}
+
+/// The scale's bits ride in `wparam`; the center and the top, both possibly negative, share the 64-bit `lparam`.
+fn placement_words(scale: f32, center_x: i32, top: i32) -> (WPARAM, LPARAM) {
+    let packed = (u64::from(center_x as u32) << 32) | u64::from(top as u32);
+    (WPARAM(scale.to_bits() as usize), LPARAM(packed as isize))
+}
+
+fn placement_from_words(wparam: WPARAM, lparam: LPARAM) -> (f32, i32, i32) {
+    let packed = lparam.0 as u64;
+    (f32::from_bits(wparam.0 as u32), (packed >> 32) as u32 as i32, packed as u32 as i32)
 }
 
 pub(super) fn set_resting_area(area: RECT) {
@@ -179,7 +200,7 @@ fn arrange(window: HWND) {
             right: placement.center_x + width / 2,
             bottom: placement.top + (DRAG_HEIGHT * placement.scale) as i32,
         })
-    } else if IS_NOTCH_HOVERED.get() {
+    } else if IS_NOTCH_OPEN.get() {
         None
     } else {
         RESTING_AREA.lock().ok().and_then(|area| *area)
@@ -215,12 +236,12 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
     match message {
         MESSAGE_RESET_INTERACTION => {
             IS_DRAGGING.set(false);
-            IS_NOTCH_HOVERED.set(false);
+            IS_NOTCH_OPEN.set(false);
             arrange(window);
             LRESULT(0)
         }
-        MESSAGE_HOVERING => {
-            IS_NOTCH_HOVERED.set(wparam.0 != 0);
+        MESSAGE_OPEN => {
+            IS_NOTCH_OPEN.set(wparam.0 != 0);
             arrange(window);
             LRESULT(0)
         }
@@ -233,6 +254,16 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
             arrange(window);
             LRESULT(0)
         }
+        MESSAGE_PLACEMENT => {
+            let (scale, center_x, top) = placement_from_words(wparam, lparam);
+            if let Some(placement) = PLACEMENT.get() {
+                PLACEMENT.set(Some(Placement { scale, center_x, top, ..placement }));
+            }
+            arrange(window);
+            LRESULT(0)
+        }
+        // The overlay sets its own size on every arrange, so Windows' suggested rectangle is not applied.
+        WM_DPICHANGED => LRESULT(0),
         WM_MOUSEMOVE | WM_RBUTTONUP => {
             forward(window, if message == WM_MOUSEMOVE { WM_POINTER_MOVED } else { message }, lparam);
             LRESULT(0)
@@ -332,5 +363,22 @@ impl IDropTarget_Impl for FileDropTarget_Impl {
         }
         post_to_notch(WM_DRAG_DROPPED);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_placement_left_of_and_above_the_primary_survives_the_message_words() {
+        let (wparam, lparam) = placement_words(1.5, -1440, -1080);
+        assert_eq!(placement_from_words(wparam, lparam), (1.5, -1440, -1080));
+    }
+
+    #[test]
+    fn a_placement_right_of_the_primary_survives_the_message_words() {
+        let (wparam, lparam) = placement_words(1.25, 2880, 12);
+        assert_eq!(placement_from_words(wparam, lparam), (1.25, 2880, 12));
     }
 }

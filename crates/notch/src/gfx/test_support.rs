@@ -13,7 +13,7 @@ use super::{Canvas, Fonts, Surface};
 pub(crate) const SURFACE_WIDTH: i32 = 260;
 pub(crate) const SURFACE_HEIGHT: i32 = 60;
 
-fn test_window() -> HWND {
+pub(crate) fn test_window() -> HWND {
     let style = WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
     unsafe { CreateWindowExW(style, w!("STATIC"), w!("canvas"), WS_POPUP, 0, 0, 10, 10, None, None, None, None) }
         .unwrap()

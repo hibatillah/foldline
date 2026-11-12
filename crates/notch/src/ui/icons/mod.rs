@@ -42,6 +42,7 @@ pub enum Icon {
     Pen,
     CircleCheck,
     Pin,
+    Download,
 }
 
 impl Icon {

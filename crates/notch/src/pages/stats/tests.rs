@@ -2,6 +2,21 @@ use super::{charts::disk_bar_track, format::percent_text, layout::NETWORK_ROW_PI
 use crate::gfx::Rect;
 
 #[test]
+fn the_page_samples_while_it_shows_in_the_open_notch() {
+    assert!(samples(true, true, true));
+}
+
+#[test]
+fn an_open_notch_on_another_page_does_not_sample() {
+    assert!(!samples(true, false, true));
+}
+
+#[test]
+fn a_switched_off_page_never_samples() {
+    assert!(!samples(false, true, true));
+}
+
+#[test]
 fn the_page_samples_once_a_second() {
     assert_eq!(SAMPLE_INTERVAL_MILLISECONDS, 1000);
 }

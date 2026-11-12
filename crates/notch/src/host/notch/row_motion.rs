@@ -9,6 +9,8 @@ pub(super) enum RowItem {
     Source(Source),
     /// The camera and microphone dots, one column for all of them.
     Dots,
+    /// The pin left of the gear in the open header; it has no place in the collapsed pill.
+    Pin,
     /// The settings gear at the right end of the open header; it has no place in the collapsed pill.
     Gear,
 }
@@ -91,6 +93,7 @@ impl Notch {
         let half = expanded_width / 2.0 - chrome::PADDING_SIDE;
         let row = self.header_row_between(-half, half);
         let mut header = insets(&self.shown_header_group(&row), &row.group_lefts, half);
+        header.push((RowItem::Pin, half - row.pin_left));
         header.push((RowItem::Gear, half - row.gear_left));
         moved |= self.row_motion.header.follow(&header);
         let idle_clock_left = self.resting_row.layout.clock_left;

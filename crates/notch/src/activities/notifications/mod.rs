@@ -4,6 +4,7 @@
 mod card;
 mod items;
 mod listener;
+mod logos;
 mod reply;
 mod rounds;
 
@@ -200,6 +201,10 @@ impl Activity for NotificationsActivity {
         card.draw(canvas, item, look, &self.reply);
     }
 
+    fn dismiss_banner(&mut self, context: &mut Context) {
+        self.hide(context);
+    }
+
     fn on_start(&mut self, context: &mut Context) {
         self.shows_text = context.settings.get_bool(SHOW_TEXT_SETTING, true);
         self.shared = Some(listener::start(context.notifier()));
@@ -225,8 +230,8 @@ impl Activity for NotificationsActivity {
     }
 
     /// Leaving the notch is leaving the card, also when the notch had opened meanwhile and the card got no `Left`.
-    fn on_hover_changed(&mut self, is_hovering: bool, context: &mut Context) {
-        if !is_hovering {
+    fn on_open_changed(&mut self, is_open: bool, context: &mut Context) {
+        if !is_open {
             self.pointer_left(context);
         }
     }

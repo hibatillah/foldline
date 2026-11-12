@@ -10,6 +10,8 @@ use crate::page::KeyInput;
 pub(super) const DELETED: u8 = 6;
 /// The list just emptied by Clear all, so the toolbar offers Undo over the empty page.
 pub(super) const CLEARED: u8 = 7;
+/// The first row hovered right after its copy button was pressed, so the copy icon is the green check.
+pub(super) const COPIED: u8 = 8;
 
 impl TodoPage {
     pub fn sample(scenario: u8) -> Self {
@@ -46,9 +48,12 @@ impl TodoPage {
         if scenario == CLEARED {
             page.list.clear();
         }
+        if scenario == COPIED {
+            page.copy_check.start(0);
+        }
         let hovered_row = match scenario {
             0 => Some(TodoTarget::Row(1)),
-            DELETED => Some(TodoTarget::Row(0)),
+            DELETED | COPIED => Some(TodoTarget::Row(0)),
             _ => None,
         };
         page.hover.set(hovered_row);

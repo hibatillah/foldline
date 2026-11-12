@@ -5,13 +5,13 @@ mod location_hook;
 
 use std::sync::{
     Mutex, OnceLock, PoisonError,
-    atomic::{AtomicU8, Ordering},
+    atomic::{AtomicIsize, AtomicU8, Ordering},
 };
 
 use windows::Win32::{
     Foundation::{HWND, POINT},
     Graphics::Gdi::{
-        GetMonitorInfoW, MONITOR_DEFAULTTONEAREST, MONITOR_DEFAULTTOPRIMARY, MONITORINFO, MonitorFromPoint,
+        GetMonitorInfoW, HMONITOR, MONITOR_DEFAULTTONEAREST, MONITOR_DEFAULTTOPRIMARY, MONITORINFO, MonitorFromPoint,
         MonitorFromWindow,
     },
     UI::{
@@ -24,6 +24,7 @@ use windows::Win32::{
     },
 };
 
+use super::monitor::MonitorId;
 use crate::platform::window_info::{self, class_name};
 pub(super) use classify::Bounds;
 use classify::{CaptureHost, Facts, capture_host, classify};
@@ -40,8 +41,19 @@ pub(super) enum ScreenMode {
 const IGNORED_CLASSES: [&str; 6] =
     ["Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "NotchWindow", "NotchDropTarget"];
 
+/// Whether a window class is a user window: not the desktop, a taskbar or one of the notch's own windows.
+pub(super) fn is_user_class(class: &str) -> bool {
+    !IGNORED_CLASSES.contains(&class)
+}
+
+pub(super) fn is_user_window(window: HWND) -> bool {
+    is_user_class(&class_name(window))
+}
+
 static ON_CHANGE: OnceLock<fn(ScreenMode)> = OnceLock::new();
 static LAST_MODE: AtomicU8 = AtomicU8::new(0);
+/// The monitor the notch is on, which the window in front is judged against; 0 means the primary monitor.
+static JUDGED_MONITOR: AtomicIsize = AtomicIsize::new(0);
 /// The foreground window's process id and image file name; cleared on every foreground change.
 static FOREGROUND_PROCESS: Mutex<Option<(u32, String)>> = Mutex::new(None);
 
@@ -66,17 +78,24 @@ fn foreground_process_name(window: HWND) -> String {
     }
 }
 
-fn read() -> ScreenMode {
+/// The mode of the window in front, judged against `monitor` (`None`: the primary monitor).
+fn read(monitor: Option<MonitorId>) -> ScreenMode {
     let window = unsafe { GetForegroundWindow() };
     if window.0.is_null() {
         return ScreenMode::Normal;
     }
-    let primary = unsafe { MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY) };
-    let monitor = unsafe { MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST) };
     let mut info = MONITORINFO { cbSize: size_of::<MONITORINFO>() as u32, ..Default::default() };
+    let mut judged = monitor.map_or(HMONITOR::default(), |id| HMONITOR(id.0 as *mut _));
+    // A monitor unplugged since it was set no longer answers; the primary one stands in.
+    if judged.0.is_null() || !unsafe { GetMonitorInfoW(judged, &mut info) }.as_bool() {
+        judged = unsafe { MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY) };
+        if !unsafe { GetMonitorInfoW(judged, &mut info) }.as_bool() {
+            return ScreenMode::Normal;
+        }
+    }
+    let window_monitor = unsafe { MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST) };
     let mut rect = Default::default();
-    if !unsafe { GetMonitorInfoW(primary, &mut info) }.as_bool() || unsafe { GetWindowRect(window, &mut rect) }.is_err()
-    {
+    if unsafe { GetWindowRect(window, &mut rect) }.is_err() {
         return ScreenMode::Normal;
     }
     let class = class_name(window);
@@ -94,16 +113,34 @@ fn read() -> ScreenMode {
         is_zoomed: unsafe { IsZoomed(window) }.as_bool(),
         has_caption: (style & WS_CAPTION.0) == WS_CAPTION.0,
         capture_host,
-        is_ignored: monitor != primary
+        is_ignored: window_monitor != judged
             || !is_visible
             || unsafe { IsIconic(window) }.as_bool()
-            || IGNORED_CLASSES.contains(&class.as_str()),
+            || !is_user_class(&class),
     };
     classify(&facts)
 }
 
+fn judged_monitor() -> Option<MonitorId> {
+    let monitor = JUDGED_MONITOR.load(Ordering::Relaxed);
+    (monitor != 0).then_some(MonitorId(monitor))
+}
+
+/// Judges the window in front against `monitor` from now on and returns its mode now, without calling `on_change`.
+pub(super) fn judge_against(monitor: Option<MonitorId>) -> ScreenMode {
+    JUDGED_MONITOR.store(monitor.map_or(0, |id| id.0), Ordering::Relaxed);
+    let mode = read(monitor);
+    LAST_MODE.store(mode as u8, Ordering::Relaxed);
+    mode
+}
+
+/// Sets the monitor to judge against before the hook starts.
+pub(super) fn set_judged_monitor(monitor: Option<MonitorId>) {
+    JUDGED_MONITOR.store(monitor.map_or(0, |id| id.0), Ordering::Relaxed);
+}
+
 fn refresh(notify_when_unchanged: bool) {
-    let mode = read();
+    let mode = read(judged_monitor());
     if notify_when_unchanged {
         let window = unsafe { GetForegroundWindow() };
         let process = if window.0.is_null() { String::new() } else { foreground_process_name(window) };
@@ -195,7 +232,7 @@ mod tests {
             let _ = SetForegroundWindow(window);
             let _ = SendMessageW(window, WM_NULL, Some(WPARAM(0)), Some(LPARAM(0)));
             std::thread::sleep(std::time::Duration::from_millis(400));
-            let mode = read();
+            let mode = read(None);
             let _ = ShowWindow(window, SW_SHOW);
             let _ = DestroyWindow(window);
             mode

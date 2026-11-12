@@ -1,10 +1,14 @@
-//! The open header's dots, clock, group and gear, and the clicks on them.
+//! The open header's dots, clock, group, pin and gear, and the clicks on them.
 
 use super::*;
 use crate::gfx::Point;
 use crate::host::{
     clock,
-    notch::{header_row::HeaderTarget, layout::WIDTH_FLOOR_PAGE_ID, row_motion::RowItem},
+    notch::{
+        header_row::{self, HeaderTarget},
+        layout::WIDTH_FLOOR_PAGE_ID,
+        row_motion::RowItem,
+    },
     pill_row,
 };
 
@@ -76,15 +80,67 @@ fn a_collapsed_notch_has_no_gear_to_press() {
 }
 
 #[test]
-fn the_header_group_keeps_the_idle_order_and_its_dots_end_10_before_the_gear() {
+fn the_header_group_keeps_the_idle_order_and_its_dots_end_5_5_before_the_pin() {
     let notch = open_header(SampleOptions { timer: true, ..SampleOptions::default() });
     let items: Vec<RowItem> = notch.header_group().iter().map(|&(item, _)| item).collect();
     let timer = RowItem::Source(Source::Page(page_index(&notch, "timer")));
     let muted = RowItem::Source(Source::Activity(0));
     assert_eq!(items, [muted, timer, RowItem::Source(Source::Activity(1)), RowItem::Dots]);
     let (dots_left, dots_width) = item_place(&notch, RowItem::Dots);
-    let gear_left = notch.header_layout(notch.frame().bounds).gear_left;
-    assert!((gear_left - (dots_left + dots_width) - pill_row::HEADER_ITEM_GAP).abs() < 0.001);
+    let pin_left = notch.header_layout(notch.frame().bounds).pin_left;
+    assert!((pin_left - (dots_left + dots_width) - pill_row::GROUP_PIN_GAP).abs() < 0.001);
+}
+
+#[test]
+fn the_pin_sits_4_left_of_the_gear_and_its_spring_settles_there() {
+    let notch = open_header(SampleOptions::default());
+    let row = notch.header_layout(notch.frame().bounds);
+    assert!((row.gear_left - (row.pin_left + pill_row::PIN_SIZE) - pill_row::PIN_GEAR_GAP).abs() < 0.001);
+    let right = header(&notch).right / notch.scale;
+    let inset = notch.row_motion.header.position(RowItem::Pin).expect("the pin has a spring");
+    assert!((right - inset - row.pin_left).abs() < 0.01);
+}
+
+#[test]
+fn a_press_on_the_pin_toggles_it_and_a_press_on_the_gear_still_opens_settings() {
+    let mut notch = open_header(SampleOptions::default());
+    notch.screen_position = POINT { x: -100_000, y: -100_000 };
+    let row = notch.header_layout(notch.frame().bounds);
+    let pin = at_item(&notch, row.pin_left, pill_row::PIN_SIZE);
+    assert_eq!(notch.header_target_at(pin), Some(HeaderTarget::Pin));
+    assert!(notch.press_header(pin));
+    assert!(notch.is_pinned());
+    let row = notch.header_layout(notch.frame().bounds);
+    let gear = at_item(&notch, row.gear_left, pill_row::GEAR_SIZE);
+    assert_eq!(notch.header_target_at(gear), Some(HeaderTarget::Settings));
+    assert!(notch.press_header(at_item(&notch, row.pin_left, pill_row::PIN_SIZE)));
+    assert!(!notch.is_pinned(), "a second press unpins");
+}
+
+#[test]
+fn the_pin_is_gray_like_the_gear_until_pinned_and_blue_while_pinned() {
+    assert_ne!(header_row::pin_color(false), header_row::pin_color(true));
+    assert_eq!(header_row::pin_color(true), crate::ui::palette::ACCENT_BLUE_LIGHT);
+}
+
+#[test]
+fn a_crowded_header_drops_icons_but_keeps_the_pin_and_the_gear() {
+    let notch = crowded_header();
+    let row = notch.header_layout(notch.frame().bounds);
+    assert!(row.dropped_icons > 0);
+    let targets = notch.header_targets(&row);
+    let ends: Vec<HeaderTarget> = targets.iter().rev().take(2).map(|&(_, _, target)| target).collect();
+    assert_eq!(ends, [HeaderTarget::Settings, HeaderTarget::Pin]);
+}
+
+#[test]
+fn the_header_minimum_width_grows_by_the_pin_and_a_gap() {
+    let notch = open_header(SampleOptions::default());
+    let (widths, gaps) = notch.resting_row.spacing(&notch.resting_row.right_end(), pill_row::HEADER_ITEM_GAP);
+    let end = pill_row::HEADER_CLOCK_GAP + widths.iter().sum::<f32>() + gaps.iter().sum::<f32>();
+    let pin_and_gear = pill_row::PIN_SIZE + pill_row::PIN_GEAR_GAP + pill_row::GEAR_SIZE;
+    let least = clock::layout_width(&notch.fonts) + 2.0 * (end + pill_row::GROUP_PIN_GAP + pin_and_gear);
+    assert!(notch.header_min_width() >= least + chrome::WIDTH_EXTRA - 0.001);
 }
 
 #[test]

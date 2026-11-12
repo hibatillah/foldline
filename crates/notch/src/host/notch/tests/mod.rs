@@ -22,6 +22,7 @@ use crate::{
 
 mod badge_input;
 mod clipboard_states;
+mod header_hover;
 mod header_row;
 mod hiding_rules;
 mod images;
@@ -29,7 +30,10 @@ mod language;
 mod location;
 mod page_navigation;
 mod page_states;
+mod pause;
+mod pin;
 mod priority_presences;
+mod relocate;
 mod resting_row;
 mod row_motion;
 mod screen_mode;
@@ -86,7 +90,9 @@ pub(super) fn custom_rig(pages: Vec<Box<dyn Page>>, settings: Settings, activiti
         activities,
         ticks_per_second: 10_000_000,
         system_language: store::language::Language::English,
+        monitor: MonitorState::new(Default::default(), None, None, 0),
     });
+    notch.monitor.source = relocate::FAKE_MONITORS;
     notch.page_list = PageList::new(count);
     notch
 }
@@ -105,13 +111,13 @@ pub(super) fn settle(notch: &mut Notch) {
 pub(super) fn open(notch: &mut Notch, page_id: &str) {
     let index = notch.pages.iter().position(|page| page.id() == page_id).unwrap();
     notch.selected_page = Some(index);
-    notch.hover.is_hovering = true;
+    notch.open.is_open = true;
     notch.springs.expansion.target = 1.0;
     settle(notch);
 }
 
 pub(super) fn close(notch: &mut Notch) {
-    notch.hover.is_hovering = false;
+    notch.open.is_open = false;
     notch.springs.expansion.target = 0.0;
     settle(notch);
 }

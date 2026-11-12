@@ -34,7 +34,8 @@ fn wanted_digits(page_count: usize) -> [bool; DIGIT_COUNT] {
 impl Notch {
     /// Holds the digit hotkeys while the pointer is on the open notch and no page is typing; gives them back otherwise.
     pub(super) fn sync_page_hotkeys(&mut self) {
-        let is_wanted = self.hover.is_hovering && self.frame().is_open() && self.keyboard.owner.is_none();
+        let is_wanted =
+            !self.is_paused() && self.open.is_open && self.frame().is_open() && self.keyboard.owner.is_none();
         let wanted = if is_wanted { wanted_digits(self.navigable.len()) } else { [false; DIGIT_COUNT] };
         for (digit, &is_wanted) in wanted.iter().enumerate() {
             let is_registered = self.page_hotkeys.registered[digit];

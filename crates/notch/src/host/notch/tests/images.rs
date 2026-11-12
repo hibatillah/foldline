@@ -1,6 +1,7 @@
 //! Offscreen images go to target/snapshots; run cargo test snapshots -- --ignored --nocapture.
 
 use super::*;
+use crate::{host::pill_row, page::PointerEvent};
 
 pub(super) const IMAGE_WIDTH: f32 = 700.0;
 
@@ -209,6 +210,33 @@ fn snapshot_of_the_hovered_notification_banner() {
     banner_snapshot_of(&notch, Box::new(activity.hovered()), "banner-notification-hovered");
 }
 
+#[test]
+#[ignore = "writes images to target/snapshots; run on purpose"]
+fn snapshots_of_the_download_banners() {
+    let notch = rig(SampleOptions::default());
+    banner_snapshot_of(&notch, crate::activities::sample_download_started(&notch.fonts), "banner-download-started");
+    banner_snapshot_of(&notch, crate::activities::sample_download_finished(&notch.fonts), "banner-download-finished");
+    let hovered = crate::activities::sample_download_finished_hovered(&notch.fonts, |image| {
+        notch.surface.create_image_brush(image).ok()
+    });
+    banner_snapshot_of(&notch, hovered, "banner-download-finished-hovered");
+}
+
+#[test]
+#[ignore = "writes images to target/snapshots; run on purpose"]
+fn snapshots_of_the_running_download_badge_in_the_pill_and_the_open_header() {
+    let mut notch = configured_rig(
+        SampleOptions { timer: true, ..SampleOptions::default() },
+        Settings::at(None),
+        vec![crate::activities::sample_download_running()],
+    );
+    notch.activities[0].is_started = true;
+    close(&mut notch);
+    save(&notch, "resting-download-badge", 40.0);
+    open(&mut notch, "timer");
+    save(&notch, "open-header-download-badge", 160.0);
+}
+
 fn banner_snapshot(notch: &Notch, name: &str) {
     banner_snapshot_of(notch, crate::activities::sample_notification(&notch.fonts), name);
 }
@@ -302,6 +330,24 @@ fn snapshots_of_the_idle_row_and_the_open_header() {
     let mut notch = marked_rig(group, marks(&[RING, DOT]));
     open(&mut notch, "timer");
     save(&notch, "open-header-with-group-battery-and-dot", 160.0);
+    notch.open.is_pinned = true;
+    save(&notch, "open-header-with-group-battery-and-dot-pinned", 160.0);
+    let mut plain = rig(SampleOptions::default());
+    open(&mut plain, "media");
+    save(&plain, "open-header-unpinned", 80.0);
+    plain.open.is_pinned = true;
+    save(&plain, "open-header-pinned", 80.0);
+    let row = plain.header_layout(plain.frame().bounds);
+    let center_y = chrome::header_rect(plain.frame().bounds, plain.scale).center_y();
+    let pin = Point::new((row.pin_left + pill_row::PIN_SIZE / 2.0) * plain.scale, center_y);
+    let gear = Point::new((row.gear_left + pill_row::GEAR_SIZE / 2.0) * plain.scale, center_y);
+    for (is_pinned, state) in [(false, "unpinned"), (true, "pinned")] {
+        plain.open.is_pinned = is_pinned;
+        for (point, item) in [(pin, "pin"), (gear, "gear")] {
+            plain.follow_header_hover(PointerEvent::Moved(point));
+            save(&plain, &format!("open-header-{state}-{item}-hovered"), 80.0);
+        }
+    }
 }
 
 #[test]

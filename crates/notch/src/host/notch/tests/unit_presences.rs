@@ -187,7 +187,7 @@ fn a_page_banner_hears_the_pointer_and_draws_in_units_of_the_banner() {
 #[test]
 fn a_page_badge_hears_the_pointer_in_units_from_the_badge_top_left() {
     let (mut notch, heard) = presence_page_rig(Presence::Badge { width: 40.0 });
-    notch.hover.is_hovering = true;
+    notch.open.is_open = true;
     let (_, area) = notch.page_badge_areas(&notch.frame()).into_iter().next().expect("the badge shows");
     notch.route_pointer(PointerEvent::Moved(inside(area, 6.0, 4.0)));
     let heard_events = heard.pointer.borrow();

@@ -5,7 +5,7 @@ use super::{images::save, *};
 #[test]
 #[ignore = "writes images to target/snapshots; run on purpose"]
 fn page_state_snapshots_of_the_shelf_todo_shalat_and_weather() {
-    let scenarios: [(&str, &str, SampleOptions); 22] = [
+    let scenarios: [(&str, &str, SampleOptions); 23] = [
         ("shelf", "state-shelf-empty", SampleOptions { shelf: 1, ..SampleOptions::default() }),
         ("shelf", "state-shelf-empty-drag", SampleOptions { shelf: 1, file_drag: true, ..SampleOptions::default() }),
         ("shelf", "state-shelf-seven", SampleOptions { shelf: 2, ..SampleOptions::default() }),
@@ -17,6 +17,7 @@ fn page_state_snapshots_of_the_shelf_todo_shalat_and_weather() {
         ("todo", "state-todo-done", SampleOptions { todo: 5, ..SampleOptions::default() }),
         ("todo", "state-todo-deleted", SampleOptions { todo: 6, ..SampleOptions::default() }),
         ("todo", "state-todo-cleared", SampleOptions { todo: 7, ..SampleOptions::default() }),
+        ("todo", "state-todo-copied", SampleOptions { todo: 8, ..SampleOptions::default() }),
         ("shalat", "state-shalat-soon", SampleOptions { shalat_mark: 3, ..SampleOptions::default() }),
         ("shalat", "state-shalat-after-isha", SampleOptions { shalat_mark: 4, ..SampleOptions::default() }),
         ("weather", "state-weather-days", SampleOptions { weather: 1, ..SampleOptions::default() }),

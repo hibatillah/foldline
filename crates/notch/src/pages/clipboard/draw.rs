@@ -7,10 +7,11 @@ use super::{
     preview::preview_lines,
     state::{Bar, Confirm, Preview},
     style::*,
+    thumbnails::{Thumbnails, draw_thumbnail},
 };
 use crate::i18n::tr;
 use crate::{
-    gfx::{Canvas, Color, FontStyle, ImageData, Point, Rect},
+    gfx::{Canvas, Color, FontStyle, Point, Rect},
     ui::{Icon, Stroke, draw_strokes},
 };
 
@@ -56,32 +57,16 @@ fn kind_icon(kind: Kind) -> &'static str {
     match kind {
         Kind::Link => LINK_ICON,
         Kind::Code => CODE_ICON,
-        Kind::Text | Kind::Color | Kind::Image => TEXT_ICON,
+        Kind::Image => IMAGE_ICON,
+        Kind::Text | Kind::Color => TEXT_ICON,
     }
-}
-
-/// A small picture stand-in for the list: the design's orange gradient with a dark notch at the top.
-fn image_badge(side: u32) -> ImageData {
-    let side_f = side as f32;
-    let last = (side_f - 1.0).max(1.0);
-    let mut bytes = Vec::with_capacity((side * side * 4) as usize);
-    for y in 0..side {
-        for x in 0..side {
-            let is_notch = (y as f32) < side_f * 4.0 / 15.0
-                && (x as f32) >= side_f * 4.0 / 15.0
-                && (x as f32) < side_f * 11.0 / 15.0;
-            let amount = (x + y) as f32 / (2.0 * last);
-            let channel = |from: f32, to: f32| if is_notch { 0 } else { (from + (to - from) * amount).round() as u8 };
-            bytes.extend_from_slice(&[channel(127.0, 44.0), channel(161.0, 106.0), channel(233.0, 238.0), 255]);
-        }
-    }
-    ImageData::new(side, side, bytes)
 }
 
 impl ClipboardPage {
     pub(super) fn draw_page(&self, canvas: &Canvas, bounds: Rect, opacity: f32) {
         let layout = Layout::new(bounds);
         let now = Instant::now();
+        self.thumbnails.keep_only(self.history.items());
         if self.history.is_empty() {
             draw_empty(canvas, bounds, opacity);
         } else {
@@ -102,7 +87,7 @@ impl ClipboardPage {
                     confirm: if is_selected { self.confirm } else { None },
                     pin: pin.map(|color| (layout.pin_area(index), color)),
                 };
-                draw_row(canvas, layout.row(index), item, row, opacity);
+                draw_row(canvas, layout.row(index), item, row, &self.thumbnails, opacity);
             }
             if let Some(item) = self.history.selected() {
                 self.draw_preview(canvas, &layout, item, opacity);
@@ -218,7 +203,7 @@ struct Row {
     pin: Option<(Rect, Color)>,
 }
 
-fn draw_row(canvas: &Canvas, rect: Rect, item: &Item, row: Row, opacity: f32) {
+fn draw_row(canvas: &Canvas, rect: Rect, item: &Item, row: Row, thumbnails: &Thumbnails, opacity: f32) {
     let (fill, border) = match (row.confirm, row.is_selected, row.is_hovered) {
         (Some(_), _, _) => (GREEN_FILL, GREEN),
         (None, true, _) => (SELECTED_FILL, SELECTED_BORDER),
@@ -253,11 +238,10 @@ fn draw_row(canvas: &Canvas, rect: Rect, item: &Item, row: Row, opacity: f32) {
                 canvas.fill_rounded_rect(badge_rect(leading, middle), 4.0, color.faded(opacity));
             }
         }
-        (Content::Image(_), _) => {
-            let area = badge_rect(leading, middle);
-            let side = (area.width() * canvas.raster_scale()).round() as u32;
-            if let Some(brush) = canvas.cached_image(("clipboard-image-badge", side), || image_badge(side)) {
-                canvas.image(&brush, area, 4.0, opacity);
+        (Content::Image(image), _) => {
+            let center = Point::new(leading + ROW_BADGE_SIZE / 2.0, middle);
+            if !draw_thumbnail(canvas, thumbnails, item.id, &image.pixels, center, ROW_BADGE_SIZE, opacity) {
+                stroke_icon(canvas, IMAGE_ICON, center, ROW_ICON_SIZE, 1.8, ICON, opacity);
             }
         }
         _ => {
@@ -317,13 +301,10 @@ mod tests {
     };
 
     #[test]
-    fn the_image_badge_is_orange_with_a_dark_notch_at_the_top() {
-        let badge = image_badge(15);
-        let pixel = |x: usize, y: usize| &badge.bgra_premultiplied[(y * 15 + x) * 4..(y * 15 + x) * 4 + 4];
-        assert_eq!(pixel(7, 0), [0, 0, 0, 255]);
-        assert_eq!(pixel(0, 0)[3], 255);
-        assert!(pixel(14, 14)[2] > pixel(0, 0)[2] - 1, "red stays high toward the corner");
-        assert_ne!(pixel(1, 1), pixel(13, 13));
+    fn the_image_icon_reads_as_a_frame_a_sun_and_a_hill_inside_the_grid() {
+        let path = crate::gfx::Path::from_svg(kind_icon(Kind::Image), Point::new(0.0, 0.0), 1.0);
+        assert_eq!(path.flatten().len(), 3);
+        assert!(path.points().all(|point| (0.0..=24.0).contains(&point.x) && (0.0..=24.0).contains(&point.y)));
     }
 
     #[test]

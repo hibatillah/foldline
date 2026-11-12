@@ -31,10 +31,13 @@ mod bitmap;
 pub mod bluetooth_devices;
 pub mod clipboard;
 pub mod dongle_devices;
+pub mod downloads_folder;
+pub mod file_icon;
 pub mod geolocation;
 pub mod notification_settings;
 mod paste;
 mod power;
+pub mod shell_open;
 pub mod toast_activation;
 pub(crate) mod window_info;
 

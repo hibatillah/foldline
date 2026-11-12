@@ -58,6 +58,16 @@ impl ImageCache {
         self.entries.borrow_mut().insert(key, Rc::clone(&brush));
         Some(brush)
     }
+
+    /// Keys hold the device size, so after a scale change the old entries are never hit again.
+    pub(super) fn clear(&self) {
+        self.entries.borrow_mut().clear();
+    }
+
+    #[cfg(test)]
+    pub(super) fn len(&self) -> usize {
+        self.entries.borrow().len()
+    }
 }
 
 /// Keeps an uploaded copy of an image that changes over time, re-uploading only when the image is replaced.

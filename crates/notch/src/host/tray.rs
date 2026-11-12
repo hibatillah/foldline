@@ -1,18 +1,24 @@
 use windows::{
     Win32::{
         Foundation::{HWND, POINT},
-        System::LibraryLoader::{GetProcAddress, LoadLibraryW},
+        System::{
+            LibraryLoader::{GetProcAddress, LoadLibraryW},
+            Time::{GetTimeZoneInformation, TIME_ZONE_INFORMATION},
+        },
+        UI::WindowsAndMessaging::HMENU,
         UI::{
             HiDpi::{GetDpiForWindow, GetSystemMetricsForDpi},
             Shell::{NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NOTIFYICONDATAW, Shell_NotifyIconW},
             WindowsAndMessaging::{
-                AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, MF_CHECKED, MF_SEPARATOR, MF_STRING,
-                SM_CXSMICON, SetForegroundWindow, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu, WM_APP,
+                AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, MF_CHECKED, MF_GRAYED, MF_POPUP, MF_SEPARATOR,
+                MF_STRING, SM_CXSMICON, SetForegroundWindow, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu, WM_APP,
             },
         },
     },
     core::{HSTRING, PCSTR, PCWSTR, Result, w},
 };
+
+use store::pause::{Pause, PauseChoice, clock_text};
 
 use super::icon::Icon;
 use crate::i18n::tr;
@@ -23,16 +29,26 @@ const TOOLTIP: &str = "Notch";
 const MENU_COMMAND_QUIT: usize = 1;
 const MENU_COMMAND_START_WITH_WINDOWS: usize = 3;
 const MENU_COMMAND_OPEN_SETTINGS: usize = 7;
+/// The four pause lengths take the commands from here, in the order of `PauseChoice::ALL`.
+const MENU_COMMAND_PAUSE_FIRST: usize = 20;
+const MENU_COMMAND_RESUME: usize = 24;
+/// What `GetTimeZoneInformation` returns while daylight saving time applies.
+const TIME_ZONE_ID_DAYLIGHT: u32 = 2;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum MenuChoice {
     OpenSettings,
     ToggleStartWithWindows,
     Quit,
+    Pause(PauseChoice),
+    Resume,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub(super) struct MenuState {
     pub(super) starts_with_windows: bool,
+    /// `None` when not paused; else the greyed line, "Paused until 14:30" or "Paused".
+    pub(super) paused_line: Option<String>,
 }
 
 /// The choice a menu command stands for; `None` when the menu was dismissed or the command is unknown.
@@ -41,8 +57,63 @@ fn choice_for_command(command: usize) -> Option<MenuChoice> {
         MENU_COMMAND_OPEN_SETTINGS => Some(MenuChoice::OpenSettings),
         MENU_COMMAND_START_WITH_WINDOWS => Some(MenuChoice::ToggleStartWithWindows),
         MENU_COMMAND_QUIT => Some(MenuChoice::Quit),
-        _ => None,
+        MENU_COMMAND_RESUME => Some(MenuChoice::Resume),
+        _ => command
+            .checked_sub(MENU_COMMAND_PAUSE_FIRST)
+            .and_then(|position| PauseChoice::ALL.get(position))
+            .map(|&choice| MenuChoice::Pause(choice)),
     }
+}
+
+/// Seconds east of UTC from Windows' bias, which counts minutes west of UTC.
+fn utc_offset_seconds(bias: i32, daylight_bias: i32, is_daylight_time: bool) -> i32 {
+    -(bias + if is_daylight_time { daylight_bias } else { 0 }) * 60
+}
+
+fn local_utc_offset_seconds() -> i32 {
+    let mut zone = TIME_ZONE_INFORMATION::default();
+    let zone_id = unsafe { GetTimeZoneInformation(&mut zone) };
+    utc_offset_seconds(zone.Bias, zone.DaylightBias, zone_id == TIME_ZONE_ID_DAYLIGHT)
+}
+
+/// The greyed menu line for a pause; `None` when the notch is not paused.
+pub(super) fn paused_line(pause: Pause) -> Option<String> {
+    match pause {
+        Pause::Off => None,
+        Pause::Manual => Some(tr!("tray.paused").into_owned()),
+        Pause::Until(end_unix) => {
+            Some(tr!("tray.paused_until", time = clock_text(end_unix, local_utc_offset_seconds())).into_owned())
+        }
+    }
+}
+
+fn pause_choice_text(choice: PauseChoice) -> HSTRING {
+    let text = match choice {
+        PauseChoice::TenMinutes => tr!("tray.pause_10"),
+        PauseChoice::ThirtyMinutes => tr!("tray.pause_30"),
+        PauseChoice::OneHour => tr!("tray.pause_60"),
+        PauseChoice::UntilResumed => tr!("tray.pause_manual"),
+    };
+    HSTRING::from(text.as_ref())
+}
+
+/// Adds the "Pause Notch" submenu, or the greyed status line and Resume Notch while paused.
+fn append_pause_items(menu: HMENU, state: &MenuState) {
+    if let Some(paused_line) = &state.paused_line {
+        let (line_text, resume_text) =
+            (HSTRING::from(paused_line.as_str()), HSTRING::from(tr!("tray.resume").as_ref()));
+        let _ = unsafe { AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, &line_text) };
+        let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_RESUME, &resume_text) };
+        return;
+    }
+    let Ok(submenu) = (unsafe { CreatePopupMenu() }) else { return };
+    for (position, choice) in PauseChoice::ALL.into_iter().enumerate() {
+        let _ =
+            unsafe { AppendMenuW(submenu, MF_STRING, MENU_COMMAND_PAUSE_FIRST + position, &pause_choice_text(choice)) };
+    }
+    let pause_text = HSTRING::from(tr!("tray.pause").as_ref());
+    // The parent menu owns the submenu and destroys it with itself.
+    let _ = unsafe { AppendMenuW(menu, MF_POPUP, submenu.0 as usize, &pause_text) };
 }
 
 fn notify_data(window: HWND) -> NOTIFYICONDATAW {
@@ -99,7 +170,7 @@ fn follow_system_theme() {
     }
 }
 
-pub(super) fn show_context_menu(window: HWND, state: MenuState) -> Option<MenuChoice> {
+pub(super) fn show_context_menu(window: HWND, state: &MenuState) -> Option<MenuChoice> {
     // Each time, so a change of theme while the notch runs shows in the next menu.
     follow_system_theme();
     let Ok(menu) = (unsafe { CreatePopupMenu() }) else { return None };
@@ -112,6 +183,7 @@ pub(super) fn show_context_menu(window: HWND, state: MenuState) -> Option<MenuCh
     );
     let _ = unsafe { AppendMenuW(menu, startup_flags, MENU_COMMAND_START_WITH_WINDOWS, &start_text) };
     let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_OPEN_SETTINGS, &settings_text) };
+    append_pause_items(menu, state);
     let _ = unsafe { AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null()) };
     let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_QUIT, &quit_text) };
     let mut cursor = POINT::default();
@@ -133,6 +205,22 @@ mod tests {
         assert_eq!(choice_for_command(MENU_COMMAND_OPEN_SETTINGS), Some(MenuChoice::OpenSettings));
         assert_eq!(choice_for_command(MENU_COMMAND_START_WITH_WINDOWS), Some(MenuChoice::ToggleStartWithWindows));
         assert_eq!(choice_for_command(MENU_COMMAND_QUIT), Some(MenuChoice::Quit));
+    }
+
+    #[test]
+    fn each_pause_length_and_resume_has_its_own_command() {
+        assert_eq!(choice_for_command(20), Some(MenuChoice::Pause(PauseChoice::TenMinutes)));
+        assert_eq!(choice_for_command(21), Some(MenuChoice::Pause(PauseChoice::ThirtyMinutes)));
+        assert_eq!(choice_for_command(22), Some(MenuChoice::Pause(PauseChoice::OneHour)));
+        assert_eq!(choice_for_command(23), Some(MenuChoice::Pause(PauseChoice::UntilResumed)));
+        assert_eq!(choice_for_command(24), Some(MenuChoice::Resume));
+    }
+
+    #[test]
+    fn the_utc_offset_follows_the_bias_and_daylight_time() {
+        assert_eq!(utc_offset_seconds(-420, 0, false), 7 * 3600);
+        assert_eq!(utc_offset_seconds(480, -60, false), -8 * 3600);
+        assert_eq!(utc_offset_seconds(480, -60, true), -7 * 3600);
     }
 
     #[test]

@@ -49,11 +49,15 @@ pub(super) const HINT: Color = TEXT_MUTED;
 pub(super) const PIN_OFFERED: Color = ICON;
 pub(super) const PIN_OFFERED_HOVER: Color = TEXT_LIGHT;
 pub(super) const PINNED: Color = ACCENT_BLUE_LIGHT;
+/// A faint light ring on a row's picture, so a dark, white or see-through picture keeps its edge on the row.
+pub(super) const THUMBNAIL_OUTLINE: Color = Color::WHITE.with_alpha(0.16);
 
 pub(super) const TEXT_ICON: &str =
     "M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM8 8h8M8 12h8M8 16h5";
 pub(super) const LINK_ICON: &str =
     "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1";
+/// Lucide "image": a frame, the sun and a hill; a row shows it when its picture cannot be drawn.
+pub(super) const IMAGE_ICON: &str = "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM7 9a2 2 0 1 0 4 0a2 2 0 1 0-4 0M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21";
 pub(super) const CODE_ICON: &str = "M8 8l-4 4 4 4M16 8l4 4-4 4";
 pub(super) const TRASH_ICON: &str = "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3";
 pub(super) const COPY_ICON: &str =

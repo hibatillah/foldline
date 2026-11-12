@@ -1,4 +1,4 @@
-//! Opt-in system stats; sample and redraw once a second only while visible.
+//! Opt-in system stats; sample and redraw once a second only while the page shows in the open notch.
 
 mod cards;
 mod charts;
@@ -91,7 +91,8 @@ pub struct StatsPage {
     /// GPU names to show, in order; `None` shows the first GPUs.
     gpu_choice: Option<Vec<String>>,
     is_enabled: bool,
-    is_hovered: bool,
+    is_notch_open: bool,
+    is_shown: bool,
     is_sampling: bool,
 }
 
@@ -104,7 +105,8 @@ impl StatsPage {
             disk_choice: None,
             gpu_choice: None,
             is_enabled: false,
-            is_hovered: false,
+            is_notch_open: false,
+            is_shown: false,
             is_sampling: false,
         }
     }
@@ -141,9 +143,8 @@ impl StatsPage {
         page
     }
 
-    /// Samples from the moment the notch is hovered, on any page, so the numbers are there when the page opens.
     fn sync_sampling(&mut self, context: &mut Context) {
-        let should_sample = self.is_enabled && self.is_hovered;
+        let should_sample = samples(self.is_enabled, self.is_shown, self.is_notch_open);
         if should_sample == self.is_sampling {
             return;
         }
@@ -186,6 +187,12 @@ impl StatsPage {
     fn tiles(&self) -> Vec<Tile> {
         self.readout.as_ref().map_or_else(|| tiles_for(false), |readout| readout.tiles.clone())
     }
+}
+
+/// The sampler and its counters run only while the page shows in the open notch; a notch pinned open on another
+/// page must not keep them running.
+fn samples(is_enabled: bool, is_shown: bool, is_notch_open: bool) -> bool {
+    is_enabled && is_shown && is_notch_open
 }
 
 /// Names split at any of `separators`; the GPU list accepts `|` (the published form) and a comma (the older form),
@@ -245,8 +252,13 @@ impl Page for StatsPage {
         }
     }
 
-    fn on_hover_changed(&mut self, is_hovering: bool, context: &mut Context) {
-        self.is_hovered = is_hovering;
+    fn on_open_changed(&mut self, is_open: bool, context: &mut Context) {
+        self.is_notch_open = is_open;
+        self.sync_sampling(context);
+    }
+
+    fn on_shown_changed(&mut self, is_shown: bool, context: &mut Context) {
+        self.is_shown = is_shown;
         self.sync_sampling(context);
     }
 

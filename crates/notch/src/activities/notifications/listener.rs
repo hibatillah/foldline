@@ -4,7 +4,7 @@
 //! database itself, so the changes it causes are waited out. The same thread removes toasts the banner dismissed.
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     sync::{
         Arc, Mutex,
         atomic::{AtomicU8, Ordering},
@@ -37,6 +37,7 @@ use windows::{
 
 use super::{
     items::Item,
+    logos::{LogoCache, MAX_ATTEMPTS},
     rounds::{Step, follow_ids, next_step, unseen_ids},
 };
 use crate::{gfx::ImageData, log, page::Notifier, platform::app_icon};
@@ -119,15 +120,13 @@ fn read_logo(app_info: &AppInfo) -> Result<ImageData> {
     Ok(ImageData::new(LOGO_PIXELS, LOGO_PIXELS, pixels.to_vec()))
 }
 
-type Logos = HashMap<String, Option<Arc<ImageData>>>;
-
 /// The list as Windows held it when the read began, and the items for the notifications not seen before.
 struct Reading {
     listed: HashSet<u32>,
     fresh: Vec<Item>,
 }
 
-fn build_item(notification: &UserNotification, logos: &mut Logos) -> Result<Item> {
+fn build_item(notification: &UserNotification, logos: &mut LogoCache) -> Result<Item> {
     let app_info = notification.AppInfo()?;
     let mut texts = Vec::new();
     if let Ok(binding) = notification.Notification()?.Visual()?.GetBinding(&KnownNotificationBindings::ToastGeneric()?)
@@ -138,22 +137,22 @@ fn build_item(notification: &UserNotification, logos: &mut Logos) -> Result<Item
     }
     let title = if texts.is_empty() { String::new() } else { texts.remove(0) };
     let app_id = app_info.AppUserModelId()?.to_string();
-    let icon = logos
-        .entry(app_id.clone())
-        .or_insert_with(|| app_icon::load(&app_id).or_else(|| read_logo(&app_info).ok()).map(Arc::new))
-        .clone();
-    Ok(Item {
-        id: notification.Id()?,
-        app: app_info.DisplayInfo()?.DisplayName()?.to_string(),
-        app_id,
-        icon,
-        title,
-        body: texts.join("\n"),
-        read_at: Instant::now(),
-    })
+    let app = app_info.DisplayInfo()?.DisplayName()?.to_string();
+    let mut was_looked_up = false;
+    let icon = logos.get(&app_id, Instant::now(), || {
+        was_looked_up = true;
+        app_icon::load(&app_id).or_else(|| read_logo(&app_info).ok()).map(Arc::new)
+    });
+    if was_looked_up && icon.is_none() {
+        let attempt = logos.failed_attempts(&app_id);
+        if attempt == 1 || attempt == MAX_ATTEMPTS {
+            log::debug(&format!("notifications: no icon for {app_id} ({app}), attempt {attempt}"));
+        }
+    }
+    Ok(Item { id: notification.Id()?, app, app_id, icon, title, body: texts.join("\n"), read_at: Instant::now() })
 }
 
-fn build_or_skip(notification: &UserNotification, logos: &mut Logos) -> Option<Item> {
+fn build_or_skip(notification: &UserNotification, logos: &mut LogoCache) -> Option<Item> {
     build_item(notification, logos)
         .inspect_err(|error| log::debug(&format!("notifications: skipped a notification that cannot be read: {error}")))
         .ok()
@@ -161,7 +160,7 @@ fn build_or_skip(notification: &UserNotification, logos: &mut Logos) -> Option<I
 
 /// Windows takes about 80 ms per notification in the list to answer (it rewrites its database for each), so only the
 /// notifications not in `seen` have their texts and logo read, and one that cannot be read is skipped.
-fn read_fresh(listener: &UserNotificationListener, seen: &HashSet<u32>, logos: &mut Logos) -> Result<Reading> {
+fn read_fresh(listener: &UserNotificationListener, seen: &HashSet<u32>, logos: &mut LogoCache) -> Result<Reading> {
     let list = listener.GetNotificationsAsync(NotificationKinds::Toast)?.join()?;
     let notifications: Vec<UserNotification> = list.into_iter().collect();
     let listed_ids: Vec<u32> = notifications.iter().filter_map(|notification| notification.Id().ok()).collect();
@@ -204,7 +203,7 @@ struct Worker<'a> {
     shared: &'a Shared,
     notifier: Notifier,
     listener: UserNotificationListener,
-    logos: Logos,
+    logos: LogoCache,
     seen: HashSet<u32>,
     high_water: u32,
 }
@@ -325,7 +324,7 @@ fn run(shared: &Shared, notifier: Notifier) -> Result<()> {
         seen.len(),
         started.elapsed().as_millis()
     ));
-    let mut worker = Worker { shared, notifier, listener, logos: Logos::new(), seen, high_water };
+    let mut worker = Worker { shared, notifier, listener, logos: LogoCache::new(), seen, high_water };
     wait_for_quiet(changes, QUIET_TIME_MILLISECONDS);
     worker.handle_change(changes, Instant::now(), true, false);
     let removal_event = HANDLE(shared.removal_event_address as *mut _);

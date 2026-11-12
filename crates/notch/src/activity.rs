@@ -18,7 +18,7 @@ pub enum Presence {
     Transient { width: f32 },
     /// A small mark kept at the right end of the pill while something lasts, like a timer running.
     Badge { width: f32 },
-    /// Banners preempt transients and block hover expansion; pointer input over them arrives in `on_pointer`.
+    /// Banners preempt transients (except a priority activity's, which dismisses them) and block hover expansion; pointer input over them arrives in `on_pointer`.
     Banner { width: f32, height: f32 },
     /// A mark right of the clock, kept while something lasts, like the battery ring or a camera dot.
     Companion { slot: Slot, width: f32 },
@@ -57,6 +57,10 @@ pub trait Activity {
         false
     }
 
+    /// A priority activity (volume, brightness) needs the pill: drop the banner you show, for good, as if it had timed
+    /// out. The notch calls it while a priority transient shows; keep the underlying data (a notification stays listed).
+    fn dismiss_banner(&mut self, _context: &mut Context) {}
+
     /// What this activity shows right now; `None` means nothing. Asked again after every event.
     fn presence(&self) -> Option<Presence>;
 
@@ -86,7 +90,7 @@ pub trait Activity {
 
     fn on_timer(&mut self, _timer: TimerId, _context: &mut Context) {}
 
-    fn on_hover_changed(&mut self, _is_hovering: bool, _context: &mut Context) {}
+    fn on_open_changed(&mut self, _is_open: bool, _context: &mut Context) {}
 
     /// Pointer input over this activity's banner while the notch is collapsed; `area` is what `draw` got.
     /// `PointerEvent::Left` means the pointer left the banner.
@@ -105,7 +109,7 @@ pub trait Activity {
     /// Called on a started activity after another program changed settings.txt: re-read this activity's keys here.
     fn on_settings_changed(&mut self, _context: &mut Context) {}
 
-    /// The language changed: rebuild any text cached from a translation. Called once per change, for started activities.
+    /// The language changed, or the notch moved to a monitor of another scale: rebuild any cached text. Called once per change, for started activities.
     fn on_language_changed(&mut self, _context: &mut Context) {}
 }
 

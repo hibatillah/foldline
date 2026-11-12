@@ -1,4 +1,4 @@
-//! The open header's icons and gear, and what a click on them does.
+//! The open header's icons, pin and gear, and what a click on them does.
 
 use super::{Notch, Source, row_motion::RowItem, units};
 use crate::host::{
@@ -8,16 +8,23 @@ use crate::host::{
 };
 use crate::{
     gfx::{Canvas, Color, Point, Rect},
-    ui::Icon,
+    page::PointerEvent,
+    ui::{HoverTarget, Icon, draw_hover_wash, palette::ACCENT_BLUE_LIGHT},
 };
 
 /// `#8c8c94`.
 const GEAR_COLOR: Color = Color::rgb(0.549, 0.549, 0.580);
 
+/// Gray like the gear while unpinned, the clipboard pin's blue while pinned.
+pub(super) fn pin_color(is_pinned: bool) -> Color {
+    if is_pinned { ACCENT_BLUE_LIGHT } else { GEAR_COLOR }
+}
+
 /// What a click on one item of the header does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum HeaderTarget {
     Page(&'static str),
+    Pin,
     Settings,
     Nothing,
 }
@@ -27,6 +34,13 @@ pub(super) enum HeaderTarget {
 #[derive(Default)]
 pub(super) struct HeaderMarks {
     pub(super) icons: Vec<(f32, Source)>,
+    /// The pin or the gear under the pointer, which draws the hover wash; other items never hover.
+    pub(super) hovered: HoverTarget<HeaderTarget>,
+}
+
+/// Only the pin and the gear show a hover wash.
+pub(super) fn hover_target(target: Option<HeaderTarget>) -> Option<HeaderTarget> {
+    target.filter(|target| matches!(target, HeaderTarget::Pin | HeaderTarget::Settings))
 }
 
 impl Notch {
@@ -92,7 +106,8 @@ impl Notch {
         self.header_row_between(header.left / self.scale, header.right / self.scale)
     }
 
-    /// The gear and the icons; the clock, the ring and the dots are drawn with the idle row because they move there.
+    /// The icons, the pin and the gear; the clock, the ring and the dots are drawn with the idle row because they move
+    /// there.
     pub(super) fn draw_header_marks(&self, canvas: &Canvas, bounds: Rect, opacity: f32) {
         let scale = self.scale;
         let header = chrome::header_rect(bounds, scale);
@@ -111,16 +126,41 @@ impl Notch {
                 }
             }
         }
-        if let Some(inset) = self.row_motion.header.position(RowItem::Gear) {
-            let gear_center = Point::new(header.right - (inset - pill_row::GEAR_SIZE / 2.0) * scale, center_y);
-            Icon::Gear.draw(canvas, gear_center, pill_row::GEAR_SIZE * scale, GEAR_COLOR, opacity);
+        let ends = [
+            (RowItem::Pin, Icon::Pin, pill_row::PIN_SIZE, pin_color(self.is_pinned()), HeaderTarget::Pin),
+            (RowItem::Gear, Icon::Gear, pill_row::GEAR_SIZE, GEAR_COLOR, HeaderTarget::Settings),
+        ];
+        for (item, icon, size, color, target) in ends {
+            let Some(inset) = self.row_motion.header.position(item) else { continue };
+            let center = Point::new(header.right - (inset - size / 2.0) * scale, center_y);
+            // The wash fills the item's hit square, so it shows exactly where a click lands.
+            if self.header_marks.hovered.is(target) {
+                draw_hover_wash(canvas, center, pill_row::HIT_SIZE, opacity);
+            }
+            icon.draw(canvas, center, size * scale, color, opacity);
         }
     }
 
-    /// Every item a click can land on, left to right: the shown group, then the gear.
+    /// Follows the pointer over the pin and the gear; asks for one repaint when the hovered item changes.
+    pub(super) fn follow_header_hover(&mut self, event: PointerEvent) {
+        let hovered = match event {
+            PointerEvent::Moved(point) if self.frame().is_open() => hover_target(self.header_target_at(point)),
+            PointerEvent::Moved(_) | PointerEvent::Left | PointerEvent::CaptureLost => None,
+            PointerEvent::Pressed(_)
+            | PointerEvent::Released(_)
+            | PointerEvent::SecondaryReleased(_)
+            | PointerEvent::Scrolled { .. } => return,
+        };
+        if self.header_marks.hovered.set(hovered) {
+            self.pending.repaint = true;
+        }
+    }
+
+    /// Every item a click can land on, left to right: the shown group, then the pin and the gear.
     pub(super) fn header_targets(&self, row: &HeaderRow) -> Vec<(f32, f32, HeaderTarget)> {
-        let items = self.shown_header_group(row).into_iter().chain([(RowItem::Gear, pill_row::GEAR_SIZE)]);
-        let lefts = row.group_lefts.iter().copied().chain([row.gear_left]);
+        let ends = [(RowItem::Pin, pill_row::PIN_SIZE), (RowItem::Gear, pill_row::GEAR_SIZE)];
+        let items = self.shown_header_group(row).into_iter().chain(ends);
+        let lefts = row.group_lefts.iter().copied().chain([row.pin_left, row.gear_left]);
         items
             .zip(lefts)
             .map(|((item, width), left)| {
@@ -128,6 +168,7 @@ impl Notch {
                     RowItem::Source(Source::Page(index)) => self.pages[index].header_status_page(),
                     RowItem::Source(Source::Activity(index)) => self.activities[index].activity.header_status_page(),
                     RowItem::Dots => None,
+                    RowItem::Pin => return (left, width, HeaderTarget::Pin),
                     RowItem::Gear => return (left, width, HeaderTarget::Settings),
                 };
                 (left, width, page_id.map_or(HeaderTarget::Nothing, HeaderTarget::Page))
@@ -157,6 +198,10 @@ impl Notch {
                 {
                     self.go_to_page(index);
                 }
+                true
+            }
+            Some(HeaderTarget::Pin) => {
+                self.toggle_pin();
                 true
             }
             Some(HeaderTarget::Settings) => {

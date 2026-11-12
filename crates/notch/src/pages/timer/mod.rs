@@ -277,9 +277,9 @@ impl Page for TimerPage {
         context.request_repaint();
     }
 
-    fn on_hover_changed(&mut self, is_hovering: bool, context: &mut Context) {
-        self.is_open = is_hovering;
-        if !is_hovering {
+    fn on_open_changed(&mut self, is_open: bool, context: &mut Context) {
+        self.is_open = is_open;
+        if !is_open {
             self.hovered_button = None;
         }
         self.schedule(context);

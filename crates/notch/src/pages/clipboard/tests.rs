@@ -85,6 +85,15 @@ fn the_image_sample_selects_the_picture() {
 }
 
 #[test]
+fn the_picture_samples_list_five_pictures_and_the_text_sample_one() {
+    let pictures =
+        |page: &ClipboardPage| page.history.items().iter().filter(|item| item.kind == item::Kind::Image).count();
+    assert_eq!(pictures(&ClipboardPage::sample(IMAGE_SELECTED)), 5);
+    assert_eq!(ClipboardPage::sample(IMAGE_SELECTED).history.items().len(), 7);
+    assert_eq!(pictures(&ClipboardPage::sample(TEXT_SELECTED)), 1);
+}
+
+#[test]
 fn the_pasted_and_copied_samples_confirm_the_selected_row() {
     assert_eq!(ClipboardPage::sample(PASTED).confirm, Some(Confirm::Pasted));
     let copied = ClipboardPage::sample(COPIED);

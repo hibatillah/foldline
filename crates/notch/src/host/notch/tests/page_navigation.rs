@@ -210,7 +210,7 @@ fn a_page_that_asks_to_open_from_its_banner_opens_the_notch_on_itself() {
     let mut notch = rig(SampleOptions { media: Some(true), timer: true, ..SampleOptions::default() });
     settle(&mut notch);
     let timer = notch.pages.iter().position(|page| page.id() == "timer").expect("the timer page is in the rig");
-    notch.set_hovering(true);
+    notch.set_open(true);
     notch.with_page(timer, |_, context| context.request_open());
     notch.flush();
     assert_eq!(notch.springs.expansion.target, 1.0);
@@ -220,7 +220,7 @@ fn a_page_that_asks_to_open_from_its_banner_opens_the_notch_on_itself() {
 #[test]
 fn an_activity_cannot_open_the_notch_on_a_page() {
     let mut notch = marked_rig(SampleOptions::default(), vec![Mark::showing(None).0]);
-    notch.set_hovering(true);
+    notch.set_open(true);
     notch.with_activity(0, |_, context| context.request_open());
     notch.flush();
     assert_eq!(notch.springs.expansion.target, 0.0);

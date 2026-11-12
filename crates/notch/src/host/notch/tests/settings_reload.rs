@@ -30,7 +30,7 @@ fn reloading_settings_applies_hide_when_idle() {
 }
 
 #[test]
-fn reloading_settings_keeps_the_open_page_and_hover() {
+fn reloading_settings_keeps_the_open_page_and_the_open_state() {
     let settings_file = SettingsFile::new("reload-open-page");
     let options = SampleOptions { media: Some(false), timer: true, ..SampleOptions::default() };
     let mut notch = configured_rig(options, settings_file.load(), Vec::new());
@@ -43,7 +43,7 @@ fn reloading_settings_keeps_the_open_page_and_hover() {
     notch.reload_settings();
     assert!(notch.hiding.hides_when_idle);
     assert_eq!(notch.page_list.order().first(), notch.pages.iter().position(|page| page.id() == reversed[0]).as_ref());
-    assert!(notch.hover.is_hovering);
+    assert!(notch.open.is_open);
     assert_eq!(notch.springs.expansion.target, 1.0);
     assert_eq!(notch.selected_page, Some(media));
     assert_eq!(notch.expanded_index, Some(media));
@@ -67,7 +67,7 @@ fn switching_off_an_earlier_page_keeps_the_open_page_in_place() {
     fs::write(&settings_file.0, "navigation.disabled=shelf\n").unwrap();
     notch.reload_settings();
     assert!(!notch.page_list.is_enabled(shelf));
-    assert!(notch.hover.is_hovering);
+    assert!(notch.open.is_open);
     assert_eq!(notch.expanded_index, Some(calendar));
     assert_eq!(notch.page_at(notch.track.position), calendar);
     assert_eq!(notch.page_at(notch.track.target), calendar);

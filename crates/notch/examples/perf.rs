@@ -285,7 +285,7 @@ fn lyrics_comparison(executable: &Path, log: &Path, center_x: i32) -> bool {
         notch.observe(&format!("lyrics {state}, collapsed"));
         move_pointer(center_x, HOVER_Y);
         sleep(Duration::from_secs(2));
-        notch.observe(&format!("lyrics {state}, hover held open"));
+        notch.observe(&format!("lyrics {state}, held open by the pointer"));
         if !media_is_playing().expect("verify playback continued during the sample") {
             println!("Lyrics comparison INVALID: media playback stopped during the sample.");
             return false;
@@ -411,10 +411,10 @@ fn main() -> ExitCode {
         report.check("memory (private working set)", round(started.private_working_set_mb), MAX_MEMORY_MB, "MB");
 
         println!("Opening and closing {CYCLES} times:");
-        let previous_hover_events = fs::read_to_string(&log)
-            .expect("read hover events before measured cycles")
+        let previous_open_events = fs::read_to_string(&log)
+            .expect("read open events before measured cycles")
             .lines()
-            .filter(|line| line.contains("hovering="))
+            .filter(|line| line.contains("open="))
             .count();
         let before = notch.measure();
         for _ in 0..CYCLES {
@@ -432,11 +432,11 @@ fn main() -> ExitCode {
         report.check("handle growth over the cycles", handle_growth, MAX_HANDLE_GROWTH, "");
 
         let log_text = fs::read_to_string(&log).unwrap_or_default();
-        let events = log_text.lines().filter(|line| line.contains("hovering=")).count() - previous_hover_events;
+        let events = log_text.lines().filter(|line| line.contains("open=")).count() - previous_open_events;
         let expected = 2 * CYCLES as usize;
-        let hover_ok = events == expected;
-        report.require("hover events logged", hover_ok, &format!("{events:>8}      (expected {expected})"));
-        if !hover_ok {
+        let open_events_ok = events == expected;
+        report.require("open events logged", open_events_ok, &format!("{events:>8}      (expected {expected})"));
+        if !open_events_ok {
             println!("    log:\n{log_text}");
         }
 
@@ -447,6 +447,7 @@ fn main() -> ExitCode {
 
     scenarios::devices_page(&executable, &log, center_x, &mut report);
     scenarios::stats_page(&executable, &log, center_x, &mut report);
+    scenarios::pinned_idle(&executable, &log, center_x, &mut report);
     if with_screen_mode {
         scenarios::screen_mode(&executable, &log, &mut report);
     }
@@ -463,7 +464,7 @@ fn main() -> ExitCode {
         if extended {
             move_pointer(center_x, HOVER_Y);
             sleep(Duration::from_secs(2));
-            notch.observe("all pages, hover held open");
+            notch.observe("all pages, held open by the pointer");
             notch.swipe_workload();
             sleep(Duration::from_secs(2));
             notch.observe("all pages, after touchpad snap");

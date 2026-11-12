@@ -98,10 +98,10 @@ impl Notch {
         }
     }
 
-    /// A page asked to be shown by a click on its banner, which opens the notch even where hovering would not.
+    /// A page asked to be shown by a click on its banner, which opens the notch even where the pointer would not.
     pub(super) fn open_on_page(&mut self, index: usize) {
         // Only a pointer on the notch can close it again by leaving.
-        if !self.page_list.is_enabled(index) || !self.hover.is_hovering {
+        if !self.page_list.is_enabled(index) || !self.open.is_open {
             return;
         }
         self.go_to_page(index);
@@ -148,8 +148,9 @@ impl Notch {
         if let Some((owner, wants_keyboard)) = requests.keyboard {
             self.set_keyboard(owner, wants_keyboard);
         }
-        if requests.close {
-            self.set_hovering(false);
+        // A page cannot close a notch the user pinned open.
+        if requests.close && !self.open.is_pinned {
+            self.set_open(false);
         }
         if let Some(index) = requests.open_page {
             self.open_on_page(index);

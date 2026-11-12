@@ -106,8 +106,8 @@ pub trait Page {
     /// Called once after the window exists: start background work and timers here.
     fn on_start(&mut self, _context: &mut Context) {}
 
-    /// All pages receive hover changes, including those not currently selected.
-    fn on_hover_changed(&mut self, _is_hovering: bool, _context: &mut Context) {}
+    /// The notch opened or closed (by the pointer, a page or the pin); all pages receive it, including those not shown.
+    fn on_open_changed(&mut self, _is_open: bool, _context: &mut Context) {}
 
     /// True for a page that takes files dropped on the notch; the first such page that is switched on gets them.
     fn accepts_drops(&self) -> bool {
@@ -162,7 +162,7 @@ pub trait Page {
     /// Called after another program changed settings.txt and the host re-read it: re-read this page's keys here.
     fn on_settings_changed(&mut self, _context: &mut Context) {}
 
-    /// The language changed: rebuild any text cached from a translation. Called once per change, after `on_settings_changed`.
+    /// The language changed, or the notch moved to a monitor of another scale: rebuild any cached text. Called once per change, after `on_settings_changed`.
     fn on_language_changed(&mut self, _context: &mut Context) {}
 
     /// Collapsed activity content, independent of page selection; re-evaluated after every event.
@@ -348,7 +348,7 @@ impl<'a> Context<'a> {
         }
     }
 
-    /// Closes the open notch as if the pointer had left it.
+    /// Closes the open notch as if the pointer had left it; does nothing while the user has pinned it open.
     pub fn request_close(&mut self) {
         self.requests.close = true;
     }

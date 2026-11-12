@@ -173,3 +173,66 @@ fn the_hover_follows_a_button_that_disappears_under_the_pointer() {
     page.undo_removal(bounds, on_undo);
     assert_eq!(page.hover.get(), None, "Undo is gone after it is used");
 }
+
+#[test]
+fn deleting_the_copied_task_clears_its_check() {
+    let mut page = page_with(3, 0);
+    page.copy_check.start(1);
+    page.delete_task(1);
+    assert!(!page.copy_check.shows(1) && !page.copy_check.shows(0) && !page.copy_check.shows(2));
+}
+
+#[test]
+fn deleting_another_task_clears_the_check_so_it_never_lands_on_a_task_that_shifted_up() {
+    let mut page = page_with(3, 0);
+    page.copy_check.start(2);
+    page.delete_task(0);
+    assert!(!page.copy_check.shows(1), "the copied task is index 1 now and must not show the check");
+    assert!(!page.copy_check.shows(2));
+}
+
+#[test]
+fn clear_all_and_undo_clear_the_check() {
+    let mut page = page_with(3, 1);
+    let bounds = Rect::new(0.0, 0.0, CONTENT_WIDTH, 144.0);
+    page.copy_check.start(0);
+    page.clear_tasks(bounds, center(layout::clear_button(bounds)));
+    assert!(!page.copy_check.shows(0));
+    page.undo_removal(bounds, center(undo_button(bounds)));
+    page.copy_check.start(0);
+    page.delete_task(3);
+    page.undo_removal(bounds, center(undo_button(bounds)));
+    assert!(!page.copy_check.shows(0), "an undo shifts the indexes after it, so it clears the check too");
+}
+
+#[test]
+fn pressing_undo_with_nothing_to_undo_still_drops_the_check_whose_timer_it_stops() {
+    let mut page = page_with(3, 0);
+    let bounds = Rect::new(0.0, 0.0, CONTENT_WIDTH, 144.0);
+    page.copy_check.start(0);
+    assert!(page.press_undo(bounds, center(undo_button(bounds))), "the check went away, so the page repaints");
+    assert!(!page.copy_check.shows(0));
+}
+
+#[test]
+fn ticking_the_copied_task_off_keeps_the_check_on_it() {
+    let mut page = page_with(3, 0);
+    page.copy_check.start(0);
+    page.list.toggle(0);
+    page.refresh_texts();
+    assert!(page.copy_check.shows(0), "a tick moves the row, not the task's index");
+    assert_eq!(page.rows().last(), Some(&Row::Item(0)), "the ticked task is now the last row");
+}
+
+#[test]
+fn the_copied_sample_hovers_its_first_row_with_the_check_on_it() {
+    let page = TodoPage::sample(sample::COPIED);
+    assert_eq!(page.hover.get(), Some(TodoTarget::Row(0)));
+    assert!(page.copy_check.shows(0));
+}
+
+#[test]
+fn the_copy_button_still_takes_a_press_while_it_shows_the_check() {
+    let row = row_rect(Rect::new(0.0, 0.0, CONTENT_WIDTH, 144.0), 0, 0.0);
+    assert_eq!(actions::row_press(row, center(layout::copy_rect(row)), true), actions::RowPress::Copy);
+}

@@ -20,6 +20,7 @@ pub(super) struct ShownPresences {
 
 impl Notch {
     pub(super) fn refresh_presences(&mut self) -> bool {
+        self.dismiss_banners_for_priority();
         let mut transients = Vec::new();
         let mut badges = Vec::new();
         let mut banners = Vec::new();
@@ -103,6 +104,26 @@ impl Notch {
         self.presences.badges = badges;
         self.presences.has_priority = has_priority;
         changed
+    }
+
+    /// A priority transient (a volume or brightness level) brings down every activity banner at once; a lasting muted
+    /// badge does not, and neither does an ordinary transient, which waits behind the banner.
+    fn dismiss_banners_for_priority(&mut self) {
+        let is_priority_transient = |slot: &super::ActivitySlot| {
+            slot.is_enabled
+                && slot.is_started
+                && slot.activity.is_priority()
+                && matches!(slot.activity.presence(), Some(Presence::Transient { .. }))
+        };
+        if !self.activities.iter().any(is_priority_transient) {
+            return;
+        }
+        for index in 0..self.activities.len() {
+            let slot = &self.activities[index];
+            if slot.is_enabled && slot.is_started && matches!(slot.activity.presence(), Some(Presence::Banner { .. })) {
+                self.with_activity(index, |activity, context| activity.dismiss_banner(context));
+            }
+        }
     }
 
     fn source_id(&self, source: Source) -> &'static str {

@@ -1,7 +1,7 @@
 use super::{paths::Paint, *};
 use crate::gfx::Path;
 
-const ALL: [Icon; 30] = [
+const ALL: [Icon; 31] = [
     Icon::Lyrics,
     Icon::Previous,
     Icon::Play,
@@ -32,6 +32,7 @@ const ALL: [Icon; 30] = [
     Icon::Pen,
     Icon::CircleCheck,
     Icon::Pin,
+    Icon::Download,
 ];
 
 #[test]
@@ -114,6 +115,18 @@ fn extent(path: &Path) -> (f32, f32) {
     path.points().fold((f32::MAX, f32::MIN), |(low, high), point| (low.min(point.x), high.max(point.x)))
 }
 
+/// Width and height of what a stroked line icon covers at `size`: its flattened points plus the stroke on each side.
+fn stroked_extent(icon: Icon, size: f32) -> (f32, f32) {
+    let figures = icon.path(Point::default(), size).0.flatten();
+    let points: Vec<Point> = figures.into_iter().flat_map(|figure| figure.points).collect();
+    let span = |axis: fn(&Point) -> f32| {
+        let (low, high) =
+            points.iter().map(axis).fold((f32::MAX, f32::MIN), |(low, high), along| (low.min(along), high.max(along)));
+        high - low + LINE_WIDTH * size / GRID
+    };
+    (span(|point| point.x), span(|point| point.y))
+}
+
 #[test]
 fn the_pin_has_a_head_above_a_needle_that_reaches_down_the_middle() {
     let (path, paint) = Icon::Pin.path(Point::default(), 24.0);
@@ -124,4 +137,32 @@ fn the_pin_has_a_head_above_a_needle_that_reaches_down_the_middle() {
     assert!(needle.iter().all(|point| point.x.abs() < 0.01 && point.y >= 5.0), "{needle:?}");
     let head_bottom = figures[0].points.iter().map(|point| point.y).fold(f32::MIN, f32::max);
     assert!(head_bottom <= 5.01, "the head ends where the needle starts: {head_bottom}");
+}
+
+#[test]
+fn at_the_header_size_the_pin_shows_about_9_by_12_and_no_taller_than_the_gear() {
+    let (width, height) = stroked_extent(Icon::Pin, 13.0);
+    assert!((width - 8.7).abs() < 0.3 && (height - 11.9).abs() < 0.3, "{width} x {height}");
+    let (_, gear_height) = stroked_extent(Icon::Gear, 16.0);
+    assert!(height <= gear_height, "{height} against the gear's {gear_height}");
+}
+
+#[test]
+fn the_download_icon_draws_an_arrow_above_a_tray_in_the_standard_size() {
+    assert_eq!(Icon::Download.size(), 18.0);
+    let (path, paint) = Icon::Download.path(Point::default(), 24.0);
+    assert_eq!(paint, Paint::Line);
+    let figures = path.flatten();
+    assert_eq!(figures.len(), 3, "the shaft, the arrowhead and the tray");
+    let arrow = figures[..2].iter().flat_map(|figure| figure.points.iter());
+    let arrow_bottom = arrow.map(|point| point.y).fold(f32::MIN, f32::max);
+    let tray_top = figures[2].points.iter().map(|point| point.y).fold(f32::MAX, f32::min);
+    assert!(arrow_bottom < tray_top, "the arrow ends above the tray's top edge: {arrow_bottom} {tray_top}");
+}
+
+#[test]
+fn the_download_icon_rasterizes_to_visible_pixels_at_18_pixels() {
+    let image = Icon::Download.render(18.0, 18, Color::WHITE);
+    assert_eq!((image.width, image.height), (18, 18));
+    assert!(image.bgra_premultiplied.chunks(4).any(|pixel| pixel[3] > 0), "the icon leaves some pixel covered");
 }

@@ -12,19 +12,19 @@ use crate::{gfx::Point, log, page::PointerEvent};
 impl Notch {
     pub fn pointer_moved(&mut self, window_x: i32, window_y: i32) {
         let point = self.to_surface_space(window_x, window_y);
-        if !self.hover.is_hovering {
+        if !self.open.is_open {
             log::debug(&format!("enter move window=({window_x},{window_y}) surface=({:.0},{:.0})", point.x, point.y));
         }
         // The shadow remains during closing but must never count as hovering the pill.
-        if !self.hover.is_dragging_files && !self.pointer_is_over_window() {
-            if self.hover.is_hovering {
+        if !self.open.is_dragging_files && !self.pointer_is_over_window() {
+            if self.open.is_open {
                 self.pointer_left();
                 self.flush();
             }
             return;
         }
         self.cancel_close();
-        self.set_hovering(true);
+        self.set_open(true);
         self.route_pointer(PointerEvent::Moved(point));
         self.flush();
     }
@@ -44,15 +44,15 @@ impl Notch {
     }
 
     pub(super) fn show_drop_page(&mut self, index: usize) {
-        if self.hover.is_hovering {
+        if self.open.is_open {
             self.go_to_page(index);
         }
     }
 
     pub fn drag_entered(&mut self) {
         let Some(index) = self.drop_page() else { return };
-        self.hover.is_dragging_files = true;
-        self.set_hovering(true);
+        self.open.is_dragging_files = true;
+        self.set_open(true);
         self.hiding.is_revealed = true;
         self.begin_opening();
         self.with_page(index, |page, context| page.on_file_drag_changed(true, context));
@@ -62,26 +62,26 @@ impl Notch {
     }
 
     pub fn drag_left(&mut self) {
-        self.hover.is_dragging_files = false;
+        self.open.is_dragging_files = false;
         if let Some(index) = self.drop_page() {
             self.with_page(index, |page, context| page.on_file_drag_changed(false, context));
         }
-        if !self.pointer_is_over_window() {
-            self.set_hovering(false);
+        if !self.open.is_pinned && !self.pointer_is_over_window() {
+            self.set_open(false);
         }
         self.flush();
     }
 
     pub fn files_dropped(&mut self, paths: Vec<std::path::PathBuf>) {
-        self.hover.is_dragging_files = false;
+        self.open.is_dragging_files = false;
         let Some(index) = self.drop_page() else { return };
         self.with_page(index, |page, context| {
             page.on_file_drag_changed(false, context);
             page.on_drop(paths, context);
         });
         self.show_drop_page(index);
-        if !self.pointer_is_over_window() {
-            self.set_hovering(false);
+        if !self.open.is_pinned && !self.pointer_is_over_window() {
+            self.set_open(false);
         }
         self.flush();
     }
@@ -105,7 +105,7 @@ impl Notch {
     }
 
     pub(super) fn scrolled_at(&mut self, now: Instant, amount: i32, is_horizontal: bool, is_touchpad: bool) {
-        if !self.hover.is_hovering {
+        if !self.open.is_open {
             return;
         }
         if !is_horizontal {
@@ -135,7 +135,7 @@ impl Notch {
 
     /// Handles `WM_MOUSELEAVE`; returns false when the leave was not real and tracking must be re-armed.
     pub fn pointer_left_window(&mut self) -> bool {
-        if self.hover.is_dragging_files {
+        if self.open.is_dragging_files {
             return true;
         }
         // A resize under a stationary pointer can report a leave that did not happen; only believe a real one.
@@ -155,6 +155,7 @@ impl Notch {
     }
 
     pub(super) fn route_pointer(&mut self, event: PointerEvent) {
+        self.follow_header_hover(event);
         let viewport = self.frame();
         // A collapsed notch shows no page, so its input belongs to the banner on it, a page badge under it, or nothing.
         if self.springs.expansion.target == 0.0 && !viewport.is_open() {

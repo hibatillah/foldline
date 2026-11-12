@@ -16,12 +16,17 @@ pub struct IconButton {
 impl IconButton {
     /// `size` is the icon's edge in DIP; `Icon::size` gives its preferred one.
     pub fn draw(&self, canvas: &Canvas, opacity: f32, size: f32) {
-        let scale = canvas.scale();
         if self.is_hovered {
-            let half = (size / 2.0 + WASH_MARGIN) * scale;
-            let wash = Rect::around(self.center, half, half);
-            canvas.fill_rounded_rect(wash, WASH_RADIUS * scale, Color::WHITE.with_alpha(WASH_ALPHA * opacity));
+            draw_hover_wash(canvas, self.center, size + 2.0 * WASH_MARGIN, opacity);
         }
-        self.icon.draw(canvas, self.center, size * scale, self.color, opacity);
+        self.icon.draw(canvas, self.center, size * canvas.scale(), self.color, opacity);
     }
+}
+
+/// The hovered icon button's rounded white square, `edge` DIP wide around `center` (in the canvas's space).
+pub fn draw_hover_wash(canvas: &Canvas, center: Point, edge: f32, opacity: f32) {
+    let scale = canvas.scale();
+    let half = edge / 2.0 * scale;
+    let wash = Rect::around(center, half, half);
+    canvas.fill_rounded_rect(wash, WASH_RADIUS * scale, Color::WHITE.with_alpha(WASH_ALPHA * opacity));
 }

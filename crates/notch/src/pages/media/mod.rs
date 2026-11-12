@@ -57,7 +57,7 @@ pub struct MediaPage {
     follower: LyricFollower,
     lyrics_enabled: bool,
     hovered_control: HoverTarget<Control>,
-    is_hovered: bool,
+    is_notch_open: bool,
     theme_color: Option<Color>,
     theme_version: u64,
     backdrop: Spring,
@@ -79,7 +79,7 @@ impl MediaPage {
             follower: LyricFollower::new(),
             lyrics_enabled: true,
             hovered_control: HoverTarget::default(),
-            is_hovered: false,
+            is_notch_open: false,
             theme_color: None,
             theme_version: 0,
             backdrop: Spring::new(0.0, 180.0, 26.0),
@@ -218,8 +218,8 @@ impl Page for MediaPage {
         self.apply_snapshot(context);
     }
 
-    fn on_hover_changed(&mut self, is_hovering: bool, context: &mut Context) {
-        self.is_hovered = is_hovering;
+    fn on_open_changed(&mut self, is_open: bool, context: &mut Context) {
+        self.is_notch_open = is_open;
         self.sync_wave_timer(context);
     }
 

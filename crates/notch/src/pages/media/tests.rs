@@ -124,7 +124,7 @@ fn lyric_mode_has_no_wave_in_the_pill_until_the_notch_opens() {
     let mut page = with_lyrics(playing_page());
     assert_eq!(page.presence(), None);
     assert!(!page.is_wave_visible());
-    page.is_hovered = true;
+    page.is_notch_open = true;
     assert!(page.is_wave_visible(), "the open notch has the wave in its header");
 }
 

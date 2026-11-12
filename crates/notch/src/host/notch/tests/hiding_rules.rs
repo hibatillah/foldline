@@ -122,14 +122,14 @@ fn a_screenshot_overlay_hides_everything_and_hover_never_opens_the_notch() {
     let mut notch = rig(SampleOptions::default());
     notch.hiding.maximized_showing = Showing::Music;
     notch.hiding.fullscreen_showing = Showing::Music;
-    notch.hiding.opens_on_hover_over_maximized = true;
-    notch.hiding.opens_on_hover_over_fullscreen = true;
+    notch.hiding.opens_on_pointer_over_maximized = true;
+    notch.hiding.opens_on_pointer_over_fullscreen = true;
     notch.set_screen_mode(ScreenMode::Capture);
     assert!(notch.is_suppressed());
     notch.presences.banner = Some((Source::Activity(0), 330.0, 70.0));
     assert!(notch.is_suppressed(), "a banner stays hidden over the overlay");
-    assert!(!notch.opens_on_hover());
-    notch.set_hovering(true);
+    assert!(!notch.opens_on_pointer());
+    notch.set_open(true);
     notch.timer_fired(REVEAL_TIMER_ID);
     notch.timer_fired(EXPAND_TIMER_ID);
     assert_eq!(notch.springs.expansion.target, 0.0, "pointing at the top edge does not open the notch");
@@ -190,7 +190,7 @@ fn pointing_at_a_collapsed_banner_reaches_its_activity_and_makes_room_for_the_bu
     settle(&mut notch);
     let (calm_width, calm_height) = (notch.springs.resting_width.target, notch.springs.resting_height.target);
     let (_, area) = notch.banner_area(&notch.frame()).expect("the banner shows");
-    notch.set_hovering(true);
+    notch.set_open(true);
     notch.route_pointer(PointerEvent::Moved(Point::new(area.center_x(), area.center_y())));
     notch.flush();
     assert_eq!(notch.springs.resting_width.target, calm_width);

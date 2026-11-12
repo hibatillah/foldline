@@ -21,7 +21,7 @@ impl MediaPage {
     }
 
     pub(super) fn is_wave_visible(&self) -> bool {
-        self.is_wave_shown() && (self.is_hovered || !self.is_lyric_mode())
+        self.is_wave_shown() && (self.is_notch_open || !self.is_lyric_mode())
     }
 
     pub(super) fn is_track_playing(&self) -> bool {

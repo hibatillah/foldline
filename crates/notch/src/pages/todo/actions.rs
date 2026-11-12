@@ -1,7 +1,8 @@
 //! What a press does: add, clear, undo, and on a hovered row copy, delete or tick off.
 
 use super::{
-    TodoPage, TodoTarget, UNDO_TIMER,
+    COPY_CHECK_TIMER, TodoPage, TodoTarget, UNDO_TIMER,
+    copy_check::CHECK_MILLISECONDS,
     layout::{Row, copy_rect, delete_rect, row_rect},
 };
 use crate::{
@@ -45,7 +46,8 @@ impl TodoPage {
             }
             Some(TodoTarget::Undo) => {
                 context.kill_timer(UNDO_TIMER);
-                if self.undo_removal(bounds, point) {
+                context.kill_timer(COPY_CHECK_TIMER);
+                if self.press_undo(bounds, point) {
                     context.request_repaint();
                 }
             }
@@ -54,9 +56,17 @@ impl TodoPage {
         }
     }
 
+    /// Undoes the last removal and drops the copy check, whose timer the caller stops, so it could never clear itself;
+    /// true when something on screen changed.
+    pub(super) fn press_undo(&mut self, bounds: Rect, point: Point) -> bool {
+        let had_check = self.copy_check.clear();
+        self.undo_removal(bounds, point) || had_check
+    }
+
     /// Removes every task; the hover is found again, since Clear all is gone and Undo has appeared.
     pub(super) fn clear_tasks(&mut self, bounds: Rect, point: Point) {
         self.list.clear();
+        self.copy_check.clear();
         self.scroll.reset();
         self.refresh_texts();
         self.hover.set(self.target_at(bounds, point));
@@ -67,6 +77,7 @@ impl TodoPage {
         if !self.list.undo() {
             return false;
         }
+        self.copy_check.clear();
         self.refresh_texts();
         self.hover.set(self.target_at(bounds, point));
         true
@@ -79,11 +90,13 @@ impl TodoPage {
             RowPress::Copy => {
                 if let Some(item) = self.list.item(index) {
                     clipboard::write_text(context.window(), &item.text);
+                    self.copy_check.start(index);
+                    context.set_timer(COPY_CHECK_TIMER, CHECK_MILLISECONDS);
+                    context.request_repaint();
                 }
             }
             RowPress::Delete => {
-                self.list.remove(index);
-                self.hover.clear();
+                self.delete_task(index);
                 self.after_removal(context);
             }
             RowPress::Toggle => {
@@ -95,11 +108,33 @@ impl TodoPage {
         }
     }
 
+    /// Removes the task; the check is forgotten, since the indexes behind it shift.
+    pub(super) fn delete_task(&mut self, index: usize) {
+        self.list.remove(index);
+        self.copy_check.clear();
+        self.hover.clear();
+    }
+
     /// Shows Undo for the removal just made; a removal before it can no longer be undone.
     fn after_removal(&mut self, context: &mut Context) {
         self.refresh_texts();
+        context.kill_timer(COPY_CHECK_TIMER);
         context.set_timer(UNDO_TIMER, UNDO_MILLISECONDS);
         context.request_repaint();
+    }
+
+    /// Ends the check when its timer fires; the timer repeats until killed, so it is killed here.
+    pub(super) fn expire_copy_check(&mut self, context: &mut Context) {
+        context.kill_timer(COPY_CHECK_TIMER);
+        if self.copy_check.clear() {
+            context.request_repaint();
+        }
+    }
+
+    /// Drops the check and its timer, for a page that is hidden.
+    pub(super) fn forget_copy_check(&mut self, context: &mut Context) {
+        context.kill_timer(COPY_CHECK_TIMER);
+        self.copy_check.clear();
     }
 
     pub(super) fn expire_undo(&mut self, context: &mut Context) {
