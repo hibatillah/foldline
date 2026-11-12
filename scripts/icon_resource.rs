@@ -1,4 +1,5 @@
-// Shared by the build scripts of the notch and settings crates (`include!`): embeds one icon as a resource.
+// Shared by the build scripts of the notch and settings crates (`include!`): embeds one icon and the version info as
+// resources.
 use std::{env, error::Error, fs, io, path::PathBuf, process::Command};
 
 fn resource_compiler() -> io::Result<PathBuf> {
@@ -33,13 +34,15 @@ fn resource_compiler() -> io::Result<PathBuf> {
     ))
 }
 
-/// Embeds `icon_file` of `branding_directory` (relative to the package) as the icon resource `resource_name`.
+/// Embeds `icon_file` of `branding_directory` (relative to the package) as the icon resource `resource_name`,
+/// followed by `version_info` (see `release_version::version_info_resource`).
 ///
 /// The resource script is written to `OUT_DIR`, so the icon of a build can differ (see `scripts/release_version.rs`).
 fn compile_icon_resource(
     branding_directory: &str,
     resource_name: &str,
     icon_file: &str,
+    version_info: &str,
 ) -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed={branding_directory}/{icon_file}");
     println!("cargo:rerun-if-env-changed=WindowsSdkDir");
@@ -52,7 +55,7 @@ fn compile_icon_resource(
     // `rc.exe` reads backslashes in a string as escapes, and canonicalize adds the `\\?\` prefix.
     let icon_path = icon_path.to_string_lossy().trim_start_matches(r"\\?\").replace('\\', "/");
     let resource_script = output_directory.join("icon.rc");
-    fs::write(&resource_script, format!("{resource_name} ICON \"{icon_path}\"\n"))?;
+    fs::write(&resource_script, format!("{resource_name} ICON \"{icon_path}\"\n{version_info}"))?;
 
     let resources = output_directory.join("icon.res");
     let status = Command::new(resource_compiler()?)

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Measures memory and CPU; moves the pointer while checking the limits in crates/notch/examples/perf.rs.
 #
-#   scripts/perf.sh                 build and check (about three minutes): shelf, then devices, then stats
+#   scripts/perf.sh                 build and check (about three minutes): shelf, devices, stats, then pinned
 #     devices: CPU per open+close cycle 400 ms, idle after cycles 0.1 %, handle growth 20
 #     stats: CPU idle after closing the page 0.1 % (its 1 Hz timer and counters stop), handle growth 20
+#     pinned: shelf and stats on, pinned on the shelf, pointer parked; stays open, idle 0.1 %, handle growth 20
 #   scripts/perf.sh --no-build      reuse the release build
 #   scripts/perf.sh --with-media    also sample normal pages with music playing
 #   scripts/perf.sh --extended      also sample hover, swipes and recovery
@@ -27,7 +28,7 @@ for argument in "$@"; do
         --extended) extra_arguments+=(--extended) ;;
         --lyrics-only) extra_arguments+=(--lyrics-only) ;;
         --screen-mode) extra_arguments+=(--screen-mode) ;;
-        -h | --help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "unknown option: $argument" >&2; exit 2 ;;
     esac
 done

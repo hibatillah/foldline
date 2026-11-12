@@ -24,6 +24,58 @@ pub fn icon_for_version(version: Option<&str>) -> &'static str {
     }
 }
 
+/// The `VERSIONINFO` resource text that names a program in Task Manager (its Processes tab shows `file_description`).
+///
+/// `version` may carry a pre-release suffix (`0.5.0-alpha.4`); the numeric `a,b,c,d` form takes its core and a last 0.
+pub fn version_info_resource(
+    file_description: &str,
+    product_name: &str,
+    version: &str,
+    original_filename: &str,
+) -> String {
+    let version = version.trim().trim_start_matches('v');
+    let core = version.split_once('-').map_or(version, |(core, _)| core);
+    let mut numbers = core.split('.').map(|part| part.parse::<u16>().unwrap_or(0));
+    let numeric = (0..4).map(|_| numbers.next().unwrap_or(0).to_string()).collect::<Vec<_>>().join(",");
+    let quoted = |value: &str| value.replace('"', "\"\"");
+    let (file_description, product_name) = (quoted(file_description), quoted(product_name));
+    let (version, original_filename) = (quoted(version), quoted(original_filename));
+    let internal_name = &original_filename;
+    format!(
+        concat!(
+            "1 VERSIONINFO\n",
+            " FILEVERSION {numeric}\n",
+            " PRODUCTVERSION {numeric}\n",
+            " FILEOS 0x40004\n",
+            " FILETYPE 1\n",
+            "{{\n",
+            " BLOCK \"StringFileInfo\"\n",
+            " {{\n",
+            "  BLOCK \"040904B0\"\n",
+            "  {{\n",
+            "   VALUE \"FileDescription\", \"{file_description}\"\n",
+            "   VALUE \"FileVersion\", \"{version}\"\n",
+            "   VALUE \"InternalName\", \"{internal_name}\"\n",
+            "   VALUE \"OriginalFilename\", \"{original_filename}\"\n",
+            "   VALUE \"ProductName\", \"{product_name}\"\n",
+            "   VALUE \"ProductVersion\", \"{version}\"\n",
+            "  }}\n",
+            " }}\n",
+            " BLOCK \"VarFileInfo\"\n",
+            " {{\n",
+            "  VALUE \"Translation\", 0x0409, 0x04B0\n",
+            " }}\n",
+            "}}\n",
+        ),
+        numeric = numeric,
+        file_description = file_description,
+        version = version,
+        internal_name = internal_name,
+        original_filename = original_filename,
+        product_name = product_name,
+    )
+}
+
 /// The latest `v*` tag, when git runs and finds one.
 fn latest_version_tag(workspace_root: &std::path::Path) -> Option<String> {
     let output = std::process::Command::new("git")
@@ -59,7 +111,7 @@ pub fn current(workspace_root: &std::path::Path) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{DEV_ICON, STABLE_ICON, icon_for_version, pre_release_label};
+    use super::{DEV_ICON, STABLE_ICON, icon_for_version, pre_release_label, version_info_resource};
 
     #[test]
     fn accepts_pre_release_of_the_same_series() {
@@ -88,5 +140,29 @@ mod tests {
         for version in [Some("0.5.0"), Some("v0.5.0"), Some("0.5.0-"), Some(""), None] {
             assert_eq!(icon_for_version(version), STABLE_ICON, "{version:?}");
         }
+    }
+
+    #[test]
+    fn version_info_names_the_program_and_carries_the_four_number_version() {
+        let text = version_info_resource("Notch Settings", "Notch", "0.5.0-alpha.4", "notch-settings.exe");
+        for expected in [
+            "FILEVERSION 0,5,0,0",
+            "PRODUCTVERSION 0,5,0,0",
+            "VALUE \"FileDescription\", \"Notch Settings\"",
+            "VALUE \"ProductName\", \"Notch\"",
+            "VALUE \"FileVersion\", \"0.5.0-alpha.4\"",
+            "VALUE \"ProductVersion\", \"0.5.0-alpha.4\"",
+            "VALUE \"InternalName\", \"notch-settings.exe\"",
+            "VALUE \"OriginalFilename\", \"notch-settings.exe\"",
+        ] {
+            assert!(text.contains(expected), "{expected}\n{text}");
+        }
+    }
+
+    #[test]
+    fn version_info_of_a_stable_version_has_no_suffix() {
+        let text = version_info_resource("Notch", "Notch", "v0.5.0", "notch.exe");
+        assert!(text.contains("VALUE \"FileVersion\", \"0.5.0\""), "{text}");
+        assert!(text.contains("FILEVERSION 0,5,0,0"), "{text}");
     }
 }
