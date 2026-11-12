@@ -25,11 +25,11 @@ The run used `scripts/perf.sh` (release build) and passed every baseline gate.
 | CPU time per open/close cycle | 131 ms | 400 ms |
 | RAM growth over 10 cycles | 0.6 MiB | 3 MiB |
 | Handle growth over 10 cycles | -9 | 20 |
-| Hover events | 20/20 | exactly 20 |
+| Open events | 20/20 | exactly 20 |
 | Idle CPU after cycles | 0% | 0.1% |
 
 Notch settled after startup and after the animations. Normal pages were restored after the test.
-This baseline did not measure music playback, live lyrics, held hover or swiping.
+This baseline did not measure music playback, live lyrics, the notch held open by the pointer, swiping or a pinned notch.
 
 A new run is pending: `scripts/perf.sh` now also checks the devices page (`NOTCH_PAGES=shelf,devices`), the stats page
 (`NOTCH_PAGES=stats`) and, with `--screen-mode`, a maximized test window. Those scenarios have no recorded numbers yet.
@@ -55,7 +55,7 @@ In every run, private working set was 25 to 28 MB (limit 30 MB), memory growth o
 
 - CPU comes from `GetProcessTimes`, which ticks in about 15.6 ms steps; 0.078 % over the 20 s window is one tick.
 - The same build passes and fails the idle-CPU checks between runs, so one failed idle check does not show a stuck timer.
-- A hand run (hover the notch 3 times with `NOTCH_DEBUG`, then 20 s idle) logged `frame timer stopped` after every hover and
+- A hand run (open the notch by pointing at it 3 times with `NOTCH_DEBUG`, then 20 s idle) logged `frame timer stopped` after every opening and
   0 ms CPU over the idle window.
 - Not established: the cause of the intermittent ticks (probably load from other processes).
 - To judge a change, close other apps, stop other `notch.exe` copies and rerun `scripts/perf.sh` several times; the limits stay.
@@ -81,13 +81,13 @@ window opened; CPU is process CPU time over the following 10 s.
 ## Window recovery verification
 
 Before the recovery fix, the main window had lost `WS_EX_TOPMOST` while its drop-target overlay retained it.
-Targeted checks deliberately demoted the running window, then tested hover handoff and simulated lock/unlock
+Targeted checks deliberately demoted the running window, then tested opening by the pointer and simulated lock/unlock
 notifications. Both restored topmost, opened the notch and preserved foreground focus.
 The physical lock/unlock cycle was not tested; see the manual checklist in [test and snapshot](../how-to/test-and-snapshot.md).
 
 ## Repeat the checks
 
-Run `scripts/perf.sh` from Git Bash for the baseline, or add `--extended` for held hover, swipes and recovery.
+Run `scripts/perf.sh` from Git Bash for the baseline, or add `--extended` for the notch held open by the pointer, swipes and recovery.
 For live lyrics, play a track with synced lyrics and use `--lyrics-only`.
 
 The check moves the pointer and replaces the running Notch. Leave the mouse alone during measurement, then run

@@ -54,7 +54,7 @@ Use the MSVC toolchain for every crate (the notch's text lookup, rust-i18n, need
 
 ## How the code is organized
 
-- `crates/notch/src/host/` is the notch itself: the window, hover, animation, input, the tray and the launcher of the settings window. It names no page. `Notch` is one struct whose methods live one job per file in `crates/notch/src/host/notch/`.
+- `crates/notch/src/host/` is the notch itself: the window, opening and closing, the pin, animation, input, the tray and the launcher of the settings window. It names no page. `Notch` is one struct whose methods live one job per file in `crates/notch/src/host/notch/`.
 - `crates/notch/src/pages/` holds one folder per page (media, shelf, calendar, timer, todo, shalat, stats, weather, devices, clipboard) and `crates/notch/src/activities/` one file per pill message (volume, battery, notifications…). Each is listed in one registry line, so adding or removing one touches no other file.
 - `crates/notch/src/gfx/` is the Direct2D and DirectWrite drawing toolkit and `crates/notch/src/ui/` the widgets and input helpers built on it; neither imports from `page`, `i18n`, `host`, `pages`, `activity` or `platform` (a test enforces it). `crates/notch/src/platform/` holds small Windows actions.
 - Pages, activities and widgets draw and receive pointer input in device-independent units starting at zero; `crates/notch/src/host/notch/units.rs` is the only place that converts to device pixels. [docs/explanation/drawing-model.md](docs/explanation/drawing-model.md) gives the reasons.
@@ -92,7 +92,7 @@ When you touched `crates/settings/` or `crates/store/`, run the first three as `
 
 | Agent | Owns |
 | --- | --- |
-| `notch-host` | `crates/notch/src/host/**`, `crates/notch/src/platform/**`: Win32 behavior, hover, timers, the tray, the header gear |
+| `notch-host` | `crates/notch/src/host/**`, `crates/notch/src/platform/**`: Win32 behavior, opening and closing, the pin, timers, the tray, the header pin and gear |
 | `notch-pages` | `crates/notch/src/pages/**`, `crates/notch/src/activities/**`, `page.rs`, `activity.rs` |
 | `notch-render` | `crates/notch/src/gfx/**`, `crates/notch/src/ui/**`: Direct2D and DirectWrite drawing |
 | `settings-gpui` | `crates/settings/**`, `crates/store/**` |

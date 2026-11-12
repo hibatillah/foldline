@@ -68,30 +68,41 @@ the marks of what is going on, then the battery ring, then the camera and microp
 
 ## Open header
 
-- Left to right: the page dots at the left edge, the clock in the exact middle, then the group and the gear at the right
-  edge, 10 px between the group's items and before the gear, 4 px between the battery ring and the dots. The group is
+- Left to right: the page dots at the left edge, the clock in the exact middle, then the group, the pin and the gear at the right
+  edge, 10 px between the group's items, 6 px between the group and the pin's box and 4 px between the pin's box and the gear's (about 8 px of air between the glyphs), 4 px between the battery ring and the dots. The group is
   the pill's group (same items, same order) as icons only. The clock glides from its place in the pill; the ring and
   the dots travel with it.
 - **The clock is alone and never moves.** It stays in the exact middle of the header whatever shows beside it, so it reads
   first. At least 40 px separate it from the page dots and at least 40 px from the nearest icon.
 - **Icons with no room are dropped, nearest the clock first** (the wave, then Caps Lock, and so on by rank). The battery
-  ring, the dots and the gear always show; the header's least width keeps room for them. Dropping keeps the clock still;
-  the icons nearest the clock are the steadiest states and the least urgent to see on hover.
+  ring, the dots, the pin and the gear always show; the header's least width keeps room for them. Dropping keeps the clock still;
+  the icons nearest the clock are the steadiest states and the least urgent to see when the notch opens.
 - **The header's least width** is the clock plus twice the wider side: the page dots and 40 px, or 40 px, the ring, the
-  dots and the gear with their gaps. With nine pages that is 341 px.
+  dots, the pin and the gear with their gaps. With nine pages that is 341 px.
 - **The open notch is never narrower than the timer page's open width** (or its header, when that needs more), so
   every page opens at one shared least width instead of one squeezed around the header. A page wider than that floor
   sets the width itself.
-- **Icons only, never text** (no "12m" on hover). The icons keep the size their activity or page gives them.
+- **Icons only, never text** (no "12m" in the open header). The icons keep the size their activity or page gives them.
 - **A click on an icon opens its page** (timer, event to Calendar, prayer to Shalat, wave to Media). Muted, Caps Lock, the
   battery ring and the dots take the click and do nothing, so a click near them never reaches the page below. The hit
   area is 24 px around the icon, without widening the gaps; where two areas meet, the nearer item wins.
-- **The gear** is a hexagon around a ring (circumradius 9.5 and ring radius 3 in a 24 px box), drawn in an 18 px box
-  so the hexagon is about as wide as the 14 px battery ring (it fills less of its box than the ring does), `#8c8c94`, the
-  last item at the right edge, 10 px after the group. It shows on hover and never in the idle pill, and opens the
+- **The gear** is a hexagon around a ring (circumradius 9.5 and ring radius 3 in a 24 px box), drawn in a 16 px box
+  so the hexagon (12.3 x 13.6 px) is a little smaller than the 14 px battery ring, `#8c8c94`, the
+  last item at the right edge, 10 px after the group. It shows only in the open notch, never in the idle pill, and opens the
   settings window. It is not an activity and has no rank. The page dots keep the left edge to themselves, so the page
   the user is on reads first; the gear sits at the right end, where controls usually are, and the group slides left by
   its width and 10 px as the notch opens.
+- **The pin** (`Icon::Pin`) is the Lucide "pin" outline (head above a needle, stroke 2 in a 24 px box). It sits 4 px left of
+  the gear in a 13 px box (`PIN_SIZE`), where it shows about 9 x 12 px, a little smaller than the battery ring and no taller than the
+  gear's 13.6 px. The glyph is centered in its box, so the 24 px hover wash is centered on it. The visible gaps ring to pin
+  and pin to gear are both about 8 px. Unpinned it is the gear's `#8c8c94`; pinned it is the accent blue `#74c0fc`
+  (`ui::palette::ACCENT_BLUE_LIGHT`, the clipboard page's pin), so the state reads at a glance. A click toggles it;
+  its hit area is 24 px like the gear's. It shows only in the open notch and is never dropped for room. It is not an
+  activity and has no rank. A pinned notch takes no file drops (the drop overlay steps aside while the notch is
+  open); the user unpins it and drags onto the collapsed pill.
+- **Hover on the pin and the gear** draws the media buttons' wash (`ui::draw_hover_wash`: white at 12 %, corner radius
+  8) behind the hovered one, filling its 24 px hit square, so it shows where a click lands without moving anything.
+  A pinned pin keeps its blue glyph on the wash. The other header items show no wash.
 
 ## Lyrics on
 
@@ -298,7 +309,10 @@ The bar stays at the bottom of the page in both heights.
   text (11 px, `#e6e6eb`, cut with an ellipsis). A row is fill `#121216` with a 1 px `#1e1e24` border; the selected row is
   `#1a1a20` with `#3a3a44`. Hover is `#17171c` (not in the board; proposed). Code rows use 10.5 px Consolas, because
   Geist Mono is not bundled (the same fallback as the calendar). A color row shows a 15 px swatch of the color, an image
-  row a 15 px orange stand-in and "Image (360x70)", a link the link icon and text the document icon.
+  row its own picture and "Image (360x70)", a link the link icon and text the document icon. The picture is the square
+  middle of the copy (cropped to fill, never letterboxed), 15 px on whole device pixels, radius 4, with a 1 device pixel
+  ring of white at 16 % inside its edge so a white, black or see-through picture keeps its outline on the row (not in
+  the board; proposed). A picture that cannot be drawn shows the Lucide image icon instead.
 - **The right column** is the preview panel (`#0b0b0e`, radius 8, 8 px above and below and 10 px at the sides) over one
   26 px action row 8 px below it. Text and code are 12 px on 17 px lines, at most 7 lines, the last ending with an
   ellipsis when more would not fit; a picture is drawn contained and centered, never upscaled beyond its stored size; a
@@ -311,7 +325,7 @@ The bar stays at the bottom of the page in both heights.
 - **Confirmations are green** (`#63e6be` on `#0d2b24`, 1 px border): after a paste the selected row reads "Pasted" with a
   check, the Paste button reads "Pasted" with a check, and the notch closes after about 600 ms; after Copy the row reads
   "Copied, moved to front" and the Copy button shows a check for 1.5 s.
-- **Pins.** A row's pin is icon only (a 13 px Lucide pin) in a 23 px square at the row's right end, which the row's own
+- **Pins.** A row's pin is icon only (the header's pin outline, `Icon::Pin`, at 13 px) in a 23 px square at the row's right end, which the row's own
   click area leaves to it. An unpinned row shows it only while hovered (`#8a8a96`, `#e6e6eb` with the pointer on it); a
   pinned row looks like the others but its pin stays, in the accent blue `#74c0fc`. At most three copies are pinned;
   while three are, unpinned rows show no pin. Pinned copies sit on top in the order they were pinned, with no divider;
@@ -364,9 +378,10 @@ The bar stays at the bottom of the page in both heights.
 
 - A task is a 32 px row (10 px radius, `#141418`, hover `#1c1c22`), 6 px apart, with a 14 px ring, the text (13 px, one
   line cut with an ellipsis, 120 characters at most) and, on hover, a 22 px delete button 6 px from the right edge with
-  a 22 px copy button (a 12 px copy icon, the same circle) 10 px to its left; the gap is wider than the 8 px between
-  pills so a press does not land on the wrong one, and a press in it does nothing. Copy puts the task's text on the
+  a 22 px copy button (a 12 px copy icon, the same circle) 6 px to its left; the gap is narrower than the 8 px between
+  pills, and a press in it does nothing so it cannot land on the wrong button. Copy puts the task's text on the
   clipboard; the notch's own clipboard writes show no "Copied" message and are not added to the clipboard page.
+  The copy button then shows a green check (the stroke of the clipboard page's Copy check, `#63e6be`, 12 px) in place of the icon for 1.5 s on that row only; a second copy moves it and restarts the 1.5 s, and a delete, Clear all, Undo or closing the page clears it. The button keeps taking presses while it shows the check.
   A done task has no fill, a green check (`#30d158`) and struck-through `#6e6e7a` text, and keeps its row. Done tasks
   follow open ones.
 - No limit on tasks; the page shows five rows at most and the list scrolls under the wheel or a swipe (one row a notch),

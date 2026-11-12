@@ -29,7 +29,8 @@ next start, or at once if something posts that message.
 | `notifications.show_text` | `on`, `off` | show what a notification says in its banner (off is private mode). Switch the banner itself off with `activity.notifications` |
 | `calendar.ics_url` | a web address | the calendar address; the settings window sets it. It is a secret: anyone with it can read the calendar |
 | `advanced.debug_log` | a file path | the file the notch appends its timestamped log to; empty means no log. Read once at start, and `NOTCH_DEBUG` overrides it |
-| `notch.top` | pixels, 0 to 2000 | how far the notch sits below the top edge of the screen (default 0). Read once at start, and `NOTCH_TOP` overrides it |
+| `notch.top` | pixels, 0 to 2000 | how far the notch sits below the top edge of the monitor it is on (default 0). Read once at start, and `NOTCH_TOP` overrides it |
+| `notch.monitor` | `main`, `focused` | which monitor the notch sits on: the primary one (`main`, the default) or the one with the window in front (`focused`). A missing key keeps the current choice and an unknown word reads as `main`. Applies without a restart; the settings window labels it **Show the notch on**. See [the layout](layout.md#where-the-notch-sits-on-several-monitors) |
 | `calendar.view` | `month`, `week` | the calendar page's left column: the whole month (default) or the current week; the week page is the default 86 px high and its list scrolls. The settings window's Calendar section writes it |
 | `calendar.refresh_minutes` | minutes | how often the calendar is downloaded again (default 15) |
 | `location.city`, `location.lat`, `location.lon`, `location.country` | text, degrees, degrees, a two-letter country code | the one place the prayer times and the weather are for, chosen with the location search in the settings window's General section. Older versions saved these as `shalat.city`, `shalat.lat`, `shalat.lon` and `shalat.country`; those are read until the shared keys are saved. |
@@ -48,12 +49,14 @@ next start, or at once if something posts that message.
 | `notch.hide_when_idle` | `on`, `off` | off by default: hide the notch over regular windows until you point at the top of the screen; only playing music, a short message or a banner shows it, a lasting badge or dot (Caps Lock, a countdown, the camera or microphone dot) does not; the muted speaker does while `notch.hide_windows_volume_popup` is on ([priority activities](#what-the-notch-shows-over-another-window)) |
 | `notch.hide_windows_volume_popup` | `on`, `off` | on by default: keep the volume and brightness flyout Windows shows above the taskbar from drawing, while the notch runs (`host/volume_flyout.rs`). Applies without a restart; the flyout returns when the notch exits or the switch goes off, and after a forced end once the notch has been started and closed again. While it is on, a volume or brightness change and the muted speaker show over every `notch.maximized` and `notch.fullscreen` word, `hidden` included. See [hide Windows' own popups](../how-to/hide-windows-popups.md) |
 | `notch.hide_windows_notifications` | `on`, `off` | on by default: turn off Windows' notification banner for every app while the notch runs, by writing `ShowBanner=0` per app and saving the previous values in `%APPDATA%\notch\notification-banners.txt` (`host/notification_banners.rs`). Notifications stay in the notification center, so the notch still shows them. Applies without a restart; the values go back when it is switched off, when the notch quits, and at the next start after a crash. See [hide Windows' own popups](../how-to/hide-windows-popups.md) |
+| `notch.paused_until` | empty, `manual`, Unix seconds | empty (not paused) by default: while paused the notch is hidden completely and Windows' own volume flyout and notification banners return. `manual` lasts until Resume; a number is the Unix second a timed pause ends. The settings window (**Pause Notch** on General), the tray (**Pause Notch**, then **Resume Notch**) and the notch itself (when a timed pause ends) write it. The notch clears it at every start, so a quit or a crash never leaves it paused; any other text, or a time not after now, reads as not paused and is cleared. Applies without a restart. See [what a pause hides](#pausing-the-notch) |
 | `notch.maximized`, `notch.fullscreen` | `hidden`, `activities`, `lyrics`, `music` | what the notch shows over a maximized window (default `lyrics`) and over a full-screen app (default `hidden`); the words are in [the next table](#what-the-notch-shows-over-another-window). A missing or unknown word uses the default |
-| `notch.hover_maximized`, `notch.hover_fullscreen` | `on`, `off` | on by default: pointing at the top edge opens the notch over a maximized window and over a full-screen app. Off stops the pointer from opening it there; short messages still follow `notch.maximized` and `notch.fullscreen`, and dragging files onto the shelf still opens it. Neither key applies over a screenshot overlay (Win+Shift+S, Snipping Tool, Game Bar): the notch is hidden there and the pointer never opens it |
+| `notch.hover_maximized`, `notch.hover_fullscreen` | `on`, `off` | on by default: pointing at the top edge opens the notch over a maximized window and over a full-screen app (the settings window labels them **Open by pointing**; the key names keep the older word). Off stops the pointer from opening it there; a pinned notch stays open whatever they say; short messages still follow `notch.maximized` and `notch.fullscreen`, and dragging files onto the shelf still opens it. Neither key applies over a screenshot overlay (Win+Shift+S, Snipping Tool, Game Bar): the notch is hidden there and the pointer never opens it |
 | `pages.known` | `id:Label,...`, with `:opt_in` after the label of an opt-in page | written by the notch at start, only when it changed: the pages the settings window lists (label is `Page::name`; an opt-in page shows as off until `navigation.disabled` is saved). Leave it alone: the notch owns it |
 | `navigation.page` | a page id | the page that was open last; the notch opens on it and writes this when you change page |
 | `activity.notifications` | `on`, `off` | on by default: show Windows notification banners in the notch |
 | `activity.device_battery` | `on`, `off` | on by default: a message when a connected Bluetooth device's battery falls to 20 % or 10 %. Read at start; switching it off while the notch runs hides the message but the watcher keeps running until exit |
+| `activity.downloads` | `on`, `off` | on by default: a banner when a browser download starts and finishes, and an icon while one runs; the settings window labels it **Browser downloads**. Reads file names in the Downloads folder only (see [activities](activities.md)). Applies without a restart: switching it on starts the folder watcher, switching it off hides the banners and the icon, but the watcher thread runs until the notch exits |
 
 Pages add their own keys, always starting with the page id. A page reads and writes them through
 `Context::settings`.
@@ -77,6 +80,23 @@ the sound is muted, and the whole collapsed pill shows then (the clock, Caps Loc
 microphone dots), not only the muted icon. Pointing at the top edge still follows the word and `notch.hover_maximized` or
 `notch.hover_fullscreen`. With `notch.hide_windows_volume_popup` off, Windows shows its own flyout and the words apply
 to volume and brightness as to any activity. A screenshot overlay hides them too.
+
+A pinned notch (the pin in the open header, `host/notch/pin.rs`) overrides every word, `notch.hide_when_idle` and
+`notch.hover_maximized` / `notch.hover_fullscreen`: it stays visible and open over maximized and full-screen windows
+until it is unpinned. Only a screenshot overlay hides it, and it returns pinned. The pin has no key: it is not saved,
+and the notch starts unpinned.
+
+### Pausing the notch
+
+A pause (`notch.paused_until`, `host/notch/pause.rs`) wins over everything above: it hides the window and draws nothing,
+whatever the pin, `notch.maximized`, `notch.fullscreen`, `notch.hide_when_idle` and the priority activities say. A pinned
+notch closes and returns pinned when the pause ends. The pause also gives Windows' popups back: the volume and
+brightness flyout and the notification banners show as if the notch were not running, and the notch hides them again
+(from `notch.hide_windows_volume_popup` and `notch.hide_windows_notifications`) when the pause ends. Changing any other
+setting during a pause leaves it unchanged. A timed pause ends from a one-shot host timer (id 12), at wake from sleep and
+at unlock after its end time, whichever comes first; a pause until resumed arms no timer. The tray menu is described in
+[host and pages](../explanation/host-and-pages.md#input-and-timers) and the window's group in
+[the settings window](settings-window.md#sections).
 
 Three older keys (`notch.hide_for_fullscreen`, `notch.show_over_maximized`, `notch.lyrics_over_maximized`) have no
 tray item. The notch reads them only when the new key is missing, at start and on a reload:

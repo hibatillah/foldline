@@ -3,7 +3,8 @@
 > **Explanation.** Read when: you change or restructure the host, a page or an activity and want to know how they work inside `notch.exe` and why. Skip if: you want the overview of the programs, crates, files and services ([ARCHITECTURE.md](../../ARCHITECTURE.md)), a file's location ([source map](../reference/source-map.md)) or a step to follow (the how-to guides).
 
 This document covers how the host, the pages and the activities work inside `notch.exe`. The notch is a small window pinned to the top of the screen. It shows one **page** at a time, either collapsed
-(a slim pill) or open (while the pointer is over it). While it is collapsed, **activities** (a volume change, a
+(a slim pill) or open: opened by the pointer, which closes it again when it leaves, or pinned open by the pin in
+the header, which keeps it open until the user unpins it. While it is collapsed, **activities** (a volume change, a
 charger being plugged in, a notification) take over the pill for a moment or add a small badge to it. The code is split
 so that adding or removing a page or an activity never touches the host.
 
@@ -12,14 +13,14 @@ The settings window is a second program; how the two programs and their shared s
 
 ## The host
 
-`host/` owns everything that is not specific to a page: the window and its message loop, hover, the springs that open
+`host/` owns everything that is not specific to a page: the window and its message loop, opening and closing (by the pointer or by the pin), the springs that open
 and close the pill, which page shows, input, the tray and the launcher of the settings window. It names no page. `window.rs` turns
 Windows messages into calls on the `Notch`, and the `Notch` decides what to show and draws it.
 
 `Notch` is one struct whose methods are split one job per file (`host/notch/`), and a job that keeps its own state
-owns a small struct for it (`Springs`, `RowMotion`, `HoverState`, `HidingState`, `KeyboardState`, `ShownPresences`). The reason is
+owns a small struct for it (`Springs`, `RowMotion`, `OpenState`, `HidingState`, `KeyboardState`, `ShownPresences`). The reason is
 reach: with one 2,000-line file every change could touch every field, and a reader had to hold the whole notch in
-mind. With a file per job, the springs can only be changed through `animation.rs`, hover only through `hover.rs`, and
+mind. With a file per job, the springs can only be changed through `animation.rs`, the open state only through `open_state.rs`, and
 a job's logic that takes and returns plain values can be tested without a window. [The source
 map](../reference/source-map.md#host-files) lists every host file and what it does.
 
@@ -58,7 +59,7 @@ after a short delay once the pointer leaves. One spring, `expansion`, goes from 
 height both interpolate from the collapsed to the open size through that one value, so they grow in parallel and arrive
 together, and the fades and the time's glide follow it too (`HEADER_STAGE` is only the point where the header content
 is fully shown and the page content has not started). Delays and fades are constants in the file that uses them
-(`notch/hover.rs`, `notch/hiding.rs`, `notch/layout.rs`).
+(`notch/open_state.rs`, `notch/hiding.rs`, `notch/layout.rs`).
 
 Every size spring (`expansion`, the collapsed and open width and height, the badge room) uses the one response
 `SIZE_RESPONSE` in `host/motion.rs`: stiffness 215, damping 16.7, a damping ratio of 0.57 and an overshoot of about 10 %
@@ -83,34 +84,40 @@ The notch can step out of the way in two ways, both in `notch/hiding.rs` (`is_hi
 - **Over a maximized or full-screen window** one `Showing` each (`notch.maximized`, default `lyrics`;
   `notch.fullscreen`, default `hidden`) replaces Hide when idle. The words are listed in
   [settings keys](../reference/settings-keys.md#what-the-notch-shows-over-another-window). `visibility::hides_to_strip` decides what a word shows, with
-  `Page::shows_live_text` marking active lyrics. `hidden` hides the window and draws nothing, so no hover, banner or
+  `Page::shows_live_text` marking active lyrics. `hidden` hides the window and draws nothing, so no opening by the pointer, banner or
   message shows until the window in front changes (a priority activity aside, below); a suppressed notch keeps its full-size layout so no strip grows back
   when it returns. Whatever a word leaves out hides to the strip, 3 px high with a 350 ms wait unless Hide when idle is on, so the tabs and title bar of the window
   are not caught. `visibility::migrate` writes the new keys from the retired `notch.hide_for_fullscreen`,
   `notch.show_over_maximized` and `notch.lyrics_over_maximized` at start and on a reload, never over a saved new key.
   A reload that changes a choice while such a window is in front applies at once: it hides or shows the window and
   re-lays out the pill.
+- **A pause** (`notch.paused_until`, `notch/pause.rs`) hides the notch completely and is part of `is_suppressed`, so it is asked before the screen mode, the pin and the priority activities and wins over all of them: the window is hidden, an open notch closes (a pin stays set and returns when the pause ends), the animation and hover-watch timers stop and nothing is painted. While paused the volume and brightness flyout and the notification banners belong to Windows again; a resume sets them from their settings keys. A pause is set from the tray or the settings window, and the notch clears it at every start. A timed pause ends from the host's one-shot timer, or at the first wake from sleep or unlock after its end time. The values are in [settings keys](../reference/settings-keys.md#pausing-the-notch).
 - **Priority activities** (`Activity::is_priority`: volume and brightness) override both while
   `notch.hide_windows_volume_popup` is on, because the notch then replaces Windows' flyout. `presences.rs` notes when
   one shows anything (`ShownPresences::has_priority`, the muted badge included); `visibility::priority_shows` turns
   that into an exception to `suppresses` and `hides_to_strip`, and `refresh_layout` shows or hides the window when it
   changes, with the pill already at its new size. The pointer still follows the word. `Capture` is never overridden.
+- **A pin** (`notch/pin.rs`) overrides both and every word, in every mode but `Capture`: `visibility::pin_shows` is
+  the same kind of exception, because pinning is the user's explicit choice to see the notch. While pinned, no
+  close path closes it (pointer leave, the close timer, a page's `request_close`, a drag that ends away) and no
+  hover-watch timer runs, since that timer only looks for the pointer leaving. Pinning over a maximized or full-screen
+  window raises the notch with the same raise the screen-mode change uses. The pin is not saved.
 
 `screen_mode.rs` decides which case applies. It hooks Windows' events for the window in front changing, and, for as
 long as one window is in front, for the moves and resizes of that window's thread (`SetWinEventHook`, one thread at a
 time, so mouse moves never wake the notch). The caret and the pointer report moves on that thread too, so when two
 moves of something other than the window come less than 100 ms apart, `screen_mode/location_hook.rs` unhooks for 250 ms
 with a one-shot timer and reads the mode again when the hook returns; no timer is armed while moves are rare or have
-stopped. A window covering the whole primary monitor without a title bar is full
+stopped. A window covering the whole monitor the notch is on (see [the layout](../reference/layout.md#where-the-notch-sits-on-several-monitors)) without a title bar is full
 screen; a zoomed one is maximized; the desktop, the taskbar and the notch's own windows never count. A screenshot
 overlay is `Capture`: any window of `ScreenClippingHost.exe` (Win+Shift+S, Print Screen), or a window of
 `SnippingTool.exe` or `GameBar.exe` that covers the monitor. The process name is read once per foreground change
 (`OpenProcess` and `QueryFullProcessImageNameW`) and kept for that window's moves. `Capture` always means `hidden` and no
-hover opening, whatever the settings say.
+opening by the pointer, whatever the settings say, and it hides a pinned notch too.
 
 Every foreground change reaches the host, even when the screen mode is unchanged, so a demoted Notch window can
-regain topmost status without taking focus. Hover restores topmost before the drop-target overlay steps aside.
-Session lock/unlock and automatic resume reset hover, capture, drag and reveal state, then restore the overlay's
+regain topmost status without taking focus. Opening for the pointer restores topmost before the drop-target overlay steps aside.
+Session lock/unlock and automatic resume reset the pointer, capture, drag and reveal state (a pinned notch keeps its pin and stays open), then restore the overlay's
 placement. Session notifications use `WTSRegisterSessionNotification` for the current session; if registration fails,
 the error is logged and foreground recovery remains available. Leave tracking is armed only while
 `WindowFromPoint` identifies the Notch window, preventing repeated leave messages from an occluded window.
@@ -164,9 +171,9 @@ device-independent units starting at zero and do not multiply by a scale; widget
 
 Windows messages reach `window.rs`, which calls the notch. The notch routes pointer events to the page chosen for the
 open mode, and `host/notch/units.rs` converts each position to units from the top-left of that page's frame (or of the
-banner's or badge's area), the same space the page draws in. A right click reaches only a page that uses it for its own content (the shelf's files); the notch has no menu of its own. The tray icon has the three items Start with Windows, Settings and Quit Notch
+banner's or badge's area), the same space the page draws in. A right click reaches only a page that uses it for its own content (the shelf's files); the notch has no menu of its own. The tray icon has the items Start with Windows, Settings, Pause Notch (a submenu of four lengths, replaced by the status line and Resume Notch while paused) and Quit Notch
 (`host/tray.rs`), and the gear in the open header starts the settings window the way the tray's Settings item does (`host/settings_launcher.rs`). A page's timers (`Context::set_timer`) are Windows timers whose ids encode the page and the
-timer number, so each page has its own.
+timer number, so each page has its own. The host's own timers are constants in `host/notch.rs` (the last, id 12, ends a timed pause: one-shot, set when a timed pause begins and killed when it ends).
 
 ### Activities
 
@@ -176,14 +183,14 @@ The host asks every running activity for its `presence()` after each event.
   widths and a blend spring cross-fades the two.
 - A **badge** joins the group at the right edge of the idle pill (icon and text; icon only for the wave, muted and Caps Lock), ordered by `header_status_rank`, between the clock and the battery ring. While a page claims the pill, the group (muted, Caps Lock, one countdown) follows the page's line with 24 px between them.
 - A **banner** opens the pill into a card taller than the idle pill and smaller than the open notch. It has the pill to
-  itself, transients wait behind it, and while it shows, pointing at the notch holds it instead of opening the notch.
+  itself, transients wait behind it (except a priority activity's level, which brings an activity's banner down at once through `Activity::dismiss_banner`; the banner does not come back, and a page's banner is not dismissed), and while it shows, pointing at the notch holds it instead of opening the notch.
   Pointer input on a collapsed notch goes to the banner (`Activity::on_pointer`, `Page::on_presence_pointer`, in
   the rect it draws into), never to the page that would open, so its buttons are real hit targets. Without a banner,
   a page's badge gets the pointer over its own rect (`Page::on_presence_pointer`, `host/notch/badge_pointer.rs`); the
   rain badge opens the weather page on a press.
 
 Required activities always start and ignore saved disable settings. Only optional activities expose a saved
-`activity.<id>` settings toggle; Notifications and the device battery warning are the optional built-ins, and both default to on. The host registers the
+`activity.<id>` settings toggle; Notifications, the device battery warning and Browser downloads are the optional built-ins, and all default to on. The host registers the
 window for Windows power-setting and clipboard messages on their behalf (`Context::listen_to_power_setting`,
 `listen_to_clipboard`) and hands them to every running activity, and to every page that is switched on (`Page::on_system_message`), as a `SystemMessage`. Activity timers use ids from
 1000 up and their wake-ups use their own window message, so they never clash with a page's. See

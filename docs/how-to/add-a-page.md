@@ -132,7 +132,7 @@ What each part does:
 - `on_settings_changed` runs after another program (the settings window) changed `settings.txt` and the notch re-read
   it. Read your keys again here; fall back to the current value, not the default, so a missing or unreadable line
   changes nothing. Never write settings from it.
-- `on_language_changed` runs once when `general.language` changed (after `on_settings_changed`). Rebuild text you cached from
+- `on_language_changed` runs once when `general.language` changed (after `on_settings_changed`), and again after the notch moves to a monitor of another scale. Rebuild text you cached from
   `tr!` (a label, a count, a measured width) and request a repaint. `name()` returns a `String` read in the current
   language through `tr!("page.<id>")`; look texts up with `crate::i18n::tr!` when you create or rebuild them, never in
   `draw_*`, and add the English and Indonesian text to `crates/notch/locales/app.yml`.
@@ -144,7 +144,7 @@ What each part does:
 - A page that uses right-click answers `uses_right_click` for those points and then gets `PointerEvent::SecondaryReleased`; the shelf does this for its files. A right-click elsewhere does nothing.
   Positions are units in the same space as its own `frame.bounds`, from the page's top-left.
 - A page with a scrolling area answers `claims_scroll` for the points where the vertical wheel or a touchpad swipe scrolls it and then gets `PointerEvent::Scrolled { notches }` (positive moves toward later content, one wheel notch is 1.0); the calendar's event list does this. Elsewhere the wheel still switches pages, and a horizontal swipe always does.
-- A page that must not hold anything while it is off (the clipboard page) answers `on_enabled_changed`, which runs at start and whenever the settings window switches the page. A page that wants a Windows message (the clipboard) calls `context.listen_to_clipboard()` in `on_start` and reads it in `on_system_message`; only a page that is on gets it. `context.request_close()` closes the notch.
+- A page that must not hold anything while it is off (the clipboard page) answers `on_enabled_changed`, which runs at start and whenever the settings window switches the page. A page that wants a Windows message (the clipboard) calls `context.listen_to_clipboard()` in `on_start` and reads it in `on_system_message`; only a page that is on gets it. `context.request_close()` closes the notch, except while the user has pinned it open: then the request does nothing.
 - A page that takes typing (the todo page's add field) calls `context.take_keyboard()` from a click, never on hover,
   and gets `on_key` with a `KeyInput` until it calls `context.release_keyboard()`. The notch stays open meanwhile. When
   the user clicks another window first, the page gets `on_keyboard_lost` and stops editing. `ui::TextField` handles

@@ -15,8 +15,8 @@ the host converts them (`crates/notch/src/host/notch/units.rs`, see [the drawing
           \________________________________________________/     top edge of the screen
           |                                                |
           |  10 px padding top                             |
-          |  [==ooo]    18:41    [~][^][t][O][.] [gear]   |     header, 16 px high
-          |  page dots  clock    the group, icons only, gear|     page dots left, clock in the middle, group and gear at the right edge
+          |  [==ooo]    18:41    [~][t][O][.] [pin][gear] |     header, 16 px high
+          |  page dots  clock    group (icons), pin, gear  |     page dots left, clock in the middle, group, pin and gear at the right edge
           |  10 px gap                                     |
           |  +------------------------------------------+  |
           |  |                                          |  |
@@ -33,9 +33,9 @@ the host converts them (`crates/notch/src/host/notch/units.rs`, see [the drawing
 ```
 
 - The header belongs to the host, on every page: the page dots (the long one is the open page) at the left, the clock in
-  the middle, and at the right the group as icons only (the same items and order as the idle pill) and the gear at the
+  the middle, and at the right the group as icons only (the same items and order as the idle pill), the pin and the gear at the
   right edge.
-  A click on a status icon opens its page and a click on the gear opens the settings window; both are described under
+  A click on a status icon opens its page, a click on the pin pins the notch open and a click on the gear opens the settings window; both are described under
   [the open header](#the-open-header).
 - A page content is 86 px high unless the page asks for more (`PageSizes::expanded.height`, at most 220 px, `MAX_CONTENT_HEIGHT` in `page.rs`: the shelf and
   the calendar do). Content that is taller than what the page asked for is clipped.
@@ -123,35 +123,41 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
 ### The open header
 
 ```
-  page dots   12+   clock (exact middle)   14+   group, icons only, 10 apart (4 ring to dots)         10   gear
-  at the left                                    [wave][Caps][muted] [timer][event][prayer] [ring][dots]    18 px
+  page dots   12+   clock (exact middle)   14+   group, icons only, 10 apart (4 ring to dots)         6    pin    4    gear
+  at the left                                    [wave][Caps][muted] [timer][event][prayer] [ring][dots]    13 px        16 px
 ```
 
 (`header_row` in `crates/notch/src/host/pill_row.rs`; the items and their clicks are in `host/notch/header_row.rs`.)
 
 - **Left:** the page dots start at the header's left edge.
-- **Right:** the gear (18 px box, its hexagon about as wide as the 14 px ring) is the last item, at the header's right
-  edge. The group ends 10 px before it, in the idle row's order, 10 px between items and 4 px from the battery ring to
+- **Right:** the gear (16 px box, its hexagon a little narrower than the 14 px ring) is the last item, at the header's right
+  edge, and the pin (a 13 px box, its pin outline showing about 9 x 12 px) sits 4 px before it. The group ends 6 px before the pin (about 8 px of air to the glyph), in the idle row's order, 10 px between items and 4 px from the battery ring to
   the dot column: the icons by rank (the activities' and pages' header status marks,
   `header_status_width` and `draw_header_status`; icons only, never text), then the battery ring, then the dot column.
-  The dot column reserves no width here either. Every group item's header place is the gear's width and 10 px left of
-  the edge, so the group slides there as the notch opens; the gear has its own spring in the header row.
+  The dot column reserves no width here either. Every group item's header place is the pin's and the gear's widths and the 6 and 4 px gaps left of
+  the edge, so the group slides there as the notch opens; the pin and the gear have their own springs in the header row.
 - **Middle:** the clock is in the exact middle of the header and never moves. An icon that would come nearer than 40 px
   to it is not shown: the icons are dropped from the clock side (lowest rank first) until the rest fit
-  (`HeaderRow::dropped_icons`). The battery ring, the dot column and the gear are never dropped.
+  (`HeaderRow::dropped_icons`). The battery ring, the dot column, the pin and the gear are never dropped.
 - **Width floor:** the open notch is never narrower than the timer page's open width: its 290 px plus the 32 px of side
   padding, 322 px (`open_min_width` in `host/notch/layout.rs`). When the header needs more, that is the floor instead:
-  the clock plus twice the wider of its two sides (the page dots and 40 px, or 40 px, the ring, the dot column and
-  the gear with their gaps) plus the side padding (`header_min_width`; 341 px with nine pages). With the timer page
+  the clock plus twice the wider of its two sides (the page dots and 40 px, or 40 px, the ring, the dot column, the
+  pin and the gear with their gaps) plus the side padding (`header_min_width`; 341 px with nine pages). With the timer page
   switched off only the header counts. A page narrower than the floor opens at it; a wider one (the 507 px shelf at
   539) sets the width itself.
 - **Clicks** land in a 24 px square around each shown icon, without moving the gaps; where two squares meet, the nearer icon
   wins (`hit_item`). A click on the timer, event, prayer or wave icon opens its page (`header_status_page`: Timer,
   Calendar, Shalat, Media). Muted, Caps Lock, the ring and the dots take the click and do nothing. A click that lands on
   an item never reaches the page below it.
-- **The gear** is drawn as a hexagon around a ring (`Icon::Gear`), `#8c8c94`, and shows on hover and never in the idle
+- **The gear** is drawn as a hexagon around a ring (`Icon::Gear`), `#8c8c94`, and shows only in the open notch, never in the idle
   pill. It is not an activity and has no rank. A click on it starts the settings window (`notch-settings.exe`) through
   `host/settings_launcher.rs`, the launcher the tray's **Settings** item uses.
+- **The pin** is drawn with `Icon::Pin`, `#8c8c94` while unpinned and `#74c0fc` while pinned (`pin_color` in
+  `host/notch/header_row.rs`). A click toggles it (`Notch::toggle_pin`, `host/notch/pin.rs`). A pinned notch stays open
+  with the pointer away and is never hidden by the words below or by Hide when idle; only a screenshot overlay hides it.
+- **Hover:** the pointer over the pin or the gear draws a 24 px wash, the item's hit square, behind it
+  (`HeaderMarks::hovered`, set on pointer moves and cleared when the pointer leaves or the notch closes; one repaint per
+  change, no timer). The layout and the hit areas stay as they are.
 - By default, over a maximized window the pill hides to a strip unless lyrics play, and over a full-screen window the
   notch is off the screen; see
   [host and pages](../explanation/host-and-pages.md#hiding). Hiding is immediate, but the notch comes back only after the
@@ -159,6 +165,29 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
   `host/notch/hiding.rs`), so switching between two maximized windows does not flash it. A screenshot overlay in front
   (`ScreenMode::Capture`) hides the notch entirely, banners included, and the pointer does not open it, whatever the
   settings say; it comes back through the same 500 ms wait. In every mode only a transient or a banner counts as an activity: other badges and dots (Caps Lock, a countdown, the camera and microphone dots) never keep a hiding pill up, so the privacy dot is not visible while the notch is hidden. The muted speaker is the exception while `notch.hide_windows_volume_popup` is on: it keeps the whole pill up over every word ([priority activities](settings-keys.md#what-the-notch-shows-over-another-window)). Music (a claiming page or the music wave) keeps the pill up under Hide when idle (`Notch::is_hidden` in `host/notch/hiding.rs`).
+
+### Where the notch sits on several monitors
+
+`notch.monitor` ([settings keys](settings-keys.md)) picks the monitor: `main` is the primary one, `focused` is the one
+with the window in front. The window is centered on that monitor, its top is `notch.top` below the top edge of that
+monitor (not of the virtual desktop), and its size and every pixel value follow that monitor's scale
+(`placement` in `host/monitor/choose.rs`).
+
+- **One move.** `Notch::relocate_if_needed` (`host/notch/relocate.rs`) makes the scale change in one message: it builds
+  the fonts and resizes the window's bitmap (`Surface::resize`, which keeps uploaded images valid), swaps them in, tells
+  every page and started activity to rebuild cached text (`on_language_changed`), moves the window with `SetWindowPos` and
+  tells the drop overlay. A failure keeps the old scale whole. Windows' `WM_DPICHANGED` suggested rectangle is never applied.
+- **When it runs:** at start, after `notch.monitor` changes, on a display or scale change (`WM_DISPLAYCHANGE`, `WM_DPICHANGED`), after unlock or resume from sleep, and
+  in `focused` mode on every change of the window in front. The foreground window's monitor is read only then; a
+  hidden, minimized or desktop window, a taskbar and the notch itself leave the notch where it is. When the monitor it
+  sits on is unplugged it moves to a remaining one.
+- **Open or pinned:** a move to another monitor waits until the notch is closed and not pinned, then reads the monitors
+  again (`release_waiting_move`). A new resolution or scale on the monitor the notch is already on applies at once.
+- **Screen mode:** maximized and full-screen are judged against the monitor the notch is on, so a full-screen window on
+  another monitor does not hide it (`host/screen_mode.rs`).
+- **One monitor:** a change of resolution or scale re-centers the notch.
+
+Limits are in [the README](../../README.md#limitations).
 
 **Where to change what:**
 
@@ -170,8 +199,9 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
 | the claimed pill's row (lead, content, group, dot column; pure math) | `crates/notch/src/host/claimed_row.rs` |
 | the idle row's state and drawing: the group, the ring, the dot column | `crates/notch/src/host/notch/resting_row.rs` |
 | the springs of every row item and of the clocks | `crates/notch/src/host/notch/row_motion.rs` |
-| the open header's items: the gear, the icons and what a click on them does | `crates/notch/src/host/notch/header_row.rs` |
-| which page shows, swiping, hover, the springs, hiding | `crates/notch/src/host/notch/` (`animation.rs`, `hover.rs`, `hiding.rs`, `layout.rs`) |
+| the open header's items: the pin, the gear, the icons and what a click on them does | `crates/notch/src/host/notch/header_row.rs` |
+| which page shows, swiping, opening and closing, the pin, the springs, hiding | `crates/notch/src/host/notch/` (`animation.rs`, `open_state.rs`, `pin.rs`, `hiding.rs`, `layout.rs`) |
+| the monitor the notch sits on and the placement there | `crates/notch/src/host/monitor.rs`, `crates/notch/src/host/monitor/choose.rs` (the rules), `crates/notch/src/host/notch/relocate.rs` (the move) |
 | maximized, full-screen and screenshot-overlay detection | `crates/notch/src/host/screen_mode.rs` (the hooks), `crates/notch/src/host/screen_mode/classify.rs` (the rules) |
 | the tray menu | `crates/notch/src/host/tray.rs` (the items), `crates/notch/src/host/window.rs` (what they do) |
 | the settings window | `crates/settings/src/sections/` (one file per section), `crates/settings/src/field.rs` (toggles and text fields); [add a setting](../how-to/add-a-setting.md) |

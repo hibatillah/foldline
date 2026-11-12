@@ -31,11 +31,12 @@ listens to one Windows power setting and flashes a level bar when it changes.
 | `header_status_page()` | optional: the id of the page a click on the header mark opens; `None` (the default) opens nothing, as for muted and Caps Lock |
 | `on_start()` | begin listening; called once, and only if the activity is switched on |
 | `on_timer()`, `on_notify()` | a timer fired; a background thread used the `Notifier` |
-| `on_hover_changed()` | the pointer entered or left the notch |
+| `on_open_changed()` | the notch opened or closed (by the pointer, a page or the pin) |
+| `dismiss_banner()` | the host calls it on an activity that shows a `Banner` while a priority activity (volume, brightness; a transient, not the muted badge) shows a level: hide the banner now, as if it had timed out, and do not bring it back; keep the data behind it (a dismissed notification stays in the Action Center). Default: nothing |
 | `on_pointer()` | pointer input over this activity's banner while the notch is collapsed, in the unit `area` `draw()` got, with points in units from its top-left; `PointerEvent::Left` means the pointer left the banner. `ui::BannerButtons` draws and hit-tests the Dismiss and Open pair (the notification card) |
 | `on_key()`, `on_keyboard_lost()` | typing, after `context.take_keyboard()` from a click (the notification banner's reply field); the keyboard went elsewhere |
 | `on_system_message()` | a power setting or the clipboard changed (see below) |
-| `on_language_changed()` | on a started activity, once per change of `general.language`; rebuild any message or width cached from `tr!` |
+| `on_language_changed()` | on a started activity, once per change of `general.language` and after the notch moves to a monitor of another scale; rebuild any message or width cached from `tr!` |
 | `on_settings_changed()` | on a started activity, after the notch received `WM_SETTINGS_CHANGED` and re-read `settings.txt`; re-read the activity's own keys, falling back to the current value |
 
 Use `Flash` for a transient that shows and then goes: `flash.show(context, milliseconds)` shows it, again while
@@ -63,7 +64,7 @@ A state that lasts and also announces itself, like muted speakers or Caps Lock, 
 `presence()` answers `Presence::Transient` while the `Flash` is visible and `Presence::Badge { width }` while the state is on.
 `draw` paints the message while the flash shows and the icon alone otherwise (`volume.rs`, `caps_lock.rs`), and
 `header_status_width` and `draw_header_status` give the same icon to the open header. Set `header_status_rank` to place
-it in the group: lower ranks sit nearer the clock, in the pill and in the header (music wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5; the default is 0).
+it in the group: lower ranks sit nearer the clock, in the pill and in the header (music wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5, rain 6, downloads 7; the default is 0).
 
 Draw messages with `ui::draw_level` (icon, bar, value) or `ui::draw_message` (icon, text, optional value) so every
 transient looks alike, and add an `Icon` to `crates/notch/src/ui/icons/` (the enum in `mod.rs`, the shape in `paths.rs`) when you need a new glyph.
@@ -81,6 +82,7 @@ The notch must use no CPU while nothing happens, so an activity never polls. Pic
 | one key | a low-level keyboard hook on a thread of its own that wakes the activity for that key only, then read the state from Windows; see `caps_lock.rs` |
 | a Windows device watcher | a WinRT `DeviceWatcher` on a thread of its own, which Windows pushes property changes into; it calls the `Notifier`; see `device_battery/` |
 | a folder changing | `FindFirstChangeNotificationW` and a blocking wait on a thread of its own; see `notifications/listener.rs` |
+| a folder's file names changing | `ReadDirectoryChangesW` on a thread of its own, which calls the `Notifier`; see `downloads/watcher.rs` |
 
 ### 4. Register it
 

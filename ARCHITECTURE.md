@@ -7,8 +7,8 @@
 The notch is one window at the top of the screen that shows one page at a time, in one of two states:
 
 - **collapsed**: a slim pill, shown while the pointer is away (`Mode::Resting` in `crates/notch/src/page.rs`);
-- **open**: the full notch with its header and the page's content, shown while the pointer stays on it
-  (`Mode::Expanded`).
+- **open**: the full notch with its header and the page's content (`Mode::Expanded`), either opened by the pointer
+  (it closes when the pointer leaves) or pinned open by the pin in the header (it stays until unpinned).
 
 The app is two programs. `notch.exe` is the notch, drawn with Direct2D and no UI framework, and it alone is held to
 the [performance budget](docs/explanation/performance-budget.md). `notch-settings.exe` is the settings window, built
@@ -66,8 +66,8 @@ does not link. The message, the keys and their defaults are in
 
 | Component | Job | Detail |
 | --- | --- | --- |
-| `notch.exe` (`crates/notch`) | `host/` owns the window, hover, the springs, input, the tray and the launcher of the settings window, and names no page. Pages and activities are each listed in one registry (`pages/mod.rs`, `activities/mod.rs`). `gfx/` and `ui/` draw with Direct2D and DirectWrite; pages, activities and widgets draw in a unit space, converted to device pixels only in `host/notch/units.rs`. | [host and pages](docs/explanation/host-and-pages.md), [drawing model](docs/explanation/drawing-model.md), [page API](docs/reference/page-api.md), [activities](docs/reference/activities.md) |
-| `notch-settings.exe` (`crates/settings`) | the settings window: GPUI and gpui-component, one file per section, one window at a time, writes keys and tells the notch | [settings window](docs/reference/settings-window.md), [add a setting](docs/how-to/add-a-setting.md) |
+| `notch.exe` (`crates/notch`), shown in Task Manager as "Notch" | `host/` owns the window, the monitor it sits on (`notch.monitor`, [layout](docs/reference/layout.md#where-the-notch-sits-on-several-monitors)), opening and closing, the pin, the pause, the springs, input, the tray and the launcher of the settings window, and names no page. Pages and activities are each listed in one registry (`pages/mod.rs`, `activities/mod.rs`). `gfx/` and `ui/` draw with Direct2D and DirectWrite; pages, activities and widgets draw in a unit space, converted to device pixels only in `host/notch/units.rs`. | [host and pages](docs/explanation/host-and-pages.md), [drawing model](docs/explanation/drawing-model.md), [page API](docs/reference/page-api.md), [activities](docs/reference/activities.md) |
+| `notch-settings.exe` (`crates/settings`), shown in Task Manager as "Notch Settings" | the settings window: GPUI and gpui-component, one file per section, one window at a time, writes keys and tells the notch | [settings window](docs/reference/settings-window.md), [add a setting](docs/how-to/add-a-setting.md) |
 | `store` (`crates/store`) | the settings file as `key=value` lines with per-key atomic writes, and `language.rs`, which resolves `general.language` for both programs | [settings keys](docs/reference/settings-keys.md) |
 | `places` (`crates/places`) | the bundled city list behind the location search and the `location.*` keys that prayer times and weather share | [settings keys](docs/reference/settings-keys.md) |
 
@@ -111,11 +111,13 @@ Windows APIs by area:
 | Area | API | Code |
 | --- | --- | --- |
 | window and surface | layered window, `UpdateLayeredWindow` | `host/window.rs`, `gfx/surface.rs` |
+| monitors | `EnumDisplayMonitors`, `GetDpiForMonitor` | `host/monitor.rs`, `host/notch/relocate.rs` |
 | window in front, volume flyout | `SetWinEventHook`, one thread at a time | `host/screen_mode.rs`, `host/volume_flyout.rs` |
 | session lock and unlock | `WTSRegisterSessionNotification` | `host/window.rs` |
 | tray, dropped files | `Shell_NotifyIcon`, `RegisterDragDrop` | `host/tray.rs`, `host/drop_target.rs` |
 | media | `GlobalSystemMediaTransportControlsSessionManager` | `pages/media/session.rs` |
 | notifications | `UserNotificationListener` | `activities/notifications/listener.rs` |
+| Downloads folder | `ReadDirectoryChangesW` on file names, one thread | `activities/downloads/watcher.rs` |
 | volume | `IAudioEndpointVolume` | `activities/volume.rs` |
 | brightness, power, clipboard | power-setting and clipboard window messages | `page.rs`, `activities/brightness.rs` |
 | devices | `DeviceWatcher` | `activities/device_battery/` |
@@ -135,8 +137,10 @@ Windows APIs by area:
 
 | Term | Meaning |
 | --- | --- |
-| collapsed | the slim pill shown while the pointer is away; `Mode::Resting` |
-| open | the full notch with its header and a page's content, shown while the pointer stays on it; `Mode::Expanded` |
+| collapsed | the slim pill shown while the notch is not open; `Mode::Resting` |
+| open | the full notch with its header and a page's content; `Mode::Expanded`. Opened by the pointer, it closes when the pointer leaves; pinned open, it stays (`host/notch/open_state.rs`) |
+| pinned | open until the user presses the header pin again, over maximized and full-screen windows too; hidden only by a screenshot overlay, never saved (`host/notch/pin.rs`) |
+| paused | hidden completely, with Windows' own volume flyout and banners back, until a chosen time or until resumed; set from the tray or the settings window through `notch.paused_until`, cleared at every start, and stronger than the pin (`host/notch/pause.rs`, [settings keys](docs/reference/settings-keys.md#pausing-the-notch)) |
 | host | `crates/notch/src/host/`: everything not specific to one page |
 | page | a view that fills the collapsed pill, the open notch or both; implements `Page` ([page API](docs/reference/page-api.md)) |
 | activity | something that reports a change while the notch is collapsed (volume, battery, a notification); implements `Activity` ([activities](docs/reference/activities.md)) |
@@ -144,7 +148,7 @@ Windows APIs by area:
 | idle pill | the collapsed pill when no page claims it: the time and the group of status marks (`host/pill_row.rs`) |
 | claimed pill | the collapsed pill while a page fills it with its own content, as the media page does with a lyric line (`host/claimed_row.rs`) |
 | status mark | the icon a page or an activity shows in the group at the right of the collapsed pill and of the open header, ordered by `header_status_rank` |
-| header | the top row of the open notch: page dots, time, status marks and the gear ([layout](docs/reference/layout.md)) |
+| header | the top row of the open notch: page dots, time, status marks, the pin and the gear ([layout](docs/reference/layout.md)) |
 | unit space | the device-independent coordinates, starting at zero, in which pages, activities and widgets draw and receive the pointer ([drawing model](docs/explanation/drawing-model.md)) |
 | `Notifier` | how a worker thread wakes the UI thread |
 | settings file | `settings.txt`, the only state both programs share |
