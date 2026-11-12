@@ -2,7 +2,7 @@
 
 Three kinds of document, each with one job ([Diátaxis](https://diataxis.fr)). Every document opens with a line that says when to read it and when to skip it. Find the task, open one file.
 
-New to the team? Start with [ONBOARDING.md](../ONBOARDING.md) at the repository root: setup, structure and the rules the code follows.
+New to the team? Start with [ONBOARDING.md](../ONBOARDING.md) at the repository root: setup, structure and the rules the code follows. For the overview of the programs, crates, files and services, read [ARCHITECTURE.md](../ARCHITECTURE.md) at the repository root.
 
 ## How-to guides: do a task
 
@@ -38,6 +38,6 @@ New to the team? Start with [ONBOARDING.md](../ONBOARDING.md) at the repository 
 
 | Read | When |
 | --- | --- |
-| [Architecture](explanation/architecture.md) | restructuring, or learning how the host, pages and activities fit |
+| [Host and pages](explanation/host-and-pages.md) | restructuring, or learning how the host, pages and activities work inside the notch |
 | [Drawing model](explanation/drawing-model.md) | changing how something is drawn, adding a widget, or asking why the notch uses no UI framework |
 | [Performance budget](explanation/performance-budget.md) | changing timers, animation or drawing |

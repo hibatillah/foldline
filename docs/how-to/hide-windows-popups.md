@@ -8,6 +8,12 @@ Both switches are under **Settings > General > Windows popups** and are on by de
 
 **Hide the Windows volume and brightness popups** (`notch.hide_windows_volume_popup`).
 
+- With the switch on, the notch is the only feedback for volume and brightness, so their level message (and the muted
+  speaker, which stays while the sound is muted) shows over a maximized or full-screen window whatever
+  `notch.maximized` and `notch.fullscreen` say, `hidden` included, and while Hide when idle is on. Only a screenshot
+  overlay hides it. With the switch off, Windows' own box is back and the notch follows those settings
+  ([settings keys](../reference/settings-keys.md#what-the-notch-shows-over-another-window)).
+
 - Explorer draws both boxes in one window of class `XamlExplorerHostIslandWindow` (no title, never takes focus,
   centered above the taskbar, extended style `0x08200088` on build 26300). The notch gives that window an empty region
   (`SetWindowRgn`), which Windows accepts from another process and Explorer never resets, so every show draws nothing

@@ -60,7 +60,7 @@ Use the MSVC toolchain for every crate (the notch's text lookup, rust-i18n, need
 - Pages, activities and widgets draw and receive pointer input in device-independent units starting at zero; `crates/notch/src/host/notch/units.rs` is the only place that converts to device pixels. [docs/explanation/drawing-model.md](docs/explanation/drawing-model.md) gives the reasons.
 - Dependencies point one way: pages and activities use `page`, `activity`, `gfx`, `ui` and `platform`; nothing in those knows a particular page; pages never use each other.
 
-The layout rules (one job per file, about 400 lines, state in a small struct beside its logic) are in [docs/reference/source-map.md](docs/reference/source-map.md), and the reasons are in [docs/explanation/architecture.md](docs/explanation/architecture.md).
+The layout rules (one job per file, about 400 lines, state in a small struct beside its logic) are in [docs/reference/source-map.md](docs/reference/source-map.md), and the reasons are in [docs/explanation/host-and-pages.md](docs/explanation/host-and-pages.md). [ARCHITECTURE.md](ARCHITECTURE.md) gives the overview of the programs, crates, files and services.
 
 ## Rules the code follows
 
@@ -110,5 +110,6 @@ The agent does not commit unless you ask. `/group-commit` commits the working tr
 | [docs/how-to/add-a-page.md](docs/how-to/add-a-page.md) | write, register and remove a page |
 | [docs/how-to/add-an-activity.md](docs/how-to/add-an-activity.md) | write, register and remove an activity |
 | [docs/reference/settings-keys.md](docs/reference/settings-keys.md) | every setting, its default and its environment variable |
-| [docs/explanation/architecture.md](docs/explanation/architecture.md) | how the code fits together, and why |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | the overview: programs, crates, files, services and terms |
+| [docs/explanation/host-and-pages.md](docs/explanation/host-and-pages.md) | how the host, pages and activities work inside the notch, and why |
 | [docs/how-to/cut-a-release.md](docs/how-to/cut-a-release.md) | the release workflow and the installer |

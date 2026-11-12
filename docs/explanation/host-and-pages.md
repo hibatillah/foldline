@@ -1,14 +1,14 @@
-# Architecture
+# Host and pages
 
-> **Explanation.** Read when: you want to know how the notch fits together and why. Skip if: you need a file's location or a step to follow; see the [source map](../reference/source-map.md) or the how-to guides.
+> **Explanation.** Read when: you change or restructure the host, a page or an activity and want to know how they work inside `notch.exe` and why. Skip if: you want the overview of the programs, crates, files and services ([ARCHITECTURE.md](../../ARCHITECTURE.md)), a file's location ([source map](../reference/source-map.md)) or a step to follow (the how-to guides).
 
-The notch is a small window pinned to the top of the screen. It shows one **page** at a time, either collapsed
+This document covers how the host, the pages and the activities work inside `notch.exe`. The notch is a small window pinned to the top of the screen. It shows one **page** at a time, either collapsed
 (a slim pill) or open (while the pointer is over it). While it is collapsed, **activities** (a volume change, a
 charger being plugged in, a notification) take over the pill for a moment or add a small badge to it. The code is split
 so that adding or removing a page or an activity never touches the host.
 
-The app is two processes: `notch.exe` (this document's subject, drawn with Direct2D, no UI framework) and the settings
-window, `notch-settings.exe`, started from the gear in the open header or from the tray (see [Two processes](#two-processes)).
+The settings window is a second program; how the two programs and their shared settings file fit together is in
+[ARCHITECTURE.md](../../ARCHITECTURE.md#system-diagram).
 
 ## The host
 
@@ -38,7 +38,7 @@ when open while paused so playback can be resumed. When no page answers for a mo
 collapsed pill shows the time, and the open notch shows its header alone. The host asks again after every event, so a
 page changes what it shows by changing its own state.
 
-The media page claims the collapsed pill only while a lyric line shows: its pill is the artwork, the dots (only while a dot shows), the line and the group. While music plays without a line, the page answers `Presence::Badge` for the animated wave and the idle row shows (`host/pill_row.rs`; the claimed row is `host/claimed_row.rs`). The page's `resting_width` is the artwork plus the line, between 240 and 520 DIP; the host adds the edges, the dots and the group.
+The media page claims the collapsed pill only while a lyric line shows: its pill is the artwork, the line, the group and, only while a dot shows, the dots at the right end. While music plays without a line, the page answers `Presence::Badge` for the animated wave and the idle row shows (`host/pill_row.rs`; the claimed row is `host/claimed_row.rs`). The page's `resting_width` is the artwork plus the line, between 240 and 520 DIP; the host adds the edges, the dots and the group.
 
 ### The open notch
 
@@ -82,14 +82,19 @@ The notch can step out of the way in two ways, both in `notch/hiding.rs` (`is_hi
   opens if the pointer stays.
 - **Over a maximized or full-screen window** one `Showing` each (`notch.maximized`, default `lyrics`;
   `notch.fullscreen`, default `hidden`) replaces Hide when idle. The words are listed in
-  [settings keys](../reference/settings-keys.md#what-the-notch-shows-over-another-window). `visibility::allows` decides what a word shows, with
+  [settings keys](../reference/settings-keys.md#what-the-notch-shows-over-another-window). `visibility::hides_to_strip` decides what a word shows, with
   `Page::shows_live_text` marking active lyrics. `hidden` hides the window and draws nothing, so no hover, banner or
-  message shows until the window in front changes; a suppressed notch keeps its full-size layout so no strip grows back
+  message shows until the window in front changes (a priority activity aside, below); a suppressed notch keeps its full-size layout so no strip grows back
   when it returns. Whatever a word leaves out hides to the strip, 3 px high with a 350 ms wait unless Hide when idle is on, so the tabs and title bar of the window
   are not caught. `visibility::migrate` writes the new keys from the retired `notch.hide_for_fullscreen`,
   `notch.show_over_maximized` and `notch.lyrics_over_maximized` at start and on a reload, never over a saved new key.
   A reload that changes a choice while such a window is in front applies at once: it hides or shows the window and
   re-lays out the pill.
+- **Priority activities** (`Activity::is_priority`: volume and brightness) override both while
+  `notch.hide_windows_volume_popup` is on, because the notch then replaces Windows' flyout. `presences.rs` notes when
+  one shows anything (`ShownPresences::has_priority`, the muted badge included); `visibility::priority_shows` turns
+  that into an exception to `suppresses` and `hides_to_strip`, and `refresh_layout` shows or hides the window when it
+  changes, with the pill already at its new size. The pointer still follows the word. `Capture` is never overridden.
 
 `screen_mode.rs` decides which case applies. It hooks Windows' events for the window in front changing, and, for as
 long as one window is in front, for the moves and resizes of that window's thread (`SetWinEventHook`, one thread at a
@@ -212,33 +217,9 @@ While anything moves the host runs a frame timer at the display's refresh rate; 
 settled and no page reports `animate` as still moving, the timer stops. A collapsed notch with nothing happening
 has no timers running except the host's own clock (once a minute) and a page's own, which is why it uses no CPU. The calendar page is the one page that has work while it is not shown: its reminder badge needs fresh events, so it keeps one timer for the next reminder window (every minute while shown or while a reminder counts down) and downloads again at its refresh interval (`pages/calendar/wake.rs`).
 
-## Two processes
-
-`crates/settings/` (GPUI) and `crates/notch/` depend on `crates/store/` and never on each other, so the notch links no UI framework. The notch
-publishes `pages.known` when it starts so the window can list pages it does not link. The window writes keys through
-`crates/store/` and tells the notch to re-read them; the message, keys and field behavior are in
-[settings keys](../reference/settings-keys.md#settings-file) and the [settings window](../reference/settings-window.md). The idle budget applies to `notch.exe` only
-([performance baseline](../reference/performance-baseline.md#settings-window)).
-
 ## Text in two languages
 
 Both programs look texts up with `tr!("key")` (rust-i18n 3, compiled in from one `locales/app.yml` per crate, English and Indonesian side by side). The language is `general.language` resolved by `store::language` (`auto` reads the Windows display language); `store::language::current()` is what `tr!` reads, with a per-thread override that tests use so a test in Indonesian never changes the text under another. The notch re-reads the key on `WM_SETTINGS_CHANGED` and calls `Page::on_language_changed` and `Activity::on_language_changed` so cached text is rebuilt; the settings window builds its pages again when the language differs from the one they were built in. A key found in the table comes back borrowed (no allocation); a text with a value in it is built when it is made, not on every paint. A test per crate checks that every `tr!` key exists in both languages and that no key is unused; fit tests measure the Indonesian text of each fixed-size place with the real fonts.
-
-| File in `crates/settings/src/` | Job |
-| --- | --- |
-| `main.rs` | the window: the frame, the brand strip, the sidebar and the content card, in the system's light or dark theme |
-| `palette.rs` | the dark and light colors of the frame, card, inputs and text, with contrast tests |
-| `sidebar.rs` | the sidebar: the "Notch" and "Page settings" groups, each item with an icon, and About pinned at the bottom |
-| `icons.rs` | the sidebar's SVG icons (`assets/icons`) and the asset source that serves them next to the component library's |
-| `header.rs` | the card's 36 px header, drawn by the window: the breadcrumb "Settings › <Page>" and the window buttons, with corners that follow the card's |
-| `layout.rs` | `Page`, `Group` and `Item`: the page title and description, each section as one bordered block under its title, and rows (title and description left, control right, dividers) |
-| `sections/` | one file per section, each returning a `Page`; `mod.rs` lists them and writes every key through `apply`; `about/` holds the About page (it writes no key) |
-| `field.rs` | the switch and the text and number fields bound to a key, and their save rules |
-| `notify.rs` | posts `WM_SETTINGS_CHANGED` to the notch |
-| `single_instance.rs` | allows one window and focuses the open one |
-| `startup.rs` | the `Run` registry value behind **Start with Windows** |
-
-To add a setting, see [add a setting](../how-to/add-a-setting.md).
 
 ## Pages
 
@@ -273,6 +254,7 @@ The timer page is the example of a page that also has a collapsed presence and a
 
 ## Where to go next
 
+- The programs, crates, files and services: [ARCHITECTURE.md](../../ARCHITECTURE.md).
 - Where a file lives: [source map](../reference/source-map.md).
 - How to test it: [test and snapshot](../how-to/test-and-snapshot.md).
 - Why the budget is what it is: [performance budget](performance-budget.md).

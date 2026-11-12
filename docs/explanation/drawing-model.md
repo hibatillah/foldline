@@ -54,7 +54,7 @@ their own, shared with other programs, as a move plus import changes.
 A display at 125 % has 1.25 device pixels per unit. Pages and activities write every size in units
 (a 26-unit button is 26 units at any display scale) and do not multiply by a scale themselves. The `ui` widgets draw in
 the canvas's current space and read `Canvas::scale()` (1.0 in a unit space, the display scale in device pixels). A
-hit-test helper without a canvas (`BannerButtons::rects`, `button_at`, `on_pointer`, `IconButton::is_hit`) takes the
+hit-test helper without a canvas (`BannerButtons::rects`, `button_at`, `on_pointer`) takes the
 scale of the caller's space, which is 1.0 in units.
 
 The border is one file, `crates/notch/src/host/notch/units.rs`, the only place that converts between the two:
@@ -110,4 +110,4 @@ A shared layout helper is added when two pages need the same one, not before.
 
 - Writing a page in units: [add a page](../how-to/add-a-page.md).
 - Checking a drawing change at several display scales: [test and snapshot](../how-to/test-and-snapshot.md#pictures-of-the-pages).
-- The host's paint order and the rest of the structure: [architecture](architecture.md).
+- The host's paint order: [host and pages](host-and-pages.md#painting). The programs and crates: [ARCHITECTURE.md](../../ARCHITECTURE.md).

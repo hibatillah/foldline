@@ -24,6 +24,9 @@ An activity answers `presence()` after every event, and the host does the layout
   Caps Lock 1, muted 2, timer 3, event 4, prayer 5, rain 6.
 - A state that lasts and also announces itself (muted, Caps Lock) answers a `Badge` while the state is on and a `Transient`
   while its message shows; the badge is an icon alone, drawn by `draw` and `draw_header_status` alike.
+- A priority activity (`Activity::is_priority`: volume and brightness) shows its presence over a window that would hide
+  the notch, while `notch.hide_windows_volume_popup` is on; see
+  [settings keys](settings-keys.md#what-the-notch-shows-over-another-window).
 - Companions are drawn by `draw` in the collapsed pill and in the open header, so a companion centers its drawing on the
   area it gets. A `Ring` companion is one item; all `Dots` companions share one area as wide as the widest, and each
   picks its own row. The dot column reserves no width: with no dot the rest of the group fills its place, and a dot
@@ -35,7 +38,7 @@ An activity answers `presence()` after every event, and the host does the layout
 
 | Id | Shows | Source |
 | --- | --- | --- |
-| `volume` | volume bar, or "Muted"; a crossed speaker (rank 2) in the pill group and the header while muted | Core Audio endpoint volume callback; follows the default speakers; the mute state is read when listening starts |
+| `volume` | volume bar with the level; muting shows the same bar with a crossed speaker for the icon; a crossed speaker (rank 2) in the pill group and the header while muted. A priority activity, like `brightness` | Core Audio endpoint volume callback; follows the default speakers; the mute state is read when listening starts |
 | `brightness` | brightness bar | power setting `GUID_DEVICE_POWER_POLICY_VIDEO_BRIGHTNESS`; laptop panel only |
 | `battery` | "Charging", "On battery", "Low battery" at 20 % and 10 %; between messages a 14 px ring at the right end of the group, before the dots (`Slot::Ring`): the arc is the charge, `#2f9e44` idle, `#30d158` while charging, `#ff453a` at 20 % or less on battery; no ring on a PC without a battery | power settings for the power source and battery level; `GetSystemPowerStatus` once at start for whether a battery exists (`platform/power.rs`, true when Windows cannot say) |
 | `bluetooth` | "<device> connected" with its battery when known, or "disconnected" | `ConnectionStatusChanged` of every paired device, on a thread of its own; the battery is read two seconds after a connection from the device node that reports it (`platform/bluetooth_devices.rs`, which the connected devices page reads too) |

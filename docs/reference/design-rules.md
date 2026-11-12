@@ -24,10 +24,15 @@ the marks of what is going on, then the battery ring, then the camera and microp
 - **Persistence rule:** among the ranked marks, the longest-lived sits nearest the clock and the most volatile nearest the
   ring, so a mark that appears or leaves moves only the ones outside it. Frequent and short-lived means volatile.
 - **The dot column reserves no width.** With no dot showing the group fills its place; when a dot appears everything left
-  of it slides by the dot and one gap. A reserved empty column reads as a hole in the pill.
+  of it slides by the dot and its gap. A reserved empty column reads as a hole in the pill.
+- **The dots sit 4 px after the battery ring**, closer than the 8 px between other items, so the ring and the dots read
+  as one cluster of device state at the right end. Dots without the ring before them keep the usual gap.
 - **Everything slides, nothing snaps.** Every item has its own spring (`host/notch/row_motion.rs`), so an item that joins
   or leaves, or a dot that flickers, moves its neighbours visibly and the user can tell what changed. The springs settle
   and stop, so the pill costs no CPU at rest.
+- **A window that comes back for a priority activity shows at its final size without animating.** Volume or brightness
+  over a window that hides the notch brings the window back already at the level's size (`refresh_layout` in
+  `host/notch/layout.rs` snaps the layout springs), so the user sees the level at once instead of the old pill morphing.
 - **A page switch is a quick swap, never a slide of two pages.** The leaving page fades out in about 110 ms while it
   drifts 12 px away; the arriving one starts 80 ms in, fades in and shifts 24 px into place from the side it comes from
   (east for the next page), and is still about 420 ms after the switch (`host/page_swap.rs`, numbers in
@@ -55,6 +60,7 @@ the marks of what is going on, then the battery ring, then the camera and microp
 | Gap between | px |
 | --- | --- |
 | two items of the group | 8 |
+| the battery ring and the dots after it | 4 |
 | the clock and the first item of the group (at least) | 24 |
 | an activity's icon and its text | 4 |
 | pill edge and the clock or the last item | 12 |
@@ -63,8 +69,9 @@ the marks of what is going on, then the battery ring, then the camera and microp
 ## Open header
 
 - Left to right: the page dots at the left edge, the clock in the exact middle, then the group and the gear at the right
-  edge, 10 px between the group's items and before the gear. The group is the pill's group (same items, same order) as
-  icons only. The clock glides from its place in the pill; the ring and the dots travel with it.
+  edge, 10 px between the group's items and before the gear, 4 px between the battery ring and the dots. The group is
+  the pill's group (same items, same order) as icons only. The clock glides from its place in the pill; the ring and
+  the dots travel with it.
 - **The clock is alone and never moves.** It stays in the exact middle of the header whatever shows beside it, so it reads
   first. At least 40 px separate it from the page dots and at least 40 px from the nearest icon.
 - **Icons with no room are dropped, nearest the clock first** (the wave, then Caps Lock, and so on by rank). The battery
@@ -78,8 +85,9 @@ the marks of what is going on, then the battery ring, then the camera and microp
 - **Icons only, never text** (no "12m" on hover). The icons keep the size their activity or page gives them.
 - **A click on an icon opens its page** (timer, event to Calendar, prayer to Shalat, wave to Media). Muted, Caps Lock, the
   battery ring and the dots take the click and do nothing, so a click near them never reaches the page below. The hit
-  area is 24 px around the icon, without widening the 10 px gap.
-- **The gear** is a hexagon around a ring (circumradius 9.5 and ring radius 3 in a 24 px box), 14 px, `#8c8c94`, the
+  area is 24 px around the icon, without widening the gaps; where two areas meet, the nearer item wins.
+- **The gear** is a hexagon around a ring (circumradius 9.5 and ring radius 3 in a 24 px box), drawn in an 18 px box
+  so the hexagon is about as wide as the 14 px battery ring (it fills less of its box than the ring does), `#8c8c94`, the
   last item at the right edge, 10 px after the group. It shows on hover and never in the idle pill, and opens the
   settings window. It is not an activity and has no rank. The page dots keep the left edge to themselves, so the page
   the user is on reads first; the gear sits at the right end, where controls usually are, and the group slides left by
@@ -87,12 +95,11 @@ the marks of what is going on, then the battery ring, then the camera and microp
 
 ## Lyrics on
 
-- The pill reads artwork (20 px), the dots only while a dot shows, lyric line, group, with 12 px at both edges, 10 px
-  between the artwork and the dots, 24 px before the line (after the dots, or after the artwork without a dot) and
-  24 px between the line and the group. The dots sit beside the artwork because the line takes the middle and the
-  group the right end; next to the artwork they are always at the same spot of a lyric pill. The artwork is the media
-  page's `resting_lead_width()`; the host passes the room after it (the dots, their 10 px and the 24 px) in
-  `Frame::lead_gap`. The line is trimmed so both 24 px gaps hold. The time stays in the header when the notch opens.
+- The pill reads artwork (20 px), lyric line, group, then the dots only while a dot shows, with 12 px at both edges,
+  24 px between the artwork and the line, 24 px between the line and the group and 8 px before the dots. The dots end
+  the row 12 px from the right edge, the same place as in the idle pill, so they never jump when lyrics start or stop.
+  The artwork is the media page's `resting_lead_width()`; the host passes the 24 px after it in `Frame::lead_gap`.
+  The line is trimmed so both 24 px gaps hold. The time stays in the header when the notch opens.
 - The line's width sets the pill's width, within the page's limits (`crates/notch/src/pages/media/resting.rs`).
 - There is no clock, no battery ring and no wave while the line shows: the artwork and the line already say that music plays.
 - The group follows the line: muted, then Caps Lock, then only one countdown, the one with the least time left
@@ -211,10 +218,14 @@ The page is off until added and has no collapsed state; it reads Windows only wh
 
 ## Media page
 
-- **The open player is the artwork (86 px, radius 12), 20 px, then a text column fitted to the text, 134 to 170 px wide** (never narrower than the 134 px control row, so a short title leaves no empty strip at the right; the page is as wide as the artwork, the gap and the column; 170 px with lyrics on): the title (14 px Medium), the artist
-  (12 px, `#9a9aa6`) 2 px under it, and 12 px below that the controls, previous, play or pause, next, then lyrics. Transport
-  icons are 18 px with 20 px between them, the lyrics icon 20 px; it is green when on, white when lyrics exist and gray
-  when they do not. There is no remaining time and no progress bar.
+- **The open player is the artwork (86 px, radius 12), 20 px, then a text column fitted to the text, 134 to 170 px wide**
+  (the page is as wide as the artwork, the gap and the column, so at least 240 px; 170 px with lyrics on): the title
+  (14 px Medium), the artist (12 px, `#9a9aa6`) 2 px under it, and 12 px below that the controls, previous, play or
+  pause, next, then lyrics, left-aligned under the text. Transport icons are 16 px, 30 px from center to center (14 px
+  between them), the lyrics icon 18 px; it is green when on, white when lyrics exist and gray when they do not. A
+  control answers clicks in a 30 x 30 px area around its center, so neighbors meet without overlapping. The control row
+  (108 px) is narrower than the 134 px least column, which keeps the page width a short title had with the larger
+  controls. There is no remaining time and no progress bar.
 - **The source app's icon is a 19 px tile (`#0c0c0c`) with a 3 px black rim, its right and bottom edges 1 px past the
   artwork's corner**, with the app icon at 15 px inside it.
 - **Lyrics on widen the page to 614 px (582 px of content) and tint the backdrop from the artwork color**, from black at
@@ -242,7 +253,7 @@ The page is off until added and has no collapsed state; it reads Windows only wh
 - **The left column is 182 px wide and the events are 16 px after it; both end on the bottom of the page.** The page is
   168 px high (the events viewport), or 170 px for a month of six rows. With `calendar.view` set to `week` the left
   column holds only the current Monday-to-Sunday row (the same cells, a day of another month keeps its date) and the page
-  is 112 px high: the viewport shows three cards and the list scrolls for more.
+  is 86 px high like the other pages (`DEFAULT_CONTENT_HEIGHT`): the viewport shows two cards and part of a third, and the list scrolls for more.
 - **The month is the month name (20 px Medium) and the year (12 px, `#9a9aa6`, on the month's baseline: its line ends 1 px
   above the month line's bottom, measured on a snapshot), one row of weekday letters (M T W T F S S,
   10 px, `#9a9aa6`) 8 px under it, and the dates 6 px under the letters:** seven 26 x 20 px cells, Monday first, up to six
@@ -300,6 +311,12 @@ The bar stays at the bottom of the page in both heights.
 - **Confirmations are green** (`#63e6be` on `#0d2b24`, 1 px border): after a paste the selected row reads "Pasted" with a
   check, the Paste button reads "Pasted" with a check, and the notch closes after about 600 ms; after Copy the row reads
   "Copied, moved to front" and the Copy button shows a check for 1.5 s.
+- **Pins.** A row's pin is icon only (a 13 px Lucide pin) in a 23 px square at the row's right end, which the row's own
+  click area leaves to it. An unpinned row shows it only while hovered (`#8a8a96`, `#e6e6eb` with the pointer on it); a
+  pinned row looks like the others but its pin stays, in the accent blue `#74c0fc`. At most three copies are pinned;
+  while three are, unpinned rows show no pin. Pinned copies sit on top in the order they were pinned, with no divider;
+  a new or repeated copy goes on top of the unpinned ones. Clicking a pinned row's pin unpins it, and it goes back
+  among the others by the time it was copied. Pins live in memory with the history and go with it.
 - **The bar** is 26 px high over the bottom of the list (covering the last row), `#26262d`, radius 8, 11 px text with
   10 px of padding. "Removed" with a `#74c0fc` "Undo" at the right stays 5 s; "Skipped: password manager" stays 3 s
   (the board gives no time; proposed). One bar at a time: a new one replaces the old, which drops the undo.
@@ -318,7 +335,9 @@ The bar stays at the bottom of the page in both heights.
 - **Limits and privacy** (decisions, not from the board): memory only, cleared on quit and when the page is switched off;
   capture happens only while the page is on; text over 100 KB is skipped; a picture over 40 MB as a bitmap is skipped and
   one over 786,432 pixels (about 3 MiB) is shrunk before it is kept, so pasting it back gives the smaller picture; all
-  copies together stay under 12 MiB, oldest first out. A copy marked `ExcludeClipboardContentFromMonitorProcessing` or
+  copies together stay under 12 MiB, oldest unpinned copy first out. The limits never drop a pinned copy or the newest
+  one (pins count toward the 7; three pinned pictures and a new one fit in 12 MiB). Undo puts a removed pinned copy
+  back pinned in its place, or unpinned on top of the others when three were pinned meanwhile. A copy marked `ExcludeClipboardContentFromMonitorProcessing` or
   `CanIncludeInClipboardHistory = 0` is never read.
 
 ## Shelf page
@@ -344,19 +363,26 @@ The bar stays at the bottom of the page in both heights.
 ## Todo page
 
 - A task is a 32 px row (10 px radius, `#141418`, hover `#1c1c22`), 6 px apart, with a 14 px ring, the text (13 px, one
-  line cut with an ellipsis, 120 characters at most) and, on hover, a 22 px delete button 6 px from the right edge.
+  line cut with an ellipsis, 120 characters at most) and, on hover, a 22 px delete button 6 px from the right edge with
+  a 22 px copy button (a 12 px copy icon, the same circle) 10 px to its left; the gap is wider than the 8 px between
+  pills so a press does not land on the wrong one, and a press in it does nothing. Copy puts the task's text on the
+  clipboard; the notch's own clipboard writes show no "Copied" message and are not added to the clipboard page.
   A done task has no fill, a green check (`#30d158`) and struck-through `#6e6e7a` text, and keeps its row. Done tasks
   follow open ones.
 - No limit on tasks; the page shows five rows at most and the list scrolls under the wheel or a swipe (one row a notch),
   with no scrollbar and no hint of the rows beyond. The toolbar (28 px high, then 8 px) sits on top: "Todo" (20 px, Medium) and the count ("3 left",
-  "3 left · 2 done", "0 left" in 12 px grey, 8 px after the title, on its baseline) at the left, **Clear all** and **Add**
-  at the right, 8 px apart. Rows run the full width below it.
+  "3 left · 2 done", "0 left" in 12 px grey, 8 px after the title, on its baseline) at the left, and at the right, 8 px apart,
+  **Undo** (while a removal can be undone), **Clear all** and **Add**. Rows run the full width below it.
 - **Add** is a fixed white pill (72 px wide, widened from 60 so "Tambah" fits; 26 px high, 13 px radius, black "+ Add" in 12 px Medium, as the design's 600 is not
   bundled). It is never dimmed. Pressing it adds the
   input as the last row (scrolled into view), with the keyboard (1 px `#408fff` outline, "+" in the same blue, "What needs doing?", "Enter
   to add" at the right).
 - **Clear all** ("Bersihkan" in Indonesian, 80 px wide) is a 26 px pill (`#1c1c22`, 1 px `#2c2c34` border, text `#e6e6eb`, text only). It
   removes every task, done or not, without asking, and is hidden when the list is empty.
+- **Undo** (same pill as Clear all, 80 px, "Urungkan") shows for 5 s after a delete or Clear all, always left of Clear
+  all's place; that place stays empty while the list is, so a second press on Clear all never lands on Undo. It puts the
+  removed tasks back where they were. Only the last removal can be undone: a new removal replaces it; the removed tasks
+  stay out of `todo.txt` unless undone, and the undo is not saved.
 - The page is 508 px wide and 28 + 8 + the rows high (3 tasks 144 px, five or more rows 220 px), at least 86 px.
 - Empty: the same 508 px width as a list, 86 px high, with the title and Add on top and "All clear" centered below;
   pressing Add shows the input as the only row.

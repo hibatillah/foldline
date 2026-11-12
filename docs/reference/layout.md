@@ -61,7 +61,7 @@ the host converts them (`crates/notch/src/host/notch/units.rs`, see [the drawing
 The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
 
 ```
-  12   clock   24 or more   group, right-anchored, 8 between items                   12
+  12   clock   24 or more   group, right-anchored, 8 between items (4 ring to dots)  12
   edge 14 pt                [wave][Caps][muted] [timer][event][prayer] [ring][dots] edge
 ```
 
@@ -76,9 +76,10 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
 - **Battery ring:** 14 px, laptop only; a PC has no ring, no weather icon and no other item in its place
   (`activities/battery.rs`).
 - **Dot column:** 6 px wide, camera over microphone; a microphone alone is a 5 px dot (see [activities.md](activities.md)). It reserves no width: with no dot
-  showing the rest of the group fills its place, and when a dot appears everything left of it moves by its width and an
-  8 px gap.
-- **Gaps:** 8 px between two items of the group, at least 24 px between the clock and the first item, 12 px from the
+  showing the rest of the group fills its place, and when a dot appears everything left of it moves by its width and
+  its gap (4 px after the battery ring, 8 px after anything else).
+- **Gaps:** 8 px between two items of the group, 4 px from the battery ring to the dot column right after it
+  (`RING_DOTS_GAP`), at least 24 px between the clock and the first item, 12 px from the
   pill's edge to the clock and to the last item. The pill is as wide as its row, at least 150 px; a wider minimum leaves
   the extra room between the clock and the group.
 - **The empty pill:** with no item at all (a PC with nothing active) the clock is centered and the pill hugs it with
@@ -93,22 +94,23 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
   (`host/claimed_row.rs`):
 
   ```
-  12   lead   10   dots   24   page content   24   group                             12
-  edge artwork      6 px        lyric line          muted, Caps Lock, one countdown   edge
+  12   lead   24   page content   24   group                             8   dots   12
+  edge artwork     lyric line          muted, Caps Lock, one countdown        6 px   edge
   ```
 
-  The dots and their 10 px gap exist only while a dot shows and take no width otherwise; the line starts 24 px after
-  the dots, or 24 px after the artwork without a dot. `Frame::lead_gap` is the room the page keeps free after its lead:
-  24 px, or 10 px, the dot column and 24 px while a dot shows. The host moves it on a spring
-  (`Springs::claim_lead_gap`), so the line slides when a dot comes or goes and the group keeps the right end. A page's
+  The group and its 24 px gap exist only with a group; the dots and their 8 px gap only while a dot shows, and they
+  take no width otherwise. The dot column ends the row 12 px from the edge, where it ends the idle row; when a dot comes
+  or goes the pill widens or narrows and the group slides by the dot and 8 px. `Frame::lead_gap` is the room the page
+  keeps free after its lead: 24 px (moved on the `Springs::claim_lead_gap` spring when a page starts or stops
+  claiming). A page's
   `sizes().resting_width` is the lead plus the content, without the lead gap, the group, the dots and the pill's edges;
   the host adds them. The line is trimmed so both 24 px gaps hold. The
   group is muted, then Caps Lock, then at most one countdown (the one with the least time left,
   `Page::countdown_seconds`), each in its long form (icon and text). There is no clock, no battery ring and no music
   wave; the artwork and the line already say that music plays. A claiming page without a lead keeps its content at the
-  left edge, and its dots end the row, 8 px after the group and 12 px from the edge.
-- **The dot column** is the right end of the idle row and sits beside the artwork on a lyric pill; it slides with its
-  own spring when the pill changes between the two.
+  left edge; its right end is the same.
+- **The dot column** is the right end of the idle row and of a lyric pill, 12 px from the edge in both, so when the pill
+  changes between the two it only follows the pill's right edge.
 - With no page claiming, the host shows the idle row.
 - An activity or a page can add a **badge** to the group, a **transient** that replaces the pill's content for a moment,
   or, for an activity, a **banner** that opens the pill into a card, or a **companion** (the battery ring and the
@@ -121,15 +123,16 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
 ### The open header
 
 ```
-  page dots   12+   clock (exact middle)   14+   group, icons only, 10 apart                          10   gear
-  at the left                                    [wave][Caps][muted] [timer][event][prayer] [ring][dots]    14 px
+  page dots   12+   clock (exact middle)   14+   group, icons only, 10 apart (4 ring to dots)         10   gear
+  at the left                                    [wave][Caps][muted] [timer][event][prayer] [ring][dots]    18 px
 ```
 
 (`header_row` in `crates/notch/src/host/pill_row.rs`; the items and their clicks are in `host/notch/header_row.rs`.)
 
 - **Left:** the page dots start at the header's left edge.
-- **Right:** the gear (14 px) is the last item, at the header's right edge. The group ends 10 px before it, in the idle
-  row's order, 10 px between items: the icons by rank (the activities' and pages' header status marks,
+- **Right:** the gear (18 px box, its hexagon about as wide as the 14 px ring) is the last item, at the header's right
+  edge. The group ends 10 px before it, in the idle row's order, 10 px between items and 4 px from the battery ring to
+  the dot column: the icons by rank (the activities' and pages' header status marks,
   `header_status_width` and `draw_header_status`; icons only, never text), then the battery ring, then the dot column.
   The dot column reserves no width here either. Every group item's header place is the gear's width and 10 px left of
   the edge, so the group slides there as the notch opens; the gear has its own spring in the header row.
@@ -142,7 +145,7 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
   the gear with their gaps) plus the side padding (`header_min_width`; 341 px with nine pages). With the timer page
   switched off only the header counts. A page narrower than the floor opens at it; a wider one (the 507 px shelf at
   539) sets the width itself.
-- **Clicks** land in a 24 px square around each shown icon, without moving the 10 px gap; where two squares meet, the nearer icon
+- **Clicks** land in a 24 px square around each shown icon, without moving the gaps; where two squares meet, the nearer icon
   wins (`hit_item`). A click on the timer, event, prayer or wave icon opens its page (`header_status_page`: Timer,
   Calendar, Shalat, Media). Muted, Caps Lock, the ring and the dots take the click and do nothing. A click that lands on
   an item never reaches the page below it.
@@ -151,11 +154,11 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
   `host/settings_launcher.rs`, the launcher the tray's **Settings** item uses.
 - By default, over a maximized window the pill hides to a strip unless lyrics play, and over a full-screen window the
   notch is off the screen; see
-  [architecture.md](../explanation/architecture.md#hiding). Hiding is immediate, but the notch comes back only after the
+  [host and pages](../explanation/host-and-pages.md#hiding). Hiding is immediate, but the notch comes back only after the
   window in front has stopped covering the screen for 500 ms (`WINDOW_REVEAL_DELAY_MILLISECONDS` in
   `host/notch/hiding.rs`), so switching between two maximized windows does not flash it. A screenshot overlay in front
   (`ScreenMode::Capture`) hides the notch entirely, banners included, and the pointer does not open it, whatever the
-  settings say; it comes back through the same 500 ms wait. In every mode only a transient or a banner counts as an activity: other badges and dots (muted, Caps Lock, a countdown, the camera and microphone dots) never keep a hiding pill up, so the privacy dot is not visible while the notch is hidden. Music (a claiming page or the music wave) keeps the pill up under Hide when idle (`Notch::is_hidden` in `host/notch/hiding.rs`).
+  settings say; it comes back through the same 500 ms wait. In every mode only a transient or a banner counts as an activity: other badges and dots (Caps Lock, a countdown, the camera and microphone dots) never keep a hiding pill up, so the privacy dot is not visible while the notch is hidden. The muted speaker is the exception while `notch.hide_windows_volume_popup` is on: it keeps the whole pill up over every word ([priority activities](settings-keys.md#what-the-notch-shows-over-another-window)). Music (a claiming page or the music wave) keeps the pill up under Hide when idle (`Notch::is_hidden` in `host/notch/hiding.rs`).
 
 **Where to change what:**
 
