@@ -74,7 +74,7 @@ Name: "{autoprograms}\{#AppDisplayName}"; Filename: "{app}\{#ExeName}"; IconFile
 
 #ifndef IsDevBuild
 [Registry]
-; The same entry the "Start with Windows" item in the notch's tray menu switches; a dev build never writes it.
+; The same entry the "Start with Windows" switch on the settings window's General page sets; a dev build never writes it.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Notch"; ValueData: """{app}\{#ExeName}"""; Flags: uninsdeletevalue; Tasks: startup
 #endif
 
