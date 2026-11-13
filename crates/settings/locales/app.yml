@@ -77,9 +77,30 @@ general.monitor_main:
 general.monitor_focused:
   en: "Focused screen"
   id: "Layar yang aktif"
+general.monitor_chosen:
+  en: "A chosen screen"
+  id: "Layar pilihan"
 general.monitor_note:
   en: "Applied live. The distance from the top (Advanced) is measured from the top of this screen."
   id: "Diterapkan langsung. Jarak dari atas (Lanjutan) diukur dari tepi atas layar ini."
+general.screen_title:
+  en: "Chosen screen"
+  id: "Layar pilihan"
+general.screen_word:
+  en: "Screen"
+  id: "Layar"
+general.screen_main:
+  en: "main"
+  id: "utama"
+general.screen_choose:
+  en: "Choose a screen"
+  id: "Pilih layar"
+general.screen_not_connected:
+  en: "Not connected"
+  id: "Tidak tersambung"
+general.screen_not_connected_note:
+  en: "The notch uses the main screen until this screen is connected again."
+  id: "Notch memakai layar utama sampai layar ini tersambung lagi."
 general.group_location:
   en: "Location"
   id: "Lokasi"

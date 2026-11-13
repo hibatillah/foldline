@@ -6,6 +6,7 @@ mod general;
 mod language;
 mod pages;
 mod pause;
+mod screen;
 mod shalat;
 mod stats;
 mod weather;

@@ -33,41 +33,74 @@ pub type Render = Rc<dyn Fn(&mut Window, &mut App) -> AnyElement>;
 
 enum Body {
     /// A title and description on the left, a control on the right.
-    Control { title: SharedString, description: Option<SharedString>, control: Render, top_aligned: bool },
+    Control {
+        title: SharedString,
+        description: Option<SharedString>,
+        note: Option<Note>,
+        control: Render,
+        top_aligned: bool,
+    },
     /// A row that draws itself across the whole width.
     Custom(Render),
 }
 
-pub struct Item(Body);
+/// A line under the description that is read on every paint; `None` shows nothing.
+pub type Note = Rc<dyn Fn() -> Option<&'static str>>;
+
+pub struct Item {
+    body: Body,
+    visible: Option<Rc<dyn Fn() -> bool>>,
+}
 
 impl Item {
     pub fn new(title: &'static str, control: Render) -> Self {
-        Self(Body::Control { title: title.into(), description: None, control, top_aligned: false })
+        Self {
+            body: Body::Control { title: title.into(), description: None, note: None, control, top_aligned: false },
+            visible: None,
+        }
     }
 
     /// Aligns the text with the top of a control that grows downward, like a search field with its results.
     pub fn top_aligned(mut self) -> Self {
-        if let Body::Control { top_aligned, .. } = &mut self.0 {
+        if let Body::Control { top_aligned, .. } = &mut self.body {
             *top_aligned = true;
         }
         self
     }
 
     pub fn custom(render: impl Fn(&mut Window, &mut App) -> AnyElement + 'static) -> Self {
-        Self(Body::Custom(Rc::new(render)))
+        Self { body: Body::Custom(Rc::new(render)), visible: None }
     }
 
     pub fn description(mut self, text: &'static str) -> Self {
-        if let Body::Control { description, .. } = &mut self.0 {
+        if let Body::Control { description, .. } = &mut self.body {
             *description = Some(text.into());
         }
         self
     }
 
+    /// A line under the description, read on every paint; it shows nothing while the function gives `None`.
+    pub fn note_when(mut self, line: impl Fn() -> Option<&'static str> + 'static) -> Self {
+        if let Body::Control { note: shown, .. } = &mut self.body {
+            *shown = Some(Rc::new(line));
+        }
+        self
+    }
+
+    /// The row is left out, with its divider, while the function gives `false`.
+    pub fn visible_when(mut self, visible: impl Fn() -> bool + 'static) -> Self {
+        self.visible = Some(Rc::new(visible));
+        self
+    }
+
+    fn is_visible(&self) -> bool {
+        self.visible.as_ref().is_none_or(|visible| visible())
+    }
+
     fn render(&self, window: &mut Window, cx: &mut App) -> AnyElement {
-        match &self.0 {
+        match &self.body {
             Body::Custom(render) => render(window, cx),
-            Body::Control { title, description, control, top_aligned } => h_flex()
+            Body::Control { title, description, note, control, top_aligned } => h_flex()
                 .when(*top_aligned, |row| row.items_start())
                 .when(!*top_aligned, |row| row.items_center())
                 .justify_between()
@@ -81,6 +114,11 @@ impl Item {
                         .children(
                             description
                                 .clone()
+                                .map(|text| div().text_sm().text_color(cx.theme().muted_foreground).child(text)),
+                        )
+                        .children(
+                            note.as_ref()
+                                .and_then(|line| line())
                                 .map(|text| div().text_sm().text_color(cx.theme().muted_foreground).child(text)),
                         ),
                 )
@@ -123,13 +161,14 @@ impl Group {
             return v_flex()
                 .gap(px(SECTION_TITLE_GAP))
                 .children(heading)
-                .children(self.items.iter().map(|item| item.render(window, cx)))
+                .children(self.items.iter().filter(|item| item.is_visible()).map(|item| item.render(window, cx)))
                 .into_any_element();
         }
         let divider = crate::palette::row_divider(cx);
         let rows: Vec<AnyElement> = self
             .items
             .iter()
+            .filter(|item| item.is_visible())
             .enumerate()
             .map(|(index, item)| {
                 div()

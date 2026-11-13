@@ -17,10 +17,16 @@ pub struct MonitorChoice {
     label: fn() -> &'static str,
 }
 
-const MONITOR_CHOICES: [MonitorChoice; 2] = [
+const MONITOR_CHOICES: [MonitorChoice; 3] = [
     MonitorChoice { word: "main", label: || tr!("general.monitor_main") },
     MonitorChoice { word: "focused", label: || tr!("general.monitor_focused") },
+    MonitorChoice { word: "chosen", label: || tr!("general.monitor_chosen") },
 ];
+
+/// Whether the dropdown shows "A chosen screen", which brings the screen list with it.
+pub(super) fn chosen_is_selected(settings: &Settings) -> bool {
+    shown_monitor_word(settings) == "chosen"
+}
 
 /// The stored word when it is one of the choices, else the default (the notch reads any other word as `main`).
 fn shown_monitor_word(settings: &Settings) -> String {
@@ -78,6 +84,7 @@ pub fn page() -> Page {
                         ),
                     )
                     .description(tr!("general.monitor_note")),
+                    super::screen::item(),
                 ],
             ),
             Group::titled(
@@ -133,9 +140,9 @@ mod tests {
     use store::Settings;
 
     #[test]
-    fn the_general_page_offers_main_and_focused_for_the_monitor_key() {
+    fn the_general_page_offers_main_focused_and_chosen_for_the_monitor_key() {
         let words: Vec<&str> = MONITOR_CHOICES.iter().map(|choice| choice.word).collect();
-        assert_eq!(words, ["main", "focused"]);
+        assert_eq!(words, ["main", "focused", "chosen"]);
         assert_eq!(MONITOR_KEY, "notch.monitor");
         assert_eq!(MONITOR_CHOICES[0].word, DEFAULT_MONITOR);
     }
@@ -152,5 +159,27 @@ mod tests {
         assert_eq!(shown_monitor_word(&unknown), "main");
         assert_eq!(shown_monitor_word(&focused), "focused");
         assert_eq!(shown_monitor_word(&missing), "main");
+    }
+
+    #[test]
+    fn the_screen_list_shows_only_while_a_chosen_screen_is_selected() {
+        let path = std::env::temp_dir().join(format!("notch-settings-chosen-{}.txt", std::process::id()));
+        std::fs::write(
+            &path,
+            "notch.monitor=chosen
+",
+        )
+        .unwrap();
+        let chosen = Settings::at(Some(path.clone()));
+        std::fs::write(
+            &path,
+            "notch.monitor=focused
+",
+        )
+        .unwrap();
+        let focused = Settings::at(Some(path.clone()));
+        let _ = std::fs::remove_file(&path);
+        assert!(chosen_is_selected(&chosen));
+        assert!(!chosen_is_selected(&focused));
     }
 }

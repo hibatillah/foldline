@@ -1,5 +1,6 @@
 pub mod language;
 pub mod pause;
+pub mod screens;
 
 use std::{collections::BTreeMap, fs, io::ErrorKind, path::PathBuf};
 
