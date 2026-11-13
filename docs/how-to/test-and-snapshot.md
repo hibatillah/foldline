@@ -147,4 +147,4 @@ For a change to activities, also check (each one is a real event, so run them on
 - `notch.maximized=lyrics` (the default) keeps only active lyrics and activities; `activities` keeps only activities; `hidden` takes the notch off the screen
 - `notch.fullscreen=activities` shows a notification banner over a full-screen video but hides the idle clock to the strip; `hidden` (the default) shows nothing
 - a settings file with only the old keys (`notch.show_over_maximized=on`) behaves as before and gains the matching new key at start
-- open the tray menu with Windows in dark mode: the menu is dark and lists Start with Windows, Settings, Pause Notch and Quit Notch (a line above Quit); tick "Start with Windows" and check the entry under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
+- open the tray menu with Windows in dark mode: the menu is dark and lists Pause Notch, Settings and Quit Notch (a line above Quit, none before the first item or after the last); tick "Start with Windows" on the settings window's General page and check the entry under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`

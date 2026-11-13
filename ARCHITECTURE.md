@@ -85,7 +85,7 @@ change reaches cached text is in [host and pages](docs/explanation/host-and-page
 | calendar cache, the last download | `%APPDATA%\notch\calendar.ics` | `pages/calendar/` |
 | the `ShowBanner` values the notch replaced, put back after a crash | `%APPDATA%\notch\notification-banners.txt` | `host/notification_banners/` |
 | clipboard history | memory only | `pages/clipboard/history.rs` |
-| Start with Windows | the current user's `Run` registry value, shared by the tray item and the settings window | `host/startup.rs`, `crates/settings/src/startup.rs` |
+| Start with Windows | the current user's `Run` registry value, written by the settings window and the installer | `crates/settings/src/startup.rs` |
 | banners off | each app's `ShowBanner` registry value | `host/notification_banners.rs` |
 
 What the user is told about each of these is in [README privacy](README.md#privacy); keys and defaults are in

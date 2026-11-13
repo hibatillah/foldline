@@ -94,7 +94,7 @@ The notch can step out of the way in two ways, both in `notch/hiding.rs` (`is_hi
 - **A pause** (`notch.paused_until`, `notch/pause.rs`) hides the notch completely and is part of `is_suppressed`, so it is asked before the screen mode, the pin and the priority activities and wins over all of them: the window is hidden, an open notch closes (a pin stays set and returns when the pause ends), the animation and hover-watch timers stop and nothing is painted. While paused the volume and brightness flyout and the notification banners belong to Windows again; a resume sets them from their settings keys. A pause is set from the tray or the settings window, and the notch clears it at every start. A timed pause ends from the host's one-shot timer, or at the first wake from sleep or unlock after its end time. The values are in [settings keys](../reference/settings-keys.md#pausing-the-notch).
 - **Priority activities** (`Activity::is_priority`: volume and brightness) override both while
   `notch.hide_windows_volume_popup` is on, because the notch then replaces Windows' flyout. `presences.rs` notes when
-  one shows anything (`ShownPresences::has_priority`, the muted badge included); `visibility::priority_shows` turns
+  one shows a transient level (`ShownPresences::has_priority`; the lasting muted badge does not count); `visibility::priority_shows` turns
   that into an exception to `suppresses` and `hides_to_strip`, and `refresh_layout` shows or hides the window when it
   changes, with the pill already at its new size. The pointer still follows the word. `Capture` is never overridden.
 - **A pin** (`notch/pin.rs`) overrides both and every word, in every mode but `Capture`: `visibility::pin_shows` is
@@ -171,7 +171,7 @@ device-independent units starting at zero and do not multiply by a scale; widget
 
 Windows messages reach `window.rs`, which calls the notch. The notch routes pointer events to the page chosen for the
 open mode, and `host/notch/units.rs` converts each position to units from the top-left of that page's frame (or of the
-banner's or badge's area), the same space the page draws in. A right click reaches only a page that uses it for its own content (the shelf's files); the notch has no menu of its own. The tray icon has the items Start with Windows, Settings, Pause Notch (a submenu of four lengths, replaced by the status line and Resume Notch while paused) and Quit Notch
+banner's or badge's area), the same space the page draws in. A right click reaches only a page that uses it for its own content (the shelf's files); the notch has no menu of its own. The tray icon has the items Pause Notch (a submenu of four lengths, replaced by the status line and Resume Notch while paused), Settings and Quit Notch
 (`host/tray.rs`), and the gear in the open header starts the settings window the way the tray's Settings item does (`host/settings_launcher.rs`). A page's timers (`Context::set_timer`) are Windows timers whose ids encode the page and the
 timer number, so each page has its own. The host's own timers are constants in `host/notch.rs` (the last, id 12, ends a timed pause: one-shot, set when a timed pause begins and killed when it ends).
 

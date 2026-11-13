@@ -87,7 +87,7 @@ Copies share state:
 
 - All copies read and write `%APPDATA%\notch\settings.txt`.
 - The settings window is single-instance across copies.
-- The tray's **Start with Windows** toggle writes the `Notch` value of the `Run` key, which the stable copy's installer task
+- The settings window's **Start with Windows** switch (General page) writes the `Notch` value of the `Run` key, which the stable copy's installer task
   also writes; a dev copy writes it only when the user switches the toggle.
 - A dev build installed by an older installer sits under the stable `AppId`, so a stable installer still offers to replace it.
 

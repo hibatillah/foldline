@@ -24,7 +24,7 @@ listens to one Windows power setting and flashes a level bar when it changes.
 | --- | --- |
 | `id()` | stable name; the settings key is `activity.<id>` |
 | `is_optional()` | false by default: required activities are always enabled; return true to expose a saved settings toggle |
-| `is_priority()` | false by default: true shows the presence over a window that hides the notch (any `notch.maximized` or `notch.fullscreen` word, Hide when idle), only while `notch.hide_windows_volume_popup` is on; volume and brightness answer true |
+| `is_priority()` | false by default: true shows the transient level (not a badge) over a window that hides the notch (any `notch.maximized` or `notch.fullscreen` word, Hide when idle), only while `notch.hide_windows_volume_popup` is on; volume and brightness answer true |
 | `presence()` | what to show right now |
 | `draw()` | draw into the area the host gives, in device-independent units from zero on a canvas whose `scale()` is 1; a companion's `draw` also serves the open header (see below) |
 | `header_status_width()`, `draw_header_status()`, `header_status_rank()` | optional: a small mark kept at the right edge of the header, icon only, while something lasts (muted speakers, Caps Lock on); `None` for no mark. The rank orders the group in the pill and the header |

@@ -164,12 +164,13 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
   window in front has stopped covering the screen for 500 ms (`WINDOW_REVEAL_DELAY_MILLISECONDS` in
   `host/notch/hiding.rs`), so switching between two maximized windows does not flash it. A screenshot overlay in front
   (`ScreenMode::Capture`) hides the notch entirely, banners included, and the pointer does not open it, whatever the
-  settings say; it comes back through the same 500 ms wait. In every mode only a transient or a banner counts as an activity: other badges and dots (Caps Lock, a countdown, the camera and microphone dots) never keep a hiding pill up, so the privacy dot is not visible while the notch is hidden. The muted speaker is the exception while `notch.hide_windows_volume_popup` is on: it keeps the whole pill up over every word ([priority activities](settings-keys.md#what-the-notch-shows-over-another-window)). Music (a claiming page or the music wave) keeps the pill up under Hide when idle (`Notch::is_hidden` in `host/notch/hiding.rs`).
+  settings say; it comes back through the same 500 ms wait. In every mode only a transient or a banner counts as an activity: other badges and dots (Caps Lock, a countdown, the camera and microphone dots) never keep a hiding pill up, so the privacy dot is not visible while the notch is hidden. The muted speaker is no exception; only a volume, brightness or mute message shows the pill over a word while `notch.hide_windows_volume_popup` is on ([priority activities](settings-keys.md#what-the-notch-shows-over-another-window)). Music (a claiming page or the music wave) keeps the pill up under Hide when idle (`Notch::is_hidden` in `host/notch/hiding.rs`).
 
 ### Where the notch sits on several monitors
 
 `notch.monitor` ([settings keys](settings-keys.md)) picks the monitor: `main` is the primary one, `focused` is the one
-with the window in front. The window is centered on that monitor, its top is `notch.top` below the top edge of that
+with the window in front, `chosen` is the one whose identifier is stored in `notch.monitor_id` (the main screen while that
+screen is not connected; it moves back when the screen returns, on the next display change). The window is centered on that monitor, its top is `notch.top` below the top edge of that
 monitor (not of the virtual desktop), and its size and every pixel value follow that monitor's scale
 (`placement` in `host/monitor/choose.rs`).
 
@@ -205,7 +206,7 @@ Limits are in [the README](../../README.md#limitations).
 | maximized, full-screen and screenshot-overlay detection | `crates/notch/src/host/screen_mode.rs` (the hooks), `crates/notch/src/host/screen_mode/classify.rs` (the rules) |
 | the tray menu | `crates/notch/src/host/tray.rs` (the items), `crates/notch/src/host/window.rs` (what they do) |
 | the settings window | `crates/settings/src/sections/` (one file per section), `crates/settings/src/field.rs` (toggles and text fields); [add a setting](../how-to/add-a-setting.md) |
-| start with Windows | `crates/notch/src/host/startup.rs` (the tray item), `crates/settings/src/startup.rs` (the window's switch), `installer/notch.iss` (the installer's choice) |
+| start with Windows | `crates/settings/src/startup.rs` (the window's switch), `installer/notch.iss` (the installer's choice) |
 | a page's content and size | that page's folder in `crates/notch/src/pages/` |
 | register a page | `crates/notch/src/pages/mod.rs` |
 | register an activity | `crates/notch/src/activities/mod.rs` |

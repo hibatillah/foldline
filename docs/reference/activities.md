@@ -24,7 +24,7 @@ An activity answers `presence()` after every event, and the host does the layout
   Caps Lock 1, muted 2, timer 3, event 4, prayer 5, rain 6, downloads 7.
 - A state that lasts and also announces itself (muted, Caps Lock) answers a `Badge` while the state is on and a `Transient`
   while its message shows; the badge is an icon alone, drawn by `draw` and `draw_header_status` alike.
-- A priority activity (`Activity::is_priority`: volume and brightness) shows its presence over a window that would hide
+- A priority activity (`Activity::is_priority`: volume and brightness) shows its transient level over a window that would hide
   the notch, while `notch.hide_windows_volume_popup` is on; see
   [settings keys](settings-keys.md#what-the-notch-shows-over-another-window).
 - Companions are drawn by `draw` in the collapsed pill and in the open header, so a companion centers its drawing on the

@@ -445,7 +445,7 @@ The bar stays at the bottom of the page in both heights.
 ## Opening settings
 
 - The gear in the open header and the tray's **Settings** item open the settings window (`notch-settings.exe`); settings
-  are edited only there, and the notch has no settings panel and no right-click menu. **Start with Windows**, **Settings**
+  are edited only there, and the notch has no settings panel and no right-click menu. **Pause Notch**, **Settings**
   and **Quit Notch** are in the tray menu. A page that uses right-click for its own content (a file on the shelf) keeps it.
 
 ## Open

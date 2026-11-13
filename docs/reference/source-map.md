@@ -34,7 +34,7 @@ crates/
         weather/      weather: the MET Norway request (fetch.rs), the forecast (forecast.rs), the sky icons (picture.rs), the message states and their width (message.rs), the page's drawing and the Today/Week pill (draw.rs), the rain alert (alert.rs: the banner, badge.rs: the countdown badge), the weather.com addresses (link.rs) the clickable cells (click.rs), fetch and rain-alert scheduling (refresh.rs), pointer input (input.rs) and the snapshot samples (sample.rs)
         todo/         todo list: the list, its todo.txt file and the undo of the last removal (list.rs), which rows show and where (layout.rs), presses: add, clear, undo, copy, delete, tick (actions.rs), the green check after a copy (copy_check.rs), drawing (draw.rs), the snapshot scenarios (sample.rs), the page tests (tests.rs), the page
   places/                the city list and the shared `location.*` keys, used by the notch and the settings window
-  store/                 the settings file code shared by the notch and the settings window (per-key atomic writes) `language.rs`, the language both programs read, and `pause.rs`, the `notch.paused_until` value (its parse, text, end time and clock text) that the notch, the tray and the settings window share
+  store/                 the settings file code shared by the notch and the settings window (per-key atomic writes) `language.rs`, the language both programs read, `screens.rs`, the connected screens and the identifier of a chosen one, and `pause.rs`, the `notch.paused_until` value (its parse, text, end time and clock text) that the notch, the tray and the settings window share
   settings/              the settings window, a separate GPUI executable named notch-settings.exe (needs the MSVC host
                          toolchain); src/sections/ holds one file per section (shalat/ one file per card group, about/ the
                          About page: app card, links, licenses file, data paths; pause.rs the Pause item of General; sections/mod.rs lists them and writes
@@ -73,14 +73,13 @@ assets/fonts/     Geist, the bundled font, and its license
 | `screen_mode/classify.rs` | the screen mode the facts about the window in front give: full screen, maximized, a screenshot overlay (pure) |
 | `screen_mode/location_hook.rs` | the hook on the foreground window's thread; pauses it for 250 ms when caret or pointer moves come less than 100 ms apart |
 | `visibility.rs` | what the notch shows over a maximized or full-screen window: the four words, `suppresses`, `hides_to_strip`, the priority exception (`priority_shows`) and the one-time migration of the retired keys (pure) |
-| `startup.rs` | the "Start with Windows" entry under the user's `Run` key |
 | `activity_layout.rs` | which transient activities show and where each one starts (pure functions) |
 | `claimed_row.rs` | the collapsed pill while a page claims it: lead, dots, content, group (pure) |
 | `settings.rs` | re-exports `Settings` from the `store` crate, the persistent key-value store pages and activities share |
-| `tray.rs` | the tray icon and its menu: Start with Windows (checked when on), Settings, Pause Notch (a submenu, or the status line and Resume Notch while paused), Quit Notch; the notch has no menu of its own |
+| `tray.rs` | the tray icon and its menu: Pause Notch (a submenu, or the status line and Resume Notch while paused), Settings, Quit Notch; the notch has no menu of its own |
 | `settings_launcher.rs` | starts `notch-settings.exe` from the folder of the running `notch.exe`, without waiting; the gear in the header and the tray's Settings item both call it |
 | `display.rs` | display scale and refresh rate |
-| `monitor.rs` | the monitors (`list`), the foreground window's monitor, the `notch.monitor` word and the start placement (Windows calls) |
+| `monitor.rs` | the monitors (`list`), the foreground window's monitor, the `notch.monitor` word, `notch.monitor_id` and the start placement; the identifier itself comes from `store::screens` (Windows calls) |
 | `monitor/choose.rs` | which monitor the notch sits on (`target_monitor`) and the window's position and size there (`placement`) (pure) |
 | `location_tracker.rs` | keeps the saved city where the device is (`location.track`): a worker thread that reads Windows' position once, the answer's message, and what an answer changes (pure `update_for`); `location_tracker/network.rs` registers a callback on network interface changes while tracking is on |
 | `volume_flyout.rs` | keeps Windows' volume and brightness flyout from drawing by giving its window an empty region, found by a show hook on the flyout's thread (`notch.hide_windows_volume_popup`); `volume_flyout/identity.rs` tells the flyout from Explorer's other island windows (pure); `volume_flyout/hook_thread.rs` runs the hook on a thread of its own |
