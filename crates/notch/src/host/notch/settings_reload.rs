@@ -49,7 +49,9 @@ impl Notch {
             self.language_changed();
         }
         self.apply_suppression(was_suppressed);
-        self.set_monitor_mode(monitor::read_mode(&self.settings, self.monitor.mode));
+        let mode = monitor::read_mode(&self.settings, self.monitor.mode);
+        let chosen_id = monitor::read_chosen_id(&self.settings, self.monitor.chosen_id.as_deref());
+        self.set_monitor_choice(mode, chosen_id);
         self.keep_shown_page_in_place(&navigable_before);
         self.flush();
     }

@@ -37,13 +37,13 @@ const SECOND: MonitorId = MonitorId(2);
 
 fn monitor(id: MonitorId, left: i32, scale: f32) -> MonitorInfo {
     let rect = crate::host::monitor::ScreenRect { left, top: 0, right: left + 1920, bottom: 1080 };
-    MonitorInfo { id, rect, scale, is_primary: id == MAIN }
+    MonitorInfo { id, device_id: format!("device-{}", id.0), rect, scale, is_primary: id == MAIN }
 }
 
 /// A notch on the main monitor at the rig's scale, with a second monitor at `second_scale` right of it.
 fn two_screen_rig(mode: MonitorMode, second_scale: f32) -> Notch {
     let main = monitor(MAIN, 0, SCALE);
-    MONITORS.set(vec![main, monitor(SECOND, 1920, second_scale)]);
+    MONITORS.set(vec![main.clone(), monitor(SECOND, 1920, second_scale)]);
     let mut notch = rig(SampleOptions::default());
     notch.monitor.mode = mode;
     notch.monitor.current = Some(MAIN);
@@ -242,4 +242,55 @@ fn a_scale_change_scales_the_painted_region_origin_used_for_pointer_input() {
     notch.relocate_if_needed();
     let expected = (400.0 * 1.5 / SCALE).round() as i32;
     assert_eq!(notch.region_origin.get(), (expected, 0));
+}
+
+#[test]
+fn an_unplugged_chosen_screen_moves_the_notch_to_the_main_screen_and_replugging_moves_it_back() {
+    let mut notch = two_screen_rig(MonitorMode::Chosen, 1.5);
+    notch.monitor.chosen_id = Some("device-2".to_owned());
+    notch.relocate_if_needed();
+    assert_eq!(notch.monitor.current, Some(SECOND));
+    MONITORS.set(vec![monitor(MAIN, 0, SCALE)]);
+    notch.relocate_if_needed();
+    assert_eq!((notch.monitor.current, notch.scale), (Some(MAIN), SCALE));
+    MONITORS.set(vec![monitor(MAIN, 0, SCALE), monitor(SECOND, 1920, 1.5)]);
+    notch.relocate_if_needed();
+    assert_eq!((notch.monitor.current, notch.scale), (Some(SECOND), 1.5));
+    assert_eq!(notch.monitor.chosen_id.as_deref(), Some("device-2"));
+}
+
+#[test]
+fn a_chosen_notch_ignores_the_foreground_window() {
+    let mut notch = two_screen_rig(MonitorMode::Chosen, 1.5);
+    notch.monitor.chosen_id = Some("device-2".to_owned());
+    FOREGROUND.set(Some(MAIN));
+    notch.relocate_if_needed();
+    assert_eq!(notch.monitor.current, Some(SECOND));
+}
+
+#[test]
+fn writing_a_chosen_screen_to_the_settings_file_moves_the_notch_there_live() {
+    let settings_file = SettingsFile::new("monitor-chosen");
+    let mut notch = two_screen_rig(MonitorMode::Main, 1.5);
+    notch.settings = settings_file.load();
+    fs::write(
+        &settings_file.0,
+        "notch.monitor=chosen
+notch.monitor_id=device-2
+",
+    )
+    .unwrap();
+    notch.reload_settings();
+    assert_eq!((notch.monitor.mode, notch.monitor.current), (MonitorMode::Chosen, Some(SECOND)));
+}
+
+#[test]
+fn a_chosen_move_waits_while_the_notch_is_open() {
+    let mut notch = two_screen_rig(MonitorMode::Chosen, 1.5);
+    notch.monitor.chosen_id = Some("device-2".to_owned());
+    notch.open.is_open = true;
+    notch.relocate_if_needed();
+    assert_eq!(notch.monitor.current, Some(MAIN), "moved while open");
+    notch.set_open(false);
+    assert_eq!(notch.monitor.current, Some(SECOND));
 }

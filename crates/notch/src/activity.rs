@@ -52,7 +52,7 @@ pub trait Activity {
         false
     }
 
-    /// Whether its presence shows over a window that hides the notch, while the notch replaces Windows' volume flyout.
+    /// Whether its transient level shows over a window that hides the notch, while the notch replaces Windows' volume flyout.
     fn is_priority(&self) -> bool {
         false
     }

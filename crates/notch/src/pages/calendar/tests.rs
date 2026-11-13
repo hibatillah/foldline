@@ -177,10 +177,15 @@ fn a_week_list_of_more_than_two_cards_claims_the_wheel() {
     let bounds = Rect::new(0.0, 0.0, EXPANDED_WIDTH, page.sizes().expanded.height);
     let frame = Frame { bounds, expansion: 1.0, expanded: Size::new(EXPANDED_WIDTH, bounds.height()), lead_gap: 0.0 };
     let inside = Point::new(bounds.right - 20.0, bounds.bottom - 20.0);
+    // The sample's agenda depends on the clock (before 09:30 it lists three events, after 23:48 one),
+    // so the row count is set here instead of read from it.
+    let occurrence = page.agenda.rows[0].occurrence.clone();
+    let rows_of = |count: usize| {
+        (0..count).map(|index| agenda::Row { occurrence: occurrence.clone(), time: format!("{index}") }).collect()
+    };
+    page.agenda.rows = rows_of(2);
     assert!(!page.claims_scroll(inside, &frame), "two events fit the week list");
-    page.agenda.rows = (0..3)
-        .map(|index| agenda::Row { occurrence: page.agenda.rows[0].occurrence.clone(), time: format!("{index}") })
-        .collect();
+    page.agenda.rows = rows_of(3);
     assert!(page.claims_scroll(inside, &frame));
 }
 

@@ -18,10 +18,19 @@ use crate::log;
 pub(super) use choose::{MonitorId, MonitorInfo, MonitorMode, Placement, ScreenRect, placement, target_monitor};
 
 const SETTING_KEY: &str = "notch.monitor";
+const CHOSEN_ID_KEY: &str = "notch.monitor_id";
 
 /// The `notch.monitor` word; a missing key keeps `current`, an unknown word reads as `main`.
 pub(super) fn read_mode(settings: &Settings, current: MonitorMode) -> MonitorMode {
     settings.get_string(SETTING_KEY).map_or(current, |word| MonitorMode::parse(Some(word)))
+}
+
+/// The `notch.monitor_id` value (the chosen screen's identifier); a missing key keeps `current`, an empty one clears it.
+pub(super) fn read_chosen_id(settings: &Settings, current: Option<&str>) -> Option<String> {
+    match settings.get_string(CHOSEN_ID_KEY) {
+        Some(id) => Some(id.trim().to_owned()).filter(|id| !id.is_empty()),
+        None => current.map(str::to_owned),
+    }
 }
 
 const MONITORINFOF_PRIMARY: u32 = 1;
@@ -51,7 +60,10 @@ fn monitor_info(monitor: HMONITOR) -> Option<MonitorInfo> {
         right: info.rcMonitor.right,
         bottom: info.rcMonitor.bottom,
     };
-    Some(MonitorInfo { id: monitor_id(monitor), rect, scale, is_primary: info.dwFlags & MONITORINFOF_PRIMARY != 0 })
+    // One implementation of the identifier, shared with the settings window.
+    let device_id = store::screens::identify(monitor.0 as isize).map(|identity| identity.id).unwrap_or_default();
+    let is_primary = info.dwFlags & MONITORINFOF_PRIMARY != 0;
+    Some(MonitorInfo { id: monitor_id(monitor), device_id, rect, scale, is_primary })
 }
 
 unsafe extern "system" fn collect_monitor(
@@ -96,15 +108,19 @@ pub(super) fn foreground() -> Option<MonitorId> {
 }
 
 /// Where the window starts: on the monitor `mode` picks, else centered on the primary screen at the system scale.
-pub(super) fn start_placement(mode: MonitorMode, top_offset: i32) -> (Option<MonitorId>, Placement) {
+pub(super) fn start_placement(
+    mode: MonitorMode,
+    chosen_id: Option<&str>,
+    top_offset: i32,
+) -> (Option<MonitorId>, Placement) {
     let monitors = list();
-    let start = target_monitor(mode, &monitors, foreground(), None)
+    let start = target_monitor(mode, &monitors, foreground(), None, chosen_id)
         .and_then(|id| monitors.iter().find(|monitor| monitor.id == id))
         .map(|monitor| (Some(monitor.id), placement(monitor, top_offset)));
     start.unwrap_or_else(|| {
         let scale = display::system_scale();
         let screen = ScreenRect { left: 0, top: 0, right: unsafe { GetSystemMetrics(SM_CXSCREEN) }, bottom: 0 };
-        let primary = MonitorInfo { id: MonitorId(0), rect: screen, scale, is_primary: true };
+        let primary = MonitorInfo { id: MonitorId(0), device_id: String::new(), rect: screen, scale, is_primary: true };
         (None, placement(&primary, top_offset))
     })
 }
@@ -172,5 +188,20 @@ mod tests {
         assert_eq!(read_mode(&settings, MonitorMode::Main), MonitorMode::Focused);
         settings.set_string(SETTING_KEY, "elsewhere");
         assert_eq!(read_mode(&settings, MonitorMode::Focused), MonitorMode::Main);
+    }
+
+    #[test]
+    fn a_missing_monitor_id_key_keeps_the_current_id_and_a_written_one_replaces_it() {
+        let mut settings = Settings::at(None);
+        assert_eq!(read_chosen_id(&settings, Some("old")), Some("old".to_owned()));
+        settings.set_string(CHOSEN_ID_KEY, " new ");
+        assert_eq!(read_chosen_id(&settings, Some("old")), Some("new".to_owned()));
+        settings.set_string(CHOSEN_ID_KEY, "");
+        assert_eq!(read_chosen_id(&settings, Some("old")), None);
+    }
+
+    #[test]
+    fn every_listed_monitor_has_an_identifier() {
+        assert!(list().iter().all(|monitor| !monitor.device_id.is_empty()));
     }
 }

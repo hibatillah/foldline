@@ -38,7 +38,7 @@ use super::{
     notification_banners, registry,
     screen_mode::{self, ScreenMode},
     settings::Settings,
-    settings_launcher, startup, tray, volume_flyout,
+    settings_launcher, tray, volume_flyout,
 };
 use store::pause::Pause;
 
@@ -77,9 +77,8 @@ fn with_notch<R>(action: impl FnOnce(&mut Notch) -> R) -> Option<R> {
 
 fn show_menu(window: HWND) {
     let paused_line = with_notch(|notch| tray::paused_line(notch.pause())).flatten();
-    let state = tray::MenuState { starts_with_windows: startup::is_enabled(), paused_line };
+    let state = tray::MenuState { paused_line };
     match tray::show_context_menu(window, &state) {
-        Some(tray::MenuChoice::ToggleStartWithWindows) => startup::set_enabled(!state.starts_with_windows),
         Some(tray::MenuChoice::OpenSettings) => settings_launcher::open_settings_window(),
         Some(tray::MenuChoice::Quit) => unsafe { PostQuitMessage(0) },
         Some(tray::MenuChoice::Pause(choice)) => {
@@ -343,7 +342,8 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
     let settings = Settings::load();
     let monitor_mode = monitor::read_mode(&settings, Default::default());
     let top_offset = top_offset();
-    let (start_monitor, start) = monitor::start_placement(monitor_mode, top_offset);
+    let chosen_id = monitor::read_chosen_id(&settings, None);
+    let (start_monitor, start) = monitor::start_placement(monitor_mode, chosen_id.as_deref(), top_offset);
     let scale = start.scale;
     let instance: HINSTANCE = unsafe { GetModuleHandleW(None) }?.into();
     let _class_icons = register_window_class(scale, instance)?;
@@ -389,7 +389,7 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
         activities,
         ticks_per_second,
         system_language,
-        monitor: MonitorState::new(monitor_mode, start_monitor, start_monitor.map(|_| start), top_offset),
+        monitor: MonitorState::new(monitor_mode, chosen_id, start_monitor, start_monitor.map(|_| start), top_offset),
     });
     NOTCH.with(|cell| *cell.borrow_mut() = Some(notch));
     match unsafe { WTSRegisterSessionNotification(window, NOTIFY_FOR_THIS_SESSION) } {

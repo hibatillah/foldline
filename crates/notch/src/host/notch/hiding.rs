@@ -88,7 +88,7 @@ impl Notch {
         )
     }
 
-    /// A priority activity's presence (a volume or brightness level, the muted badge) overrides the word now.
+    /// A priority activity's level message (a volume or brightness change, a mute toggle) overrides the word now; the lasting muted badge does not.
     fn priority_shows(&self) -> bool {
         visibility::priority_shows(
             self.hiding.screen_mode,

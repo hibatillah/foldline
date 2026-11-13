@@ -14,7 +14,7 @@ pub(super) struct ShownPresences {
     /// The banner's owner, width and height.
     pub(super) banner: Option<(Source, f32, f32)>,
     pub(super) badges: Vec<(Source, f32)>,
-    /// Whether a priority activity (`Activity::is_priority`) shows anything, which can override the hiding word.
+    /// Whether a priority activity (`Activity::is_priority`) shows a transient level, which can override the hiding word.
     pub(super) has_priority: bool,
 }
 
@@ -33,7 +33,10 @@ impl Notch {
             .filter(|(_, slot)| slot.is_enabled && slot.is_started)
             .map(|(index, slot)| (Source::Activity(index), slot.activity.presence()));
         let has_priority = self.activities.iter().any(|slot| {
-            slot.is_enabled && slot.is_started && slot.activity.is_priority() && slot.activity.presence().is_some()
+            slot.is_enabled
+                && slot.is_started
+                && slot.activity.is_priority()
+                && matches!(slot.activity.presence(), Some(Presence::Transient { .. }))
         });
         let page_presences = self
             .pages

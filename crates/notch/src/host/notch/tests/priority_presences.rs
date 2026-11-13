@@ -69,7 +69,7 @@ fn with_windows_own_flyout_back_a_volume_change_follows_the_word() {
     notch.set_screen_mode(ScreenMode::Normal);
     notch.timer_fired(WINDOW_REVEAL_TIMER_ID);
     notch.flush();
-    assert!(notch.is_hidden(), "the muted badge is lasting state when the flag does nothing");
+    assert!(notch.is_hidden(), "the muted badge is lasting state");
 }
 
 #[test]
@@ -82,21 +82,36 @@ fn a_volume_change_never_shows_over_a_screenshot_overlay() {
 }
 
 #[test]
-fn the_muted_badge_keeps_the_pill_up_over_every_hiding_word_and_with_hide_when_idle() {
+fn the_muted_badge_alone_follows_every_hiding_word_and_hide_when_idle() {
     let (mut notch, level) = priority_rig();
     level.set(Some(MUTED_BADGE));
     notch.flush();
+    assert!(!notch.presences.has_priority, "a lasting badge is not on demand");
     for (mode, showing) in super::hiding_rules::hiding_in_every_mode(&mut notch) {
         notch.hiding.maximized_showing = showing;
         notch.hiding.fullscreen_showing = showing;
         notch.hiding.screen_mode = mode;
-        assert!(!notch.is_hidden(), "muted over {mode:?} with {showing:?}");
+        assert!(notch.is_hidden(), "muted over {mode:?} with {showing:?}");
     }
     notch.hiding.fullscreen_showing = Showing::Hidden;
-    assert!(!notch.is_suppressed(), "muted over a hidden full-screen window");
-    level.set(None);
-    notch.flush();
-    assert!(notch.is_suppressed());
+    assert!(notch.is_suppressed(), "muted over a hidden full-screen window");
+}
+
+#[test]
+fn a_mute_toggle_shows_its_level_over_a_hiding_word_and_the_pill_hides_again_while_still_muted() {
+    let (mut notch, level) = priority_rig();
+    level.set(Some(MUTED_BADGE));
+    for (mode, showing) in super::hiding_rules::hiding_in_every_mode(&mut notch) {
+        notch.hiding.maximized_showing = showing;
+        notch.hiding.fullscreen_showing = showing;
+        notch.hiding.screen_mode = mode;
+        level.set(Some(LEVEL));
+        notch.flush();
+        assert!(!notch.is_hidden(), "the level over {mode:?} with {showing:?}");
+        level.set(Some(MUTED_BADGE));
+        notch.flush();
+        assert!(notch.is_hidden(), "the muted badge left alone over {mode:?} with {showing:?}");
+    }
 }
 
 #[test]
@@ -132,15 +147,18 @@ fn a_switched_off_priority_activity_does_not_override_the_word() {
 }
 
 #[test]
-fn a_hidden_full_screen_window_coming_to_the_front_while_muted_raises_the_notch_above_it() {
+fn a_hidden_full_screen_window_coming_to_the_front_while_muted_leaves_the_notch_away_until_a_level_shows() {
     let (mut notch, level) = priority_rig();
     notch.hiding.fullscreen_showing = Showing::Hidden;
     assert!(!notch.stays_on_screen_in(ScreenMode::Fullscreen), "with nothing up the notch steps away");
     level.set(Some(MUTED_BADGE));
     notch.flush();
-    assert!(notch.stays_on_screen_in(ScreenMode::Fullscreen), "the muted badge needs the notch above the game");
+    assert!(!notch.stays_on_screen_in(ScreenMode::Fullscreen), "the muted badge alone does not raise the notch");
     notch.set_screen_mode(ScreenMode::Fullscreen);
-    assert!(!notch.is_suppressed());
+    assert!(notch.is_suppressed());
+    level.set(Some(LEVEL));
+    notch.flush();
+    assert!(!notch.is_suppressed(), "a mute toggle shows its level above the game");
     notch.timer_fired(RAISE_TIMER_ID);
     assert!(!notch.is_suppressed());
 }

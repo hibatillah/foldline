@@ -117,7 +117,7 @@ pub(super) struct Collapsed {
     pub(super) has_lyrics: bool,
 }
 
-/// Whether a priority activity (volume, brightness) shows where the word or hide-when-idle would hide it: only while
+/// Whether a priority activity's level message (volume, brightness, a mute toggle) shows where the word or hide-when-idle would hide it: only while
 /// the notch replaces Windows' own flyout, and never over a screenshot overlay.
 pub(super) fn priority_shows(mode: ScreenMode, replaces_windows_flyout: bool, has_priority_presence: bool) -> bool {
     has_priority_presence && replaces_windows_flyout && mode != ScreenMode::Capture

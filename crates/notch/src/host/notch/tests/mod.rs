@@ -90,7 +90,7 @@ pub(super) fn custom_rig(pages: Vec<Box<dyn Page>>, settings: Settings, activiti
         activities,
         ticks_per_second: 10_000_000,
         system_language: store::language::Language::English,
-        monitor: MonitorState::new(Default::default(), None, None, 0),
+        monitor: MonitorState::new(Default::default(), None, None, None, 0),
     });
     notch.monitor.source = relocate::FAKE_MONITORS;
     notch.page_list = PageList::new(count);

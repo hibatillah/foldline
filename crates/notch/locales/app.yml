@@ -1,7 +1,4 @@
 _version: 2
-tray.start_with_windows:
-  en: Start with Windows
-  id: Mulai bersama Windows
 tray.settings:
   en: Settings
   id: Pengaturan

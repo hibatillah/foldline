@@ -10,8 +10,8 @@ use windows::{
             HiDpi::{GetDpiForWindow, GetSystemMetricsForDpi},
             Shell::{NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NOTIFYICONDATAW, Shell_NotifyIconW},
             WindowsAndMessaging::{
-                AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, MF_CHECKED, MF_GRAYED, MF_POPUP, MF_SEPARATOR,
-                MF_STRING, SM_CXSMICON, SetForegroundWindow, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu, WM_APP,
+                AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, MF_GRAYED, MF_POPUP, MF_SEPARATOR, MF_STRING,
+                SM_CXSMICON, SetForegroundWindow, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu, WM_APP,
             },
         },
     },
@@ -27,7 +27,6 @@ pub(super) const WM_TRAY: u32 = WM_APP + 2;
 const TRAY_ICON_ID: u32 = 1;
 const TOOLTIP: &str = "Notch";
 const MENU_COMMAND_QUIT: usize = 1;
-const MENU_COMMAND_START_WITH_WINDOWS: usize = 3;
 const MENU_COMMAND_OPEN_SETTINGS: usize = 7;
 /// The four pause lengths take the commands from here, in the order of `PauseChoice::ALL`.
 const MENU_COMMAND_PAUSE_FIRST: usize = 20;
@@ -38,7 +37,6 @@ const TIME_ZONE_ID_DAYLIGHT: u32 = 2;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum MenuChoice {
     OpenSettings,
-    ToggleStartWithWindows,
     Quit,
     Pause(PauseChoice),
     Resume,
@@ -46,7 +44,6 @@ pub(super) enum MenuChoice {
 
 #[derive(Clone, Debug, Default)]
 pub(super) struct MenuState {
-    pub(super) starts_with_windows: bool,
     /// `None` when not paused; else the greyed line, "Paused until 14:30" or "Paused".
     pub(super) paused_line: Option<String>,
 }
@@ -55,7 +52,6 @@ pub(super) struct MenuState {
 fn choice_for_command(command: usize) -> Option<MenuChoice> {
     match command {
         MENU_COMMAND_OPEN_SETTINGS => Some(MenuChoice::OpenSettings),
-        MENU_COMMAND_START_WITH_WINDOWS => Some(MenuChoice::ToggleStartWithWindows),
         MENU_COMMAND_QUIT => Some(MenuChoice::Quit),
         MENU_COMMAND_RESUME => Some(MenuChoice::Resume),
         _ => command
@@ -174,16 +170,11 @@ pub(super) fn show_context_menu(window: HWND, state: &MenuState) -> Option<MenuC
     // Each time, so a change of theme while the notch runs shows in the next menu.
     follow_system_theme();
     let Ok(menu) = (unsafe { CreatePopupMenu() }) else { return None };
-    let startup_flags = if state.starts_with_windows { MF_STRING | MF_CHECKED } else { MF_STRING };
     // Read each time the menu opens, so a language change shows in the next menu.
-    let (start_text, settings_text, quit_text) = (
-        HSTRING::from(tr!("tray.start_with_windows").as_ref()),
-        HSTRING::from(tr!("tray.settings").as_ref()),
-        HSTRING::from(tr!("tray.quit").as_ref()),
-    );
-    let _ = unsafe { AppendMenuW(menu, startup_flags, MENU_COMMAND_START_WITH_WINDOWS, &start_text) };
-    let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_OPEN_SETTINGS, &settings_text) };
+    let (settings_text, quit_text) =
+        (HSTRING::from(tr!("tray.settings").as_ref()), HSTRING::from(tr!("tray.quit").as_ref()));
     append_pause_items(menu, state);
+    let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_OPEN_SETTINGS, &settings_text) };
     let _ = unsafe { AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null()) };
     let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_QUIT, &quit_text) };
     let mut cursor = POINT::default();
@@ -203,7 +194,6 @@ mod tests {
     #[test]
     fn each_item_has_its_own_command() {
         assert_eq!(choice_for_command(MENU_COMMAND_OPEN_SETTINGS), Some(MenuChoice::OpenSettings));
-        assert_eq!(choice_for_command(MENU_COMMAND_START_WITH_WINDOWS), Some(MenuChoice::ToggleStartWithWindows));
         assert_eq!(choice_for_command(MENU_COMMAND_QUIT), Some(MenuChoice::Quit));
     }
 
@@ -225,7 +215,7 @@ mod tests {
 
     #[test]
     fn a_dismissed_menu_and_retired_commands_choose_nothing() {
-        for command in [0, 2, 4, 5, 6, 50, 100, 1000] {
+        for command in [0, 2, 3, 4, 5, 6, 50, 100, 1000] {
             assert_eq!(choice_for_command(command), None, "command {command}");
         }
     }

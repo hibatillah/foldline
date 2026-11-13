@@ -48,7 +48,13 @@ impl Notch {
         let source = self.monitor.source;
         let monitors = (source.list)();
         let foreground = (source.foreground)();
-        let Some(target) = target_monitor(self.monitor.mode, &monitors, foreground, self.monitor.current) else {
+        let Some(target) = target_monitor(
+            self.monitor.mode,
+            &monitors,
+            foreground,
+            self.monitor.current,
+            self.monitor.chosen_id.as_deref(),
+        ) else {
             return false;
         };
         let Some(target_info) = monitors.iter().find(|monitor| monitor.id == target) else { return false };
@@ -85,9 +91,10 @@ impl Notch {
         self.relocate_if_needed();
     }
 
-    pub(super) fn set_monitor_mode(&mut self, mode: MonitorMode) {
-        if self.monitor.mode != mode {
+    pub(super) fn set_monitor_choice(&mut self, mode: MonitorMode, chosen_id: Option<String>) {
+        if self.monitor.mode != mode || self.monitor.chosen_id != chosen_id {
             self.monitor.mode = mode;
+            self.monitor.chosen_id = chosen_id;
             self.relocate_if_needed();
         }
     }
@@ -155,7 +162,7 @@ mod tests {
     }
 
     fn state_on(current: Option<MonitorId>, placed: Option<Placement>) -> MonitorState {
-        MonitorState::new(MonitorMode::Focused, current, placed, 0)
+        MonitorState::new(MonitorMode::Focused, None, current, placed, 0)
     }
 
     #[test]
