@@ -16,7 +16,7 @@ paths:
   started activity). A re-read falls back to the field's current value, not the default.
 - A new key, its default and its label go into `docs/reference/settings-keys.md` and the `README.md` menu list and defaults
   table in the same change. The steps are in `docs/how-to/add-a-setting.md`.
-- The tray menu has Start with Windows, Settings, Pause Notch (Resume Notch while paused) and Quit Notch; every other toggle lives in the settings window.
+- The tray menu has Pause Notch (Resume Notch while paused), Settings, then Quit Notch; every toggle, Start with Windows included, lives in the settings window.
 - Write boolean keys as `on` or `off`, and at start treat a missing or unreadable value as the documented default.
 - The notch starts the settings window from the gear in the open header (`host/notch/header_row.rs`) and the tray's **Settings** item, both through `host/settings_launcher.rs`. A second start brings the open window forward (`crates/settings/src/single_instance.rs`).
 - The window's pages (`crates/settings/src/sections/mod.rs`): General, Pages and Behavior, then the page settings Calendar, Shalat, Stats and Weather, then Advanced, with About pinned at the bottom of the sidebar. A new key goes on the page that matches it.
