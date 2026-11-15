@@ -1,4 +1,4 @@
-use super::{GRID, Icon};
+use super::{GRID, Icon, weather};
 use crate::gfx::{Path, Point};
 
 const CORNER_RADIUS: f32 = 1.8;
@@ -59,18 +59,6 @@ impl Icon {
                 };
                 (join(body, marks), Paint::Line)
             }
-            Icon::Sun => {
-                let mut sun = circle(at(12.0, 12.0), 4.0 * unit);
-                for step in 0..8 {
-                    let angle = step as f32 * std::f32::consts::FRAC_PI_4;
-                    let (sine, cosine) = angle.sin_cos();
-                    sun.append(line(&[
-                        (12.0 + 7.0 * cosine, 12.0 + 7.0 * sine),
-                        (12.0 + 9.5 * cosine, 12.0 + 9.5 * sine),
-                    ]));
-                }
-                (sun, Paint::Line)
-            }
             Icon::Bolt => (
                 solid(&[(13.5, 3.0), (6.0, 13.5), (11.0, 13.5), (10.0, 21.0), (18.0, 10.0), (13.0, 10.0)], 1.0),
                 Paint::Fill,
@@ -128,7 +116,7 @@ impl Icon {
             Icon::Bluetooth => {
                 (line(&[(7.0, 8.0), (17.0, 16.0), (12.0, 20.5), (12.0, 3.5), (17.0, 8.0), (7.0, 16.0)]), Paint::Line)
             }
-            Icon::Moon => {
+            Icon::MoonStar => {
                 // Lucide "moon-star" (ISC license, https://lucide.dev).
                 let outer = arc((12.0, 12.0), 9.0, 3.1, 266.9, 24);
                 let inner = arc((17.0, 7.0), 6.0, 212.0, 58.0, 12);
@@ -143,14 +131,6 @@ impl Icon {
                 crescent = crescent.curve_to(at(20.526, 11.870), at(21.007, 12.081), at(20.985, 12.486));
                 let star = join(line(&[(19.0, 3.0), (19.0, 7.0)]), line(&[(17.0, 5.0), (21.0, 5.0)]));
                 (join(crescent, star), Paint::Line)
-            }
-            Icon::Cloud => {
-                // Lucide "cloud" (ISC license, https://lucide.dev).
-                let points: Vec<(f32, f32)> = std::iter::once((17.5, 19.0))
-                    .chain(arc((9.0, 12.0), 7.0, 90.0, 343.4, 24))
-                    .chain(arc((17.5, 14.5), 4.5, 270.0, 450.0, 14))
-                    .collect();
-                (line(&points), Paint::Line)
             }
             // Lucide "copy" (ISC license, https://lucide.dev).
             Icon::Copy => {
@@ -254,6 +234,26 @@ impl Icon {
                 );
                 let text = join(line(&[(7.5, 8.5), (16.5, 8.5)]), line(&[(7.5, 11.5), (13.0, 11.5)]));
                 (join(bubble, text), Paint::Line)
+            }
+            Icon::Sun
+            | Icon::Moon
+            | Icon::CloudLightning
+            | Icon::Cloudy
+            | Icon::CloudRain
+            | Icon::CloudRainWind
+            | Icon::CloudSunRain
+            | Icon::CloudSnow
+            | Icon::CloudMoon
+            | Icon::CloudMoonRain
+            | Icon::CloudSun
+            | Icon::CloudFog => {
+                let corner = Point::new(center.x - size / 2.0, center.y - size / 2.0);
+                let strokes = weather::strokes(self).unwrap_or_default();
+                let mut drawing = Path::new();
+                for stroke in strokes {
+                    drawing.append(Path::from_svg(stroke, corner, unit));
+                }
+                (drawing, Paint::Line)
             }
         }
     }

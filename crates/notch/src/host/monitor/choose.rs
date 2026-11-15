@@ -81,11 +81,12 @@ pub(in crate::host) struct Placement {
     pub scale: f32,
 }
 
-pub(in crate::host) fn placement(monitor: &MonitorInfo, top_offset: i32) -> Placement {
+/// The window is centered on the monitor and flush with its top edge.
+pub(in crate::host) fn placement(monitor: &MonitorInfo) -> Placement {
     let width = (WINDOW_WIDTH * monitor.scale).round() as i32;
     let height = (WINDOW_HEIGHT * monitor.scale).round() as i32;
     let center_x = monitor.rect.left + monitor.rect.width() / 2;
-    Placement { left: center_x - width / 2, top: monitor.rect.top + top_offset, width, height, scale: monitor.scale }
+    Placement { left: center_x - width / 2, top: monitor.rect.top, width, height, scale: monitor.scale }
 }
 
 #[cfg(test)]
@@ -151,7 +152,7 @@ mod tests {
     #[test]
     fn a_monitor_left_of_the_primary_gives_a_negative_left_and_a_centered_window() {
         let left_monitor = monitor(2, -1920, 0, 1.0, false);
-        let placed = placement(&left_monitor, 0);
+        let placed = placement(&left_monitor);
         assert_eq!(placed.left, -960 - placed.width / 2);
         assert!(placed.left < 0);
         assert_eq!(placed.left + placed.width / 2, left_monitor.rect.left + left_monitor.rect.width() / 2);
@@ -160,7 +161,7 @@ mod tests {
     #[test]
     fn the_placement_size_follows_scale_1_0_1_25_and_1_5() {
         for scale in [1.0_f32, 1.25, 1.5] {
-            let placed = placement(&monitor(1, 0, 0, scale, true), 0);
+            let placed = placement(&monitor(1, 0, 0, scale, true));
             assert_eq!(placed.width, (WINDOW_WIDTH * scale).round() as i32);
             assert_eq!(placed.height, (WINDOW_HEIGHT * scale).round() as i32);
             assert_eq!(placed.scale, scale);
@@ -168,9 +169,9 @@ mod tests {
     }
 
     #[test]
-    fn the_top_offset_is_measured_from_the_monitors_top_edge() {
+    fn the_notch_sits_on_the_top_edge_of_its_monitor() {
         let below = monitor(2, 0, 1080, 1.0, false);
-        assert_eq!(placement(&below, 12).top, 1080 + 12);
+        assert_eq!(placement(&below).top, 1080);
     }
 
     #[test]

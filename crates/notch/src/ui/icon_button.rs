@@ -24,7 +24,7 @@ impl IconButton {
 }
 
 /// The hovered icon button's rounded white square, `edge` DIP wide around `center` (in the canvas's space).
-pub fn draw_hover_wash(canvas: &Canvas, center: Point, edge: f32, opacity: f32) {
+fn draw_hover_wash(canvas: &Canvas, center: Point, edge: f32, opacity: f32) {
     let scale = canvas.scale();
     let half = edge / 2.0 * scale;
     let wash = Rect::around(center, half, half);

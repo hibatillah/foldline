@@ -41,12 +41,18 @@ fn lyrics_color(is_on: bool, has_lyrics: bool, is_hovered: bool) -> Color {
     }
 }
 
-pub fn hit_test(layout: &Layout, point: Point) -> Option<Control> {
-    Control::ALL.into_iter().find(|&control| layout.control_hit_area(control).contains(point))
+pub fn hit_test(layout: &Layout, point: Point, is_lyrics_allowed: bool) -> Option<Control> {
+    Control::ALL
+        .into_iter()
+        .filter(|&control| is_lyrics_allowed || control != Control::Lyrics)
+        .find(|&control| layout.control_hit_area(control).contains(point))
 }
 
 pub fn draw(page: &MediaPage, canvas: &Canvas, layout: &Layout, opacity: f32) {
     for control in Control::ALL {
+        if control == Control::Lyrics && !page.is_lyrics_allowed {
+            continue;
+        }
         let (icon, is_on) = match control {
             Control::Previous => (Icon::Previous, None),
             Control::PlayPause => (if page.info.is_playing { Icon::Pause } else { Icon::Play }, None),
@@ -75,9 +81,9 @@ mod tests {
         let bounds = Rect::new(0.0, 0.0, width, layout::PLAIN_HEIGHT);
         let layout = Layout::new(bounds, width, 1, layout::TEXT_MAX_WIDTH);
         for control in Control::ALL {
-            assert_eq!(hit_test(&layout, layout.control_center(control)), Some(control));
+            assert_eq!(hit_test(&layout, layout.control_center(control), true), Some(control));
         }
-        assert_eq!(hit_test(&layout, Point::new(10.0, 10.0)), None);
+        assert_eq!(hit_test(&layout, Point::new(10.0, 10.0), true), None);
     }
 
     #[test]
@@ -88,8 +94,8 @@ mod tests {
         let (play, next) = (layout.control_center(Control::PlayPause), layout.control_center(Control::Next));
         let near_play = Point::new(play.x + 13.0, play.y);
         let near_next = Point::new(next.x - 13.0, next.y);
-        assert_eq!(hit_test(&layout, near_play), Some(Control::PlayPause));
-        assert_eq!(hit_test(&layout, near_next), Some(Control::Next));
+        assert_eq!(hit_test(&layout, near_play, true), Some(Control::PlayPause));
+        assert_eq!(hit_test(&layout, near_next, true), Some(Control::Next));
     }
 
     #[test]

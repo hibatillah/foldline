@@ -3,9 +3,8 @@
 use std::time::Duration;
 
 /// Spring (stiffness, damping) of every size change: open, close, page width and height, badge room.
-/// Damping ratio is `16.7 / (2 * sqrt(215))` = 0.57, which overshoots a move by about 10 percent (11 percent without the lead-in) and settles in
-/// about 1.45 times the time of the earlier (420, 21) spring.
-pub(super) const SIZE_RESPONSE: (f32, f32) = (215.0, 16.7);
+/// Damping ratio is `19.7 / (2 * sqrt(215))` = 0.67, which overshoots a move by about 5 percent (5.8 without the lead-in).
+pub(super) const SIZE_RESPONSE: (f32, f32) = (215.0, 19.7);
 
 /// The pull of a size spring grows from nothing over this long when a move starts at rest, so it begins gently.
 pub(super) const SIZE_LEAD_IN: f32 = 0.09;
@@ -23,7 +22,7 @@ pub(super) const PAGE_SWAP_OUT_SHIFT: f32 = 12.0;
 pub(super) const PAGE_SWAP_IN_DELAY: f32 = 0.08;
 
 /// Seconds the arriving page takes to shift into place; with the delay it ends just after a size spring is within
-/// 5 percent of its move (about 0.40 s), so the pill has nearly its new size before the content is still.
+/// 3 percent of its move (about 0.41 s), so the pill has nearly its new size before the content is still.
 pub(super) const PAGE_SWAP_IN_SECONDS: f32 = 0.34;
 
 /// DIP the arriving page starts away from its place, on the side it comes from (east for the next page).
@@ -58,9 +57,9 @@ mod tests {
     fn the_size_spring_is_underdamped_with_a_small_overshoot() {
         let (stiffness, damping) = SIZE_RESPONSE;
         let damping_ratio = damping / (2.0 * stiffness.sqrt());
-        assert!((0.565..=0.62).contains(&damping_ratio), "damping ratio {damping_ratio}");
+        assert!((0.66..=0.68).contains(&damping_ratio), "damping ratio {damping_ratio}");
         let overshoot = (-std::f32::consts::PI * damping_ratio / (1.0 - damping_ratio * damping_ratio).sqrt()).exp();
-        assert!((0.08..=0.115).contains(&overshoot), "overshoot {overshoot}");
+        assert!((0.05..=0.065).contains(&overshoot), "overshoot {overshoot}");
     }
 
     #[test]

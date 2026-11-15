@@ -22,6 +22,11 @@ fn page_index(notch: &Notch, id: &str) -> usize {
     notch.pages.iter().position(|page| page.id() == id).unwrap()
 }
 
+/// The gap the claiming page asked for after its lead, or the host's 24.
+fn claiming_lead_gap(notch: &Notch) -> f32 {
+    notch.pages[notch.resting_index.unwrap()].resting_lead_gap().unwrap_or(claimed_row::CONTENT_GAP)
+}
+
 #[test]
 fn an_empty_pill_on_a_pc_centers_the_clock_and_hugs_it_narrower_than_150() {
     let notch = marked_rig(SampleOptions::default(), Vec::new());
@@ -204,7 +209,8 @@ fn the_lyric_pill_has_no_clock_no_battery_and_no_wave_and_grows_to_fit_its_group
     let page_width = notch.pages[index].sizes().resting_width;
     let widths: Vec<f32> = notch.resting_row.claimed_group.iter().map(|&(_, width)| width).collect();
     let group = widths.iter().sum::<f32>() + 2.0 * pill_row::ITEM_GAP;
-    assert_eq!(notch.springs.resting_width.target, 12.0 + 20.0 + 24.0 + page_width + 24.0 + group + 12.0);
+    let lead_gap = claiming_lead_gap(&notch);
+    assert_eq!(notch.springs.resting_width.target, 12.0 + 20.0 + lead_gap + page_width + 24.0 + group + 12.0);
     assert_eq!(resting_inset(&notch, RowItem::Source(Source::Activity(2))), None, "the battery ring is not drawn");
     assert!(!notch.has_music_badge());
 }
@@ -233,9 +239,9 @@ fn a_dot_in_the_lyric_pill_sits_8_after_the_countdown() {
 }
 
 #[test]
-fn a_dot_in_the_lyric_pill_leaves_the_line_24_after_the_artwork() {
+fn a_dot_in_the_lyric_pill_leaves_the_line_where_the_page_asked_after_the_artwork() {
     let (notch, _) = lyric_rig(Some(DOT));
-    assert_eq!(notch.resting_row.claim.lead_gap(), claimed_row::CONTENT_GAP);
+    assert_eq!(notch.resting_row.claim.lead_gap(), claiming_lead_gap(&notch));
     assert_eq!(notch.resting_row.claim.left_inset(), pill_row::PILL_EDGE);
 }
 
@@ -243,7 +249,7 @@ fn a_dot_in_the_lyric_pill_leaves_the_line_24_after_the_artwork() {
 fn without_a_dot_the_lyric_pill_reserves_no_dot_column() {
     let (notch, _) = lyric_rig(None);
     assert_eq!(resting_inset(&notch, RowItem::Dots), None);
-    assert_eq!(notch.resting_row.claim.lead_gap(), claimed_row::CONTENT_GAP);
+    assert_eq!(notch.resting_row.claim.lead_gap(), claiming_lead_gap(&notch));
     let &(countdown, width) = notch.resting_row.claimed_group.last().unwrap();
     assert_eq!(resting_inset(&notch, RowItem::Source(countdown)), Some(pill_row::PILL_EDGE + width));
 }
@@ -262,5 +268,59 @@ fn a_dot_appearing_in_the_lyric_pill_widens_it_and_slides_the_group_left_while_t
     assert!(notch.frame_timer.is_running);
     settle(&mut notch);
     assert_eq!(resting_inset(&notch, countdown), Some(before_inset + dot_room), "the dot takes the right end");
-    assert_eq!(notch.springs.claim_lead_gap.position, claimed_row::CONTENT_GAP, "the line stays after the artwork");
+    assert_eq!(notch.springs.claim_lead_gap.position, claiming_lead_gap(&notch), "the line stays after the artwork");
+}
+
+/// A claiming page with a 20 wide lead that asks for `lead_gap` after it.
+struct LeadPage {
+    lead_gap: Option<f32>,
+}
+
+impl Page for LeadPage {
+    fn id(&self) -> &'static str {
+        "lead"
+    }
+
+    fn priority(&self, _mode: crate::page::Mode) -> Option<crate::page::Priority> {
+        Some(crate::page::Priority::NORMAL)
+    }
+
+    fn sizes(&self) -> crate::page::PageSizes {
+        crate::page::PageSizes { resting_width: 200.0, expanded: crate::gfx::Size::new(200.0, 86.0) }
+    }
+
+    fn draw_resting(&self, _canvas: &Canvas, _frame: &crate::page::Frame, _opacity: f32) {}
+
+    fn draw_expanded(&self, _canvas: &Canvas, _frame: &crate::page::Frame, _opacity: f32) {}
+
+    fn resting_lead_width(&self) -> f32 {
+        20.0
+    }
+
+    fn resting_lead_gap(&self) -> Option<f32> {
+        self.lead_gap
+    }
+}
+
+fn lead_rig(lead_gap: Option<f32>) -> Notch {
+    let mut notch = custom_rig(vec![Box::new(LeadPage { lead_gap })], Settings::at(None), Vec::new());
+    notch.refresh_layout();
+    settle(&mut notch);
+    notch
+}
+
+#[test]
+fn a_page_can_ask_for_a_narrower_lead_gap() {
+    let notch = lead_rig(Some(12.0));
+    let edges = 2.0 * pill_row::PILL_EDGE;
+    assert_eq!(notch.springs.resting_width.target, edges + 20.0 + 12.0 + 200.0, "the pill reserves 12");
+    assert_eq!(notch.springs.claim_lead_gap.position, 12.0, "Frame::lead_gap passes the same 12");
+}
+
+#[test]
+fn a_page_that_asks_for_no_lead_gap_gets_the_hosts_24() {
+    let notch = lead_rig(None);
+    let edges = 2.0 * pill_row::PILL_EDGE;
+    assert_eq!(notch.springs.resting_width.target, edges + 20.0 + claimed_row::CONTENT_GAP + 200.0);
+    assert_eq!(notch.springs.claim_lead_gap.position, claimed_row::CONTENT_GAP);
 }

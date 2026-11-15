@@ -11,8 +11,8 @@ pub(super) const ITEM_GAP: f32 = 8.0;
 pub(super) const PILL_EDGE: f32 = 12.0;
 /// Room on each side of the clock in the empty pill, which hugs the clock instead of keeping the usual minimum.
 pub(super) const EMPTY_SIDE: f32 = 28.0;
-/// Between two items of the open header's group, and between the group and the gear.
-pub(super) const HEADER_ITEM_GAP: f32 = 10.0;
+/// Between two items of the open header's group.
+pub(super) const HEADER_ITEM_GAP: f32 = 8.0;
 /// Between the battery ring and the dot column right after it, in the idle row and the open header alike.
 pub(super) const RING_DOTS_GAP: f32 = 4.0;
 /// The least room between the header clock and the nearest icon; icons nearer than this are dropped.
@@ -23,10 +23,10 @@ pub(super) const PAGE_DOTS_CLOCK_GAP: f32 = 40.0;
 pub(super) const GEAR_SIZE: f32 = 16.0;
 /// The pin's box; its stroked outline shows about 9 x 12 in it, level with the ring.
 pub(super) const PIN_SIZE: f32 = 13.0;
-/// Pin box to gear box; with both glyphs' margins the visible gap is about 8.
+/// Pin glyph box to gear glyph box.
 pub(super) const PIN_GEAR_GAP: f32 = 4.0;
-/// Group to pin box; the ring has no margin, so the visible gap is about 8.
-pub(super) const GROUP_PIN_GAP: f32 = 6.0;
+/// The group's last item to the pin glyph box.
+pub(super) const GROUP_PIN_GAP: f32 = 8.0;
 /// Edge of the square a click on a header icon lands in; where neighbours' squares overlap, the nearer item wins.
 pub(super) const HIT_SIZE: f32 = 24.0;
 
@@ -287,24 +287,24 @@ mod tests {
     }
 
     #[test]
-    fn the_pin_sits_3_5_left_of_the_gear() {
+    fn the_pin_glyph_ends_4_before_the_gear_glyph() {
         let header = header(&[16.0], &[RING]);
-        assert_eq!(header.gear_left - (header.pin_left + PIN_SIZE), PIN_GEAR_GAP);
+        assert_eq!(header.gear_left - (header.pin_left + PIN_SIZE), 4.0);
     }
 
     #[test]
     fn the_pin_is_never_dropped_when_icons_are() {
         let header = header(&[16.0; 12], &[RING, DOTS]);
         assert!(header.dropped_icons > 0);
-        assert_eq!(header.pin_left, RIGHT - GEAR_SIZE - PIN_GEAR_GAP - PIN_SIZE);
+        assert_eq!(header.pin_left, self::header(&[], &[]).pin_left);
         let last_end = header.group_lefts.last().unwrap() + DOTS;
-        assert_eq!(header.pin_left - last_end, GROUP_PIN_GAP, "the group still ends before the pin");
+        assert_eq!(header.pin_left - last_end, 8.0, "the group still ends before the pin");
     }
 
     #[test]
     fn the_header_minimum_width_includes_the_pin() {
         let without_end = end_run(&[]);
-        assert_eq!(without_end, CLOCK + 2.0 * (HEADER_CLOCK_GAP + PIN_SIZE + PIN_GEAR_GAP + GEAR_SIZE));
+        assert_eq!(without_end, CLOCK + 2.0 * (HEADER_CLOCK_GAP + PIN_SIZE + 4.0 + GEAR_SIZE));
     }
 
     #[test]
@@ -316,12 +316,24 @@ mod tests {
     }
 
     #[test]
-    fn the_header_group_runs_10_apart_with_4_from_the_ring_to_the_dots_and_ends_6_before_the_pin() {
+    fn the_header_group_runs_8_apart_with_4_from_the_ring_to_the_dots_and_ends_8_before_the_pin() {
         let header = header(&[16.0, 16.0], &[RING, DOTS]);
         assert_eq!(header.pin_left - (header.group_lefts[3] + DOTS), GROUP_PIN_GAP);
         assert_eq!(header.group_lefts[3] - (header.group_lefts[2] + RING), RING_DOTS_GAP);
         assert_eq!(header.group_lefts[2] - (header.group_lefts[1] + 16.0), HEADER_ITEM_GAP);
         assert_eq!(header.group_lefts[1] - (header.group_lefts[0] + 16.0), HEADER_ITEM_GAP);
+    }
+
+    #[test]
+    fn the_open_header_right_side_reads_status_8_countdown_8_ring_4_dots_8_pin_4_gear() {
+        let (status, countdown) = (16.0, 30.0);
+        let header = header(&[status, countdown], &[RING, DOTS]);
+        let lefts = &header.group_lefts;
+        let ends =
+            [lefts[0] + status, lefts[1] + countdown, lefts[2] + RING, lefts[3] + DOTS, header.pin_left + PIN_SIZE];
+        let starts = [lefts[1], lefts[2], lefts[3], header.pin_left, header.gear_left];
+        let gaps: Vec<f32> = starts.iter().zip(ends).map(|(start, end)| start - end).collect();
+        assert_eq!(gaps, [8.0, 8.0, 4.0, 8.0, 4.0]);
     }
 
     #[test]

@@ -1,6 +1,7 @@
 mod paths;
 #[cfg(test)]
 mod tests;
+mod weather;
 
 use self::paths::Paint;
 use crate::gfx::{Canvas, Color, ImageData, Mask, Point};
@@ -30,8 +31,7 @@ pub enum Icon {
     Clock,
     Folder,
     Calendar,
-    Moon,
-    Cloud,
+    MoonStar,
     Bluetooth,
     CapsLock,
     Gear,
@@ -43,6 +43,18 @@ pub enum Icon {
     CircleCheck,
     Pin,
     Download,
+    CloudLightning,
+    Cloudy,
+    CloudRain,
+    CloudRainWind,
+    CloudSunRain,
+    CloudSnow,
+    CloudMoon,
+    CloudMoonRain,
+    CloudSun,
+    CloudFog,
+    /// Lucide "moon"; `MoonStar` is "moon-star".
+    Moon,
 }
 
 impl Icon {

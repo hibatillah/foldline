@@ -23,8 +23,11 @@ use crate::{
     log,
     page::{Page, RESTING_HEIGHT, Requests},
 };
+use access::AccessState;
+pub(super) use access::{AccessSource, AccountFile};
 use animation::{FrameTimer, Springs};
 use badge_pointer::BadgePointer;
+pub(super) use daily_check::DailyCheck;
 use header_row::HeaderMarks;
 use hiding::HidingState;
 use keyboard::KeyboardState;
@@ -37,8 +40,10 @@ use presences::ShownPresences;
 use resting_row::RestingRow;
 use row_motion::RowMotion;
 
+mod access;
 mod animation;
 mod badge_pointer;
+mod daily_check;
 mod header_row;
 mod hiding;
 mod input;
@@ -105,8 +110,17 @@ enum Source {
 
 struct ActivitySlot {
     activity: Box<dyn Activity>,
+    /// The user's own choice; a lock leaves it as it is.
     is_enabled: bool,
+    is_locked: bool,
     is_started: bool,
+}
+
+impl ActivitySlot {
+    /// A locked or switched-off activity keeps its listener but shows nothing.
+    fn is_showing(&self) -> bool {
+        self.is_enabled && !self.is_locked && self.is_started
+    }
 }
 
 pub(super) struct Notch {
@@ -126,6 +140,7 @@ pub(super) struct Notch {
     header_marks: HeaderMarks,
     resting_index: Option<usize>,
     expanded_index: Option<usize>,
+    /// May point at a locked page; kept so the user's page returns when access does.
     selected_page: Option<usize>,
     shown_page: Option<usize>,
     page_list: PageList,
@@ -148,6 +163,8 @@ pub(super) struct Notch {
     page_hotkeys: PageHotkeys,
     region_origin: Cell<(i32, i32)>,
     monitor: MonitorState,
+    access: AccessState,
+    daily_check: DailyCheck,
 }
 
 pub(super) struct NotchParts {
@@ -162,6 +179,8 @@ pub(super) struct NotchParts {
     pub ticks_per_second: i64,
     pub system_language: Language,
     pub monitor: MonitorState,
+    pub access_source: Box<dyn AccessSource>,
+    pub daily_check: DailyCheck,
 }
 
 impl Notch {
@@ -178,6 +197,8 @@ impl Notch {
             ticks_per_second,
             system_language,
             monitor,
+            access_source,
+            daily_check,
         } = parts;
         visibility::migrate(&mut settings);
         let activities = activities
@@ -185,7 +206,7 @@ impl Notch {
             .map(|activity| {
                 let is_enabled =
                     !activity.is_optional() || settings.get_bool(&activity_setting_key(activity.id()), true);
-                ActivitySlot { activity, is_enabled, is_started: false }
+                ActivitySlot { activity, is_enabled, is_locked: false, is_started: false }
             })
             .collect();
         let hiding = HidingState::read(&settings);
@@ -227,6 +248,8 @@ impl Notch {
             page_hotkeys: PageHotkeys::default(),
             region_origin: Cell::new((0, 0)),
             monitor,
+            access: AccessState::new(access_source, store::pause::now_unix()),
+            daily_check,
         }
     }
 
@@ -255,19 +278,18 @@ impl Notch {
             self.settings.get_string(PAGE_ORDER_SETTING),
             self.settings.get_string(PAGES_OFF_SETTING),
         );
+        self.page_list.set_locked(self.page_locks());
         for index in 0..self.pages.len() {
             self.with_page(index, |page, context| page.on_start(context));
             let is_enabled = self.page_list.is_enabled(index);
             self.with_page(index, |page, context| page.on_enabled_changed(is_enabled, context));
         }
-        for index in 0..self.activities.len() {
-            if self.activities[index].is_enabled {
-                self.start_activity(index);
-            }
-        }
-        volume_flyout::set_hidden(volume_flyout::wants_hidden(&self.settings));
-        notification_banners::set_hidden(notification_banners::wants_hidden(&self.settings));
+        self.lock_activities();
+        volume_flyout::set_hidden(volume_flyout::wants_hidden(&self.settings) && self.may_hide_flyout());
+        // Off also restores banners a crashed notch left off, so a lock at start still cleans up.
+        notification_banners::set_hidden(notification_banners::wants_hidden(&self.settings) && self.may_hide_banners());
         self.sync_location_tracking();
+        self.start_daily_check_if_due(store::pause::now_unix());
         self.arm_clock_timer();
         self.refresh_layout();
         for spring in self.layout_springs() {

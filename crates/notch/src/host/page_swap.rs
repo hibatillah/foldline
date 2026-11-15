@@ -216,7 +216,7 @@ mod tests {
 
     #[test]
     fn the_content_settles_just_after_the_pill_reaches_its_new_size() {
-        let arrival = size_spring_arrival(0.05);
+        let arrival = size_spring_arrival(0.03);
         let gap = PAGE_SWAP_SECONDS - arrival;
         assert!((0.0..=0.06).contains(&gap), "content ends {gap} s after the size ({arrival} s)");
     }

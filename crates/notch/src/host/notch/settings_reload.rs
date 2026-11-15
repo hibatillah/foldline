@@ -16,11 +16,15 @@ impl Notch {
         self.apply_stored_pause(store::pause::now_unix());
         let was_suppressed = self.is_suppressed();
         self.hiding.reload(&self.settings);
+        // The settings window posts this after it signs in or out, so account.txt is read again too.
+        self.reload_access();
         // While paused the popups belong to Windows; a resume sets them again from these keys.
         if !self.is_paused() {
-            volume_flyout::set_hidden(self.settings.get_bool(volume_flyout::SETTING_KEY, volume_flyout::is_hidden()));
+            let wants_flyout_hidden = self.settings.get_bool(volume_flyout::SETTING_KEY, volume_flyout::is_hidden());
+            volume_flyout::set_hidden(wants_flyout_hidden && self.may_hide_flyout());
             let hides_banners = notification_banners::is_hidden();
-            let wants_banners_hidden = self.settings.get_bool(notification_banners::SETTING_KEY, hides_banners);
+            let wants_banners_hidden =
+                self.settings.get_bool(notification_banners::SETTING_KEY, hides_banners) && self.may_hide_banners();
             // Unchanged stays put: switching off restores, which every unrelated settings change must not repeat.
             if wants_banners_hidden != hides_banners {
                 notification_banners::set_hidden(wants_banners_hidden);

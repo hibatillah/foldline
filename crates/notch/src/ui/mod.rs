@@ -20,7 +20,7 @@ pub use banner_buttons::{
 };
 pub use hover::HoverTarget;
 pub use hud::{LEVEL_WIDTH, draw_level, draw_message, message_width};
-pub use icon_button::{IconButton, draw_hover_wash};
+pub use icon_button::IconButton;
 pub use icons::Icon;
 pub use input::{KeyInput, PointerEvent};
 pub use outline::draw_dashed_outline;

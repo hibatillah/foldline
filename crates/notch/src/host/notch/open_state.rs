@@ -59,6 +59,7 @@ impl Notch {
             return;
         }
         self.open.is_open = is_open;
+        self.reevaluate_access_if_due(store::pause::now_unix());
         if !is_open {
             self.cancel_close();
         }

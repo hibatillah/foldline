@@ -144,7 +144,7 @@ impl ShalatPage {
 
     fn draw_badge(&self, canvas: &Canvas, area: Rect, opacity: f32, text: &str) {
         let icon_center = Point::new(area.left + BADGE_ICON_SIZE / 2.0, area.center_y());
-        Icon::Moon.draw(canvas, icon_center, BADGE_ICON_SIZE, MINT_GREEN, opacity);
+        Icon::MoonStar.draw(canvas, icon_center, BADGE_ICON_SIZE, MINT_GREEN, opacity);
         let text_area = Rect::new(area.left + BADGE_ICON_SIZE + BADGE_ICON_GAP, area.top, area.right, area.bottom);
         canvas.text(&MEDIUM_13, text, text_area, MINT_GREEN.faded(opacity));
     }
@@ -193,7 +193,7 @@ impl Page for ShalatPage {
     }
 
     fn header_status_width(&self) -> Option<f32> {
-        self.badge.as_ref().map(|_| Icon::Moon.size())
+        self.badge.as_ref().map(|_| Icon::MoonStar.size())
     }
 
     fn draw_header_status(&self, canvas: &Canvas, area: Rect, opacity: f32) {
@@ -201,7 +201,7 @@ impl Page for ShalatPage {
             return;
         }
         let center = Point::new(area.center_x(), area.center_y());
-        Icon::Moon.draw(canvas, center, Icon::Moon.size(), MINT_GREEN, opacity);
+        Icon::MoonStar.draw(canvas, center, Icon::MoonStar.size(), MINT_GREEN, opacity);
     }
 
     fn header_status_page(&self) -> Option<&'static str> {
@@ -233,7 +233,15 @@ impl Page for ShalatPage {
 
     fn draw_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         if self.alert.is_visible() {
-            ui::draw_message(canvas, area, opacity, Icon::Moon, MINT_GREEN, &self.alert_title, Some(&self.alert_value));
+            ui::draw_message(
+                canvas,
+                area,
+                opacity,
+                Icon::MoonStar,
+                MINT_GREEN,
+                &self.alert_title,
+                Some(&self.alert_value),
+            );
         } else if let Some(text) = &self.badge {
             self.draw_badge(canvas, area, opacity, text);
         }

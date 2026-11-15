@@ -47,12 +47,12 @@ fn two_screen_rig(mode: MonitorMode, second_scale: f32) -> Notch {
     let mut notch = rig(SampleOptions::default());
     notch.monitor.mode = mode;
     notch.monitor.current = Some(MAIN);
-    notch.monitor.placed = Some(placement(&main, 0));
+    notch.monitor.placed = Some(placement(&main));
     notch
 }
 
 fn second_placement(scale: f32) -> crate::host::monitor::Placement {
-    placement(&monitor(SECOND, 1920, scale), 0)
+    placement(&monitor(SECOND, 1920, scale))
 }
 
 #[test]

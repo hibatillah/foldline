@@ -32,8 +32,13 @@ impl MediaPage {
         matches!(self.info.lyrics, LyricsStatus::Found(_))
     }
 
+    /// The user wants lyrics and the account allows them.
+    pub(super) fn are_lyrics_on(&self) -> bool {
+        self.lyrics_enabled && self.is_lyrics_allowed
+    }
+
     pub(super) fn is_lyric_panel_visible(&self) -> bool {
-        self.lyrics_enabled && self.has_lyrics()
+        self.are_lyrics_on() && self.has_lyrics()
     }
 
     pub(super) fn is_lyric_mode(&self) -> bool {
@@ -42,7 +47,7 @@ impl MediaPage {
 
     pub(super) fn visible_lyric_lines(&self) -> Option<&[LyricLine]> {
         match &self.info.lyrics {
-            LyricsStatus::Found(lyrics) if self.lyrics_enabled && self.info.available => Some(&lyrics.lines),
+            LyricsStatus::Found(lyrics) if self.are_lyrics_on() && self.info.available => Some(&lyrics.lines),
             _ => None,
         }
     }

@@ -147,9 +147,12 @@ impl Notch {
             group: Run { widths: &widths, gaps: &gaps },
             minimum_width: clock::RESTING_WIDTH,
         });
-        let lead_width = self.resting_index.map_or(0.0, |index| self.pages[index].resting_lead_width());
+        let resting_page = self.resting_index.map(|index| &self.pages[index]);
+        let lead_width = resting_page.map_or(0.0, |page| page.resting_lead_width());
+        let lead_gap = resting_page.and_then(|page| page.resting_lead_gap());
         let claimed_widths: Vec<f32> = self.resting_row.claimed_group.iter().map(|&(_, width)| width).collect();
-        self.resting_row.claim = ClaimedRow::new(lead_width, self.resting_row.dots_width(), &claimed_widths);
+        self.resting_row.claim =
+            ClaimedRow::new(lead_width, self.resting_row.dots_width(), &claimed_widths).with_lead_gap(lead_gap);
     }
 
     /// The rect a badge draws into: the place its spring holds, measured from the pill's right edge.

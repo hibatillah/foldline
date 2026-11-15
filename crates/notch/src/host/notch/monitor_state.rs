@@ -25,8 +25,6 @@ pub(in crate::host) struct MonitorState {
     pub current: Option<MonitorId>,
     /// The placement last applied, so an unchanged one is not applied again.
     pub placed: Option<Placement>,
-    /// `notch.top`, measured from the top edge of the monitor.
-    pub top_offset: i32,
     pub source: MonitorSource,
     pub(super) waiting: Option<(MonitorId, Placement)>,
 }
@@ -37,9 +35,8 @@ impl MonitorState {
         chosen_id: Option<String>,
         current: Option<MonitorId>,
         placed: Option<Placement>,
-        top_offset: i32,
     ) -> Self {
-        Self { mode, chosen_id, current, placed, top_offset, source: MonitorSource::WINDOWS, waiting: None }
+        Self { mode, chosen_id, current, placed, source: MonitorSource::WINDOWS, waiting: None }
     }
 
     pub(super) fn is_listed(monitors: &[MonitorInfo], id: Option<MonitorId>) -> bool {

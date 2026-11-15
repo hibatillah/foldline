@@ -47,7 +47,7 @@ pub struct SampleOptions {
     /// The shalat page shows its collapsed mark (`1`) or its prayer-time message (`2`); `0` shows neither.
     /// `3` is the open page under ten minutes before Asr and `4` the open page after Isha.
     pub shalat_mark: u8,
-    /// The weather page shows its days (`1`), its offline message (`2`), its no-location message (`4`), the rain banner (`3`), the rain countdown badge (`5`) or its hours (`0`).
+    /// The weather page shows its days (`1`), its offline message (`2`), its no-location message (`4`), the rain banner (`3` thunder, `6` snow, `8` showers), the rain countdown badge (`5` rain, `7` snow, `9` showers) or its hours (`0`).
     pub weather: u8,
     /// The devices page shows scenario `n` of the design (see `devices/sample.rs`); `0` is five devices.
     pub devices: u8,
@@ -88,8 +88,12 @@ pub fn samples(fonts: &crate::gfx::Fonts, directory: &std::path::Path, options: 
             1 => weather::WeatherPage::sample(true),
             2 => weather::WeatherPage::sample_offline(fonts),
             4 => weather::WeatherPage::sample_no_location(fonts),
-            5 => weather::WeatherPage::sample_rain_badge(fonts),
-            3 => weather::WeatherPage::sample_alert(fonts),
+            5 => weather::WeatherPage::sample_rain_badge(fonts, "rain"),
+            7 => weather::WeatherPage::sample_rain_badge(fonts, "snow"),
+            9 => weather::WeatherPage::sample_rain_badge(fonts, "rainshowers_day"),
+            3 => weather::WeatherPage::sample_alert(fonts, "heavyrainandthunder"),
+            6 => weather::WeatherPage::sample_alert(fonts, "snow"),
+            8 => weather::WeatherPage::sample_alert(fonts, "rainshowers_day"),
             _ => weather::WeatherPage::sample(false),
         }),
         Box::new(devices::DevicesPage::sample(options.devices)),

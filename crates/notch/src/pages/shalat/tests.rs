@@ -89,10 +89,10 @@ fn the_prayer_header_icon_shows_only_while_the_badge_does() {
     let fonts = crate::gfx::Fonts::new(1.0).unwrap();
     assert_eq!(ShalatPage::sample().header_status_width(), None);
     let page = ShalatPage::sample_badge(&fonts);
-    assert_eq!(page.header_status_width(), Some(Icon::Moon.size()));
+    assert_eq!(page.header_status_width(), Some(Icon::MoonStar.size()));
     let Some(Presence::Badge { width }) = page.presence() else { panic!("the sample has a badge") };
     assert!(page.short_presence_width().unwrap() < width);
-    assert!(width > Icon::Moon.size() + BADGE_ICON_GAP, "the badge holds the icon and the text");
+    assert!(width > Icon::MoonStar.size() + BADGE_ICON_GAP, "the badge holds the icon and the text");
 }
 
 #[test]

@@ -5,13 +5,14 @@ use crate::i18n::tr;
 use salah::{DateTime, Utc};
 
 use super::badge::{self, Badge};
+use super::symbol::Symbol;
 use crate::ui::palette::{CARD_APP_NAME_TEXT, CARD_BODY_TEXT};
 use crate::ui::type_styles::{MEDIUM_14, REGULAR_13, REGULAR_14};
 use crate::{
     activity::{FLASH_TIMER, Flash, Presence},
     gfx::{Canvas, Color, Point, Rect, clamp_lines},
     page::{Context, PointerEvent, TimerId},
-    ui::{BANNER_BUTTONS_HEIGHT, BannerButton, BannerButtons, BannerLabels, Stroke, draw_strokes},
+    ui::{BANNER_BUTTONS_HEIGHT, BannerButton, BannerButtons, BannerLabels, Icon},
 };
 
 pub(super) const BADGE_TIMER: TimerId = TimerId(3);
@@ -35,12 +36,11 @@ const BODY_LINES: usize = 2;
 const TITLE_GAP: f32 = 8.0;
 
 const TILE: Color = Color::rgb(0.11, 0.494, 0.839);
-const RAIN_CLOUD: &str = "M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2";
-const RAIN_DROPS: &str = "M16 14v6M8 14v6M12 16v6";
 
 /// What the alert shows for the coming rain.
 pub(super) struct Rain {
     pub(super) at: DateTime<Utc>,
+    pub(super) symbol: Symbol,
     pub(super) title: String,
     pub(super) body: String,
 }
@@ -51,6 +51,7 @@ pub(super) struct Alert {
     title: String,
     lines: Vec<String>,
     buttons: BannerButtons,
+    banner_symbol: Symbol,
     badge: Option<Badge>,
 }
 
@@ -86,26 +87,28 @@ impl Alert {
             title: String::new(),
             lines: Vec::new(),
             buttons: BannerButtons::default(),
+            banner_symbol: Symbol::Rain,
             badge: None,
         }
     }
 
     #[cfg(test)]
-    pub(super) fn sample_banner(fonts: &crate::gfx::Fonts, rain_at: DateTime<Utc>) -> Self {
+    pub(super) fn sample_banner(fonts: &crate::gfx::Fonts, symbol: Symbol, rain_at: DateTime<Utc>) -> Self {
         let mut alert = Self::new();
+        alert.banner_symbol = symbol;
         alert.title = "Rain in 30 min".to_owned();
-        let body = body_text("Thunderstorms", "17:00", "Pekanbaru, ID");
+        let body = body_text(&symbol.label(), "17:00", "Pekanbaru, ID");
         alert.lines = clamp_lines(&body, BODY_LINES, text_width(), |text| fonts.measure(&REGULAR_13, text));
         alert.buttons = translated_buttons(fonts);
-        alert.badge = Some(Badge::new(fonts, rain_at, super::RAIN_ALERT_LEAD_MINUTES));
+        alert.badge = Some(Badge::new(fonts, symbol, rain_at, super::RAIN_ALERT_LEAD_MINUTES));
         alert.flash = Flash::visible();
         alert
     }
 
     /// The state after the banner went away and only the badge is left.
     #[cfg(test)]
-    pub(super) fn sample_badge(fonts: &crate::gfx::Fonts, rain_at: DateTime<Utc>) -> Self {
-        let mut alert = Self::sample_banner(fonts, rain_at);
+    pub(super) fn sample_badge(fonts: &crate::gfx::Fonts, symbol: Symbol, rain_at: DateTime<Utc>) -> Self {
+        let mut alert = Self::sample_banner(fonts, symbol, rain_at);
         alert.flash = Flash::default();
         alert
     }
@@ -125,8 +128,9 @@ impl Alert {
         let fonts = context.fonts();
         self.lines = clamp_lines(&rain.body, BODY_LINES, text_width(), |text| fonts.measure(&REGULAR_13, text));
         self.buttons = translated_buttons(fonts);
-        self.badge = Some(Badge::new(fonts, rain.at, super::RAIN_ALERT_LEAD_MINUTES));
+        self.badge = Some(Badge::new(fonts, rain.symbol, rain.at, super::RAIN_ALERT_LEAD_MINUTES));
         self.title = rain.title;
+        self.banner_symbol = rain.symbol;
         self.is_pointer_over = false;
         self.flash.show(context, BANNER_MILLISECONDS);
         context.set_timer(BADGE_TIMER, badge::next_tick_milliseconds(rain.at, now));
@@ -154,6 +158,11 @@ impl Alert {
             return Some(Presence::Banner { width: WIDTH, height: banner_height(self.lines.len()) + buttons });
         }
         self.live_badge(now).map(|badge| Presence::Badge { width: badge.width })
+    }
+
+    /// The icon of the coming weather while the badge counts down.
+    pub(super) fn badge_icon(&self, now: DateTime<Utc>) -> Option<Icon> {
+        self.live_badge(now).map(|badge| badge.symbol.icon())
     }
 
     pub(super) fn has_badge(&self, now: DateTime<Utc>) -> bool {
@@ -258,8 +267,13 @@ impl Alert {
             area.top + TOP_PADDING + TILE_SIZE,
         );
         canvas.fill_rounded_rect(tile, TILE_RADIUS, TILE.faded(opacity));
-        let layers = [Stroke::new(RAIN_CLOUD, Color::WHITE), Stroke::new(RAIN_DROPS, Color::WHITE)];
-        draw_strokes(canvas, &layers, Point::new(tile.center_x(), tile.center_y()), TILE_ICON_SIZE, 2.0, opacity);
+        self.banner_symbol.icon().draw(
+            canvas,
+            Point::new(tile.center_x(), tile.center_y()),
+            TILE_ICON_SIZE,
+            Color::WHITE,
+            opacity,
+        );
         let left = tile.right + TILE_GAP;
         let right = area.right - PADDING;
         let heading = Rect::new(left, tile.top, right, tile.top + HEADING_HEIGHT);
@@ -322,8 +336,8 @@ mod tests {
     #[test]
     fn the_pointer_on_the_banner_adds_room_for_the_buttons_under_the_same_lines() {
         let fonts = Fonts::new(1.0).unwrap();
-        let calm = Alert::sample_banner(&fonts, rain_at()).presence(before(30));
-        let pointed = Alert::sample_banner(&fonts, rain_at()).pointed_at().presence(before(30));
+        let calm = Alert::sample_banner(&fonts, Symbol::Thunderstorm, rain_at()).presence(before(30));
+        let pointed = Alert::sample_banner(&fonts, Symbol::Thunderstorm, rain_at()).pointed_at().presence(before(30));
         let (Some(Presence::Banner { width, height: calm }), Some(Presence::Banner { height, .. })) = (calm, pointed)
         else {
             panic!("both are banners")
@@ -335,7 +349,7 @@ mod tests {
     #[test]
     fn after_the_banner_the_countdown_stays_as_a_badge_until_the_rain_starts() {
         let fonts = Fonts::new(1.0).unwrap();
-        let alert = Alert::sample_badge(&fonts, rain_at());
+        let alert = Alert::sample_badge(&fonts, Symbol::Thunderstorm, rain_at());
         assert!(matches!(alert.presence(before(25)), Some(Presence::Badge { .. })));
         assert_eq!(alert.countdown_seconds(before(25)), Some(25 * 60));
         assert_eq!(alert.presence(rain_at()), None);
@@ -346,11 +360,11 @@ mod tests {
     fn a_press_on_the_badge_opens_the_notch_but_a_move_or_the_banner_does_not() {
         let fonts = Fonts::new(1.0).unwrap();
         let press = PointerEvent::Pressed(Point::new(1.0, 1.0));
-        let badge = Alert::sample_badge(&fonts, rain_at());
+        let badge = Alert::sample_badge(&fonts, Symbol::Thunderstorm, rain_at());
         assert!(badge.press_opens(press, before(25)));
         assert!(!badge.press_opens(PointerEvent::Moved(Point::new(1.0, 1.0)), before(25)));
         assert!(!badge.press_opens(press, rain_at()), "the badge is gone once the rain starts");
-        let banner = Alert::sample_banner(&fonts, rain_at());
+        let banner = Alert::sample_banner(&fonts, Symbol::Thunderstorm, rain_at());
         assert!(!banner.press_opens(press, before(25)), "the banner has its own buttons");
         assert!(!Alert::new().press_opens(press, before(25)));
     }
@@ -376,11 +390,29 @@ mod tests {
     #[test]
     fn a_language_change_measures_the_rain_badge_again() {
         let fonts = crate::gfx::Fonts::new(1.0).unwrap();
-        let mut alert = Alert::sample_banner(&fonts, rain_at());
+        let mut alert = Alert::sample_banner(&fonts, Symbol::Thunderstorm, rain_at());
         let english = alert.badge.as_ref().unwrap().width;
         store::language::with_override(store::language::Language::Indonesian, || {
             alert.remeasure_badge(&fonts);
             assert!(alert.badge.as_ref().unwrap().width > english);
         });
+    }
+}
+
+#[cfg(test)]
+mod icon_tests {
+    use super::*;
+    use crate::gfx::Fonts;
+    use crate::ui::Icon;
+
+    #[test]
+    fn the_alert_shows_the_icon_of_the_coming_weather_and_none_after_it_starts() {
+        let fonts = Fonts::new(1.0).unwrap();
+        let rain_at = DateTime::parse_from_rfc3339("2026-11-05T10:00:00Z").unwrap().with_timezone(&Utc);
+        let before = rain_at - salah::Duration::minutes(25);
+        let alert = Alert::sample_badge(&fonts, Symbol::from_code("rainshowers_day"), rain_at);
+        assert!(alert.badge_icon(before) == Some(Icon::CloudSunRain));
+        assert!(alert.badge_icon(rain_at).is_none());
+        assert!(Alert::new().badge_icon(before).is_none());
     }
 }

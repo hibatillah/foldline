@@ -1,7 +1,7 @@
 use super::{paths::Paint, *};
 use crate::gfx::Path;
 
-const ALL: [Icon; 31] = [
+const ALL: [Icon; 41] = [
     Icon::Lyrics,
     Icon::Previous,
     Icon::Play,
@@ -20,8 +20,7 @@ const ALL: [Icon; 31] = [
     Icon::Clock,
     Icon::Folder,
     Icon::Calendar,
-    Icon::Moon,
-    Icon::Cloud,
+    Icon::MoonStar,
     Icon::Bluetooth,
     Icon::CapsLock,
     Icon::Gear,
@@ -33,6 +32,32 @@ const ALL: [Icon; 31] = [
     Icon::CircleCheck,
     Icon::Pin,
     Icon::Download,
+    Icon::CloudLightning,
+    Icon::Cloudy,
+    Icon::CloudRain,
+    Icon::CloudRainWind,
+    Icon::CloudSunRain,
+    Icon::CloudSnow,
+    Icon::CloudMoon,
+    Icon::CloudMoonRain,
+    Icon::CloudSun,
+    Icon::CloudFog,
+    Icon::Moon,
+];
+
+const WEATHER: [Icon; 12] = [
+    Icon::CloudLightning,
+    Icon::Cloudy,
+    Icon::CloudRain,
+    Icon::CloudRainWind,
+    Icon::CloudSunRain,
+    Icon::CloudSnow,
+    Icon::CloudMoon,
+    Icon::CloudMoonRain,
+    Icon::CloudSun,
+    Icon::CloudFog,
+    Icon::Sun,
+    Icon::Moon,
 ];
 
 #[test]
@@ -87,7 +112,7 @@ fn the_gear_is_a_pointy_top_hexagon_around_a_ring_drawn_as_a_line() {
 
 #[test]
 fn the_moon_is_a_crescent_with_a_plus_shaped_star_at_its_top_right() {
-    let (path, paint) = Icon::Moon.path(Point::default(), 24.0);
+    let (path, paint) = Icon::MoonStar.path(Point::default(), 24.0);
     assert_eq!(paint, Paint::Line);
     let figures = path.flatten();
     assert_eq!(figures.len(), 3, "the crescent and the two bars of the star");
@@ -165,4 +190,60 @@ fn the_download_icon_rasterizes_to_visible_pixels_at_18_pixels() {
     let image = Icon::Download.render(18.0, 18, Color::WHITE);
     assert_eq!((image.width, image.height), (18, 18));
     assert!(image.bgra_premultiplied.chunks(4).any(|pixel| pixel[3] > 0), "the icon leaves some pixel covered");
+}
+
+#[test]
+fn a_weather_icon_has_one_figure_per_stroke_of_its_path_data() {
+    for icon in WEATHER {
+        let strokes = weather::strokes(icon).expect("a weather icon has path data");
+        let figures = icon.path(Point::default(), 24.0).0.flatten();
+        assert_eq!(figures.len(), strokes.len(), "{strokes:?}");
+        assert!(figures.iter().all(|figure| figure.points.len() >= 2), "every stroke has a length");
+    }
+}
+
+#[test]
+fn a_cloud_with_a_sun_or_moon_behind_it_is_read_down_to_its_bottom_edge() {
+    let lowest = |icon: Icon| {
+        let figures = icon.path(Point::default(), 24.0).0.flatten();
+        figures.iter().flat_map(|figure| figure.points.iter()).map(|point| point.y).fold(f32::MIN, f32::max)
+    };
+    for icon in [Icon::CloudSun, Icon::CloudMoon, Icon::CloudSunRain, Icon::CloudMoonRain] {
+        assert!(lowest(icon) >= 9.9, "icon {} reaches the bottom of the grid", icon as u8);
+    }
+}
+
+#[test]
+fn the_sun_is_a_disc_with_eight_rays_and_the_plain_moon_is_one_closed_crescent() {
+    let sun = Icon::Sun.path(Point::default(), 24.0).0.flatten();
+    assert_eq!(sun.len(), 9, "the disc and eight rays");
+    let disc_radii = sun[0].points.iter().map(|point| point.x.hypot(point.y));
+    assert!(disc_radii.into_iter().all(|radius| (radius - 4.0).abs() < 0.05));
+    let moon = Icon::Moon.path(Point::default(), 24.0).0.flatten();
+    assert_eq!((moon.len(), moon[0].is_closed), (1, true));
+}
+
+#[test]
+fn snow_flakes_are_dots_the_stroke_turns_round() {
+    let figures = Icon::CloudSnow.path(Point::default(), 24.0).0.flatten();
+    let dots = figures.iter().filter(|figure| extent_of(&figure.points) < 0.02).count();
+    assert_eq!(dots, 6);
+}
+
+fn extent_of(points: &[Point]) -> f32 {
+    let (low, high) =
+        points.iter().fold((f32::MAX, f32::MIN), |(low, high), point| (low.min(point.x), high.max(point.x)));
+    high - low
+}
+
+#[test]
+fn a_weather_icon_rasterizes_to_visible_pixels_at_18_pixels() {
+    for icon in WEATHER {
+        let image = icon.render(18.0, 18, Color::WHITE);
+        assert!(
+            image.bgra_premultiplied.chunks(4).any(|pixel| pixel[3] > 0),
+            "icon {} leaves some pixel covered",
+            icon as u8
+        );
+    }
 }

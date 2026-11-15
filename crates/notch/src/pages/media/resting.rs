@@ -8,15 +8,17 @@ use crate::{
 pub const ARTWORK_SIZE: f32 = 20.0;
 const ARTWORK_RADIUS: f32 = 5.0;
 const LYRIC_SLACK: f32 = 8.0;
-/// Smallest collapsed pill while lyrics are on, so a short line or a rest in the music does not shrink it.
-const MIN_LYRIC_WIDTH: f32 = 240.0;
+/// Room in DIP between the artwork and the lyric line, asked of the host through `Page::resting_lead_gap`.
+pub const LYRIC_LEAD_GAP: f32 = 12.0;
+/// Smallest line area while lyrics are on, so a short line or a rest in the music does not shrink the pill.
+const MIN_LYRIC_WIDTH: f32 = 128.0;
 const NOTE: &str = "\u{266A}";
-const MAX_LYRIC_WIDTH: f32 = 520.0;
+const MAX_LYRIC_WIDTH: f32 = 500.0;
 const LYRIC_TRAVEL: f32 = 6.0;
 
-/// Content width of the claimed pill: the artwork and the line; the host adds its own gaps and edges.
+/// Width of the line area of the claimed pill; the host adds the artwork, its gaps and edges.
 pub fn width(lyric_width: f32) -> f32 {
-    (ARTWORK_SIZE + lyric_width + LYRIC_SLACK).clamp(MIN_LYRIC_WIDTH, MAX_LYRIC_WIDTH)
+    (lyric_width + LYRIC_SLACK).clamp(MIN_LYRIC_WIDTH, MAX_LYRIC_WIDTH)
 }
 
 /// Where the lyric line starts: after the artwork and the gap the host reserved.
@@ -61,6 +63,13 @@ mod tests {
         assert!(width(300.0) > width(150.0));
         assert_eq!(width(5000.0), MAX_LYRIC_WIDTH);
         assert_eq!(width(1.0), MIN_LYRIC_WIDTH);
+    }
+
+    #[test]
+    fn a_short_lyric_line_keeps_a_line_area_of_128_units_and_adds_no_artwork_width() {
+        assert_eq!(width(1.0), 128.0);
+        assert_eq!(width(0.0), 128.0);
+        assert_eq!(width(200.0), 200.0 + LYRIC_SLACK);
     }
 
     #[test]

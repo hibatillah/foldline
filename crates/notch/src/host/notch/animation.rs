@@ -233,17 +233,17 @@ mod tests {
         (highest - 1.0, settled_at.expect("the spring settles"))
     }
     #[test]
-    fn the_size_spring_overshoots_about_ten_percent_and_settles_so_the_frame_timer_can_stop() {
+    fn the_size_spring_overshoots_about_five_percent_and_settles_so_the_frame_timer_can_stop() {
         let (overshoot, seconds_to_settle) = measure(size_spring(0.0));
-        assert!((0.08..0.12).contains(&overshoot), "overshoot {overshoot}");
+        assert!((0.04..0.065).contains(&overshoot), "overshoot {overshoot}");
         assert!(seconds_to_settle < 1.6, "settled after {seconds_to_settle}");
     }
     #[test]
-    fn the_size_spring_settles_one_and_a_third_to_one_and_a_half_times_slower_than_the_old_one() {
+    fn the_size_spring_settles_one_and_a_tenth_to_one_and_a_third_times_slower_than_the_stiff_420_spring() {
         let (_, old_seconds) = measure(Spring::new(0.0, 420.0, 21.0));
         let (_, new_seconds) = measure(size_spring(0.0));
         let ratio = new_seconds / old_seconds;
-        assert!((1.3..1.5).contains(&ratio), "ratio {ratio} ({old_seconds} -> {new_seconds})");
+        assert!((1.1..1.3).contains(&ratio), "ratio {ratio} ({old_seconds} -> {new_seconds})");
     }
     #[test]
     fn a_size_move_starts_gently_instead_of_at_full_speed() {

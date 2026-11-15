@@ -1,4 +1,4 @@
-use super::{WeatherPage, alert::Alert, forecast::Forecast};
+use super::{WeatherPage, alert::Alert, forecast::Forecast, symbol::Symbol};
 use crate::gfx::Fonts;
 use places::Location;
 use salah::{DateTime, Duration, Utc};
@@ -7,7 +7,7 @@ impl WeatherPage {
     #[cfg(test)]
     pub fn sample(shows_days: bool) -> Self {
         let now = DateTime::parse_from_rfc3339("2026-11-05T09:05:00Z").unwrap().with_timezone(&Utc);
-        let skies = ["partlycloudy_day", "partlycloudy_day", "rain", "heavyrainandthunder", "rain", "cloudy"];
+        let skies = ["partlycloudy_day", "partlycloudy_day", "rain", "heavyrainandthunder", "snow", "cloudy"];
         let hours: Vec<String> = (0..24)
             .map(|offset| {
                 let (code, rain) = if (2..5).contains(&offset) { (skies[offset % 6], 1.4) } else { (skies[offset % 2], 0.0) };
@@ -33,17 +33,17 @@ impl WeatherPage {
     }
 
     #[cfg(test)]
-    pub fn sample_alert(fonts: &Fonts) -> Self {
+    pub fn sample_alert(fonts: &Fonts, code: &str) -> Self {
         let mut page = Self::sample(false);
-        page.alert = Alert::sample_banner(fonts, page.sample_rain_time());
+        page.alert = Alert::sample_banner(fonts, Symbol::from_code(code), page.sample_rain_time());
         page
     }
 
     /// The banner is gone and the countdown is in the pill.
     #[cfg(test)]
-    pub fn sample_rain_badge(fonts: &Fonts) -> Self {
+    pub fn sample_rain_badge(fonts: &Fonts, code: &str) -> Self {
         let mut page = Self::sample(false);
-        page.alert = Alert::sample_badge(fonts, page.sample_rain_time());
+        page.alert = Alert::sample_badge(fonts, Symbol::from_code(code), page.sample_rain_time());
         page
     }
 

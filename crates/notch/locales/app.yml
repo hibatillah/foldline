@@ -605,3 +605,6 @@ downloads.open:
 downloads.show_in_folder:
   en: "Show in folder"
   id: "Tampilkan di folder"
+account.signed_out_elsewhere:
+  en: "Signed out: this account signed in on another PC"
+  id: "Keluar: akun ini masuk di PC lain"

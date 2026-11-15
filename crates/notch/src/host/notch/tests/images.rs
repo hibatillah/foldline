@@ -129,7 +129,7 @@ fn snapshots_of_the_devices_page_states() {
 #[test]
 #[ignore = "writes images to target/snapshots; run on purpose"]
 fn snapshots_of_the_collapsed_pill() {
-    let scenarios: [(&str, SampleOptions); 11] = [
+    let scenarios: [(&str, SampleOptions); 13] = [
         ("resting-idle", SampleOptions::default()),
         ("resting-idle-with-timer", SampleOptions { timer: true, ..SampleOptions::default() }),
         ("resting-idle-with-calendar", SampleOptions { calendar: true, ..SampleOptions::default() }),
@@ -159,6 +159,8 @@ fn snapshots_of_the_collapsed_pill() {
         ("resting-shalat-mark", SampleOptions { shalat_mark: 1, ..SampleOptions::default() }),
         ("resting-shalat-message", SampleOptions { shalat_mark: 2, ..SampleOptions::default() }),
         ("resting-weather-rain-badge", SampleOptions { weather: 5, ..SampleOptions::default() }),
+        ("resting-weather-snow-badge", SampleOptions { weather: 7, ..SampleOptions::default() }),
+        ("resting-weather-showers-badge", SampleOptions { weather: 9, ..SampleOptions::default() }),
     ];
     for (name, options) in scenarios {
         let mut notch = rig(options);
@@ -305,6 +307,36 @@ fn snapshots_of_the_short_lived_messages() {
         let width = ui::message_width(fonts, message, value);
         pill(&notch, name, width, |canvas, area| ui::draw_message(canvas, area, 1.0, icon, color, message, value));
     }
+}
+
+#[test]
+#[ignore = "writes images to target/snapshots; run on purpose"]
+fn snapshots_of_the_weather_icons() {
+    let notch = rig(SampleOptions::default());
+    let icons = [
+        Icon::Sun,
+        Icon::Moon,
+        Icon::Cloudy,
+        Icon::CloudSun,
+        Icon::CloudMoon,
+        Icon::CloudRain,
+        Icon::CloudSunRain,
+        Icon::CloudMoonRain,
+        Icon::CloudRainWind,
+        Icon::CloudSnow,
+        Icon::CloudFog,
+        Icon::CloudLightning,
+    ];
+    const SPACING: f32 = 44.0;
+    let width = SPACING * icons.len() as f32 + 20.0;
+    pill(&notch, "weather-icons", width, |canvas, bounds| {
+        canvas.in_units(Point::new(bounds.left, bounds.top), |canvas| {
+            for (index, icon) in icons.into_iter().enumerate() {
+                let center = Point::new(30.0 + SPACING * index as f32, 20.0);
+                icon.draw(canvas, center, 24.0, Color::WHITE, 1.0);
+            }
+        });
+    });
 }
 
 #[test]

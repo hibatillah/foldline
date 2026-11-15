@@ -9,13 +9,20 @@ use windows::{
     core::GUID,
 };
 
+use account::access::Access;
+
 use crate::{
     activity::{Presence, SystemMessage},
     gfx::{Canvas, Fonts, ImageBrush, ImageData, Point, Rect, Size, Surface},
     host::Settings,
 };
 
+mod timer_keys;
+
 pub use crate::ui::{KeyInput, PointerEvent};
+#[cfg(test)]
+pub(crate) use timer_keys::timer_key;
+pub(crate) use timer_keys::{owned_timer_key, split_owned_timer_key, split_timer_key};
 
 /// Device-independent pixels; resting content is centered within this height.
 pub const RESTING_HEIGHT: f32 = 33.0;
@@ -66,7 +73,8 @@ pub struct Frame {
     pub expansion: f32,
     /// The content size in device-independent pixels; visible pages retain their own width during navigation.
     pub expanded: Size,
-    /// Width in DIP the host keeps free after `Page::resting_lead_width` while the page claims the pill.
+    /// Width in DIP the host keeps free after `Page::resting_lead_width` while the page claims the pill:
+    /// `Page::resting_lead_gap`, or 24.
     pub lead_gap: f32,
 }
 
@@ -162,6 +170,9 @@ pub trait Page {
     /// Called after another program changed settings.txt and the host re-read it: re-read this page's keys here.
     fn on_settings_changed(&mut self, _context: &mut Context) {}
 
+    /// What the account allows changed: ask `Context::allows` again for the page's own sub-features.
+    fn on_access_changed(&mut self, _context: &mut Context) {}
+
     /// The language changed, or the notch moved to a monitor of another scale: rebuild any cached text. Called once per change, after `on_settings_changed`.
     fn on_language_changed(&mut self, _context: &mut Context) {}
 
@@ -173,6 +184,12 @@ pub trait Page {
     /// Width in DIP of what the claimed pill draws at its left end; the host leaves `Frame::lead_gap` after it.
     fn resting_lead_width(&self) -> f32 {
         0.0
+    }
+
+    /// Room in DIP the host keeps between the lead and the rest of the claimed pill, passed as `Frame::lead_gap`;
+    /// `None` keeps the host's 24.
+    fn resting_lead_gap(&self) -> Option<f32> {
+        None
     }
 
     /// Draws what `presence` asked for into `area` (units, starting at zero), faded by `opacity`.
@@ -260,14 +277,24 @@ pub struct Context<'a> {
     surface: &'a Surface,
     fonts: &'a Fonts,
     requests: &'a mut Requests,
+    /// The page's id, or `"activity"` for an activity: the catalog resource `allows` asks about.
+    resource: &'a str,
+    access: &'a Access,
     /// Persistent settings shared by all pages and activities; prefix keys with the page or activity id.
     pub settings: &'a mut Settings,
+}
+
+/// Where a `Context` belongs and what the account allows it.
+pub(crate) struct Owner<'a> {
+    pub index: usize,
+    pub resource: &'a str,
+    pub access: &'a Access,
 }
 
 impl<'a> Context<'a> {
     pub(crate) fn new(
         window: HWND,
-        page_index: usize,
+        page: Owner<'a>,
         surface: &'a Surface,
         fonts: &'a Fonts,
         requests: &'a mut Requests,
@@ -275,19 +302,21 @@ impl<'a> Context<'a> {
     ) -> Self {
         Self {
             window,
-            owner_index: page_index,
+            owner_index: page.index,
             timer_base: PAGE_TIMER_BASE,
             notify_message: WM_PAGE_NOTIFY,
             surface,
             fonts,
             requests,
+            resource: page.resource,
+            access: page.access,
             settings,
         }
     }
 
     pub(crate) fn for_activity(
         window: HWND,
-        activity_index: usize,
+        activity: Owner<'a>,
         surface: &'a Surface,
         fonts: &'a Fonts,
         requests: &'a mut Requests,
@@ -295,14 +324,21 @@ impl<'a> Context<'a> {
     ) -> Self {
         Self {
             window,
-            owner_index: activity_index,
+            owner_index: activity.index,
             timer_base: crate::activity::ACTIVITY_TIMER_BASE,
             notify_message: crate::activity::WM_ACTIVITY_NOTIFY,
             surface,
             fonts,
             requests,
+            resource: activity.resource,
+            access: activity.access,
             settings,
         }
+    }
+
+    /// Whether the account allows `action` (`"lyrics"`) of this page; ask again in `Page::on_access_changed`.
+    pub fn allows(&self, action: &str) -> bool {
+        self.access.allows(self.resource, action)
     }
 
     pub fn fonts(&self) -> &Fonts {
@@ -388,28 +424,6 @@ impl<'a> Context<'a> {
     }
 }
 
-#[cfg(test)]
-pub(crate) fn timer_key(page_index: usize, timer: TimerId) -> usize {
-    owned_timer_key(PAGE_TIMER_BASE, page_index, timer)
-}
-
-pub(crate) fn owned_timer_key(timer_base: usize, owner_index: usize, timer: TimerId) -> usize {
-    debug_assert!(usize::from(timer.0) < TIMERS_PER_PAGE, "timer ids must be below {TIMERS_PER_PAGE}");
-    timer_base + owner_index * TIMERS_PER_PAGE + usize::from(timer.0)
-}
-
-pub(crate) fn split_timer_key(key: usize) -> Option<(usize, TimerId)> {
-    split_owned_timer_key(PAGE_TIMER_BASE, PAGE_TIMER_LIMIT, key)
-}
-
-pub(crate) fn split_owned_timer_key(timer_base: usize, limit: usize, key: usize) -> Option<(usize, TimerId)> {
-    if key >= limit {
-        return None;
-    }
-    let offset = key.checked_sub(timer_base)?;
-    Some((offset / TIMERS_PER_PAGE, TimerId((offset % TIMERS_PER_PAGE) as u8)))
-}
-
 /// Wakes a page or activity from any thread. Cheap to clone; keep one in the background worker.
 #[derive(Clone, Copy, Debug)]
 pub struct Notifier {
@@ -420,12 +434,29 @@ pub struct Notifier {
 }
 
 impl Notifier {
+    /// Wakes the host itself with its own `message`, for work no page or activity owns.
+    pub(crate) fn for_host(window: HWND, message: u32) -> Self {
+        Self { window_address: window.0 as isize, owner_index: 0, message }
+    }
+
     pub fn notify(&self) {
         let window = HWND(self.window_address as *mut _);
         unsafe {
             let _ = PostMessageW(Some(window), self.message, WPARAM(self.owner_index), LPARAM(0));
         }
     }
+}
+
+/// Runs `hook` with a `Context` for the page `resource` under `access`, on a window-less surface and empty settings.
+#[cfg(test)]
+pub(crate) fn with_test_context<R>(resource: &str, access: &Access, hook: impl FnOnce(&mut Context) -> R) -> R {
+    let surface = Surface::new(40, 20).unwrap();
+    let fonts = Fonts::new(1.0).unwrap();
+    let mut requests = Requests::default();
+    let mut settings = Settings::at(None);
+    let owner = Owner { index: 0, resource, access };
+    let mut context = Context::new(HWND::default(), owner, &surface, &fonts, &mut requests, &mut settings);
+    hook(&mut context)
 }
 
 #[cfg(test)]
@@ -445,30 +476,5 @@ mod tests {
         assert!(!frame(0.79).is_open());
         assert!(frame(0.8).is_open());
         assert!(frame(1.05).is_open());
-    }
-
-    #[test]
-    fn timer_keys_round_trip_to_page_and_timer() {
-        for (page, timer) in [(0, 0), (0, 15), (1, 0), (3, 7)] {
-            let key = timer_key(page, TimerId(timer));
-            assert_eq!(split_timer_key(key), Some((page, TimerId(timer))));
-        }
-    }
-
-    #[test]
-    fn timers_of_different_pages_never_collide() {
-        assert_ne!(timer_key(0, TimerId(15)), timer_key(1, TimerId(0)));
-    }
-
-    #[test]
-    fn keys_below_the_page_range_belong_to_the_host() {
-        assert_eq!(split_timer_key(0), None);
-        assert_eq!(split_timer_key(PAGE_TIMER_BASE - 1), None);
-    }
-
-    #[test]
-    fn keys_from_the_activity_range_up_are_not_page_timers() {
-        assert_eq!(split_timer_key(PAGE_TIMER_LIMIT), None);
-        assert!(split_timer_key(PAGE_TIMER_LIMIT - 1).is_some());
     }
 }

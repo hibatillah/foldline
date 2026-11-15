@@ -27,7 +27,7 @@ const PADDING: f32 = 14.0;
 const OPEN_RIGHT_PADDING: f32 = 12.0;
 const ICON_SIZE: f32 = 12.0;
 const ICON_GAP: f32 = 6.0;
-/// Keeps Dismiss and the longest Open inside a 340 DIP notification card's 20 DIP padding.
+/// Keeps Dismiss and the longest Open inside the narrowest (340 DIP) banner's 20 DIP padding.
 const MAX_OPEN_LABEL_WIDTH: f32 = 160.0;
 
 const DISMISS_FILL: Color = Color::WHITE.with_alpha(0.14);

@@ -11,6 +11,7 @@ windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Graphics_
 windows-numerics = "0.3"
 windows-core = "0.62.2"
 windows-collections = "0.3.2"
+account = { path = "../account" }
 places = { path = "../places" }
 store = { path = "../store" }
 salah = "0.7.6"

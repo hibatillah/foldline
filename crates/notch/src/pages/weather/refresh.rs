@@ -63,7 +63,7 @@ impl WeatherPage {
         let Some(hour) = self
             .forecast
             .as_ref()
-            .filter(|_| self.rain_alert)
+            .filter(|_| self.is_rain_alert_on())
             .and_then(|forecast| forecast.upcoming_rain(now, RAIN_WINDOW_HOURS))
         else {
             return;
@@ -78,6 +78,7 @@ impl WeatherPage {
             let Some(location) = &self.location else { return };
             let rain = Rain {
                 at: hour.time,
+                symbol: hour.symbol,
                 title: format!("Rain in {minutes} min"),
                 body: body_text(&hour.symbol.label(), &time, &location.label),
             };

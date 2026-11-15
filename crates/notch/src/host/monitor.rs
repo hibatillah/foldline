@@ -108,20 +108,16 @@ pub(super) fn foreground() -> Option<MonitorId> {
 }
 
 /// Where the window starts: on the monitor `mode` picks, else centered on the primary screen at the system scale.
-pub(super) fn start_placement(
-    mode: MonitorMode,
-    chosen_id: Option<&str>,
-    top_offset: i32,
-) -> (Option<MonitorId>, Placement) {
+pub(super) fn start_placement(mode: MonitorMode, chosen_id: Option<&str>) -> (Option<MonitorId>, Placement) {
     let monitors = list();
     let start = target_monitor(mode, &monitors, foreground(), None, chosen_id)
         .and_then(|id| monitors.iter().find(|monitor| monitor.id == id))
-        .map(|monitor| (Some(monitor.id), placement(monitor, top_offset)));
+        .map(|monitor| (Some(monitor.id), placement(monitor)));
     start.unwrap_or_else(|| {
         let scale = display::system_scale();
         let screen = ScreenRect { left: 0, top: 0, right: unsafe { GetSystemMetrics(SM_CXSCREEN) }, bottom: 0 };
         let primary = MonitorInfo { id: MonitorId(0), device_id: String::new(), rect: screen, scale, is_primary: true };
-        (None, placement(&primary, top_offset))
+        (None, placement(&primary))
     })
 }
 

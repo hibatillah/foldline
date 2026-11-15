@@ -1,7 +1,6 @@
 //! The open header's dots, clock, group, pin and gear, and the clicks on them.
 
 use super::*;
-use crate::gfx::Point;
 use crate::host::{
     clock,
     notch::{
@@ -11,6 +10,7 @@ use crate::host::{
     },
     pill_row,
 };
+use crate::{gfx::Point, page::PointerEvent};
 
 fn header_icon(rank: u8) -> Mark {
     let (mut mark, _) = Mark::showing(None);
@@ -80,7 +80,7 @@ fn a_collapsed_notch_has_no_gear_to_press() {
 }
 
 #[test]
-fn the_header_group_keeps_the_idle_order_and_its_dots_end_5_5_before_the_pin() {
+fn the_header_group_keeps_the_idle_order_and_its_dots_end_8_before_the_pin() {
     let notch = open_header(SampleOptions { timer: true, ..SampleOptions::default() });
     let items: Vec<RowItem> = notch.header_group().iter().map(|&(item, _)| item).collect();
     let timer = RowItem::Source(Source::Page(page_index(&notch, "timer")));
@@ -88,14 +88,14 @@ fn the_header_group_keeps_the_idle_order_and_its_dots_end_5_5_before_the_pin() {
     assert_eq!(items, [muted, timer, RowItem::Source(Source::Activity(1)), RowItem::Dots]);
     let (dots_left, dots_width) = item_place(&notch, RowItem::Dots);
     let pin_left = notch.header_layout(notch.frame().bounds).pin_left;
-    assert!((pin_left - (dots_left + dots_width) - pill_row::GROUP_PIN_GAP).abs() < 0.001);
+    assert!((pin_left - (dots_left + dots_width) - 8.0).abs() < 0.001);
 }
 
 #[test]
-fn the_pin_sits_4_left_of_the_gear_and_its_spring_settles_there() {
+fn the_pin_glyph_ends_4_before_the_gear_glyph_and_its_spring_settles_there() {
     let notch = open_header(SampleOptions::default());
     let row = notch.header_layout(notch.frame().bounds);
-    assert!((row.gear_left - (row.pin_left + pill_row::PIN_SIZE) - pill_row::PIN_GEAR_GAP).abs() < 0.001);
+    assert!((row.gear_left - (row.pin_left + pill_row::PIN_SIZE) - 4.0).abs() < 0.001);
     let right = header(&notch).right / notch.scale;
     let inset = notch.row_motion.header.position(RowItem::Pin).expect("the pin has a spring");
     assert!((right - inset - row.pin_left).abs() < 0.01);
@@ -118,9 +118,36 @@ fn a_press_on_the_pin_toggles_it_and_a_press_on_the_gear_still_opens_settings() 
 }
 
 #[test]
-fn the_pin_is_gray_like_the_gear_until_pinned_and_blue_while_pinned() {
-    assert_ne!(header_row::pin_color(false), header_row::pin_color(true));
-    assert_eq!(header_row::pin_color(true), crate::ui::palette::ACCENT_BLUE_LIGHT);
+fn a_pinned_pin_is_white() {
+    assert_eq!(header_row::pin_color(true, false), Color::WHITE);
+}
+
+#[test]
+fn a_hovered_gear_and_pin_turn_white() {
+    assert_eq!((header_row::pin_color(false, true), header_row::gear_color(true)), (Color::WHITE, Color::WHITE));
+}
+
+#[test]
+fn an_idle_pin_and_gear_are_gray() {
+    let gray = header_row::GEAR_COLOR;
+    assert_eq!((header_row::pin_color(false, false), header_row::gear_color(false)), (gray, gray));
+}
+
+#[test]
+fn a_hovered_gear_draws_no_wash_in_its_hit_square() {
+    let mut notch = open_header(SampleOptions::default());
+    let row = notch.header_layout(notch.frame().bounds);
+    let gear = at_item(&notch, row.gear_left, pill_row::GEAR_SIZE);
+    notch.follow_header_hover(PointerEvent::Moved(gear));
+    assert!(notch.header_marks.hovered.is(HeaderTarget::Settings));
+    super::images::clear(&notch);
+    notch.paint();
+    // Inside the 24 DIP hit square but left of the 16 DIP glyph box, where the wash used to show.
+    let probe_x = ((row.gear_left - 2.0) * notch.scale) as usize;
+    let probe_y = gear.y as usize;
+    let offset = (probe_y * notch.surface.width as usize + probe_x) * 4;
+    let pixel = &notch.surface.read_pixels()[offset..offset + 3];
+    assert!(pixel.iter().all(|&channel| channel < 4), "the pill stays black around the gear: {pixel:?}");
 }
 
 #[test]

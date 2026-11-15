@@ -2,15 +2,17 @@
 
 use super::pill_row::{ITEM_GAP, PILL_EDGE, Run};
 
-/// Between the artwork and the page's line, and between the line and the group.
+/// Between the line and the group, and between the artwork and the line unless the page asks for its own gap.
 pub(super) const CONTENT_GAP: f32 = 24.0;
 
-/// `[edge][lead][24][content][24][group][8][dots][edge]`: the dot column ends the row where it ends the idle row.
+/// `[edge][lead][lead gap, 24 by default][content][24][group][8][dots][edge]`: the dot column ends the row where it ends the idle row.
 /// The group and its 24 take room only with a group, the dots and their 8 only while a dot shows. Without a lead the
 /// content starts at the pill's left edge. The battery ring never shows here, so the dots keep `ITEM_GAP`.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(super) struct ClaimedRow {
     lead_width: f32,
+    /// Room after the lead when there is one: `CONTENT_GAP` or what the page asked for.
+    gap_after_lead: f32,
     /// Zero while no dot shows.
     dots_width: f32,
     /// In the order the group is drawn, left to right.
@@ -21,7 +23,13 @@ pub(super) struct ClaimedRow {
 impl ClaimedRow {
     pub fn new(lead_width: f32, dots_width: f32, group_widths: &[f32]) -> Self {
         let group_gaps = vec![ITEM_GAP; group_widths.len().saturating_sub(1)];
-        Self { lead_width, dots_width, group_widths: group_widths.to_vec(), group_gaps }
+        Self { lead_width, gap_after_lead: CONTENT_GAP, dots_width, group_widths: group_widths.to_vec(), group_gaps }
+    }
+
+    /// Keeps `gap` after the lead instead of `CONTENT_GAP`; `None` keeps `CONTENT_GAP`.
+    pub fn with_lead_gap(mut self, gap: Option<f32>) -> Self {
+        self.gap_after_lead = gap.unwrap_or(CONTENT_GAP);
+        self
     }
 
     fn has_lead(&self) -> bool {
@@ -53,7 +61,7 @@ impl ClaimedRow {
 
     /// What the page leaves free between its lead and its line.
     pub fn lead_gap(&self) -> f32 {
-        if self.has_lead() { CONTENT_GAP } else { 0.0 }
+        if self.has_lead() { self.gap_after_lead } else { 0.0 }
     }
 
     /// Distance of the page's content from the pill's right edge.
@@ -161,5 +169,23 @@ mod tests {
         let lefts = claimed.group_lefts(width);
         assert_eq!(lefts[1] + 20.0 + ITEM_GAP, claimed.dots_left(width).unwrap());
         assert_eq!(claimed.dots_left(width).unwrap() + DOTS, width - PILL_EDGE);
+    }
+
+    #[test]
+    fn a_page_can_ask_for_a_narrower_lead_gap() {
+        let default = ClaimedRow::new(20.0, DOTS, &[16.0]);
+        let narrow = ClaimedRow::new(20.0, DOTS, &[16.0]).with_lead_gap(Some(12.0));
+        assert_eq!(narrow.lead_gap(), 12.0);
+        assert_eq!(default.pill_width(200.0) - narrow.pill_width(200.0), default.lead_gap() - 12.0);
+    }
+
+    #[test]
+    fn a_page_without_its_own_lead_gap_keeps_24() {
+        assert_eq!(ClaimedRow::new(20.0, 0.0, &[]).with_lead_gap(None).lead_gap(), CONTENT_GAP);
+    }
+
+    #[test]
+    fn a_page_without_a_lead_gets_no_lead_gap_even_when_it_asks_for_one() {
+        assert_eq!(ClaimedRow::new(0.0, 0.0, &[]).with_lead_gap(Some(12.0)).lead_gap(), 0.0);
     }
 }

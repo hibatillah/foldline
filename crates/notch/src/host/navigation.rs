@@ -8,14 +8,22 @@ pub(super) fn page_transition(position: f32) -> Spring {
     Spring::new(position, PAGE_SLIDE_RESPONSE.0, PAGE_SLIDE_RESPONSE.1)
 }
 
+/// A page shows when the user chose it and the account does not lock it; a lock never changes the user's choice.
 pub(super) struct PageList {
     order: Vec<usize>,
-    enabled: Vec<bool>,
+    chosen: Vec<bool>,
+    locked: Vec<bool>,
+    opt_in: Vec<bool>,
 }
 
 impl PageList {
     pub fn new(count: usize) -> Self {
-        Self { order: (0..count).collect(), enabled: vec![true; count] }
+        Self {
+            order: (0..count).collect(),
+            chosen: vec![true; count],
+            locked: vec![false; count],
+            opt_in: vec![false; count],
+        }
     }
 
     /// Ignore unknown IDs, append missing pages, and apply opt-in defaults only without saved disables.
@@ -33,14 +41,14 @@ impl PageList {
         }
         let missing: Vec<usize> = (0..ids.len()).filter(|index| !order.contains(index)).collect();
         order.extend(missing);
-        let enabled = match disabled_text {
+        let chosen = match disabled_text {
             Some(text) => {
                 let disabled = words(text);
                 ids.iter().map(|id| !disabled.iter().any(|word| word == id)).collect()
             }
             None => opt_in.iter().map(|is_opt_in| !is_opt_in).collect(),
         };
-        Self { order, enabled }
+        Self { order, chosen, locked: vec![false; ids.len()], opt_in: opt_in.to_vec() }
     }
 
     #[cfg(test)]
@@ -48,13 +56,37 @@ impl PageList {
         &self.order
     }
 
+    /// Chosen and not locked; when every chosen page is locked, the unlocked pages that are not opt-in show instead.
     pub fn is_enabled(&self, page: usize) -> bool {
-        self.enabled.get(page).copied().unwrap_or(false)
+        if self.is_locked(page) {
+            return false;
+        }
+        let any_chosen_unlocked = (0..self.chosen.len()).any(|index| self.is_chosen(index) && !self.is_locked(index));
+        if any_chosen_unlocked {
+            self.is_chosen(page)
+        } else {
+            page < self.chosen.len() && !self.opt_in.get(page).copied().unwrap_or(false)
+        }
+    }
+
+    /// The user's own on or off, which `disabled_text` saves.
+    pub fn is_chosen(&self, page: usize) -> bool {
+        self.chosen.get(page).copied().unwrap_or(false)
+    }
+
+    pub fn is_locked(&self, page: usize) -> bool {
+        self.locked.get(page).copied().unwrap_or(false)
+    }
+
+    /// One entry per page; a missing entry counts as unlocked.
+    pub fn set_locked(&mut self, locked: Vec<bool>) {
+        self.locked = locked;
+        self.locked.resize(self.chosen.len(), false);
     }
 
     #[cfg(test)]
     pub fn set_enabled(&mut self, page: usize, is_enabled: bool) {
-        if let Some(slot) = self.enabled.get_mut(page) {
+        if let Some(slot) = self.chosen.get_mut(page) {
             *slot = is_enabled;
         }
     }
@@ -64,7 +96,7 @@ impl PageList {
     }
 
     pub fn disabled_text(&self, ids: &[&str]) -> String {
-        let off = |index: &usize| !self.is_enabled(*index);
+        let off = |index: &usize| !self.is_chosen(*index);
         (0..ids.len()).filter(off).map(|index| ids[index]).collect::<Vec<_>>().join(",")
     }
 
@@ -141,7 +173,7 @@ mod tests {
     fn pages_are_reached_in_the_users_order_and_switched_off_ones_are_skipped() {
         let mut list = PageList::load(&IDS[..3], &[false; 3], Some("timer"), None);
         assert_eq!(list.navigable(&[LOW, LOW, LOW]), vec![2, 0, 1]);
-        list.enabled[0] = false;
+        list.chosen[0] = false;
         assert_eq!(list.navigable(&[LOW, LOW, LOW]), vec![2, 1]);
         assert_eq!(list.effective(&[LOW, LOW, LOW]), vec![None, LOW, LOW]);
     }
@@ -149,7 +181,7 @@ mod tests {
     #[test]
     fn the_saved_order_and_choices_come_back_by_id() {
         let mut list = PageList::load(&IDS, &[false; 4], Some("clock,stats"), None);
-        list.enabled[2] = false;
+        list.chosen[2] = false;
         let (order, disabled) = (list.order_text(&IDS), list.disabled_text(&IDS));
         assert_eq!(order, "clock,stats,media,timer");
         assert_eq!(disabled, "timer");
@@ -170,6 +202,34 @@ mod tests {
         assert!(list.is_enabled(0) && !list.is_enabled(3));
         let saved = PageList::load(&IDS, &[false, false, false, true], None, Some(""));
         assert!(saved.is_enabled(3));
+    }
+
+    #[test]
+    fn a_locked_page_keeps_the_users_choice_for_when_access_returns() {
+        let mut list = PageList::load(&IDS, &[false; 4], None, Some("stats"));
+        list.set_locked(vec![false, false, true, true]);
+        assert!(!list.is_enabled(2), "a locked page is hidden");
+        assert!(list.is_chosen(2), "the lock leaves the user's choice on");
+        assert_eq!(list.disabled_text(&IDS), "stats", "only the user's own off is saved");
+        list.set_locked(vec![false; 4]);
+        assert!(list.is_enabled(2) && !list.is_enabled(3));
+    }
+
+    #[test]
+    fn locking_every_chosen_page_falls_back_to_the_allowed_ones() {
+        let mut list = PageList::load(&IDS, &[false, false, false, true], None, Some("clock,media"));
+        list.set_locked(vec![false, false, true, true]);
+        let enabled: Vec<bool> = (0..IDS.len()).map(|index| list.is_enabled(index)).collect();
+        assert_eq!(enabled, [true, true, false, false]);
+        assert_eq!(list.disabled_text(&IDS), "clock,media");
+    }
+
+    #[test]
+    fn the_fallback_never_shows_an_opt_in_page() {
+        let mut list = PageList::load(&IDS, &[false, false, false, true], None, Some("clock,timer,stats"));
+        list.set_locked(vec![false, true, false, false]);
+        let enabled: Vec<bool> = (0..IDS.len()).map(|index| list.is_enabled(index)).collect();
+        assert_eq!(enabled, [true, false, true, false]);
     }
 
     #[test]

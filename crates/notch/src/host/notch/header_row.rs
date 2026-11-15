@@ -9,15 +9,20 @@ use crate::host::{
 use crate::{
     gfx::{Canvas, Color, Point, Rect},
     page::PointerEvent,
-    ui::{HoverTarget, Icon, draw_hover_wash, palette::ACCENT_BLUE_LIGHT},
+    ui::{HoverTarget, Icon},
 };
 
 /// `#8c8c94`.
-const GEAR_COLOR: Color = Color::rgb(0.549, 0.549, 0.580);
+pub(super) const GEAR_COLOR: Color = Color::rgb(0.549, 0.549, 0.580);
 
-/// Gray like the gear while unpinned, the clipboard pin's blue while pinned.
-pub(super) fn pin_color(is_pinned: bool) -> Color {
-    if is_pinned { ACCENT_BLUE_LIGHT } else { GEAR_COLOR }
+/// White while pinned or under the pointer, gray otherwise.
+pub(super) fn pin_color(is_pinned: bool, is_hovered: bool) -> Color {
+    if is_pinned || is_hovered { Color::WHITE } else { GEAR_COLOR }
+}
+
+/// White under the pointer, gray otherwise.
+pub(super) fn gear_color(is_hovered: bool) -> Color {
+    if is_hovered { Color::WHITE } else { GEAR_COLOR }
 }
 
 /// What a click on one item of the header does.
@@ -34,11 +39,11 @@ pub(super) enum HeaderTarget {
 #[derive(Default)]
 pub(super) struct HeaderMarks {
     pub(super) icons: Vec<(f32, Source)>,
-    /// The pin or the gear under the pointer, which draws the hover wash; other items never hover.
+    /// The pin or the gear under the pointer, whose glyph turns white; other items never hover.
     pub(super) hovered: HoverTarget<HeaderTarget>,
 }
 
-/// Only the pin and the gear show a hover wash.
+/// Only the pin and the gear react to hover.
 pub(super) fn hover_target(target: Option<HeaderTarget>) -> Option<HeaderTarget> {
     target.filter(|target| matches!(target, HeaderTarget::Pin | HeaderTarget::Settings))
 }
@@ -47,7 +52,7 @@ impl Notch {
     pub(super) fn refresh_header_marks(&mut self) {
         let mut entries: Vec<(u8, f32, Source)> = Vec::new();
         for (index, slot) in self.activities.iter().enumerate() {
-            if !slot.is_enabled || !slot.is_started {
+            if !slot.is_showing() {
                 continue;
             }
             if let Some(width) = slot.activity.header_status_width() {
@@ -126,17 +131,15 @@ impl Notch {
                 }
             }
         }
+        let is_pin_hovered = self.header_marks.hovered.is(HeaderTarget::Pin);
+        let is_gear_hovered = self.header_marks.hovered.is(HeaderTarget::Settings);
         let ends = [
-            (RowItem::Pin, Icon::Pin, pill_row::PIN_SIZE, pin_color(self.is_pinned()), HeaderTarget::Pin),
-            (RowItem::Gear, Icon::Gear, pill_row::GEAR_SIZE, GEAR_COLOR, HeaderTarget::Settings),
+            (RowItem::Pin, Icon::Pin, pill_row::PIN_SIZE, pin_color(self.is_pinned(), is_pin_hovered)),
+            (RowItem::Gear, Icon::Gear, pill_row::GEAR_SIZE, gear_color(is_gear_hovered)),
         ];
-        for (item, icon, size, color, target) in ends {
+        for (item, icon, size, color) in ends {
             let Some(inset) = self.row_motion.header.position(item) else { continue };
             let center = Point::new(header.right - (inset - size / 2.0) * scale, center_y);
-            // The wash fills the item's hit square, so it shows exactly where a click lands.
-            if self.header_marks.hovered.is(target) {
-                draw_hover_wash(canvas, center, pill_row::HIT_SIZE, opacity);
-            }
             icon.draw(canvas, center, size * scale, color, opacity);
         }
     }

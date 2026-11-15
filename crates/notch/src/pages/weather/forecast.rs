@@ -238,7 +238,7 @@ mod tests {
         let fetched_at = DateTime::parse_from_rfc3339("2026-11-05T17:05:00Z").unwrap().with_timezone(&Utc);
         let forecast = Forecast::parse(sample, fetched_at).expect("the real response parses");
         assert_eq!(forecast.hours.len(), 3);
-        assert_eq!(forecast.hours[0].symbol, Symbol::Rain);
+        assert_eq!(forecast.hours[0].symbol, Symbol::HeavyRain);
         assert_eq!(forecast.hours[0].rain_millimeters, 1.4);
         assert_eq!(forecast.feels_like, 23.7);
         assert!(!forecast.days.is_empty());

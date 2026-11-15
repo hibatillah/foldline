@@ -1,5 +1,6 @@
 //! Window orchestration stays independent of individual page implementations.
 
+mod account_check;
 mod activity_layout;
 mod chrome;
 mod claimed_row;

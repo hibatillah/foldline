@@ -40,7 +40,15 @@ fn page_state_snapshots_of_the_shelf_todo_shalat_and_weather() {
 #[test]
 #[ignore = "writes images to target/snapshots; run on purpose"]
 fn page_state_snapshot_of_the_rain_alert_banner() {
-    let notch = rig(SampleOptions { weather: 3, ..SampleOptions::default() });
+    let banners =
+        [(3, "state-weather-rain-banner"), (6, "state-weather-snow-banner"), (8, "state-weather-showers-banner")];
+    for (weather, name) in banners {
+        rain_banner_snapshot(weather, name);
+    }
+}
+
+fn rain_banner_snapshot(weather: u8, name: &str) {
+    let notch = rig(SampleOptions { weather, ..SampleOptions::default() });
     let page = notch.pages.iter().find(|page| page.id() == "weather").unwrap();
     let Some(Presence::Banner { width, height }) = page.presence() else { panic!("the sample shows the banner") };
     let surface = &notch.surface;
@@ -63,7 +71,7 @@ fn page_state_snapshot_of_the_rain_alert_banner() {
         })
         .unwrap();
     images::write_image(
-        "state-weather-rain-banner",
+        name,
         surface.read_pixels(),
         surface.width as usize,
         (images::IMAGE_WIDTH * SCALE) as usize,

@@ -58,7 +58,7 @@ impl Notch {
             return false;
         };
         let Some(target_info) = monitors.iter().find(|monitor| monitor.id == target) else { return false };
-        let target_placement = placement(target_info, self.monitor.top_offset);
+        let target_placement = placement(target_info);
         let current_exists = MonitorState::is_listed(&monitors, self.monitor.current);
         let is_held_open = self.open.is_open || self.open.is_pinned;
         match decide_move(target, target_placement, &self.monitor, current_exists, is_held_open) {
@@ -162,7 +162,7 @@ mod tests {
     }
 
     fn state_on(current: Option<MonitorId>, placed: Option<Placement>) -> MonitorState {
-        MonitorState::new(MonitorMode::Focused, None, current, placed, 0)
+        MonitorState::new(MonitorMode::Focused, None, current, placed)
     }
 
     #[test]

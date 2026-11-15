@@ -104,6 +104,9 @@ pub trait Activity {
 
     fn on_notify(&mut self, _context: &mut Context) {}
 
+    /// Called once on a started activity when the daily account check learns this PC was signed out because the account signed in on another PC.
+    fn on_account_signed_out_elsewhere(&mut self, _context: &mut Context) {}
+
     fn on_system_message(&mut self, _message: &SystemMessage, _context: &mut Context) {}
 
     /// Called on a started activity after another program changed settings.txt: re-read this activity's keys here.

@@ -2,7 +2,10 @@
 
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
     thread,
     time::Duration,
 };
@@ -81,6 +84,8 @@ struct Shared {
     /// Lookup results by track, so replaying a song never asks the service again; `None` means it has no lyrics.
     lyrics_cache: Mutex<HashMap<String, Option<Arc<Lyrics>>>>,
     subscription: Mutex<Option<SessionSubscription>>,
+    /// Whether the account allows lyrics; while it does not, no lookup reaches the network.
+    is_lyrics_allowed: AtomicBool,
     notify_changed: Box<dyn Fn() + Send + Sync>,
 }
 
@@ -90,12 +95,13 @@ pub struct MediaWatcher {
 }
 
 impl MediaWatcher {
-    pub fn start(notify_changed: impl Fn() + Send + Sync + 'static) -> Result<Self> {
+    pub fn start(is_lyrics_allowed: bool, notify_changed: impl Fn() + Send + Sync + 'static) -> Result<Self> {
         let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()?.join()?;
         let shared = Arc::new(Shared {
             info: Mutex::new(MediaInfo::default()),
             lyrics_cache: Mutex::new(HashMap::new()),
             subscription: Mutex::new(None),
+            is_lyrics_allowed: AtomicBool::new(is_lyrics_allowed),
             notify_changed: Box::new(notify_changed),
         });
 
@@ -108,6 +114,14 @@ impl MediaWatcher {
 
         attach_current_session(&manager, &shared);
         Ok(Self { manager, shared })
+    }
+
+    /// Regaining the grant looks the playing track up again; losing it stops lookups still waiting to start.
+    pub fn set_lyrics_allowed(&self, is_allowed: bool) {
+        let was_allowed = self.shared.is_lyrics_allowed.swap(is_allowed, Ordering::SeqCst);
+        if is_allowed && !was_allowed {
+            restart_lyrics_lookup(&self.shared);
+        }
     }
 
     pub fn snapshot(&self) -> MediaInfo {
@@ -230,6 +244,19 @@ fn refresh_properties(shared: &Arc<Shared>, session: &GlobalSystemMediaTransport
     }
 }
 
+fn restart_lyrics_lookup(shared: &Arc<Shared>) {
+    let track = update_info(shared, |info| {
+        if info.track_key.is_empty() || matches!(info.lyrics, LyricsStatus::Found(_) | LyricsStatus::Loading) {
+            return None;
+        }
+        info.lyrics = LyricsStatus::Loading;
+        Some((info.track_key.clone(), info.artist.clone(), info.title.clone(), info.album.clone()))
+    });
+    if let Some((track_key, artist, title, album)) = track {
+        spawn_lyrics_lookup(shared.clone(), track_key, artist, title, album);
+    }
+}
+
 /// Fetches synced lyrics off-thread and stores them only if the track has not changed meanwhile.
 fn spawn_lyrics_lookup(shared: Arc<Shared>, track_key: String, artist: String, title: String, album: String) {
     thread::spawn(move || {
@@ -237,7 +264,7 @@ fn spawn_lyrics_lookup(shared: Arc<Shared>, track_key: String, artist: String, t
         let cached = shared.lyrics_cache.lock().ok().and_then(|cache| cache.get(&track_key).cloned());
         let result = if let Some(cached) = cached {
             cached
-        } else if lookups_disabled || title.is_empty() {
+        } else if lookups_disabled || title.is_empty() || !shared.is_lyrics_allowed.load(Ordering::SeqCst) {
             None
         } else {
             thread::sleep(LYRICS_DEBOUNCE);
@@ -257,6 +284,14 @@ fn spawn_lyrics_lookup(shared: Arc<Shared>, track_key: String, artist: String, t
                 thread::sleep(LYRICS_DURATION_CHECK_INTERVAL);
                 waited += LYRICS_DURATION_CHECK_INTERVAL;
             };
+            if !shared.is_lyrics_allowed.load(Ordering::SeqCst) {
+                update_info(&shared, |info| {
+                    if info.track_key == track_key {
+                        info.lyrics = LyricsStatus::NotFound;
+                    }
+                });
+                return;
+            }
             match lyrics::fetch(&artist, &title, &album, duration_seconds) {
                 Ok(found) => {
                     let found = found.map(Arc::new);

@@ -65,7 +65,10 @@ pub struct WeatherPage {
     hover: HoverTarget<WeatherTarget>,
     /// The content width of the message on show, so the page hugs it; `None` while the forecast shows.
     message_width: Option<f32>,
+    /// The user's `weather.rain_alert` choice; the alert runs only while the account allows it too.
     rain_alert: bool,
+    /// Whether the account allows the rain alert; read again in `on_access_changed`.
+    is_rain_alert_allowed: bool,
     /// The first rainy hour the alert was already shown for, so one rain gives one message.
     alerted_for: Option<DateTime<Utc>>,
     alert: Alert,
@@ -84,11 +87,16 @@ impl WeatherPage {
             hover: HoverTarget::default(),
             message_width: None,
             rain_alert: true,
+            is_rain_alert_allowed: true,
             alerted_for: None,
             alert: Alert::new(),
             outcome: Arc::new(Mutex::new(None)),
             fixed_now: None,
         }
+    }
+
+    fn is_rain_alert_on(&self) -> bool {
+        self.rain_alert && self.is_rain_alert_allowed
     }
 
     fn now(&self) -> DateTime<Utc> {
@@ -157,7 +165,7 @@ impl Page for WeatherPage {
     }
 
     fn header_status_width(&self) -> Option<f32> {
-        self.alert.has_badge(self.now()).then(|| Icon::Cloud.size())
+        self.alert.badge_icon(self.now()).map(Icon::size)
     }
 
     fn header_status_page(&self) -> Option<&'static str> {
@@ -165,9 +173,9 @@ impl Page for WeatherPage {
     }
 
     fn draw_header_status(&self, canvas: &Canvas, area: Rect, opacity: f32) {
-        if self.alert.has_badge(self.now()) {
+        if let Some(icon) = self.alert.badge_icon(self.now()) {
             let center = Point::new(area.center_x(), area.center_y());
-            Icon::Cloud.draw(canvas, center, Icon::Cloud.size(), ACCENT_BLUE_LIGHT, opacity);
+            icon.draw(canvas, center, icon.size(), ACCENT_BLUE_LIGHT, opacity);
         }
     }
 
@@ -184,6 +192,7 @@ impl Page for WeatherPage {
     }
 
     fn on_start(&mut self, context: &mut Context) {
+        self.is_rain_alert_allowed = context.allows("rain_alert");
         self.read_settings(context);
         self.refresh_message_width(context.fonts());
         self.start_fetch(context);
@@ -210,11 +219,26 @@ impl Page for WeatherPage {
             self.refresh_message_width(context.fonts());
             self.start_fetch(context);
             context.request_repaint();
-        } else if self.rain_alert {
+        } else if self.is_rain_alert_on() {
             self.arm_alert(context);
         } else {
             context.kill_timer(ALERT_TIMER);
             self.alert.clear(context);
+        }
+    }
+
+    fn on_access_changed(&mut self, context: &mut Context) {
+        let is_allowed = context.allows("rain_alert");
+        if is_allowed == self.is_rain_alert_allowed {
+            return;
+        }
+        self.is_rain_alert_allowed = is_allowed;
+        if self.is_rain_alert_on() {
+            self.arm_alert(context);
+        } else {
+            context.kill_timer(ALERT_TIMER);
+            self.alert.clear(context);
+            self.alerted_for = None;
         }
     }
 

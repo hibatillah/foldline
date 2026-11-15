@@ -11,7 +11,7 @@ use crate::{
     ui::{BANNER_BUTTONS_HEIGHT, BannerButton, BannerButtons, BannerLabels},
 };
 
-pub const WIDTH: f32 = 340.0;
+pub const WIDTH: f32 = 380.0;
 const PADDING: f32 = 20.0;
 const TOP_PADDING: f32 = 12.0;
 const BOTTOM_PADDING: f32 = 16.0;
@@ -266,7 +266,7 @@ mod tests {
             store::language::with_override(language, || {
                 let mut card = Card::new(&item("Rafi", "hi"), true, &fonts);
                 card.offer_reply(&fonts);
-                // A notification card is 340 DIP wide with 20 DIP of padding on each side.
+                // The narrowest banner (a download or rain alert card) is 340 DIP wide with 20 DIP of padding on each side.
                 let rects: Vec<_> = card.buttons.rects(300.0, 0.0, 1.0).collect();
                 let leftmost = rects.iter().map(|(_, rect)| rect.left).fold(f32::MAX, f32::min);
                 assert!(leftmost >= 0.0, "{language:?}: the buttons need {} px of 300", 300.0 - leftmost);

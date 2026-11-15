@@ -149,13 +149,15 @@ impl CalendarPage {
     pub fn sample(fonts: &Fonts) -> Self {
         use dates::civil_from_days;
         let now = local_now();
-        let (year, month, _) = civil_from_days(day_of(now));
         let at = |seconds: i64| {
-            let (_, _, date) = civil_from_days(day_of(seconds));
+            let (year, month, date) = civil_from_days(day_of(seconds));
             let of_day = seconds.rem_euclid(dates::SECONDS_PER_DAY);
             format!("{year:04}{month:02}{date:02}T{:02}{:02}00", of_day / 3600, of_day / 60 % 60)
         };
         let today = |hour: i64, minute: i64| day_of(now) * dates::SECONDS_PER_DAY + hour * 3600 + minute * 60;
+        // Late in the evening the "in 12 minutes" event would fall on the next day (or month); keep every sample event today.
+        let soon_start = (now + 12 * 60).min(today(23, 0));
+        let soon_minutes = ((today(24, 0) - soon_start) / 60).min(60);
         let event = |start: i64, minutes: i64, summary: &str, place: &str| {
             format!(
                 "BEGIN:VEVENT\r\nUID:{summary}\r\nDTSTART:{}\r\nDTEND:{}\r\nSUMMARY:{summary}\r\nLOCATION:{place}\r\nEND:VEVENT\r\n",
@@ -166,7 +168,7 @@ impl CalendarPage {
         let text = format!(
             "BEGIN:VCALENDAR\r\n{}{}{}END:VCALENDAR\r\n",
             event(today(9, 0), 30, "Morning standup", ""),
-            event(now + 12 * 60, 60, "Design review: notch v3", "https://meet.google.com/abc-defg-hij"),
+            event(soon_start, soon_minutes, "Design review: notch v3", "https://meet.google.com/abc-defg-hij"),
             event(today(23, 0), 60, "Deep learning reading group", ""),
         );
         let mut page = Self::new();

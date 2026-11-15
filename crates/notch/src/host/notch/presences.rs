@@ -30,11 +30,10 @@ impl Notch {
             .activities
             .iter()
             .enumerate()
-            .filter(|(_, slot)| slot.is_enabled && slot.is_started)
+            .filter(|(_, slot)| slot.is_showing())
             .map(|(index, slot)| (Source::Activity(index), slot.activity.presence()));
         let has_priority = self.activities.iter().any(|slot| {
-            slot.is_enabled
-                && slot.is_started
+            slot.is_showing()
                 && slot.activity.is_priority()
                 && matches!(slot.activity.presence(), Some(Presence::Transient { .. }))
         });
@@ -113,8 +112,7 @@ impl Notch {
     /// badge does not, and neither does an ordinary transient, which waits behind the banner.
     fn dismiss_banners_for_priority(&mut self) {
         let is_priority_transient = |slot: &super::ActivitySlot| {
-            slot.is_enabled
-                && slot.is_started
+            slot.is_showing()
                 && slot.activity.is_priority()
                 && matches!(slot.activity.presence(), Some(Presence::Transient { .. }))
         };
@@ -123,7 +121,7 @@ impl Notch {
         }
         for index in 0..self.activities.len() {
             let slot = &self.activities[index];
-            if slot.is_enabled && slot.is_started && matches!(slot.activity.presence(), Some(Presence::Banner { .. })) {
+            if slot.is_showing() && matches!(slot.activity.presence(), Some(Presence::Banner { .. })) {
                 self.with_activity(index, |activity, context| activity.dismiss_banner(context));
             }
         }
