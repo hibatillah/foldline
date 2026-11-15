@@ -15,14 +15,16 @@ keys, defaults and the window's sections are listed in [settings keys](../refere
 3. **Add the control to the window** (`crates/settings/src/`):
    - A toggle: add `Item::new(label, field::toggle(key, default)).description(text)` to a `Group` in the section's
      `page()`.
-   - A text or number field: use `field::input(key, Kind::Text { width }, placeholder)` or
+   - A text or number field: use `field::input(key, Kind::Path { width }, placeholder)` or
      `field::input(key, Kind::WholeNumber { default, range }, placeholder)` as the item's control. It saves on Enter or when it loses
      focus, and shows the saved value again when the typed one is rejected.
    - A choice among pictures: a picture card (`card::frame` and `card::grid`, as in `sections/behavior.rs`) whose click
      calls `field::write(key, word, cx)`.
+   - A setting that takes effect only when the notch starts again gets `.tag(tr!("advanced.after_restart"))`.
+   - A picture that explains a setting goes in its own `Item::picture_row` under the row, drawn with `illustration.rs`.
    - Every item gets a description of one to three short lines that says what the setting does.
    - Write the label and description through `tr!("<section>.<key>")` and add the English and Indonesian text to `crates/settings/locales/app.yml`, as `general.track_location` does.
-   - A new section: create `sections/<name>.rs` with a `page() -> Page` function (title, one-line description, groups)
+   - A new section: create `sections/<name>.rs` with a `page() -> Page` function (`Page::plain(title, groups)`; the page opens with its first section)
      and add it to `sections::all` in `sections/mod.rs` as a `NavEntry` with its sidebar group (`NavGroup::Notch` or
      `NavGroup::PageSettings`) and icon.
    - Every write goes through `sections::apply`, which saves the key and posts `WM_SETTINGS_CHANGED` to the notch.

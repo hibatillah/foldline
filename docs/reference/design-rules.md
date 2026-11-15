@@ -69,7 +69,7 @@ the marks of what is going on, then the battery ring, then the camera and microp
 ## Open header
 
 - Left to right: the page dots at the left edge, the clock in the exact middle, then the group, the pin and the gear at the right
-  edge, 10 px between the group's items, 6 px between the group and the pin's box and 4 px between the pin's box and the gear's (about 8 px of air between the glyphs), 4 px between the battery ring and the dots. The group is
+  edge, 8 px between the group's items, 4 px between the battery ring and the dots, 8 px between the group and the pin glyph and 4 px between the pin glyph and the gear glyph. **The pin and gear gaps are measured between the glyphs**; their 24 px buttons are hit areas only and draw nothing, so they may overlap without showing. The group is
   the pill's group (same items, same order) as icons only. The clock glides from its place in the pill; the ring and
   the dots travel with it.
 - **The clock is alone and never moves.** It stays in the exact middle of the header whatever shows beside it, so it reads
@@ -88,29 +88,29 @@ the marks of what is going on, then the battery ring, then the camera and microp
   area is 24 px around the icon, without widening the gaps; where two areas meet, the nearer item wins.
 - **The gear** is a hexagon around a ring (circumradius 9.5 and ring radius 3 in a 24 px box), drawn in a 16 px box
   so the hexagon (12.3 x 13.6 px) is a little smaller than the 14 px battery ring, `#8c8c94`, the
-  last item at the right edge, 10 px after the group. It shows only in the open notch, never in the idle pill, and opens the
+  last item, its box flush with the header's right edge. It shows only in the open notch, never in the idle pill, and opens the
   settings window. It is not an activity and has no rank. The page dots keep the left edge to themselves, so the page
   the user is on reads first; the gear sits at the right end, where controls usually are, and the group slides left by
-  its width and 10 px as the notch opens.
+  its width and the gaps as the notch opens.
 - **The pin** (`Icon::Pin`) is the Lucide "pin" outline (head above a needle, stroke 2 in a 24 px box). It sits 4 px left of
   the gear in a 13 px box (`PIN_SIZE`), where it shows about 9 x 12 px, a little smaller than the battery ring and no taller than the
-  gear's 13.6 px. The glyph is centered in its box, so the 24 px hover wash is centered on it. The visible gaps ring to pin
-  and pin to gear are both about 8 px. Unpinned it is the gear's `#8c8c94`; pinned it is the accent blue `#74c0fc`
-  (`ui::palette::ACCENT_BLUE_LIGHT`, the clipboard page's pin), so the state reads at a glance. A click toggles it;
+  gear's 13.6 px. The group ends 8 px before it. Unpinned it is the gear's
+  `#8c8c94`; pinned it is white, so the state reads at a glance. A click toggles it;
   its hit area is 24 px like the gear's. It shows only in the open notch and is never dropped for room. It is not an
   activity and has no rank. A pinned notch takes no file drops (the drop overlay steps aside while the notch is
   open); the user unpins it and drags onto the collapsed pill.
-- **Hover on the pin and the gear** draws the media buttons' wash (`ui::draw_hover_wash`: white at 12 %, corner radius
-  8) behind the hovered one, filling its 24 px hit square, so it shows where a click lands without moving anything.
-  A pinned pin keeps its blue glyph on the wash. The other header items show no wash.
+- **Hover on the pin and the gear** shows no background: the 24 px square around each is a hit area only, so the two
+  glyphs keep their close spacing. The hovered pin or gear draws its glyph white instead; a pinned pin is white with or
+  without the pointer. The other header items do not react to hover.
 
 ## Lyrics on
 
 - The pill reads artwork (20 px), lyric line, group, then the dots only while a dot shows, with 12 px at both edges,
-  24 px between the artwork and the line, 24 px between the line and the group and 8 px before the dots. The dots end
+  12 px between the artwork and the line, 24 px between the line and the group and 8 px before the dots. The dots end
   the row 12 px from the right edge, the same place as in the idle pill, so they never jump when lyrics start or stop.
-  The artwork is the media page's `resting_lead_width()`; the host passes the 24 px after it in `Frame::lead_gap`.
-  The line is trimmed so both 24 px gaps hold. The time stays in the header when the notch opens.
+  The artwork is the media page's `resting_lead_width()`; the host passes the gap after it in `Frame::lead_gap`
+  (24 px unless the page answers `resting_lead_gap()`; the media page answers 12).
+  The line is trimmed so both gaps hold. The time stays in the header when the notch opens.
 - The line's width sets the pill's width, within the page's limits (`crates/notch/src/pages/media/resting.rs`).
 - There is no clock, no battery ring and no wave while the line shows: the artwork and the line already say that music plays.
 - The group follows the line: muted, then Caps Lock, then only one countdown, the one with the least time left
@@ -125,9 +125,10 @@ the marks of what is going on, then the battery ring, then the camera and microp
 - A message that reports a percentage (Bluetooth device, charging, on battery, low battery) shows a 32 px ring around
   its icon, like the battery; that pill grows to 48 px.
 - A message's value takes its icon's color (the percentage, "25 min", "15:19"); the name stays white.
-- A notification opens the pill into a 340 px card: app icon, sender, two lines of the message. The two lines are
+- A notification opens the pill into a 380 px card: app icon, sender, two lines of the message. The two lines are
   clamped with an ellipsis, hovered or not; hover adds buttons and never grows the text, so the buttons do not move
   under the pointer.
+- The account notice ("Signed out: this account signed in on another PC") is a 5 s message with the bell icon (`Icon::Bell`), white text.
 - The heading is the sender in white, then the app name in grey (`#8e8e99`, regular weight) with no separator, so a
   missing sender cannot leave a dangling mark. A sender that is empty or only whitespace counts as missing and the
   app name takes its place, in white.
@@ -147,9 +148,12 @@ The picture of the redesigned window leads where it differs from earlier text. T
   over a blurred backdrop (`WindowBackgroundAppearance::Blurred`, Windows acrylic), so the desktop shows through frosted;
   there is no tint, gradient or glow, and the sidebar sits on it with no card and no solid fill. Dark theme: `#101010` at
   64 %. Light theme: white at 35 %. `NOTCH_SETTINGS_SOLID=1` makes it opaque and neutral (`#141414` dark, `#eeeeee`
-  light). The content is the only solid surface: one rounded (8 px), thinly bordered card inset 8 px from the top, right
-  and bottom edges. Dark theme: card `#161618`, card border `#2a2a2e`, header `#1b1c21`, a section's block `#202022`,
-  buttons and inputs `#151517` with a `#303035` border, row divider `#2c2c30`, titles `#f4f6fa`, muted text `#a3a3aa`.
+  light). The content is the only solid surface: one rounded (14 px), thinly bordered card inset 8 px from the top, right
+  and bottom edges. Dark theme (the v7 board's surfaces): card `#1b1b1d`, card border `#2a2a2e`, header `#1e1e21`, a section's block
+  `#2a2a2d` (its border is the card border, so it reads as a plain lighter block), inputs `#1d1d1f` with a `#3a3a3e`
+  border (darker than the block), buttons `#38383b` with a `#444448` border (lighter than the block), row divider
+  `#353538`, switch off `#47474f`, titles `#f4f6fa`, muted text `#a3a3aa` (the board's `#8e8e98` would fall under 4.5:1
+  on the block, so the muted text stays where the contrast test holds it).
   Light theme: card `#ffffff`, border `#d9dde6`, block `#f8f9fc`, muted `#4b4d55`, titles `#0b0d14`. A translucent frame
   with one solid card keeps the content the brightest, steadiest thing in the window. The contrast tests keep titles at
   7:1 and muted text at 4.5:1 on the card and the blocks; on the frame they keep titles at 4.5:1 over a pure white desktop
@@ -161,37 +165,59 @@ The picture of the redesigned window leads where it differs from earlier text. T
   the selected option card's border and radio. Text stays white or muted. The tests keep the accent at 4.5:1 as text on
   the card and 3:1 as an icon on a block; as an icon on the frame it is held at 2:1 (over a bright wallpaper in the dark
   theme, over a mid-grey desktop in the light theme).
-- **The sidebar** is 200 px wide and opens with the brand strip (58 px high, 6 px of it top padding so the tile is 18 px from the window top and 18 px from the left edge; the squared tile logo, 28 px, then "Notch" in `text_base`
-  semibold and the version in `text_xs`, muted), then two labelled groups (`text_xs`, muted): "Notch" (General, Pages, Behavior, Advanced) and
-  "Page settings" (Calendar, Shalat, System stats, Weather), with **About** at the bottom, without a label. The empty sidebar (the strips between and below the items, at their sides, and the group labels) moves the window like the header; the items never do. Items are 32 px
-  high, `text_sm` text, a 14 px blue icon; the selected one has a rounded (8 px), faint white fill. The tile is blue in a
-  stable build and orange in a pre-release build, in both themes. The icons are General the hex nut (the same drawing as
-  the notch's gear), Pages Lucide "layers", Behavior "puzzle", Calendar "calendar-days", Shalat "moon-star" (the shalat
-  icon in the notch too), System stats "chart-column", Weather "cloud-drizzle", Advanced "wrench" and About "info". They
+- **The sidebar** is 216 px wide with 16 px of padding above, 10 px at the sides and 12 px below. It opens with the brand (the tile 16 px from the window top and 18 px from the left edge; the squared tile logo, 28 px, then "Notch" in `text_lg`
+  semibold and the version in `text_xs`, muted, 8 px apart, with 4 px below), then two labelled groups (`text_sm`, muted, 12 px above the label and 5 px below): "Notch" (General, Pages, Behavior, Advanced) and
+  "Page settings" (Calendar, Timer, Prayer, System stats, Weather; Prayer is the Shalat page, "Shalat" in Indonesian), with **Account** and **About** at the bottom, without a label. The empty sidebar (the strips between and below the items, at their sides, and the group labels) moves the window like the header; the items never do. Items are 36 px
+  high and 1 px apart, `text_base` text 11 px from a 17 px blue icon; the selected one has a rounded (10 px), faint white fill and a medium-weight label. The tile is blue in a
+  stable build and indigo in a pre-release build, in both themes. The icons are General the hex nut (the same drawing as
+  the notch's gear), Pages Lucide "layers", Behavior "puzzle", Calendar "calendar-days", Timer "timer", Prayer "moon-star" (the shalat
+  icon in the notch too), System stats "chart-column", Weather "cloud-drizzle", Advanced "wrench", Account "circle-user" and About "info"; "lock" marks a locked page. They
   are SVG files in `crates/settings/assets/icons`, served by `crates/settings/src/icons.rs`; the Lucide ISC notice is in
   `THIRD-PARTY-LICENSES.txt`.
-- **The card's header** is 36 px with its own fill, a little lighter than the card, over a divider. It reads
-  "Settings › <Page>" (Settings muted, the page in the accent blue) with the window buttons (minimize, maximize, close) at
+- **The card's header** is 44 px with its own fill, a little lighter than the card, over a divider. It reads
+  "Settings › <Page>" (`text_base`, 22 px from the card's edge, 10 px around the chevron; Settings muted, the page in the accent blue and medium weight) with the window buttons (minimize, maximize, close) at
   the right end, and it is the drag area together with the brand strip. The window draws it itself and not the component
   library's title bar: the header's top corners are rounded to match the card (radius less the 1 px border), and the close
   button rounds its own top-right corner, so its red hover follows the card's corner instead of poking out of it.
-- **Every page opens with a description**, one sentence under the header at the page's top, in `text_base` and
-  the full title color, saying what the page is for.
-- **A section is one bordered block** (8 px radius, the card's border color, one step lighter than the card) with its
-  rows separated by dividers; the border closes the last row, so only rows between two others carry a divider. The
-  section's title (`text_base`, full title color, with a small blue icon where one fits) sits above the block. A
-  block's bottom to the next title is 22 px, and a title to its block 8 px. Muted gray is for row descriptions
-  (`text_sm`) and group labels; row titles are medium weight (`text_sm`) in the full foreground.
-- **Rows** have `px_4`/`py_3p5` padding: the title and a muted description at the left, the control at the right. A button
-  is a dark rounded pill (32 px high, 10 px radius, thin border); one that does nothing yet is dimmed, with "Coming soon" to its left.
+- **A redesigned page opens with its first section**, as the v7 boards do: General, Pages, Behavior, Advanced, Account
+  and About have no description sentence (`Page::plain`); the page settings keep theirs (one sentence in `text_base`
+  and the full title color) until their boards are built. A section heading with an icon (Files on About) is set at
+  14 px in the full title color, because it names a group rather than describing it.
+- **Pictures explain a setting where words alone would not**: the three Hide-when-idle pictures, the city map, the two
+  notification banners, the screens of **Show the notch on**, the page dots on Pages, the log sample on Advanced. They
+  sit in their own row of the block (12 px by 14 px padding), drawn with GPUI elements on a dark blue scene
+  (`#1d2438` to `#12151f`, 9 px radius, a faint white border) and never as images, with a 12 px muted caption under
+  each when they come as a strip. A picture that is also a choice is an option card; the others are not clickable.
+- **Tags and hints.** A small rounded tag after a row title states a fact about the row: "After restart" in muted gray
+  (only where it is true: the debug log and the distance from the top), "Also key 0" in the accent. A hint that applies
+  to a whole list sits under it in a blue-bordered box with a blue icon (the digit keys and switching a page off on
+  Pages).
+- **A section opens with a heading row** (`text_sm`, muted, inset 4 px): its title at the left, with a small blue icon
+  where one fits, and an optional short description at the right. Its parts follow 7 px apart: bordered blocks (12 px
+  radius, the card's border color, one step lighter than the card) with rows separated by dividers, where the border
+  closes the last row, so only rows between two others carry a divider; and items drawn outside a block, like the
+  Behavior cards. The page content is padded 16 px above, 22 px at the sides and 20 px below, and sections sit 14 px
+  apart. Muted gray is for row descriptions (`text_sm`), section headings and group labels; row titles are medium
+  weight (`text_base`) in the full foreground.
+- **Rows** are at least 50 px high with 9 px by 14 px padding: the title and a muted description (17 px lines) at the
+  left, 12 px from the control at the right. A switch is 42 x 25 (the window's own `switch.rs`). A button
+  is rounded (30 px high, 8 px radius, 13 px medium text), a step lighter than the block with a thin border; one that does nothing yet (What's new) is dimmed to 40 %, with "Coming soon" to its left. A field is 8 px round, darker than the block, and its border turns to the accent while it has focus. A page, sub-feature (Rain alert) or activity the account does not unlock keeps its switch and shows, before it, a 16 px lock in the accent blue and a pill (**Sign in** or **Upgrade**); the lock is the only sign of it, with no dimming or color change of the row.
 - **The font is Geist**, set through the component library's `theme.font_family`, so every control uses it.
-- **One scale knob.** The window follows the Windows display scale (GPUI sizes are logical pixels times the monitor's scale factor). On top of that, `theme.font_size` (`UI_FONT_SIZE` in `main.rs`, 14.7 instead of the library's 16, set in `palette::apply`) is the window's rem size, so every rem-based size shrinks together: `text_*` (`text_sm` is about 12.9 px, `text_base` 14.7 px), `px_*`, `gap_*` and the library's controls. Sizes written in `px(..)` (sidebar, header, brand) do not follow it.
+- **One scale knob.** The window follows the Windows display scale (GPUI sizes are logical pixels times the monitor's scale factor). On top of that, `theme.font_size` (`UI_FONT_SIZE` in `main.rs`, 14.5 instead of the library's 16, set in `palette::apply`) is the window's rem size, so every rem-based size shrinks together: `text_*` (`text_xs` is about 10.9 px, `text_sm` 12.7 px, `text_base` 14.5 px, `text_lg` 16.3 px), `px_*`, `gap_*` and the library's controls. Sizes written in `px(..)` (sidebar, header, brand) do not follow it.
 - **Option cards** are for picking among pictures (the calculation methods, the Asr choice, what the notch shows over a
   maximized or full-screen window). They follow shadcn's radio card: the radio ring sits inside the card at the top left,
   left of the title (semibold, full foreground) with the muted description under it; the picture follows. Selected:
   blue-tinted fill, accent border, accent ring with an accent dot. Unselected: darker fill, quiet border, empty ring. A
-  multi-select option uses a checkbox in the same place. Cards sit in equal-width columns (`card::grid`): four for the
-  calculation methods, two for the rest; a partial last row keeps the cell width and starts at the left.
+  multi-select option uses a checkbox in the same place. A card is rounded 10 px with a 1.5 px border and 8 px padding, 6 px between its parts; the title is 13.5 px and the
+  description 12 px on 16 px lines. Unselected, its fill is the block's (`#2a2a2d`) with a faint border, so it reads
+  as an outline. Where the picture already names the choice (the Behavior levels), the radio gives way to a filled
+  accent check after the title of the selected card (`card::checked_header`). Cards sit in equal-width columns 10 px
+  apart (`card::grid`): four for the calculation methods and the Behavior levels (the picture, 78 px high, above the
+  title there), three for the language and the screen choice, two for the rest; a partial last row keeps the cell width
+  and starts at the left.
+- **The chosen screen is picked on a drawing of the desktop**: the connected screens where they stand, scaled to fit,
+  each with its number and size; the chosen one is outlined in the accent with the notch on it. A list of names would
+  not say which physical screen is which.
 
 ## Connected devices page
 
@@ -421,13 +447,13 @@ The bar stays at the bottom of the page in both heights.
   at the right end of the left column's first line, level with the place, names what is shown and switches between the
   hours and the days when pressed; a day shows its high above its low. The choice is kept while the notch runs, not
   across restarts.
-- Sky icons are Lucide-style lines (cloud `#c4c4cc`, sun and moon `#ffc078`, rain `#74c0fc`, bolt `#ffd43b`).
+- Sky icons are the Lucide icons of the sky, one color each, chosen by `Symbol::icon` (the one mapping, from the MET Norway code): thunder cloud-lightning, snow and sleet cloud-snow, showers cloud-sun-rain by day and twilight and cloud-moon-rain by night (any intensity), heavy rain cloud-rain-wind, rain and light rain cloud-rain, cloudy cloudy, fair and partly cloudy cloud-sun by day and cloud-moon by night, clear sky sun by day and moon by night, fog cloud-fog, an unknown code cloudy. `_polartwilight` counts as day. Colors: sun and partly cloudy by day `#ffc078`, rain and showers `#74c0fc`, thunder `#ffd43b`, snow `#e7f0ff`, cloud, night and fog `#c4c4cc` (`#e6e6eb` in the first cell). The same icon draws in the rain alert (see below).
 - Offline and no location are rows: a 36 px round badge (`#17171c`, 1 px `#26262d`) on the left, 16 px, then a
   left-aligned title (15 px, Medium) and a line (12 px, `#9a9aa6`). Offline: a crossed-out cloud, "Weather is offline"
   and "Last updated 13:40 · retrying on its own". No location: a `#4dabf7` pin, "Choose a city" and "Pick a location in
   Settings to see the weather". Both hug their content: the page is as wide as the row plus the notch's padding, never
   below the notch's minimum width (the timer page's). The design draws them in a 392 px notch; that is not a rule.
-- The rain alert starts 30 minutes before rain: a 340 px banner (the width of a notification card; a blue 30 px tile with a rain icon, "Rain in 30 min" with "Weather" after it in grey, two lines of text) for 9 s, held while the pointer is on it, with Dismiss and Open under the text. The banner is the only moment the alert takes the pill; after it the alert stays as a blue badge in the group (a 14 px cloud, 4 px, "Rain in 25 min"; "25m" when several badges share the pill) and as a cloud in the open header, rank 6 (after the prayer), until the rain starts, so the clock and the battery ring stay in view. A press on the badge in the collapsed pill opens the notch on the weather page. Dismiss removes the badge too. Open opens the notch on the weather page (no browser); a click on the header cloud does the same. Only data clicked on the weather page opens weather.com: an hour of the Today view opens `https://weather.com/weather/hourbyhour/l/<lat>,<lon>` and a day of the Week view opens `.../tenday/l/<lat>,<lon>` (coordinates trimmed to 4 decimals, numbers only; the site has no address for one hour or day, so the view lists them). The data still comes from MET Norway.
+- The rain alert starts 30 minutes before rain: a 340 px banner (the width of a download card, a little narrower than a notification card; a blue 30 px tile with the white icon of the coming weather, "Rain in 30 min" with "Weather" after it in grey, two lines of text) for 9 s, held while the pointer is on it, with Dismiss and Open under the text. The banner is the only moment the alert takes the pill; after it the alert stays as a blue badge in the group (the 14 px icon of the coming weather, 4 px, "Rain in 25 min"; "25m" when several badges share the pill) and as that icon in the open header, rank 6 (after the prayer), until the rain starts, so the clock and the battery ring stay in view. A press on the badge in the collapsed pill opens the notch on the weather page. Dismiss removes the badge too. Open opens the notch on the weather page (no browser); a click on the header icon does the same. Only data clicked on the weather page opens weather.com: an hour of the Today view opens `https://weather.com/weather/hourbyhour/l/<lat>,<lon>` and a day of the Week view opens `.../tenday/l/<lat>,<lon>` (coordinates trimmed to 4 decimals, numbers only; the site has no address for one hour or day, so the view lists them). The data still comes from MET Norway.
 - Each hour (Today) and each day (Week) is a button: a click opens the same table for that hour's or that day's date, and the cell under the pointer takes a faint white tint (`#ffffff` at 7 %), as the Today/Week pill takes its lighter fill. The notch sets no pointer cursor anywhere, so none is set here. The Today/Week pill is unchanged.
 
 ## Color and type

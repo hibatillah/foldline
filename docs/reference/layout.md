@@ -101,7 +101,8 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
   The group and its 24 px gap exist only with a group; the dots and their 8 px gap only while a dot shows, and they
   take no width otherwise. The dot column ends the row 12 px from the edge, where it ends the idle row; when a dot comes
   or goes the pill widens or narrows and the group slides by the dot and 8 px. `Frame::lead_gap` is the room the page
-  keeps free after its lead: 24 px (moved on the `Springs::claim_lead_gap` spring when a page starts or stops
+  keeps free after its lead: 24 px, or what the page answers in `Page::resting_lead_gap()`; the host reserves the same
+  width in the pill (moved on the `Springs::claim_lead_gap` spring when a page starts or stops
   claiming). A page's
   `sizes().resting_width` is the lead plus the content, without the lead gap, the group, the dots and the pill's edges;
   the host adds them. The line is trimmed so both 24 px gaps hold. The
@@ -123,19 +124,21 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
 ### The open header
 
 ```
-  page dots   12+   clock (exact middle)   14+   group, icons only, 10 apart (4 ring to dots)         6    pin    4    gear
+  page dots   12+   clock (exact middle)   14+   group, icons only, 8 apart (4 ring to dots)   8    pin    4    gear
   at the left                                    [wave][Caps][muted] [timer][event][prayer] [ring][dots]    13 px        16 px
 ```
 
 (`header_row` in `crates/notch/src/host/pill_row.rs`; the items and their clicks are in `host/notch/header_row.rs`.)
 
 - **Left:** the page dots start at the header's left edge.
-- **Right:** the gear (16 px box, its hexagon a little narrower than the 14 px ring) is the last item, at the header's right
-  edge, and the pin (a 13 px box, its pin outline showing about 9 x 12 px) sits 4 px before it. The group ends 6 px before the pin (about 8 px of air to the glyph), in the idle row's order, 10 px between items and 4 px from the battery ring to
+- **Right:** the gear (16 px box, its hexagon a little narrower than the 14 px ring) is the last item, at the header's
+  right edge, and the pin (a 13 px box, its outline showing about 9 x 12 px) sits 4 px before it; the group ends 8 px
+  before the pin. The gaps are between the glyph boxes. Each has a 24 px hit square (`HIT_SIZE`) that draws nothing
+  (no hover background). The group is in the idle row's order, 8 px between items and 4 px from the battery ring to
   the dot column: the icons by rank (the activities' and pages' header status marks,
   `header_status_width` and `draw_header_status`; icons only, never text), then the battery ring, then the dot column.
-  The dot column reserves no width here either. Every group item's header place is the pin's and the gear's widths and the 6 and 4 px gaps left of
-  the edge, so the group slides there as the notch opens; the pin and the gear have their own springs in the header row.
+  The dot column reserves no width here either. Every group item's header place is the pin's and the gear's boxes, the 4 px between them and the 8 px
+  before the pin left of the edge (41 px), so the group slides there as the notch opens; the pin and the gear have their own springs in the header row.
 - **Middle:** the clock is in the exact middle of the header and never moves. An icon that would come nearer than 40 px
   to it is not shown: the icons are dropped from the clock side (lowest rank first) until the rest fit
   (`HeaderRow::dropped_icons`). The battery ring, the dot column, the pin and the gear are never dropped.
@@ -155,9 +158,9 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
 - **The pin** is drawn with `Icon::Pin`, `#8c8c94` while unpinned and `#74c0fc` while pinned (`pin_color` in
   `host/notch/header_row.rs`). A click toggles it (`Notch::toggle_pin`, `host/notch/pin.rs`). A pinned notch stays open
   with the pointer away and is never hidden by the words below or by Hide when idle; only a screenshot overlay hides it.
-- **Hover:** the pointer over the pin or the gear draws a 24 px wash, the item's hit square, behind it
-  (`HeaderMarks::hovered`, set on pointer moves and cleared when the pointer leaves or the notch closes; one repaint per
-  change, no timer). The layout and the hit areas stay as they are.
+- **Hover:** the pointer over the pin or the gear turns its glyph white and draws nothing else, so the 24 px hit square stays
+  invisible (`HeaderMarks::hovered`, set on pointer moves and cleared when the pointer leaves or the notch closes; one
+  repaint per change, no timer). The layout and the hit areas stay as they are.
 - By default, over a maximized window the pill hides to a strip unless lyrics play, and over a full-screen window the
   notch is off the screen; see
   [host and pages](../explanation/host-and-pages.md#hiding). Hiding is immediate, but the notch comes back only after the
@@ -170,7 +173,7 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
 
 `notch.monitor` ([settings keys](settings-keys.md)) picks the monitor: `main` is the primary one, `focused` is the one
 with the window in front, `chosen` is the one whose identifier is stored in `notch.monitor_id` (the main screen while that
-screen is not connected; it moves back when the screen returns, on the next display change). The window is centered on that monitor, its top is `notch.top` below the top edge of that
+screen is not connected; it moves back when the screen returns, on the next display change). The window is centered on that monitor, its top is flush with the top edge of that
 monitor (not of the virtual desktop), and its size and every pixel value follow that monitor's scale
 (`placement` in `host/monitor/choose.rs`).
 

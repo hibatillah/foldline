@@ -22,6 +22,7 @@ crates/notch/      notch.exe: host/, pages/, activities/, gfx/, ui/, platform/
 crates/settings/   notch-settings.exe, the settings window (GPUI)
 crates/store/      the settings file code both programs share, and the language both read
 crates/places/     the bundled city list and the location.* keys
+crates/account/    the account: permission catalog, statuses, grants, the signed token and policy, account.txt, the calls to the account site
 vendor/salah/      the prayer-time crate with one fix
 scripts/           reload, watch, perf, test-build, release notes, licenses, the city list
 installer/         the Inno Setup script
@@ -56,7 +57,7 @@ Every file inside these folders, and which module may use which, is in the [sour
  +------------------------------------------------------------+
 ```
 
-The two programs never call each other's code. The settings file and one window message are the whole link: the
+The two programs never call each other's code. The settings file, `account.txt` (see [Data stores](#data-stores)) and one window message are the whole link: the
 settings window writes a key through `crates/store` and posts `WM_SETTINGS_CHANGED` (`crates/settings/src/notify.rs`),
 and the notch reads the keys again. The notch writes `pages.known` at start, so the settings window can list pages it
 does not link. The message, the keys and their defaults are in
@@ -70,8 +71,9 @@ does not link. The message, the keys and their defaults are in
 | `notch-settings.exe` (`crates/settings`), shown in Task Manager as "Notch Settings" | the settings window: GPUI and gpui-component, one file per section, one window at a time, writes keys and tells the notch | [settings window](docs/reference/settings-window.md), [add a setting](docs/how-to/add-a-setting.md) |
 | `store` (`crates/store`) | the settings file as `key=value` lines with per-key atomic writes, and `language.rs`, which resolves `general.language` for both programs | [settings keys](docs/reference/settings-keys.md) |
 | `places` (`crates/places`) | the bundled city list behind the location search and the `location.*` keys that prayer times and weather share | [settings keys](docs/reference/settings-keys.md) |
+| `account` (`crates/account`) | the permission catalog, the statuses and grants, the signed token and policy (verified with Windows CNG), the DPAPI-protected `account.txt`, and the `Windows.Web.Http` calls to the account site; the notch decides access with it and the settings window signs in with it | [accounts and permissions](docs/explanation/accounts-and-permissions.md), [permissions](docs/reference/permissions.md) |
 
-`crates/notch` and `crates/settings` depend on `crates/store` and `crates/places` and never on each other, so the
+`crates/notch` and `crates/settings` depend on `crates/store`, `crates/places` and `crates/account` and never on each other, so the
 notch links no UI framework. Both programs look up their texts in English and Indonesian with `tr!`; how a language
 change reaches cached text is in [host and pages](docs/explanation/host-and-pages.md#text-in-two-languages).
 
@@ -80,6 +82,7 @@ change reaches cached text is in [host and pages](docs/explanation/host-and-page
 | Store | Where | Owner |
 | --- | --- | --- |
 | settings | `%APPDATA%\notch\settings.txt` | `crates/store` |
+| account: device identity, the last signed token and policy, the last check time | `%APPDATA%\notch\account.txt`, written atomically (a `.tmp` file renamed over it) with the device secret DPAPI-protected, by the settings window's sign-in and sign-out and by the notch's daily check | `crates/account/src/stored.rs` |
 | todo list | `%APPDATA%\notch\todo.txt` | `pages/todo/list.rs` |
 | shelf | `%APPDATA%\notch\shelf.txt` | `pages/shelf/` |
 | calendar cache, the last download | `%APPDATA%\notch\calendar.ics` | `pages/calendar/` |
@@ -101,6 +104,7 @@ Network requests use WinRT `Windows.Web.Http.HttpClient` on a worker thread:
 | the calendar address the user sets | the ICS download | `pages/calendar/fetch.rs` |
 | MET Norway Locationforecast | the forecast and the rain alert | `pages/weather/fetch.rs` |
 | weather.com | opened in the browser on a click, never fetched | `pages/weather/link.rs` |
+| the account site | the sign-in claim, sign-out and the daily check of the token and policy; a release build makes no request to it until accounts are enforced (`account::keys::is_enforced`) ([why](docs/explanation/accounts-and-permissions.md#why-a-release-build-locks-nothing-yet)) | `crates/account/src/client.rs`, called from `host/notch/daily_check.rs`, `host/account_check.rs` and `crates/settings/src/sign_in/` |
 
 The city search reads the bundled `assets/cities.tsv` and sends nothing. The device position comes from Windows
 (`Geolocator`, `platform/geolocation.rs`), asked again after a network change (`host/location_tracker/`). What each
@@ -151,11 +155,12 @@ Windows APIs by area:
 | header | the top row of the open notch: page dots, time, status marks, the pin and the gear ([layout](docs/reference/layout.md)) |
 | unit space | the device-independent coordinates, starting at zero, in which pages, activities and widgets draw and receive the pointer ([drawing model](docs/explanation/drawing-model.md)) |
 | `Notifier` | how a worker thread wakes the UI thread |
-| settings file | `settings.txt`, the only state both programs share |
+| settings file | `settings.txt`, the state both programs read and write; `account.txt` is the other file both touch |
 
 ## Where to go next
 
 - Setting up and the rules the code follows: [ONBOARDING.md](ONBOARDING.md).
 - Where a file lives: [source map](docs/reference/source-map.md).
+- Who may use which page or activity, and why a release build locks nothing yet: [accounts and permissions](docs/explanation/accounts-and-permissions.md); the catalog, statuses and `account.txt` fields: [permissions](docs/reference/permissions.md).
 - How the host chooses, sizes, animates and hides pages: [host and pages](docs/explanation/host-and-pages.md).
 - Every document by type: [docs/README.md](docs/README.md).

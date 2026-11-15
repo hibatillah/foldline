@@ -44,7 +44,7 @@ animation is noticeably slower, so use release for anything you look at.
 `assets/branding/` holds the logo files. A **mark** is the logo without a square; a **tile** is the logo inside the rounded square.
 
 - `tile-stable.svg`, `.png` (256 px), `.ico`: the blue tile. Icon of stable builds; the settings sidebar and About card show it on a stable build.
-- `tile-dev.svg`, `.png`, `.ico`: the orange tile. The same for pre-release builds (alpha, beta, rc).
+- `tile-dev.svg`, `.png`, `.ico`: the indigo tile. The same for pre-release builds (alpha, beta, rc).
 - `mark-cream.png`, `mark-charcoal.png`, `mark-orange.png`: marks without a square, kept as archive and used nowhere.
 
 The SVG files are the masters. The PNG and `.ico` files came from the designer's logo set and are committed as supplied; no script exports them, so replace all three files of a tile together when the logo changes.

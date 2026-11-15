@@ -37,7 +37,10 @@ listens to one Windows power setting and flashes a level bar when it changes.
 | `on_key()`, `on_keyboard_lost()` | typing, after `context.take_keyboard()` from a click (the notification banner's reply field); the keyboard went elsewhere |
 | `on_system_message()` | a power setting or the clipboard changed (see below) |
 | `on_language_changed()` | on a started activity, once per change of `general.language` and after the notch moves to a monitor of another scale; rebuild any message or width cached from `tr!` |
+| `on_account_signed_out_elsewhere()` | on a started activity, once when the daily account check learns this PC was signed out because the account signed in on another PC; only `account_notice` uses it (it shows its message through a `Flash`). Default: nothing |
 | `on_settings_changed()` | on a started activity, after the notch received `WM_SETTINGS_CHANGED` and re-read `settings.txt`; re-read the activity's own keys, falling back to the current value |
+
+An activity whose id is an `activity` action in the catalog (`crates/account/src/catalog.rs`) can be locked by the account: a locked activity is not started, and one already started keeps its listener but shows nothing, as when the user switches it off. `context.allows(action)` asks about the `activity` resource. Add a new activity's id to the `activity` actions of the catalog (the test `every_registered_page_and_activity_is_in_the_catalog` fails without it); a trial, paid account and the free launch then get it by themselves, and a guest or member gets it only when `Grants::built_in()` in `grants.rs` lists it (see [permissions](../reference/permissions.md#built-in-grants)); an id the catalog does not name is never locked (`account_notice` is in the account catalog and granted to every status, so it is never locked).
 
 Use `Flash` for a transient that shows and then goes: `flash.show(context, milliseconds)` shows it, again while
 visible keeps it up for a fresh duration, and `flash.on_timer(timer, context)` hides it. It uses `TimerId(0)`; an

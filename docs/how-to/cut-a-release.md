@@ -93,7 +93,7 @@ Copies share state:
 
 ## Notes
 
-- The icon is a tile, chosen by channel: `assets/branding/tile-stable` (blue) for a stable version and `tile-dev` (orange) for a pre-release. Replace the `.svg`, `.png` and `.ico` of a tile together
+- The icon is a tile, chosen by channel: `assets/branding/tile-stable` (blue) for a stable version and `tile-dev` (indigo) for a pre-release. Replace the `.svg`, `.png` and `.ico` of a tile together
   when the logo changes; no script exports them. Cargo embeds the `.ico` in each executable; Inno Setup uses the same tile for the setup
   executable and its PNG for the wizard image. The Start menu shortcut and installed-app entry use the icon embedded in `notch.exe`. See [App icon](build-run-and-debug.md#app-icon).
 - The installer is not code-signed, so Windows SmartScreen may warn people who download it. Free signing for open
@@ -121,7 +121,7 @@ as a number, so write `alpha.2`, not `alpha2`. The crate version stays `0.5.0` f
 `release.yml` checks only the part of the tag before the first `-` against the crate version, builds the same installer
 and publishes the release as a pre-release, so it is not shown as the latest one. The installer carries the whole tag
 version (`0.5.0-alpha.1`), which its Start menu entry, its folder and Add or remove programs show (`Notch 0.5.0-alpha.1`); it installs beside every other copy and never asks to replace one (see [Updating](#updating)). The settings window's sidebar shows it
-too: the Build step passes it as `NOTCH_RELEASE_VERSION` (the tag without the `v`), and a local build without it shows the latest pre-release tag of the current version series (`crates/settings/build.rs` reads it from `git describe`), or the plain crate version when there is none. The executables, the installer and its wizard image carry the orange `tile-dev` icon instead of the blue `tile-stable` one. The **Check the icons** step of `release.yml` (`scripts/check-icon.sh`) fails the release before packaging when an executable embeds the wrong tile. Delete the pre-release and its tag when it is no longer needed.
+too: the Build step passes it as `NOTCH_RELEASE_VERSION` (the tag without the `v`), and a local build without it shows the latest pre-release tag of the current version series (`crates/settings/build.rs` reads it from `git describe`), or the plain crate version when there is none. The executables, the installer and its wizard image carry the indigo `tile-dev` icon instead of the blue `tile-stable` one. The **Check the icons** step of `release.yml` (`scripts/check-icon.sh`) fails the release before packaging when an executable embeds the wrong tile. Delete the pre-release and its tag when it is no longer needed.
 
 In Claude Code, `/release <version | major | minor | patch | alpha | beta | rc | stable>` does these steps up to the push: it works out the next tag from the latest one (`/release beta` after `v0.5.0-alpha.2` gives `v0.5.0-beta.1`; `/release minor beta` gives the first beta of the next minor), checks that `master` is clean and green, sets the crate versions when the base number changes, commits and tags locally, shows the result and asks before pushing the commit and the tag.
 

@@ -62,7 +62,7 @@ is fully shown and the page content has not started). Delays and fades are const
 (`notch/open_state.rs`, `notch/hiding.rs`, `notch/layout.rs`).
 
 Every size spring (`expansion`, the collapsed and open width and height, the badge room) uses the one response
-`SIZE_RESPONSE` in `host/motion.rs`: stiffness 215, damping 16.7, a damping ratio of 0.57 and an overshoot of about 10 %
+`SIZE_RESPONSE` in `host/motion.rs`: stiffness 215, damping 19.7, a damping ratio of 0.67 and an overshoot of about 5 %
 of a move, for open, close, page switches and the media page's lyrics width. Every size spring also has a lead-in (`SIZE_LEAD_IN`, 90 ms): when a move starts at rest, the pull toward the
 target grows along a smoothstep from nothing, so the move begins gently (an ease-in) and the bounce stays at the end;
 a retarget while moving keeps the pull it had. Springs with the same response and lead-in settle in the same time

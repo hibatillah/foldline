@@ -17,6 +17,7 @@ New to the team? Start with [ONBOARDING.md](../ONBOARDING.md) at the repository 
 | [Test and snapshot](how-to/test-and-snapshot.md) | writing a test, rendering page pictures, the manual checklist |
 | [Run the performance check](how-to/run-the-perf-check.md) | after host, animation, timer or drawing changes, and before a release |
 | [Work with branches](how-to/work-with-branches.md) | starting a change, opening or merging a pull request, or before you push |
+| [Run the mock account server](how-to/run-the-mock-account-server.md) | trying the app against the account API before the real site exists |
 | [Cut a release](how-to/cut-a-release.md) | publishing a version, the installer, license list, how users update |
 
 ## Reference: look something up
@@ -27,6 +28,7 @@ New to the team? Start with [ONBOARDING.md](../ONBOARDING.md) at the repository 
 | [Activities](reference/activities.md) | what `Presence` can show, and what each built-in activity watches |
 | [Settings keys](reference/settings-keys.md) | a key, its default, an environment variable, where a tunable lives |
 | [Settings window](reference/settings-window.md) | what each section of `notch-settings.exe` sets |
+| [Permissions](reference/permissions.md) | the catalog, statuses, built-in grants, server grants, debug variables and `account.txt` |
 | [Source map](reference/source-map.md) | where a file lives and which module may use which |
 | [Layout](reference/layout.md) | padding, header and the open and collapsed shapes |
 | [Design rules](reference/design-rules.md) | order, gaps, colors and fonts of what the user sees, and the reason for each |
@@ -41,3 +43,4 @@ New to the team? Start with [ONBOARDING.md](../ONBOARDING.md) at the repository 
 | [Host and pages](explanation/host-and-pages.md) | restructuring, or learning how the host, pages and activities work inside the notch |
 | [Drawing model](explanation/drawing-model.md) | changing how something is drawn, adding a widget, or asking why the notch uses no UI framework |
 | [Performance budget](explanation/performance-budget.md) | changing timers, animation or drawing |
+| [Accounts and permissions](explanation/accounts-and-permissions.md) | changing who may use what, adding a page or activity, or asking why a release build locks nothing yet |
