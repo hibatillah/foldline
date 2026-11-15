@@ -57,7 +57,7 @@ jobs:
       - name: Check the icons
         shell: bash
         run: |
-          # A tag with a suffix (v0.5.0-alpha.1) is a dev build: both programs must carry the orange tile, the others the blue one.
+          # A tag with a suffix (v0.5.0-alpha.1) is a dev build: both programs must carry the indigo tile, the others the blue one.
           name=$(grep -m1 '^name' crates/notch/Cargo.toml | cut -d'"' -f2)
           settings_name=$(grep -A3 '^\[\[bin\]\]' crates/settings/Cargo.toml | grep -m1 '^name' | cut -d'"' -f2)
           tile=tile-stable
