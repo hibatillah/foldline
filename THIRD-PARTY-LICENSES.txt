@@ -15917,6 +15917,7 @@ freely, subject to the following restrictions:
 
 ==============================================================================
 Crates whose sources contain no license file (see their declared license):
+  account 0.5.0 (declared: None)
   blade-graphics 0.7.1 (declared: MIT)
   blade-macros 0.3.0 (declared: MIT)
   blade-util 0.3.0 (declared: MIT)
@@ -15935,6 +15936,7 @@ Crates whose sources contain no license file (see their declared license):
   lyon_tessellation 1.0.23 (declared: MIT OR Apache-2.0)
   mac 0.1.1 (declared: MIT/Apache-2.0)
   naga 25.0.1 (declared: MIT OR Apache-2.0)
+  places 0.5.0 (declared: None)
   profiling 1.0.18 (declared: MIT OR Apache-2.0)
   profiling-procmacros 1.0.18 (declared: MIT OR Apache-2.0)
   pulp-wasm-simd-flag 0.1.1 (declared: MIT)
@@ -15962,6 +15964,13 @@ changed: only cities with 15,000 inhabitants or more were kept, and only their n
 The data is provided "as is" without warranty or any representation of accuracy, timeliness or completeness.
 
 ==============================================================================
+MET Norway weather data (the weather page)
+------------------------------------------------------------------------------
+The forecast comes from the MET Norway Weather API (https://api.met.no), licensed under the Creative Commons
+Attribution 4.0 International License (https://creativecommons.org/licenses/by/4.0/). Data from the Norwegian
+Meteorological Institute. The data is provided "as is" without warranty.
+
+==============================================================================
 option-ext 0.2.0 (Mozilla Public License 2.0)
 ------------------------------------------------------------------------------
 The settings window includes the unmodified crate option-ext, licensed under the Mozilla Public License, version 2.0
@@ -15972,7 +15981,7 @@ only and does not apply to the rest of this software.
 ==============================================================================
 Lucide icons (ISC License)
 ------------------------------------------------------------------------------
-The "sliders-horizontal", "copy" and "x" icons are redrawn from Lucide (https://lucide.dev), and the settings window bundles the Lucide icons "layers", "puzzle", "calendar-days", "moon-star", "chart-column", "wrench", "info", "cloud-drizzle" and "folder" unmodified. Lucide is licensed under
+The "sliders-horizontal", "copy" and "x" icons and the weather icons "sun", "moon", "cloud", "cloudy", "cloud-sun", "cloud-moon", "cloud-rain", "cloud-rain-wind", "cloud-sun-rain", "cloud-moon-rain", "cloud-snow", "cloud-fog" and "cloud-lightning" are redrawn from Lucide (https://lucide.dev), and the settings window bundles the Lucide icons "layers", "puzzle", "calendar-days", "moon-star", "chart-column", "wrench", "info", "cloud-drizzle", "folder", "circle-user" and "lock" unmodified. Lucide is licensed under
 the ISC License; portions are copyright Cole Bemis 2013-2022 as part of Feather (MIT License). All other copyright is
 held by Lucide Contributors 2022. The license text is at https://lucide.dev/license.
 

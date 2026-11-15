@@ -3,6 +3,13 @@
 version = 4
 
 [[package]]
+name = "account"
+version = "0.5.0"
+dependencies = [
+ "windows 0.62.2",
+]
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3607,6 +3614,7 @@ dependencies = [
 name = "notch"
 version = "0.5.0"
 dependencies = [
+ "account",
  "places",
  "rust-i18n",
  "salah",
@@ -5283,6 +5291,7 @@ dependencies = [
 name = "settings"
 version = "0.5.0"
 dependencies = [
+ "account",
  "gpui",
  "gpui-component",
  "gpui-component-assets",
