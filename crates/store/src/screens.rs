@@ -23,6 +23,9 @@ pub struct Screen {
     pub id: String,
     pub model: Option<String>,
     pub is_primary: bool,
+    /// The top-left corner on the virtual desktop; the primary screen's is 0, 0 and others can be negative.
+    pub left: i32,
+    pub top: i32,
     pub width: i32,
     pub height: i32,
 }
@@ -84,7 +87,15 @@ unsafe extern "system" fn collect(monitor: HMONITOR, _context: HDC, _rect: *mut 
         let ScreenIdentity { id, model } = identity_of(&info);
         let rect = info.monitorInfo.rcMonitor;
         let is_primary = info.monitorInfo.dwFlags & MONITORINFOF_PRIMARY != 0;
-        screens.push(Screen { id, model, is_primary, width: rect.right - rect.left, height: rect.bottom - rect.top });
+        screens.push(Screen {
+            id,
+            model,
+            is_primary,
+            left: rect.left,
+            top: rect.top,
+            width: rect.right - rect.left,
+            height: rect.bottom - rect.top,
+        });
     }
     true.into()
 }
@@ -123,6 +134,8 @@ mod tests {
     fn the_list_has_one_primary_screen_and_every_identifier_is_filled() {
         let screens = list();
         assert_eq!(screens.iter().filter(|screen| screen.is_primary).count(), 1);
+        let primary = screens.iter().find(|screen| screen.is_primary).expect("primary");
+        assert_eq!((primary.left, primary.top), (0, 0), "the primary screen starts the virtual desktop");
         assert!(screens.iter().all(|screen| !screen.id.is_empty() && screen.width > 0 && screen.height > 0));
     }
 

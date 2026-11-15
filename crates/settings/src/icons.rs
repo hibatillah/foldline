@@ -25,8 +25,35 @@ pub const WEATHER: &str = "icons/cloud-drizzle.svg";
 pub const FOLDER: &str = "icons/folder.svg";
 /// Lucide "info".
 pub const ABOUT: &str = "icons/info.svg";
+/// Lucide "circle-user".
+pub const ACCOUNT: &str = "icons/circle-user.svg";
+/// Lucide "lock", the badge of a page the account does not unlock.
+pub const LOCK: &str = "icons/lock.svg";
 
-const OWN_ICONS: [(&str, &str); 10] = [
+/// Lucide "play", the media page.
+pub const PLAY: &str = "icons/play.svg";
+/// Lucide "inbox", the file shelf; the component library's bundle serves it.
+pub const INBOX: &str = "icons/inbox.svg";
+/// Lucide "timer".
+pub const TIMER: &str = "icons/timer.svg";
+/// Lucide "square-check", the todo page.
+pub const TODO: &str = "icons/square-check.svg";
+/// Lucide "bluetooth", the connected devices page.
+pub const BLUETOOTH: &str = "icons/bluetooth.svg";
+/// Lucide "clipboard".
+pub const CLIPBOARD: &str = "icons/clipboard.svg";
+/// Lucide "keyboard", the hint about the number keys.
+pub const KEYBOARD: &str = "icons/keyboard.svg";
+/// Lucide "mouse-pointer-2", the pointer in the pictures.
+pub const POINTER: &str = "icons/mouse-pointer-2.svg";
+/// Lucide "volume-2", the volume message in the Behavior pictures.
+pub const VOLUME: &str = "icons/volume-2.svg";
+/// Lucide "triangle-alert", the icon of a warning box.
+pub const WARNING: &str = "icons/triangle-alert.svg";
+/// Lucide "file"; the component library's bundle serves it.
+pub const FILE: &str = "icons/file.svg";
+
+const OWN_ICONS: [(&str, &str); 21] = [
     (GENERAL, include_str!("../assets/icons/hex-nut.svg")),
     (PAGES, include_str!("../assets/icons/layers.svg")),
     (BEHAVIOR, include_str!("../assets/icons/puzzle.svg")),
@@ -37,6 +64,17 @@ const OWN_ICONS: [(&str, &str); 10] = [
     (WEATHER, include_str!("../assets/icons/cloud-drizzle.svg")),
     (FOLDER, include_str!("../assets/icons/folder.svg")),
     (ABOUT, include_str!("../assets/icons/info.svg")),
+    (ACCOUNT, include_str!("../assets/icons/circle-user.svg")),
+    (LOCK, include_str!("../assets/icons/lock.svg")),
+    (PLAY, include_str!("../assets/icons/play.svg")),
+    (TIMER, include_str!("../assets/icons/timer.svg")),
+    (TODO, include_str!("../assets/icons/square-check.svg")),
+    (BLUETOOTH, include_str!("../assets/icons/bluetooth.svg")),
+    (CLIPBOARD, include_str!("../assets/icons/clipboard.svg")),
+    (KEYBOARD, include_str!("../assets/icons/keyboard.svg")),
+    (POINTER, include_str!("../assets/icons/mouse-pointer-2.svg")),
+    (VOLUME, include_str!("../assets/icons/volume-2.svg")),
+    (WARNING, include_str!("../assets/icons/triangle-alert.svg")),
 ];
 
 /// Serves this window's icons first and the component library's bundle for everything else.
@@ -77,7 +115,9 @@ mod tests {
 
     #[test]
     fn the_librarys_own_icons_are_still_served() {
-        assert!(WindowAssets.load("icons/chevron-right.svg").expect("load").is_some());
+        for path in ["icons/chevron-right.svg", INBOX, FILE] {
+            assert!(WindowAssets.load(path).expect("load").is_some(), "{path}");
+        }
     }
 
     #[test]

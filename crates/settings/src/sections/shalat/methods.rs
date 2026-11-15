@@ -7,7 +7,10 @@ use places::Location;
 use store::Settings;
 
 use super::{METHOD_KEY, pictures, pictures::Sun};
-use crate::{card, field, layout::Item};
+use crate::{
+    card, field,
+    layout::{self, Item},
+};
 
 /// How Isha is found: the sun's depth in degrees, or a fixed time after Maghrib.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -138,7 +141,7 @@ fn method_card(
     selected: bool,
     cx: &App,
 ) -> AnyElement {
-    card::frame(SharedString::from(format!("{METHOD_KEY}-{word}")), selected, 10.0, 10.0, cx)
+    card::frame(SharedString::from(format!("{METHOD_KEY}-{word}")), selected, cx)
         .cursor_pointer()
         .on_click(move |_event, _window, cx| field::write(METHOD_KEY, word, cx))
         .child(card::header(name, Some(note), selected, cx))
@@ -173,7 +176,7 @@ pub fn item() -> Item {
         let explanation = tr!("shalat.method_explanation", auto = auto_sentence(&country));
         v_flex()
             .gap_3()
-            .child(card::described(tr!("shalat.method_title"), explanation, cx))
+            .child(layout::block_heading(tr!("shalat.method_title"), Some(explanation.into()), cx))
             .child(card::grid(card::COLUMNS, cards))
             .into_any_element()
     })

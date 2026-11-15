@@ -1,7 +1,6 @@
-//! The language cards on the General page: Automatic, English and Bahasa Indonesia.
+//! The language cards on the Advanced page: Automatic, English and Bahasa Indonesia.
 
 use gpui::{AnyElement, App, SharedString, prelude::*};
-use gpui_component::v_flex;
 use store::{
     Settings,
     language::{LANGUAGE_KEY, Language, LanguageChoice},
@@ -35,7 +34,7 @@ pub fn auto_description(system: Language) -> &'static str {
 fn card_for(card: &'static Card, selected: bool, cx: &App) -> AnyElement {
     let choice = card.choice;
     let description = (choice == LanguageChoice::Auto).then(|| auto_description(store::language::system_language()));
-    card::frame(SharedString::from(format!("{LANGUAGE_KEY}-{}", choice.setting_word())), selected, 10.0, 10.0, cx)
+    card::frame(SharedString::from(format!("{LANGUAGE_KEY}-{}", choice.setting_word())), selected, cx)
         .cursor_pointer()
         .on_click(move |_event, _window, cx| apply_language(choice, cx))
         .child(card::header((card.label)(), description, selected, cx))
@@ -43,14 +42,10 @@ fn card_for(card: &'static Card, selected: bool, cx: &App) -> AnyElement {
 }
 
 pub fn item() -> Item {
-    Item::custom(|_window, cx| {
+    Item::picture_row(|_window, cx| {
         let picked = LanguageChoice::from_setting(Settings::load().get_string(LANGUAGE_KEY));
         let cards = CHOICES.iter().map(|card| card_for(card, card.choice == picked, cx)).collect();
-        v_flex()
-            .gap_3()
-            .child(card::described(tr!("general.language_title"), tr!("general.language_description"), cx))
-            .child(card::grid(3, cards))
-            .into_any_element()
+        card::grid(3, cards).into_any_element()
     })
 }
 

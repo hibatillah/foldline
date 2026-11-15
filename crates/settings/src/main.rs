@@ -2,12 +2,16 @@
 
 rust_i18n::i18n!("locales", fallback = "en");
 
+mod account_refresh;
 mod brand;
 mod card;
+mod chips;
 mod field;
 mod header;
 mod i18n;
 mod icons;
+mod illustration;
+mod info_box;
 mod layout;
 mod location;
 mod notify;
@@ -17,8 +21,13 @@ mod picture;
 mod release_version;
 mod sections;
 mod sidebar;
+mod sign_in;
 mod single_instance;
+mod standing;
 mod startup;
+mod stepper;
+mod switch;
+mod tag;
 mod version;
 
 use std::rc::Rc;
@@ -31,14 +40,14 @@ use gpui_component::{ActiveTheme as _, Root, Theme, TitleBar, h_flex, v_flex};
 
 use sidebar::{NavEntry, SelectHandler};
 
-const SIDEBAR_WIDTH: f32 = 200.0;
+const SIDEBAR_WIDTH: f32 = 216.0;
 const MINIMUM_WINDOW_SIZE: (f32, f32) = (720.0, 480.0);
 const DEFAULT_WINDOW_SIZE: (f32, f32) = (1040.0, 660.0);
 /// Space kept free around the window when the screen is smaller than the default size (taskbar and edges).
 const SCREEN_MARGIN: f32 = 80.0;
 const LOGO_SIZE: f32 = 28.0;
 /// The one scale knob: gpui-component's Root sets the window's rem size to this, so every rem-based size (text, `px_*`, `gap_*`, controls) follows it. 16 is the library default.
-const UI_FONT_SIZE: f32 = 14.7;
+const UI_FONT_SIZE: f32 = 14.5;
 // The notch's own font files (SIL Open Font License, assets/fonts/Geist-LICENSE.txt).
 const GEIST_FONTS: [&[u8]; 2] = [
     include_bytes!("../../../assets/fonts/Geist-Regular.ttf"),
@@ -47,7 +56,13 @@ const GEIST_FONTS: [&[u8]; 2] = [
 const FONT_FAMILY: &str = "Geist";
 /// The frame that shows around the content card: above it, to its right and below it.
 const FRAME_PADDING: f32 = 8.0;
-const CARD_RADIUS: f32 = 8.0;
+const CARD_RADIUS: f32 = 14.0;
+/// The space between the card's header and the page, at the page's sides and below it.
+const CONTENT_PADDING_TOP: f32 = 16.0;
+const CONTENT_PADDING_X: f32 = 22.0;
+const CONTENT_PADDING_BOTTOM: f32 = 20.0;
+/// Between the tile, "Notch" and the version.
+const BRAND_GAP: f32 = 8.0;
 
 struct SettingsWindow {
     selected_page_index: usize,
@@ -65,15 +80,15 @@ impl Render for SettingsWindow {
         let view = cx.entity();
         let version_label = format!("v{}", version::displayed_version());
         let brand = h_flex()
-            .gap_3()
+            .gap(px(BRAND_GAP))
             .items_center()
             .child(img(brand::tile_image()).size(px(LOGO_SIZE)).flex_none())
             .child(
                 h_flex()
-                    .gap_1()
+                    .gap(px(BRAND_GAP))
                     .items_baseline()
                     .min_w_0()
-                    .child(div().flex_none().text_base().font_weight(gpui::FontWeight::SEMIBOLD).child("Notch"))
+                    .child(div().flex_none().text_lg().font_weight(gpui::FontWeight::SEMIBOLD).child("Notch"))
                     .child(
                         div()
                             .min_w_0()
@@ -87,15 +102,20 @@ impl Render for SettingsWindow {
             )
             .into_any_element();
         let on_select: SelectHandler = Rc::new(move |page_index, cx| {
-            view.update(cx, |this, cx| {
-                this.selected_page_index = page_index;
-                cx.notify();
-            });
+            view.update(cx, |this, cx| this.select(page_index, cx));
         });
         let sidebar = sidebar::render(brand, &self.pages, self.selected_page_index, on_select, cx);
         let selected = &self.pages[self.selected_page_index].page;
-        let content =
-            div().id("content").flex_1().min_h_0().overflow_y_scroll().px_6().py_6().child(selected.render(window, cx));
+        let content = div()
+            // One scroll position per page, so a page opens at its top.
+            .id(("content", self.selected_page_index))
+            .flex_1()
+            .min_h_0()
+            .overflow_y_scroll()
+            .pt(px(CONTENT_PADDING_TOP))
+            .px(px(CONTENT_PADDING_X))
+            .pb(px(CONTENT_PADDING_BOTTOM))
+            .child(selected.render(window, cx));
         let card = v_flex()
             .size_full()
             .rounded(px(CARD_RADIUS))
@@ -125,6 +145,32 @@ impl Render for SettingsWindow {
             )
             .children(Root::render_notification_layer(window, cx))
     }
+}
+
+impl SettingsWindow {
+    /// Showing the Account page checks the account with the site when the last check is stale.
+    fn select(&mut self, page_index: usize, cx: &mut Context<Self>) {
+        self.selected_page_index = page_index;
+        if self.pages.get(page_index).is_some_and(|entry| entry.icon == icons::ACCOUNT) {
+            account_refresh::refresh_if_due(cx);
+        }
+        cx.notify();
+    }
+}
+
+/// The open window, so a page can switch to another one (a locked page's **Sign in** opens Account).
+struct OpenWindow(gpui::WeakEntity<SettingsWindow>);
+
+impl gpui::Global for OpenWindow {}
+
+/// Selects the sidebar entry with this icon; does nothing before the window is open.
+pub fn select_page(icon: &'static str, cx: &mut App) {
+    let Some(view) = cx.try_global::<OpenWindow>().map(|open| open.0.clone()) else { return };
+    let _ = view.update(cx, |window, cx| {
+        if let Some(index) = window.pages.iter().position(|entry| entry.icon == icon) {
+            window.select(index, cx);
+        }
+    });
 }
 
 /// The opening size: the default, cut down to fit the screen with a margin, never below the minimum size.
@@ -175,6 +221,7 @@ fn main() {
                 pages: sections::all(),
                 built_for: store::language::current(),
             });
+            cx.set_global(OpenWindow(view.downgrade()));
             let view_to_refresh = view.clone();
             window
                 .observe_window_appearance(move |window, cx| {

@@ -1,11 +1,18 @@
 //! Fine-tuning each prayer by up to 30 minutes, with a day bar that shows where each prayer falls.
 
 use crate::i18n::tr;
+use std::rc::Rc;
+
 use gpui::{AnyElement, App, SharedString, div, linear_color_stop, linear_gradient, prelude::*, px, relative};
-use gpui_component::{ActiveTheme as _, Icon, IconName, h_flex, v_flex};
+use gpui_component::{h_flex, v_flex};
 use store::Settings;
 
-use crate::{card, field, layout::Item, picture::color};
+use crate::{
+    field,
+    layout::{self, Item},
+    picture::color,
+    stepper::{self, Step},
+};
 
 const OFFSET_LIMIT: i64 = 30;
 // The bar covers 03:30 to 20:30, where the prayers of a city near the equator fall.
@@ -59,12 +66,12 @@ pub fn stepped(offset: i64, delta: i64) -> i64 {
     (offset + delta).clamp(-OFFSET_LIMIT, OFFSET_LIMIT)
 }
 
-/// "0 min", "+2 min", "−5 min".
-pub fn offset_text(offset: i64) -> String {
+/// "0", "+2", "−5": the minutes with their sign; the stepper adds the unit.
+pub fn offset_value(offset: i64) -> String {
     match offset {
-        0 => tr!("shalat.offset_zero").to_owned(),
-        offset if offset > 0 => tr!("shalat.offset_plus", offset = offset),
-        offset => tr!("shalat.offset_minus", offset = -offset),
+        0 => "0".to_owned(),
+        offset if offset > 0 => format!("+{offset}"),
+        offset => format!("−{}", -offset),
     }
 }
 
@@ -118,35 +125,13 @@ fn day_bar(offsets: &[i64; 6]) -> AnyElement {
     div().relative().w_full().child(day_strip()).children(dots).into_any_element()
 }
 
-fn step_button(
-    key: &'static str,
-    label: &'static str,
-    icon: IconName,
-    delta: i64,
-    offset: i64,
-    cx: &App,
-) -> AnyElement {
-    let available = stepped(offset, delta) != offset;
-    div()
-        .id(SharedString::from(format!("{key}-{label}")))
-        .size(px(24.0))
-        .flex_none()
-        .flex()
-        .items_center()
-        .justify_center()
-        .rounded(px(6.0))
-        .border_1()
-        .border_color(cx.theme().border)
-        .bg(crate::palette::input_background(cx))
-        .when(available, |button| {
-            button.cursor_pointer().on_click(move |_event, _window, cx| {
-                let next = stepped(read_offset(&Settings::load(), key), delta);
-                field::write(key, &next.to_string(), cx);
-            })
-        })
-        .when(!available, |button| button.opacity(0.4))
-        .child(Icon::new(icon).size(px(12.0)))
-        .into_any_element()
+fn step_by(key: &'static str, delta: i64, offset: i64) -> Option<Step> {
+    (stepped(offset, delta) != offset).then(|| {
+        Rc::new(move |cx: &mut App| {
+            let next = stepped(read_offset(&Settings::load(), key), delta);
+            field::write(key, &next.to_string(), cx);
+        }) as Step
+    })
 }
 
 fn prayer_column(prayer: &'static Prayer, offset: i64, cx: &App) -> AnyElement {
@@ -156,16 +141,15 @@ fn prayer_column(prayer: &'static Prayer, offset: i64, cx: &App) -> AnyElement {
         .items_center()
         .gap(px(6.0))
         .child(div().text_size(px(13.0)).child((prayer.name)()))
-        .child(
-            h_flex()
-                .items_center()
-                .gap(px(4.0))
-                .child(step_button(prayer.key, "minus", IconName::Minus, -1, offset, cx))
-                .child(
-                    div().w(px(48.0)).text_center().text_size(px(12.0)).child(SharedString::from(offset_text(offset))),
-                )
-                .child(step_button(prayer.key, "plus", IconName::Plus, 1, offset, cx)),
-        )
+        .child(stepper::stepper(
+            prayer.key,
+            SharedString::from(offset_value(offset)),
+            tr!("stepper.minutes"),
+            step_by(prayer.key, -1, offset),
+            step_by(prayer.key, 1, offset),
+            stepper::COMPACT,
+            cx,
+        ))
         .into_any_element()
 }
 
@@ -176,7 +160,7 @@ pub fn item() -> Item {
         let columns = PRAYERS.iter().zip(offsets).map(|(prayer, offset)| prayer_column(prayer, offset, cx));
         v_flex()
             .gap_3()
-            .child(card::described(tr!("shalat.adjust_title"), tr!("shalat.adjust_description"), cx))
+            .child(layout::block_heading(tr!("shalat.adjust_title"), None, cx))
             .child(
                 v_flex()
                     .gap(px(14.0))
@@ -233,10 +217,10 @@ mod tests {
     }
 
     #[test]
-    fn the_offset_reads_with_a_sign_and_the_unit() {
-        assert_eq!(offset_text(0), "0 min");
-        assert_eq!(offset_text(2), "+2 min");
-        assert_eq!(offset_text(-30), "−30 min");
+    fn the_offset_reads_with_its_sign() {
+        assert_eq!(offset_value(0), "0");
+        assert_eq!(offset_value(2), "+2");
+        assert_eq!(offset_value(-30), "−30");
     }
 
     #[test]

@@ -2,12 +2,12 @@
 
 mod licenses;
 mod paths;
-mod widgets;
+pub(super) mod widgets;
 
 use crate::i18n::tr;
 use std::{path::Path, rc::Rc};
 
-use gpui::{AnyElement, App, Window};
+use gpui::{AnyElement, App, Window, div, prelude::*, px};
 use gpui_component::{IconName, WindowExt as _, notification::Notification};
 
 use crate::layout::{Group, Item, Page};
@@ -16,7 +16,8 @@ use widgets::Handler;
 
 /// The release notes of this version. Empty until the site exists; while it is empty the button is inert.
 const WHATS_NEW_URL: &str = "";
-const LRCLIB_URL: &str = "https://lrclib.net";
+
+const STORE_PRODUCT_ID: &str = "9NGTV96SZDS7";
 
 /// What a row's button does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -58,13 +59,6 @@ fn link_rows() -> Vec<Row> {
             button: tr!("about.view"),
             action: Action::Licenses,
             external: false,
-        },
-        Row {
-            title: tr!("about.lyrics"),
-            description: tr!("about.lyrics_note"),
-            button: "lrclib.net",
-            action: Action::Link(LRCLIB_URL),
-            external: true,
         },
     ]
 }
@@ -117,9 +111,15 @@ fn handler_for(action: Action) -> Option<Handler> {
     Some(handler)
 }
 
-/// The update check. A later change returns the handler that runs it; until then the button is inert.
-fn update_check() -> Option<Handler> {
-    None
+/// The Microsoft Store address of the app, or nothing while there is no product id.
+fn store_address(product_id: &str) -> Option<String> {
+    (!product_id.is_empty()).then(|| format!("ms-windows-store://pdp/?productid={product_id}"))
+}
+
+/// Opens the app's Store page; none while `STORE_PRODUCT_ID` is empty, so the link stays hidden.
+fn open_store() -> Option<Handler> {
+    let address = store_address(STORE_PRODUCT_ID)?;
+    Some(Rc::new(move |_window, cx| cx.open_url(&address)))
 }
 
 fn items(rows: Vec<Row>) -> Vec<Item> {
@@ -136,10 +136,11 @@ fn items(rows: Vec<Row>) -> Vec<Item> {
 }
 
 pub fn page() -> Page {
-    let card = Item::custom(|_window, cx| widgets::app_card(update_check(), cx));
-    Page::new(
+    let card = Item::picture_row(|_window, cx| {
+        div().px(px(2.0)).py(px(4.0)).child(widgets::app_card(open_store(), cx)).into_any_element()
+    });
+    Page::plain(
         tr!("about.title"),
-        tr!("about.description"),
         vec![
             Group::new(vec![card]),
             Group::new(items(link_rows())),
@@ -157,8 +158,8 @@ mod tests {
     }
 
     #[test]
-    fn the_link_rows_are_whats_new_licenses_and_lyrics() {
-        assert_eq!(titles(&link_rows()), ["What's new", "Licenses", "Lyrics"]);
+    fn the_link_rows_are_whats_new_and_licenses() {
+        assert_eq!(titles(&link_rows()), ["What's new", "Licenses"]);
     }
 
     #[test]
@@ -182,25 +183,17 @@ mod tests {
     }
 
     #[test]
-    fn the_update_check_is_not_wired_yet() {
-        assert!(update_check().is_none());
+    fn an_empty_product_id_gives_no_store_address() {
+        assert_eq!(store_address(""), None);
     }
 
     #[test]
-    fn the_lyrics_row_names_lrclib_and_opens_its_site() {
-        let lyrics = &link_rows()[2];
-        assert_eq!(lyrics.action, Action::Link("https://lrclib.net"));
-        assert!(lyrics.description.contains("LRCLIB"));
+    fn a_product_id_gives_the_store_page_address() {
+        assert_eq!(store_address("9ABC123DEF45").as_deref(), Some("ms-windows-store://pdp/?productid=9ABC123DEF45"));
     }
 
     #[test]
     fn the_settings_file_row_names_the_real_file() {
         assert!(file_rows()[0].description.starts_with("settings.txt"));
-    }
-
-    #[test]
-    fn the_page_has_a_description() {
-        let page = page();
-        assert!(page.description().trim().len() > 20);
     }
 }

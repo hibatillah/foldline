@@ -25,9 +25,12 @@ pub struct Palette {
     pub header: u32,
     /// A section's bordered block, one step above the card.
     pub block: u32,
-    /// A field or a button, darker than the block it sits in.
+    /// A field, darker than the block it sits in.
     pub input: u32,
     pub input_border: u32,
+    /// A button: a step lighter than the block it sits in on the dark theme.
+    pub button: u32,
+    pub button_border: u32,
     pub divider: u32,
     pub option: u32,
     pub option_selected: u32,
@@ -38,26 +41,31 @@ pub struct Palette {
     pub switch_off: u32,
     /// The blue of icons, links, the page title, switches that are on and the selected option's border.
     pub accent: u32,
+    /// The amber of a warning box's border and icon.
+    pub warning: u32,
 }
 
 impl Palette {
     pub const DARK: Palette = Palette {
         frame: 0x101010a3,
         frame_solid: 0x141414ff,
-        card: 0x161618ff,
+        card: 0x1b1b1dff,
         card_border: 0x2a2a2eff,
-        header: 0x1b1c21ff,
-        block: 0x202022ff,
-        input: 0x151517ff,
-        input_border: 0x303035ff,
-        divider: 0x2c2c30ff,
-        option: 0x151517ff,
-        option_selected: 0x1b2535ff,
-        option_border: 0x2e2e33ff,
+        header: 0x1e1e21ff,
+        block: 0x2a2a2dff,
+        input: 0x1d1d1fff,
+        input_border: 0x3a3a3eff,
+        button: 0x38383bff,
+        button_border: 0x444448ff,
+        divider: 0x353538ff,
+        option: 0x2a2a2dff,
+        option_selected: 0x2c323cff,
+        option_border: 0x3f3f42ff,
         title: 0xf4f6faff,
         muted: 0xa3a3aaff,
-        switch_off: 0x3a3a40ff,
+        switch_off: 0x47474fff,
         accent: 0x4c9affff,
+        warning: 0xe0a53aff,
     };
 
     pub const LIGHT: Palette = Palette {
@@ -69,6 +77,8 @@ impl Palette {
         block: 0xf8f9fcff,
         input: 0xffffffff,
         input_border: 0xd0d5e0ff,
+        button: 0xffffffff,
+        button_border: 0xd0d5e0ff,
         divider: 0xe6e9f0ff,
         option: 0xffffffff,
         option_selected: 0xeaf1ffff,
@@ -77,6 +87,7 @@ impl Palette {
         muted: 0x4b4d55ff,
         switch_off: 0xcdd2dcff,
         accent: 0x2563ebff,
+        warning: 0xb45309ff,
     };
 
     pub fn for_theme(is_dark: bool) -> Palette {
@@ -124,7 +135,7 @@ pub fn block_fill(cx: &App) -> Hsla {
     color(current(cx).block)
 }
 
-/// The field's and the button's own background, darker than the block it sits in on the dark theme.
+/// The field's own background, darker than the block it sits in on the dark theme.
 pub fn input_background(cx: &App) -> Hsla {
     color(current(cx).input)
 }
@@ -132,6 +143,16 @@ pub fn input_background(cx: &App) -> Hsla {
 /// The thin outline of a field or a button.
 pub fn input_border(cx: &App) -> Hsla {
     color(current(cx).input_border)
+}
+
+/// A button's own fill, lighter than the block in the dark theme.
+pub fn button_fill(cx: &App) -> Hsla {
+    color(current(cx).button)
+}
+
+/// The thin outline of a button.
+pub fn button_border(cx: &App) -> Hsla {
+    color(current(cx).button_border)
 }
 
 /// A faint wash over the translucent frame: the selected and hovered sidebar item and a hovered window button.
@@ -180,6 +201,11 @@ pub fn accent(cx: &App) -> Hsla {
     color(current(cx).accent)
 }
 
+/// The amber of a warning: the border, the wash and the icon of a warning box.
+pub fn warning(cx: &App) -> Hsla {
+    color(current(cx).warning)
+}
+
 /// Gives the component library's theme this window's colors; the title bar stays clear so the card's header shows
 /// through.
 pub fn apply(cx: &mut App) {
@@ -198,6 +224,7 @@ pub fn apply(cx: &mut App) {
     theme.accordion = color(colors.card);
     theme.accordion_hover = color(colors.input);
     theme.border = color(colors.card_border);
+    theme.input = color(colors.input_border);
     theme.muted_foreground = color(colors.muted);
     theme.title_bar = transparent_black();
     theme.title_bar_border = transparent_black();
@@ -289,6 +316,13 @@ mod tests {
     }
 
     #[test]
+    fn the_warning_icon_reads_on_the_card_in_both_themes() {
+        for palette in [Palette::DARK, Palette::LIGHT] {
+            assert!(contrast(palette.warning, palette.card) >= 3.0, "{palette:?}");
+        }
+    }
+
+    #[test]
     fn the_accent_is_blue() {
         for palette in [Palette::DARK, Palette::LIGHT] {
             let (red, green, blue) =
@@ -308,6 +342,7 @@ mod tests {
                 palette.header,
                 palette.block,
                 palette.input,
+                palette.button,
                 palette.divider,
             ] {
                 assert_eq!(solid & 0xff, 0xff, "{palette:?}");
@@ -343,11 +378,20 @@ mod tests {
     }
 
     #[test]
-    fn a_dark_block_is_a_step_above_the_card_and_its_buttons_a_step_below_the_block() {
+    fn a_dark_block_is_a_step_above_the_card_its_fields_below_it_and_its_buttons_above_it() {
         let dark = Palette::DARK;
         assert!(luminance(dark.block) > luminance(dark.card));
         assert!(luminance(dark.input) < luminance(dark.block));
+        assert!(luminance(dark.button) > luminance(dark.block));
         assert!(contrast(dark.title, dark.input) >= 7.0);
+    }
+
+    #[test]
+    fn titles_and_muted_text_read_on_a_button_in_both_themes() {
+        for palette in [Palette::DARK, Palette::LIGHT] {
+            assert!(contrast(palette.title, palette.button) >= 7.0, "{palette:?}");
+            assert!(contrast(palette.muted, palette.button) >= 4.5, "{palette:?}");
+        }
     }
 
     #[test]

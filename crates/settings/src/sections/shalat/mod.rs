@@ -14,14 +14,16 @@ const MESSAGE_KEY: &str = "shalat.message";
 const BADGE_KEY: &str = "shalat.badge";
 
 pub fn page() -> Page {
-    Page::new(
+    Page::plain(
         tr!("shalat.title"),
-        tr!("shalat.description"),
         vec![
-            Group::titled(tr!("shalat.group_method"), vec![methods::item()]),
-            Group::titled(tr!("shalat.group_asr"), vec![asr::item()]),
-            Group::titled(tr!("shalat.group_reminders"), vec![reminders::item()]),
-            Group::titled(tr!("shalat.group_adjust"), vec![adjust::item()]),
+            Group::titled(tr!("shalat.group_method"), vec![methods::item()])
+                .description(tr!("shalat.group_method_note")),
+            Group::titled(tr!("shalat.group_asr"), vec![asr::item()]).description(tr!("shalat.group_asr_note")),
+            Group::titled(tr!("shalat.group_reminders"), vec![reminders::item()])
+                .description(tr!("shalat.group_reminders_note")),
+            Group::titled(tr!("shalat.group_adjust"), vec![adjust::item()])
+                .description(tr!("shalat.group_adjust_note")),
         ],
     )
 }

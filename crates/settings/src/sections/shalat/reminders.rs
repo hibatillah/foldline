@@ -8,7 +8,7 @@ use store::Settings;
 use super::{BADGE_KEY, MESSAGE_KEY};
 use crate::{
     card, field,
-    layout::Item,
+    layout::{self, Item},
     picture::{color, pill_frame, sunset},
 };
 
@@ -97,7 +97,7 @@ fn reminder_card(reminder: &'static Reminder, picture: AnyElement, cx: &App) -> 
                 .text_color(cx.theme().muted_foreground)
                 .child((reminder.description)()),
         );
-    card::frame(SharedString::from(format!("card-{}", reminder.key)), on, 9.0, 9.0, cx)
+    card::frame(SharedString::from(format!("card-{}", reminder.key)), on, cx)
         .child(picture)
         .child(h_flex().items_center().gap_3().child(text).child(switch))
         .into_any_element()
@@ -112,7 +112,7 @@ pub fn item() -> Item {
             .collect();
         v_flex()
             .gap_3()
-            .child(card::described(tr!("shalat.reminders_title"), tr!("shalat.reminders_description"), cx))
+            .child(layout::block_heading(tr!("shalat.reminders_title"), None, cx))
             .child(card::grid(2, cards))
             .into_any_element()
     })
@@ -135,28 +135,10 @@ mod tests {
         }
     }
 
-    /// The text of one key (its `en` and `id` lines) in a locale file.
-    fn locale_entry(file: &str, key: &str) -> String {
-        let text = std::fs::read_to_string(file).unwrap();
-        let start = text
-            .find(&format!(
-                "
-{key}:
-"
-            ))
-            .unwrap_or_else(|| panic!("{key} missing in {file}"));
-        text[start + 1..].lines().take(3).collect::<Vec<_>>().join(
-            "
-",
-        )
-    }
-
     #[test]
     fn the_previews_use_the_words_the_notch_shows() {
-        let notch = format!("{}/../notch/locales/app.yml", env!("CARGO_MANIFEST_DIR"));
-        let own = format!("{}/locales/app.yml", env!("CARGO_MANIFEST_DIR"));
         for key in ["shalat.alert_title", "shalat.badge_text"] {
-            assert_eq!(locale_entry(&own, key), locale_entry(&notch, key), "{key} differs between the two programs");
+            assert!(crate::i18n::same_in_the_notch(key), "{key} differs between the two programs");
         }
     }
 

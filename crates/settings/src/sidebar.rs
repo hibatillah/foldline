@@ -11,29 +11,33 @@ use crate::{layout::Page, palette};
 /// Called with the index of the entry that was clicked.
 pub type SelectHandler = Rc<dyn Fn(usize, &mut App)>;
 
-const ITEM_HEIGHT: f32 = 32.0;
-const GROUP_LABEL_HEIGHT: f32 = 24.0;
-const GROUP_GAP: f32 = 14.0;
-const ICON_SIZE: f32 = 14.0;
-/// Space between an item's edge and its icon, and between the icon and the label.
+const ITEM_HEIGHT: f32 = 36.0;
+const ITEM_RADIUS: f32 = 10.0;
+/// Between two items of a group.
+const ITEM_GAP: f32 = 1.0;
+const ICON_SIZE: f32 = 17.0;
+/// Space between an item's edge and its icon.
 const ITEM_PADDING: f32 = 10.0;
-/// The gutter at each side of the items and below them; it is part of the drag area.
-const SIDEBAR_PADDING: f32 = 8.0;
-/// The brand's inset from the sidebar's edge.
-const BRAND_PADDING_X: f32 = 10.0;
-/// The top strip that holds the brand; dragging it moves the window.
-pub const BRAND_HEIGHT: f32 = 58.0;
-/// Extra space above the brand; the tile's centered gap to the window top (12 px) looks smaller than its 18 px gap to the left edge.
-const BRAND_TOP_PADDING: f32 = 6.0;
+const ICON_GAP: f32 = 11.0;
+/// Space above a group's label, and between the label and its first item.
+const GROUP_LABEL_ABOVE: f32 = 12.0;
+const GROUP_LABEL_BELOW: f32 = 5.0;
+/// The sidebar's padding: above the brand, at each side of the items and below the footer; all of it is drag area.
+const SIDEBAR_PADDING_TOP: f32 = 16.0;
+const SIDEBAR_PADDING_X: f32 = 10.0;
+const SIDEBAR_PADDING_BOTTOM: f32 = 12.0;
+/// The brand's inset from the gutter, and the space under it.
+const BRAND_PADDING_X: f32 = 8.0;
+const BRAND_PADDING_BOTTOM: f32 = 4.0;
 
 /// The sidebar's groups, in the order they are shown.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NavGroup {
     /// The notch as a whole.
     Notch,
-    /// Settings that belong to one page of the notch (Calendar, Shalat).
+    /// Settings that belong to one page of the notch (Calendar, Prayer).
     PageSettings,
-    /// Items pinned to the bottom of the sidebar without a label (About); not part of `ORDER`.
+    /// Items pinned to the bottom of the sidebar without a label (Account, About); not part of `ORDER`.
     Footer,
 }
 
@@ -94,13 +98,13 @@ fn item(
         .id(gpui::ElementId::Name(id.into()))
         .h(px(ITEM_HEIGHT))
         .px(px(ITEM_PADDING))
-        .gap(px(ITEM_PADDING))
+        .gap(px(ICON_GAP))
         .items_center()
-        .rounded(px(8.0))
+        .rounded(px(ITEM_RADIUS))
         .cursor_pointer()
-        .text_sm()
+        .text_base()
         .text_color(color)
-        .when(selected, |row| row.bg(fill))
+        .when(selected, |row| row.bg(fill).font_weight(gpui::FontWeight::MEDIUM))
         .when(!selected, |row| row.hover(move |style| style.bg(fill.opacity(0.6)).text_color(foreground)))
         .on_click(on_click)
         .child(icon.size(px(ICON_SIZE)).text_color(palette::accent(cx)))
@@ -108,15 +112,16 @@ fn item(
         .into_any_element()
 }
 
-/// A group's label; it is not clickable, so it moves the window like the empty sidebar.
+/// A group's label with the space above and below it; it is not clickable, so it moves the window like the empty sidebar.
 fn group_label(label: &'static str, cx: &App) -> impl IntoElement {
     h_flex()
         .id(gpui::ElementId::Name(format!("sidebar-group-{label}").into()))
         .window_control_area(WindowControlArea::Drag)
-        .h(px(GROUP_LABEL_HEIGHT))
+        .pt(px(GROUP_LABEL_ABOVE))
+        .pb(px(GROUP_LABEL_BELOW))
         .px(px(ITEM_PADDING))
         .items_center()
-        .text_xs()
+        .text_sm()
         .text_color(palette::muted(cx))
         .child(label)
 }
@@ -129,9 +134,9 @@ fn drag_area(id: impl Into<SharedString>) -> gpui::Stateful<gpui::Div> {
 /// Items between two drag gutters, so the sidebar's side padding moves the window too.
 fn guttered(id: &'static str, items: gpui::Div) -> gpui::Div {
     h_flex()
-        .child(drag_area(format!("{id}-left")).flex_none().w(px(SIDEBAR_PADDING)))
+        .child(drag_area(format!("{id}-left")).flex_none().w(px(SIDEBAR_PADDING_X)))
         .child(items.flex_1().min_w_0())
-        .child(drag_area(format!("{id}-right")).flex_none().w(px(SIDEBAR_PADDING)))
+        .child(drag_area(format!("{id}-right")).flex_none().w(px(SIDEBAR_PADDING_X)))
 }
 
 /// The whole sidebar column. `on_select` gets the index of the clicked entry; footer entries sit at the bottom.
@@ -155,7 +160,9 @@ pub fn render(
         )
     };
     let groups = grouped(entries).into_iter().map(|(group, indexes)| {
-        v_flex().gap_0p5().child(group_label(group.label(), cx)).children(indexes.into_iter().map(nav_item))
+        v_flex()
+            .child(group_label(group.label(), cx))
+            .child(v_flex().gap(px(ITEM_GAP)).children(indexes.into_iter().map(nav_item)))
     });
     let footer = entries
         .iter()
@@ -170,17 +177,18 @@ pub fn render(
             h_flex()
                 .id("sidebar-brand")
                 .window_control_area(WindowControlArea::Drag)
-                .h(px(BRAND_HEIGHT))
-                .px(px(SIDEBAR_PADDING + BRAND_PADDING_X))
-                .pt(px(BRAND_TOP_PADDING))
+                .flex_none()
+                .px(px(SIDEBAR_PADDING_X + BRAND_PADDING_X))
+                .pt(px(SIDEBAR_PADDING_TOP))
+                .pb(px(BRAND_PADDING_BOTTOM))
                 .items_center()
                 .child(brand),
         )
-        .child(guttered("sidebar-gutter-groups", v_flex().gap(px(GROUP_GAP)).children(groups)))
+        .child(guttered("sidebar-gutter-groups", v_flex().children(groups)))
         // The empty space below the items moves the window.
         .child(drag_area("sidebar-empty").flex_1().min_h_0().w_full())
-        .child(guttered("sidebar-gutter-footer", v_flex().gap_1().children(footer)))
-        .child(drag_area("sidebar-bottom").flex_none().w_full().h(px(SIDEBAR_PADDING)))
+        .child(guttered("sidebar-gutter-footer", v_flex().gap(px(ITEM_GAP)).children(footer)))
+        .child(drag_area("sidebar-bottom").flex_none().w_full().h(px(SIDEBAR_PADDING_BOTTOM)))
         .into_any_element()
 }
 
@@ -189,7 +197,7 @@ mod tests {
     use super::*;
 
     fn entry(group: NavGroup, title: &'static str) -> NavEntry {
-        NavEntry::new(group, crate::icons::GENERAL, Page::new(title, "", Vec::new()))
+        NavEntry::new(group, crate::icons::GENERAL, Page::plain(title, Vec::new()))
     }
 
     #[test]
@@ -210,9 +218,9 @@ mod tests {
 
     #[test]
     fn the_tile_sits_about_as_far_from_the_top_as_from_the_left_edge() {
-        const TOP_GAP: f32 = BRAND_TOP_PADDING + (BRAND_HEIGHT - BRAND_TOP_PADDING - crate::LOGO_SIZE) / 2.0;
-        const LEFT_GAP: f32 = SIDEBAR_PADDING + BRAND_PADDING_X;
-        const { assert!((LEFT_GAP - TOP_GAP).abs() <= 1.0) };
+        const TOP_GAP: f32 = SIDEBAR_PADDING_TOP;
+        const LEFT_GAP: f32 = SIDEBAR_PADDING_X + BRAND_PADDING_X;
+        const { assert!((LEFT_GAP - TOP_GAP).abs() <= 2.0) };
     }
 
     #[test]
@@ -228,6 +236,37 @@ mod tests {
             entries.iter().filter(|entry| entry.group == group).map(|entry| entry.page.title).collect::<Vec<_>>()
         };
         assert_eq!(titles(NavGroup::Notch), ["General", "Pages", "Behavior", "Advanced"]);
-        assert_eq!(titles(NavGroup::PageSettings), ["Calendar", "Shalat", "System stats", "Weather"]);
+        assert_eq!(titles(NavGroup::PageSettings), ["Calendar", "Timer", "Prayer", "System stats", "Weather"]);
+    }
+
+    #[test]
+    fn advanced_sits_in_the_notch_group() {
+        let entries = crate::sections::all();
+        let advanced = entries.iter().find(|entry| entry.icon == crate::icons::ADVANCED).expect("advanced entry");
+        assert_eq!(advanced.group, NavGroup::Notch);
+        let notch_group =
+            grouped(&entries).into_iter().find(|(group, _)| *group == NavGroup::Notch).expect("notch group");
+        let last_in_notch_group = notch_group.1.last().copied().expect("notch entries");
+        assert_eq!(entries[last_in_notch_group].icon, crate::icons::ADVANCED);
+    }
+
+    #[test]
+    fn shalat_is_listed_as_prayer() {
+        let entries = crate::sections::all();
+        let shalat = entries.iter().find(|entry| entry.icon == crate::icons::SHALAT).expect("shalat entry");
+        assert_eq!(shalat.group, NavGroup::PageSettings);
+        assert_eq!(shalat.page.title, "Prayer");
+    }
+
+    #[test]
+    fn shalat_keeps_its_own_word_in_indonesian() {
+        use store::language::{Language, with_override};
+        let title = with_override(Language::Indonesian, || {
+            crate::sections::all()
+                .into_iter()
+                .find(|entry| entry.icon == crate::icons::SHALAT)
+                .map(|entry| entry.page.title)
+        });
+        assert_eq!(title, Some("Shalat"));
     }
 }

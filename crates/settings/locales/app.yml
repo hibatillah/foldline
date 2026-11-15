@@ -12,7 +12,7 @@ calendar.title:
   en: Calendar
   id: Kalender
 shalat.title:
-  en: Shalat
+  en: Prayer
   id: Shalat
 stats.title:
   en: System stats
@@ -30,8 +30,8 @@ general.language_title:
   en: Language
   id: Bahasa
 general.language_description:
-  en: Choose the language of the notch and of this window.
-  id: Pilih bahasa notch dan jendela ini.
+  en: "For the notch and this window"
+  id: "Untuk notch dan jendela ini"
 language.auto:
   en: Automatic
   id: Otomatis
@@ -47,9 +47,6 @@ language.auto_english:
 language.auto_indonesian:
   en: Follows Windows, which is in Indonesian.
   id: Mengikuti Windows, yang memakai bahasa Indonesia.
-general.description:
-  en: "Startup, your location, notifications, Windows popups and the focus timer."
-  id: "Startup, lokasi, notifikasi, popup Windows, dan timer fokus."
 general.group_startup:
   en: "Startup"
   id: "Startup"
@@ -57,17 +54,14 @@ general.start_with_windows:
   en: "Start with Windows"
   id: "Mulai bersama Windows"
 general.start_with_windows_note:
-  en: "Starts the notch when you sign in."
-  id: "Menjalankan notch saat masuk ke Windows."
+  en: "Have Notch ready when you sign in."
+  id: "Notch siap saat Anda masuk ke Windows."
 general.hide_when_idle:
   en: "Hide when idle"
   id: "Sembunyikan saat diam"
 general.hide_when_idle_note:
-  en: "Hides the notch when nothing is happening. Point at the top edge to bring it back."
-  id: "Menyembunyikan notch saat tidak ada aktivitas. Arahkan kursor ke tepi atas untuk memunculkannya lagi."
-general.group_screen:
-  en: "Screen"
-  id: "Layar"
+  en: "Hide the notch when nothing is happening. Point at the top edge to bring it back."
+  id: "Sembunyikan notch saat tidak ada aktivitas. Arahkan kursor ke tepi atas untuk memunculkannya lagi."
 general.monitor:
   en: "Show the notch on"
   id: "Tampilkan notch di"
@@ -81,8 +75,8 @@ general.monitor_chosen:
   en: "A chosen screen"
   id: "Layar pilihan"
 general.monitor_note:
-  en: "Applied live. The distance from the top (Advanced) is measured from the top of this screen."
-  id: "Diterapkan langsung. Jarak dari atas (Lanjutan) diukur dari tepi atas layar ini."
+  en: "Applies at once"
+  id: "Langsung diterapkan"
 general.screen_title:
   en: "Chosen screen"
   id: "Layar pilihan"
@@ -93,11 +87,8 @@ general.screen_main:
   en: "main"
   id: "utama"
 general.screen_choose:
-  en: "Choose a screen"
-  id: "Pilih layar"
-general.screen_not_connected:
-  en: "Not connected"
-  id: "Tidak tersambung"
+  en: "No screen picked yet, so the notch sits on the main one. Click a screen to put it there."
+  id: "Belum ada layar yang dipilih, jadi notch ada di layar utama. Klik layar untuk menaruhnya di sana."
 general.screen_not_connected_note:
   en: "The notch uses the main screen until this screen is connected again."
   id: "Notch memakai layar utama sampai layar ini tersambung lagi."
@@ -108,13 +99,13 @@ general.track_location:
   en: "Track location"
   id: "Lacak lokasi"
 general.track_location_note:
-  en: "The city changes by itself when the device moves to another one. Needs Windows location access (Settings > Privacy & security > Location). Turn off to keep the city chosen below."
-  id: "Kota berubah sendiri saat perangkat pindah ke kota lain. Perlu akses lokasi Windows (Pengaturan > Privasi & keamanan > Lokasi). Matikan agar kota yang dipilih di bawah tetap."
+  en: "The city changes by itself when the device moves to another one. Needs Windows location access (Settings > Privacy & security > Location). Turn off to keep the city chosen above."
+  id: "Kota berubah sendiri saat perangkat pindah ke kota lain. Perlu akses lokasi Windows (Pengaturan > Privasi & keamanan > Lokasi). Matikan agar kota yang dipilih di atas tetap."
 general.city:
   en: "City"
   id: "Kota"
 general.city_note:
-  en: "The one place for the prayer times and the weather."
+  en: "One place for prayer times and weather."
   id: "Satu lokasi untuk jadwal shalat dan cuaca."
 general.group_notifications:
   en: "Notifications"
@@ -123,14 +114,14 @@ general.show_notifications:
   en: "Show notifications"
   id: "Tampilkan notifikasi"
 general.show_notifications_note:
-  en: "Shows a banner when Windows shows a notification. To keep Windows' own banner away, turn on \"Hide Windows notification banners\" under Windows popups."
-  id: "Menampilkan banner saat Windows menampilkan notifikasi. Untuk menyembunyikan banner bawaan Windows, aktifkan \"Sembunyikan banner notifikasi Windows\" di bagian Popup Windows."
+  en: "Get a banner when Windows has a notification. To keep Windows' own banner away, turn on \"Hide Windows notification banners\" below."
+  id: "Tampilkan banner saat Windows punya notifikasi. Untuk menyembunyikan banner bawaan Windows, aktifkan \"Sembunyikan banner notifikasi Windows\" di bawah."
 general.show_notification_text:
   en: "Show notification text"
   id: "Tampilkan isi notifikasi"
 general.show_notification_text_note:
-  en: "Shows the message in the banner. Without it, the banner reads \"New message\"."
-  id: "Menampilkan isi pesan di banner. Tanpa ini, banner hanya bertuliskan \"Pesan baru\"."
+  en: "Read the message in the banner. Off shows \"New message\"."
+  id: "Baca isi pesan di banner. Jika mati, banner bertuliskan \"Pesan baru\"."
 general.device_battery:
   en: "Warn when a device battery is low"
   id: "Peringatkan saat baterai perangkat lemah"
@@ -158,117 +149,63 @@ general.hide_banners:
 general.hide_banners_note:
   en: "Turns off the banner Windows shows at the bottom right for every app while the notch runs, so only the notch shows notifications; they stay in the notification center. Each app's own choice comes back when this is off or the notch closes."
   id: "Mematikan banner yang ditampilkan Windows di kanan bawah untuk semua aplikasi selama notch berjalan, sehingga hanya notch yang menampilkan notifikasi; notifikasi tetap ada di pusat notifikasi. Pilihan tiap aplikasi kembali saat ini dimatikan atau notch ditutup."
-general.group_timer:
-  en: "Timer"
-  id: "Timer"
-general.focus_minutes:
-  en: "Focus (minutes)"
-  id: "Fokus (menit)"
-general.focus_minutes_note:
-  en: "Length of a focus session, 5 to 120."
-  id: "Lama satu sesi fokus, 5 sampai 120."
-general.short_break_minutes:
-  en: "Short break (minutes)"
-  id: "Istirahat singkat (menit)"
-general.short_break_note:
-  en: "Rest after a focus session, 1 to 120."
-  id: "Istirahat setelah sesi fokus, 1 sampai 120."
-general.long_break_minutes:
-  en: "Long break (minutes)"
-  id: "Istirahat panjang (menit)"
-general.long_break_note:
-  en: "Longer rest after several sessions, 1 to 120."
-  id: "Istirahat lebih lama setelah beberapa sesi, 1 sampai 120."
 pages.desc_media:
-  en: "Music player with synced lyrics."
-  id: "Pemutar musik dengan lirik yang sinkron."
+  en: "Music, with synced lyrics."
+  id: "Musik, dengan lirik yang tersinkron."
 pages.desc_shelf:
-  en: "Holds dropped files for a while."
-  id: "Menyimpan file yang dijatuhkan untuk sementara."
+  en: "Drop files here to keep them for a while."
+  id: "Taruh file di sini untuk disimpan sebentar."
 pages.desc_calendar:
-  en: "The month or the week, and the events of a day you pick."
-  id: "Bulan atau pekan, dan acara pada hari yang dipilih."
+  en: "The month or the week, and the events of any day you pick."
+  id: "Bulan atau minggu ini, dan acara di hari yang Anda pilih."
 pages.desc_timer:
-  en: "Focus and break timer."
-  id: "Timer fokus dan istirahat."
+  en: "Focus and break sessions."
+  id: "Sesi fokus dan istirahat."
 pages.desc_stats:
-  en: "System stats, off until you switch it on."
-  id: "Statistik sistem, mati sampai dinyalakan."
+  en: "CPU, memory, network, disks and GPU at a glance."
+  id: "CPU, memori, jaringan, disk, dan GPU sekilas."
 pages.desc_clipboard:
   en: "History of the last 7 copies with a preview, paste and copy buttons. Kept in memory only and cleared when the app quits."
   id: "Riwayat 7 salinan terakhir dengan pratinjau, tombol tempel dan salin. Hanya disimpan di memori dan dihapus saat aplikasi ditutup."
 pages.not_reported:
   en: "The notch has not reported its pages yet. Start the notch once, then reopen this window."
   id: "Notch belum melaporkan halamannya. Jalankan notch sekali, lalu buka jendela ini lagi."
-pages.description:
-  en: "Choose which pages the notch shows and drag them into your order. At least one stays on."
-  id: "Pilih halaman yang ditampilkan notch dan seret ke urutan yang diinginkan. Minimal satu halaman tetap menyala."
 behavior.level0:
-  en: "0 · Hidden"
-  id: "0 · Tersembunyi"
+  en: "Hidden"
+  id: "Tersembunyi"
 behavior.level0_note:
-  en: "Nothing is drawn. Not even messages."
-  id: "Tidak ada yang digambar. Pesan pun tidak."
+  en: "Nothing shows."
+  id: "Tidak ada yang tampil."
 behavior.level1:
-  en: "1 · Activities"
-  id: "1 · Aktivitas"
+  en: "Activities only"
+  id: "Hanya aktivitas"
 behavior.level1_note:
-  en: "On-demand messages only, such as volume. Then it hides again."
-  id: "Hanya pesan sesuai kebutuhan, seperti volume. Lalu bersembunyi lagi."
+  en: "Messages such as volume, nothing else."
+  id: "Pesan seperti volume, tidak lebih."
 behavior.level2:
-  en: "2 · Lyrics"
-  id: "2 · Lirik"
-behavior.level2_note:
-  en: "Lyrics while they play, plus everything from level 1."
-  id: "Lirik selagi diputar, ditambah semua dari level 1."
-behavior.level3:
-  en: "3 · Always visible"
-  id: "3 · Selalu terlihat"
-behavior.level3_note:
-  en: "The idle pill with clock and battery, plus everything from levels 1 and 2."
-  id: "Pill saat diam dengan jam dan baterai, ditambah semua dari level 1 dan 2."
-behavior.intro:
-  en: "Behavior works like a log level. You pick how much the notch is allowed to show, and every level also shows everything below it. Level 2 does not mean lyrics only: it shows lyrics and messages. Level 3 shows all of it."
-  id: "Perilaku bekerja seperti level log. Pilih seberapa banyak yang boleh ditampilkan notch, dan setiap level juga menampilkan semua level di bawahnya. Level 2 bukan hanya lirik: isinya lirik dan pesan. Level 3 menampilkan semuanya."
-behavior.column_messages:
-  en: "On-demand messages"
-  id: "Pesan sesuai kebutuhan"
-behavior.column_lyrics:
   en: "Lyrics"
   id: "Lirik"
-behavior.column_idle_pill:
-  en: "Idle pill"
-  id: "Pill saat diam"
-behavior.group_shows:
-  en: "What the notch shows"
-  id: "Apa yang ditampilkan notch"
-behavior.group_open_by_pointer:
-  en: "Open by pointing"
-  id: "Buka saat kursor diarahkan"
-behavior.description:
-  en: "Choose what the notch shows, as a level, while a maximized or full-screen window is in front of it."
-  id: "Pilih apa yang ditampilkan notch, sebagai level, saat jendela yang dimaksimalkan atau layar penuh ada di depannya."
-behavior.group_levels:
-  en: "Levels"
-  id: "Level"
+behavior.level2_note:
+  en: "Lyrics while they play, and messages."
+  id: "Lirik saat diputar, dan pesan."
+behavior.level3:
+  en: "Always visible"
+  id: "Selalu tampil"
+behavior.level3_note:
+  en: "The clock stays on screen, with everything else."
+  id: "Jam tetap di layar, beserta yang lainnya."
 behavior.over_maximized:
   en: "Over a maximized window"
   id: "Di atas jendela yang dimaksimalkan"
 behavior.over_maximized_note:
-  en: "Applies while a maximized window is in front."
-  id: "Berlaku saat jendela yang dimaksimalkan ada di depan."
-behavior.open_by_pointer_maximized_note:
-  en: "Pointing at the top edge opens the notch. Off: pointing never opens it over a maximized window; a pinned notch stays open."
-  id: "Mengarahkan kursor ke tepi atas membuka notch. Mati: kursor tidak pernah membukanya di atas jendela yang dimaksimalkan; notch yang disematkan tetap terbuka."
+  en: "What shows while a maximized window is in front"
+  id: "Yang tampil saat jendela yang dimaksimalkan ada di depan"
 behavior.over_fullscreen:
   en: "Over a full-screen app"
   id: "Di atas aplikasi layar penuh"
 behavior.over_fullscreen_note:
-  en: "Applies while a full-screen app or game is in front."
-  id: "Berlaku saat aplikasi atau game layar penuh ada di depan."
-behavior.open_by_pointer_fullscreen_note:
-  en: "Pointing at the top edge opens the notch. Off: pointing never opens it over a full-screen app; a pinned notch stays open."
-  id: "Mengarahkan kursor ke tepi atas membuka notch. Mati: kursor tidak pernah membukanya di atas aplikasi layar penuh; notch yang disematkan tetap terbuka."
+  en: "What shows while a full-screen app or game is in front"
+  id: "Yang tampil saat aplikasi atau game layar penuh ada di depan"
 calendar.view_month:
   en: "Month"
   id: "Bulan"
@@ -285,26 +222,23 @@ calendar.google_step1:
   en: "Open calendar.google.com on a computer."
   id: "Buka calendar.google.com di komputer."
 calendar.google_step2:
-  en: "Click the gear icon at the top right, then Settings."
-  id: "Klik ikon roda gigi di kanan atas, lalu Setelan."
+  en: "Click the gear icon, then Settings."
+  id: "Klik ikon roda gigi, lalu Setelan."
 calendar.google_step3:
-  en: "Under \"Settings for my calendars\" on the left, click the calendar to show."
-  id: "Di bawah \"Setelan untuk kalender saya\" di sebelah kiri, klik kalender yang ingin ditampilkan."
+  en: "Under “Settings for my calendars”, pick the calendar to show."
+  id: "Di bawah “Setelan untuk kalender saya”, pilih kalender yang ingin ditampilkan."
 calendar.google_step4:
   en: "Click Integrate calendar."
   id: "Klik Integrasikan kalender."
 calendar.google_step5:
-  en: "Copy the link under \"Secret address in iCal format\" and paste it into the Calendar address field."
-  id: "Salin tautan di bawah \"Alamat rahasia dalam format iCal\" lalu tempel ke kolom Alamat kalender."
+  en: "Copy the “Secret address in iCal format” and paste it above."
+  id: "Salin “Alamat rahasia dalam format iCal” lalu tempel di atas."
 calendar.google_note1:
-  en: "The secret address lets anyone who has it read the whole calendar. Keep it to yourself; Reset in the same section replaces it."
-  id: "Alamat rahasia memungkinkan siapa pun yang memilikinya membaca seluruh kalender. Simpan sendiri; Reset di bagian yang sama menggantinya."
+  en: "Anyone with the secret address can read your whole calendar. Keep it private. Reset replaces it."
+  id: "Siapa pun yang punya alamat rahasia dapat membaca seluruh kalender Anda. Jaga kerahasiaannya. Reset menggantinya."
 calendar.google_note2:
-  en: "A work or school account may hide the address when the admin limits sharing. Ask the admin in that case."
-  id: "Akun kerja atau sekolah mungkin menyembunyikan alamat ini saat admin membatasi berbagi. Tanyakan ke admin jika begitu."
-calendar.description:
-  en: "Connect your calendar and choose how often the notch downloads it again."
-  id: "Hubungkan kalender dan pilih seberapa sering notch mengunduhnya lagi."
+  en: "Work or school accounts may hide the address when the admin limits sharing. Ask your admin."
+  id: "Akun kerja atau sekolah mungkin menyembunyikan alamat saat admin membatasi berbagi. Tanyakan ke admin."
 calendar.group_google:
   en: "Google Calendar"
   id: "Google Calendar"
@@ -314,63 +248,42 @@ calendar.address:
 calendar.address_placeholder:
   en: "Paste the secret iCal address"
   id: "Tempel alamat iCal rahasia"
-calendar.address_note:
-  en: "The private iCal link of your calendar."
-  id: "Tautan iCal pribadi untuk kalender ini."
 calendar.refresh:
-  en: "Refresh (minutes)"
-  id: "Perbarui (menit)"
+  en: "Refresh"
+  id: "Perbarui"
 calendar.refresh_note:
-  en: "How often the notch downloads it again, 1 to 1440."
-  id: "Seberapa sering notch mengunduhnya lagi, 1 sampai 1440."
-calendar.guide_title:
-  en: "How to get the address from Google Calendar"
-  id: "Cara mendapatkan alamat dari Google Calendar"
+  en: "How often Notch downloads your events, 1 to 1440 min."
+  id: "Seberapa sering Notch mengunduh acara Anda, 1 sampai 1440 mnt."
 calendar.view_title:
   en: "Calendar view"
   id: "Tampilan kalender"
 calendar.view_description:
   en: "Show the whole month or only the current week."
   id: "Tampilkan seluruh bulan atau hanya pekan ini."
-stats.disks_title:
-  en: "Up to 3 disks"
-  id: "Hingga 3 disk"
 stats.disks_hint:
   en: "Open the System stats page in the notch once to list your disks"
   id: "Buka halaman Statistik sistem di notch sekali untuk melihat daftar disk"
 stats.disks_none:
   en: "No disk found"
   id: "Disk tidak ditemukan"
-stats.gpus_title:
-  en: "Up to 2 GPUs"
-  id: "Hingga 2 GPU"
 stats.gpus_hint:
   en: "Open the System stats page in the notch once to list your GPUs"
   id: "Buka halaman Statistik sistem di notch sekali untuk melihat daftar GPU"
 stats.gpus_none:
   en: "No GPU found"
   id: "GPU tidak ditemukan"
-stats.description:
-  en: "Choose which disks and graphics cards the System stats page shows."
-  id: "Pilih disk dan kartu grafis yang ditampilkan halaman Statistik sistem."
 stats.group_disks:
   en: "Disks"
   id: "Disk"
 stats.group_gpus:
-  en: "GPUs"
-  id: "GPU"
-weather.description:
-  en: "A rain alert for your place. It needs the Weather page switched on in Pages."
-  id: "Peringatan hujan untuk lokasi yang dipilih. Butuh halaman Cuaca yang menyala di bagian Halaman."
+  en: "Graphics cards"
+  id: "Kartu grafis"
 weather.rain_alert:
   en: "Rain alert"
   id: "Peringatan hujan"
 weather.rain_alert_note:
-  en: "A banner 30 minutes before rain, then a countdown beside the clock. Open shows the weather page."
-  id: "Banner 30 menit sebelum hujan, lalu hitung mundur di samping jam. Buka menampilkan halaman cuaca."
-advanced.description:
-  en: "Troubleshooting and placement. Changes apply after you restart the notch."
-  id: "Pemecahan masalah dan penempatan. Perubahan berlaku setelah notch dimulai ulang."
+  en: "Get a message in the pill 30 minutes before the next rain."
+  id: "Dapatkan pesan di pill 30 menit sebelum hujan berikutnya."
 advanced.debug_log:
   en: "Debug log file"
   id: "File log debug"
@@ -378,17 +291,8 @@ advanced.debug_log_placeholder:
   en: "Path to a log file"
   id: "Path ke file log"
 advanced.debug_log_note:
-  en: "Appends timestamped lines to this file. Empty means no log."
-  id: "Menambahkan baris berstempel waktu ke file ini. Kosong berarti tanpa log."
-advanced.move_down:
-  en: "Move down (pixels)"
-  id: "Geser ke bawah (piksel)"
-advanced.move_down_note:
-  en: "Distance below the top edge, 0 to 2000."
-  id: "Jarak dari tepi atas, 0 sampai 2000."
-shalat.description:
-  en: "Prayer times use the location set in General. Pick the calculation method, the reminders and any minute adjustments."
-  id: "Waktu shalat memakai lokasi yang diatur di Umum. Pilih metode perhitungan, pengingat, dan penyesuaian menit."
+  en: "Writes a log with times here to help find problems. Empty means off."
+  id: "Menulis log beserta waktunya di sini untuk membantu menemukan masalah. Kosong berarti mati."
 shalat.group_method:
   en: "Calculation method"
   id: "Metode perhitungan"
@@ -419,15 +323,6 @@ shalat.maghrib:
 shalat.isha:
   en: "Isha"
   id: "Isya"
-shalat.offset_zero:
-  en: "0 min"
-  id: "0 menit"
-shalat.offset_plus:
-  en: "+%{offset} min"
-  id: "+%{offset} menit"
-shalat.offset_minus:
-  en: "−%{offset} min"
-  id: "−%{offset} menit"
 shalat.asr_standard:
   en: "Standard"
   id: "Standar"
@@ -449,9 +344,6 @@ shalat.asr_hanafi_caption:
 shalat.asr_title:
   en: "When Asr begins"
   id: "Saat Ashar dimulai"
-shalat.asr_description:
-  en: "Standard or Hanafi: the length of an object's shadow that marks Asr."
-  id: "Standar atau Hanafi: panjang bayangan benda yang menandai Ashar."
 shalat.region_kemenag:
   en: "Indonesia, Malaysia, Singapore"
   id: "Indonesia, Malaysia, Singapura"
@@ -521,9 +413,6 @@ shalat.badge_text:
 shalat.reminders_title:
   en: "What the notch shows around a prayer"
   id: "Yang ditampilkan notch di sekitar waktu shalat"
-shalat.reminders_description:
-  en: "Each card previews what you would see. Switch it off to stop it."
-  id: "Tiap kartu memperlihatkan tampilannya. Matikan untuk menghentikannya."
 about.whats_new:
   en: "What's new"
   id: "Yang baru"
@@ -542,12 +431,6 @@ about.licenses_note:
 about.view:
   en: "View"
   id: "Lihat"
-about.lyrics:
-  en: "Lyrics"
-  id: "Lirik"
-about.lyrics_note:
-  en: "Synced lyrics come from LRCLIB"
-  id: "Lirik sinkron berasal dari LRCLIB"
 about.settings_file:
   en: "Settings file"
   id: "File pengaturan"
@@ -563,18 +446,18 @@ about.data_folder_note:
 about.nothing_saved:
   en: "The notch has not saved anything yet."
   id: "Notch belum menyimpan apa pun."
-about.description:
-  en: "The version you run, where its notes and licenses are, and the files the notch keeps for you."
-  id: "Versi yang dipakai, tempat catatan dan lisensinya, serta file yang disimpan notch."
 about.group_files:
   en: "Files"
   id: "File"
 about.coming_soon:
   en: "Coming soon"
   id: "Segera hadir"
-about.check_now:
-  en: "Check now"
-  id: "Periksa sekarang"
+about.updates_from_store:
+  en: "Updates come from the Microsoft Store"
+  id: "Pembaruan datang dari Microsoft Store"
+about.open_in_store:
+  en: "Open in Store"
+  id: "Buka di Store"
 about.version:
   en: "Version %{version}"
   id: "Versi %{version}"
@@ -593,9 +476,6 @@ general.city_placeholder:
 shalat.adjust_title:
   en: "Fine-tune each prayer"
   id: "Setel tiap waktu shalat"
-shalat.adjust_description:
-  en: "Add or subtract minutes, from −30 to 30, to match your local mosque. The dots show where each prayer falls in the day."
-  id: "Tambah atau kurangi menit, dari −30 sampai 30, agar sesuai dengan masjid setempat. Titik menunjukkan letak tiap waktu shalat dalam sehari."
 pause.group:
   en: "Pause"
   id: "Jeda"
@@ -626,3 +506,366 @@ pause.until:
 pause.until_resumed:
   en: "Paused until you resume"
   id: "Dijeda sampai Anda lanjutkan"
+account.title:
+  en: Account
+  id: Akun
+account.description:
+  en: "Sign in to use your Notch plan on this PC and unlock more pages."
+  id: "Masuk untuk memakai paket Notch Anda di PC ini dan membuka lebih banyak halaman."
+account.signed_out_title:
+  en: "Not signed in"
+  id: "Belum masuk"
+account.signed_out_note:
+  en: "Notch opens your browser, where you sign in with your Google account."
+  id: "Notch membuka peramban, tempat Anda masuk dengan akun Google."
+account.sign_in_google:
+  en: "Sign in with Google"
+  id: "Masuk dengan Google"
+account.waiting_title:
+  en: "Waiting for the browser"
+  id: "Menunggu peramban"
+account.waiting_note:
+  en: "Finish signing in in the browser tab Notch opened."
+  id: "Selesaikan proses masuk di tab peramban yang dibuka Notch."
+account.finishing:
+  en: "Finishing sign-in…"
+  id: "Menyelesaikan proses masuk…"
+account.cancel:
+  en: Cancel
+  id: Batal
+account.cancelled:
+  en: "Sign-in cancelled."
+  id: "Proses masuk dibatalkan."
+account.timed_out:
+  en: "Sign-in stopped after 5 minutes without an answer from the browser."
+  id: "Proses masuk berhenti setelah 5 menit tanpa jawaban dari peramban."
+account.refused:
+  en: "The browser came back with an answer Notch did not expect. Try again."
+  id: "Peramban kembali dengan jawaban yang tidak diharapkan Notch. Coba lagi."
+account.invalid_code:
+  en: "The sign-in code was refused. Try again."
+  id: "Kode masuk ditolak. Coba lagi."
+account.unavailable:
+  en: "Could not reach the Notch site. Check the connection and try again."
+  id: "Situs Notch tidak dapat dihubungi. Periksa koneksi lalu coba lagi."
+account.not_verified:
+  en: "The site's answer could not be verified for this PC."
+  id: "Jawaban situs tidak dapat diverifikasi untuk PC ini."
+account.not_saved:
+  en: "Could not save the account file."
+  id: "Berkas akun tidak dapat disimpan."
+account.no_device:
+  en: "Could not read this PC's identity, so it cannot be signed in."
+  id: "Identitas PC ini tidak dapat dibaca, jadi PC ini tidak dapat masuk."
+account.no_listener:
+  en: "Could not prepare the sign-in on this PC."
+  id: "Proses masuk tidak dapat disiapkan di PC ini."
+account.browser_done:
+  en: "You can close this tab and return to Notch."
+  id: "Anda dapat menutup tab ini dan kembali ke Notch."
+account.signed_in:
+  en: "Signed in"
+  id: "Sudah masuk"
+account.sign_out:
+  en: "Sign out"
+  id: "Keluar"
+account.status_inactive:
+  en: "Your sign-in cannot be verified on this PC, so nothing is unlocked. Sign out, then sign in again."
+  id: "Proses masuk Anda tidak dapat diverifikasi di PC ini, jadi tidak ada yang terbuka. Keluar, lalu masuk lagi."
+account.status_free:
+  en: "Free account"
+  id: "Akun gratis"
+account.status_trial:
+  en: "Trial until %{date}"
+  id: "Uji coba sampai %{date}"
+account.status_paid:
+  en: "Paid"
+  id: "Berbayar"
+account.status_launch:
+  en: "Free during launch"
+  id: "Gratis selama peluncuran"
+account.upgrade:
+  en: Upgrade
+  id: Tingkatkan
+account.upgrade_note:
+  en: "Unlock every page and feature on the site's pricing page."
+  id: "Buka semua halaman dan fitur di halaman harga situs."
+account.manage:
+  en: "Manage account"
+  id: "Kelola akun"
+account.manage_note:
+  en: "Your PCs, plan and payments, on the site."
+  id: "PC, paket, dan pembayaran Anda, di situs."
+pages.locked_sign_in:
+  en: "Sign in"
+  id: "Masuk"
+pages.locked_sign_in_again:
+  en: "Sign in again"
+  id: "Masuk lagi"
+account.opening_soon:
+  en: "Accounts open soon. Everything is free until then."
+  id: "Akun segera dibuka. Semuanya gratis sampai saat itu."
+account.description_soon:
+  en: "Notch accounts are not open yet, so every page and feature works without one."
+  id: "Akun Notch belum dibuka, jadi semua halaman dan fitur berfungsi tanpa akun."
+pages.locked_upgrade:
+  en: Upgrade
+  id: Tingkatkan
+account.finishing_note:
+  en: "Checking the sign-in with the Notch site. This takes up to 15 seconds."
+  id: "Memeriksa proses masuk dengan situs Notch. Ini memakan waktu hingga 15 detik."
+account.listener_failed:
+  en: "Notch stopped waiting for the browser because the sign-in port closed. Try again."
+  id: "Notch berhenti menunggu peramban karena port proses masuk tertutup. Coba lagi."
+general.idle_picture_tray:
+  en: "Notch starts in the tray when you sign in."
+  id: "Notch berjalan di tray saat Anda masuk."
+general.idle_picture_hidden:
+  en: "Idle: the pill stays hidden."
+  id: "Saat diam: pil tetap tersembunyi."
+general.idle_picture_back:
+  en: "Pointer at the top edge: it appears."
+  id: "Kursor di tepi atas: pil muncul."
+general.city_used_by_prayer:
+  en: "Prayer times"
+  id: "Jadwal shalat"
+general.city_used_by_weather:
+  en: "Weather"
+  id: "Cuaca"
+general.city_used_by_note:
+  en: "use this city"
+  id: "memakai kota ini"
+general.city_none:
+  en: "No city yet"
+  id: "Belum ada kota"
+general.notification_sample_message:
+  en: "Your files are ready to review"
+  id: "File Anda siap diperiksa"
+general.notification_sample_hidden:
+  en: "New message"
+  id: "Pesan baru"
+general.notification_show_message:
+  en: "Show the message"
+  id: "Tampilkan pesan"
+general.notification_hide_message:
+  en: "Hide the message"
+  id: "Sembunyikan pesan"
+general.monitor_main_note:
+  en: "The screen Windows calls main."
+  id: "Layar yang disebut utama oleh Windows."
+general.monitor_focused_note:
+  en: "Moves to the screen of the window in front."
+  id: "Pindah ke layar jendela yang sedang di depan."
+general.monitor_chosen_note:
+  en: "Stays on the screen you pick below."
+  id: "Tetap di layar yang Anda pilih di bawah."
+general.screen_pick_note:
+  en: "Click a screen to put the notch on it. Point at one to see its name."
+  id: "Klik layar untuk menaruh notch di sana. Arahkan kursor untuk melihat namanya."
+general.screen_main_badge:
+  en: "Main"
+  id: "Utama"
+pages.desc_todo:
+  en: "Quick tasks you can tick off."
+  id: "Tugas singkat yang bisa Anda centang."
+pages.desc_shalat:
+  en: "Prayer times and a countdown to the next one."
+  id: "Jadwal shalat dan hitung mundur ke waktu berikutnya."
+pages.desc_weather:
+  en: "Weather where you are, with rain alerts."
+  id: "Cuaca di lokasi Anda, dengan peringatan hujan."
+pages.desc_devices:
+  en: "Battery for your Bluetooth and wireless devices."
+  id: "Baterai perangkat Bluetooth dan nirkabel Anda."
+pages.group_preview:
+  en: "How it looks in the notch"
+  id: "Tampilannya di notch"
+pages.group_pages:
+  en: "Pages"
+  id: "Halaman"
+pages.count_note:
+  en: "%{total} pages · %{on} on · drag to reorder"
+  id: "%{total} halaman · %{on} aktif · seret untuk mengurutkan"
+pages.preview_first:
+  en: "First page (key 1): %{page}"
+  id: "Halaman pertama (tombol 1): %{page}"
+pages.preview_page:
+  en: "Page %{number} (key %{number}): %{page}"
+  id: "Halaman %{number} (tombol %{number}): %{page}"
+pages.preview_last:
+  en: "Last page (key 0): %{page}"
+  id: "Halaman terakhir (tombol 0): %{page}"
+pages.preview_note:
+  en: "Each dot is one page. The long dot is the page you are on. A page that is off has no dot."
+  id: "Setiap titik adalah satu halaman. Titik panjang adalah halaman yang sedang dibuka. Halaman yang mati tidak punya titik."
+pages.keys_hint:
+  en: "While the pointer is on the open notch, press 1 to 9 to jump to a page in this order, and 0 for the last page. Pages that are off are skipped and get no number."
+  id: "Saat kursor ada di notch yang terbuka, tekan 1 sampai 9 untuk melompat ke halaman sesuai urutan ini, dan 0 untuk halaman terakhir. Halaman yang mati dilewati dan tidak mendapat nomor."
+pages.off_hint:
+  en: "A page you switch off keeps its place in the list. Switch it on and it returns to the same spot. At least one page stays on."
+  id: "Halaman yang Anda matikan tetap di tempatnya dalam daftar. Nyalakan lagi dan halaman kembali ke posisi yang sama. Setidaknya satu halaman tetap aktif."
+pages.also_key_zero:
+  en: "Also key 0"
+  id: "Juga tombol 0"
+behavior.open_on_hover:
+  en: "Open on hover"
+  id: "Buka saat diarahkan"
+behavior.open_on_hover_maximized_note:
+  en: "Point at the top edge to open the notch over a maximized window."
+  id: "Arahkan kursor ke tepi atas untuk membuka notch di atas jendela yang dimaksimalkan."
+behavior.open_on_hover_fullscreen_note:
+  en: "Point at the top edge to open the notch over a full-screen app."
+  id: "Arahkan kursor ke tepi atas untuk membuka notch di atas aplikasi layar penuh."
+advanced.group_troubleshooting:
+  en: "Troubleshooting"
+  id: "Pemecahan masalah"
+advanced.after_restart:
+  en: "After restart"
+  id: "Setelah dimulai ulang"
+advanced.browse:
+  en: "Browse"
+  id: "Telusuri"
+advanced.debug_log_sample_note:
+  en: "Example of the log file. Leave the path empty to keep logging off."
+  id: "Contoh isi file log. Biarkan kosong agar log tetap mati."
+general.notification_sample_name:
+  en: "Rafi"
+  id: "Rafi"
+general.notification_sample_app:
+  en: "· Chat"
+  id: "· Chat"
+timer.title:
+  en: "Timer"
+  id: "Timer"
+timer.group_looks:
+  en: "How it looks in the notch"
+  id: "Tampilannya di notch"
+timer.group_looks_note:
+  en: "Focus timer page"
+  id: "Halaman timer fokus"
+timer.group_lengths:
+  en: "Session lengths"
+  id: "Lama sesi"
+timer.group_lengths_note:
+  en: "Focus 5–120 min · breaks 1–120 min"
+  id: "Fokus 5–120 mnt · istirahat 1–120 mnt"
+timer.focus:
+  en: "Focus"
+  id: "Fokus"
+timer.focus_note:
+  en: "How long one focus session lasts, 5 to 120."
+  id: "Lama satu sesi fokus, 5 sampai 120."
+timer.short_break:
+  en: "Short break"
+  id: "Istirahat singkat"
+timer.short_break_note:
+  en: "Rest after a focus session, 1 to 120."
+  id: "Istirahat setelah sesi fokus, 1 sampai 120."
+timer.long_break:
+  en: "Long break"
+  id: "Istirahat panjang"
+timer.long_break_note:
+  en: "Longer rest after several sessions, 1 to 120."
+  id: "Istirahat lebih lama setelah beberapa sesi, 1 sampai 120."
+timer.group_round:
+  en: "One round"
+  id: "Satu putaran"
+timer.round_total:
+  en: "With the lengths above · %{minutes} min"
+  id: "Dengan lama di atas · %{minutes} mnt"
+timer.round_note:
+  en: "Four focus sessions, a short break between them and a long break at the end."
+  id: "Empat sesi fokus, istirahat singkat di antaranya dan istirahat panjang di akhir."
+timer.focus_session:
+  en: "Focus · %{n} of %{total}"
+  id: "Fokus · %{n} dari %{total}"
+timer.pause:
+  en: "Pause"
+  id: "Jeda"
+timer.extend:
+  en: "+5 min"
+  id: "+5 mnt"
+timer.stop:
+  en: "Stop"
+  id: "Berhenti"
+stepper.minutes:
+  en: "min"
+  id: "mnt"
+calendar.group_google_note:
+  en: "Connect it once"
+  id: "Hubungkan sekali saja"
+calendar.group_steps:
+  en: "How to get the address"
+  id: "Cara mendapatkan alamat"
+calendar.group_steps_note:
+  en: "Google Calendar, step by step"
+  id: "Google Calendar, langkah demi langkah"
+calendar.reset:
+  en: "Reset"
+  id: "Reset"
+calendar.flow_source_note:
+  en: "Secret iCal address"
+  id: "Alamat iCal rahasia"
+calendar.flow_target:
+  en: "Notch"
+  id: "Notch"
+calendar.flow_target_note:
+  en: "Calendar page"
+  id: "Halaman Kalender"
+calendar.flow_every:
+  en: "every %{minutes} min"
+  id: "tiap %{minutes} mnt"
+calendar.weekday_letters:
+  en: "MTWTFSS"
+  id: "SSRKJSM"
+stats.pick_note:
+  en: "Pick up to %{limit} · %{chosen} of %{limit}"
+  id: "Pilih hingga %{limit} · %{chosen} dari %{limit}"
+stats.disk_local:
+  en: "Local disk"
+  id: "Disk lokal"
+stats.disk_removable:
+  en: "Removable disk"
+  id: "Disk lepasan"
+stats.disk_other:
+  en: "Disk"
+  id: "Disk"
+weather.group_alerts:
+  en: "Alerts"
+  id: "Peringatan"
+weather.group_alerts_note:
+  en: "The city comes from General"
+  id: "Kota diambil dari Umum"
+weather.alert_sent:
+  en: "Message sent"
+  id: "Pesan terkirim"
+weather.axis_now:
+  en: "Now"
+  id: "Kini"
+weather.axis_half_hour:
+  en: "+30 min"
+  id: "+30 mnt"
+weather.axis_hour:
+  en: "+60 min"
+  id: "+60 mnt"
+weather.alert_pill:
+  en: "Rain in %{minutes} min"
+  id: "Hujan %{minutes} mnt lagi"
+weather.alert_caption_bars:
+  en: "Notch sends the message 30 minutes before rain starts."
+  id: "Notch mengirim pesan 30 menit sebelum hujan mulai."
+weather.alert_caption_pill:
+  en: "What you see in the pill."
+  id: "Yang tampil di pill."
+shalat.group_method_note:
+  en: "Uses the location set in General."
+  id: "Memakai lokasi yang diatur di Umum."
+shalat.group_asr_note:
+  en: "Pick the shadow length that marks Asr."
+  id: "Pilih panjang bayangan yang menandai Ashar."
+shalat.group_reminders_note:
+  en: "Each card previews what you would see."
+  id: "Tiap kartu memperlihatkan tampilannya."
+shalat.group_adjust_note:
+  en: "Up to 30 minutes earlier or later."
+  id: "Hingga 30 menit lebih awal atau lebih lambat."

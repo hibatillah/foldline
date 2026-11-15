@@ -31,6 +31,22 @@ pub fn apply_language(choice: LanguageChoice, cx: &mut App) {
     cx.refresh_windows();
 }
 
+/// The `en` and `id` lines of one key in a locale file.
+#[cfg(test)]
+fn locale_entry(file: &std::path::Path, key: &str) -> Option<String> {
+    let text = std::fs::read_to_string(file).ok()?;
+    let start = text.find(&format!("\n{key}:\n"))?;
+    Some(text[start + 1..].lines().take(3).collect::<Vec<_>>().join("\n"))
+}
+
+/// Whether a picture's word reads the same here as in the notch, in both languages.
+#[cfg(test)]
+pub(crate) fn same_in_the_notch(key: &str) -> bool {
+    let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let own = locale_entry(&manifest.join("locales/app.yml"), key);
+    own.is_some() && own == locale_entry(&manifest.join("../notch/locales/app.yml"), key)
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::{Path, PathBuf};

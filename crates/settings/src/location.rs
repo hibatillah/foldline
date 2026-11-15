@@ -1,7 +1,7 @@
-//! The city search both the General and the Shalat page show: a field with up to five matches below it.
+//! The city search of the General page: a field with up to five matches below it, the saved one checked, and the
+//! pages that use the city.
 
 use crate::i18n::tr;
-use std::rc::Rc;
 
 use gpui::{
     AnyElement, App, AppContext as _, Entity, Focusable as _, SharedString, Subscription, Window, div, prelude::*, px,
@@ -14,13 +14,17 @@ use gpui_component::{
 use places::{City, Location};
 use store::Settings;
 
-use crate::{field, layout::Render, sections};
+use crate::{field, sections};
 
 const RESULT_LIMIT: usize = 5;
-const FIELD_WIDTH: f32 = 260.0;
+const FIELD_HEIGHT: f32 = 32.0;
+const RESULTS_RADIUS: f32 = 9.0;
+const RESULT_RADIUS: f32 = 6.0;
+const RESULT_TEXT_SIZE: f32 = 13.0;
+const CHIP_TEXT_SIZE: f32 = 11.5;
 
 /// The saved city as the field shows it ("Pekanbaru, ID"), or nothing until one is chosen.
-fn current_label(settings: &Settings) -> String {
+pub fn current_label(settings: &Settings) -> String {
     Location::read(&|key| settings.get_string(key).map(str::to_owned))
         .map(|location| location.label)
         .unwrap_or_default()
@@ -37,12 +41,59 @@ struct CitySearch {
     _subscription: Subscription,
 }
 
-/// The search field for the item's control; `id` keeps each page's field and its typed text apart.
-pub fn city_search(id: &'static str) -> Render {
-    Rc::new(move |window, cx| city_search_element(id, window, cx))
+/// One match: the name, then " · country" muted; the saved city has an accent fill and a check.
+fn result_row(id: &'static str, city: City, saved: bool, search: Entity<CitySearch>, cx: &App) -> AnyElement {
+    let row_id = SharedString::from(format!("{id}-{}-{:.3}-{:.3}", city.label(), city.latitude, city.longitude));
+    let accent = crate::palette::accent(cx);
+    let muted = cx.theme().muted_foreground;
+    let hover = cx.theme().foreground.opacity(0.08);
+    let name =
+        h_flex().min_w_0().gap(px(4.0)).child(div().flex_none().child(SharedString::from(city.name.clone()))).child(
+            div().min_w_0().truncate().text_color(muted).child(SharedString::from(format!("· {}", city.country))),
+        );
+    h_flex()
+        .id(row_id)
+        .justify_between()
+        .gap_2()
+        .px(px(8.0))
+        .py(px(6.0))
+        .rounded(px(RESULT_RADIUS))
+        .text_size(px(RESULT_TEXT_SIZE))
+        .cursor_pointer()
+        .when(saved, |row| row.bg(accent.opacity(0.18)))
+        .when(!saved, |row| row.hover(move |row| row.bg(hover)))
+        .on_click(move |_event, window, cx| {
+            choose(&mut Settings::load(), &city);
+            search.update(cx, |search, cx| {
+                search.matches.clear();
+                let label = city.label();
+                search.input.update(cx, |input, cx| input.set_value(label, window, cx));
+            });
+            cx.refresh_windows();
+        })
+        .child(name)
+        .children(saved.then(|| Icon::new(IconName::Check).size(px(13.0)).text_color(accent)))
+        .into_any_element()
 }
 
-fn city_search_element(id: &'static str, window: &mut Window, cx: &mut App) -> AnyElement {
+/// "Prayer times" and "Weather" as small chips, then "use this city".
+fn users_of_the_city(cx: &App) -> AnyElement {
+    let chip = |text: &'static str| {
+        div().px(px(7.0)).py(px(1.0)).rounded(px(5.0)).bg(cx.theme().foreground.opacity(0.09)).child(text)
+    };
+    h_flex()
+        .gap(px(6.0))
+        .items_center()
+        .text_size(px(CHIP_TEXT_SIZE))
+        .text_color(cx.theme().muted_foreground)
+        .child(chip(tr!("general.city_used_by_prayer")))
+        .child(chip(tr!("general.city_used_by_weather")))
+        .child(tr!("general.city_used_by_note"))
+        .into_any_element()
+}
+
+/// The field, its matches and the pages that use the city; `id` keeps the field and its typed text apart.
+pub fn city_search(id: &'static str, window: &mut Window, cx: &mut App) -> AnyElement {
     let label = current_label(&Settings::load());
     let search = window.use_keyed_state(SharedString::from(id), cx, {
         let label = label.clone();
@@ -61,53 +112,32 @@ fn city_search_element(id: &'static str, window: &mut Window, cx: &mut App) -> A
     });
     let input = search.read(cx).input.clone();
     let matches = search.read(cx).matches.clone();
+    let focused = input.focus_handle(cx).is_focused(window);
     // The saved city comes back once the typed text has no matches left to pick from and the field lost focus.
-    if matches.is_empty() && !input.focus_handle(cx).is_focused(window) && input.read(cx).value() != label {
-        input.update(cx, |input, cx| input.set_value(label, window, cx));
+    if matches.is_empty() && !focused && input.read(cx).value() != label {
+        input.update(cx, |input, cx| input.set_value(label.clone(), window, cx));
     }
     let muted = cx.theme().muted_foreground;
     let field_box = field::framed(
-        FIELD_WIDTH,
+        focused,
         Input::new(&input).appearance(false).prefix(Icon::new(IconName::Search).size(px(13.0)).text_color(muted)),
         cx,
-    );
+    )
+    .w_full()
+    .h(px(FIELD_HEIGHT))
+    .flex()
+    .items_center();
     let results = (!matches.is_empty()).then(|| {
-        let rows = matches.into_iter().map(|city| {
-            let row_id =
-                SharedString::from(format!("{id}-{}-{:.3}-{:.3}", city.label(), city.latitude, city.longitude));
-            let search = search.clone();
-            let chosen = city.clone();
-            h_flex()
-                .id(row_id)
-                .justify_between()
-                .gap_2()
-                .px(px(10.0))
-                .py(px(6.0))
-                .text_size(px(13.0))
-                .cursor_pointer()
-                .hover(|row| row.bg(cx.theme().foreground.opacity(0.08)))
-                .on_click(move |_event, window, cx| {
-                    choose(&mut Settings::load(), &chosen);
-                    search.update(cx, |search, cx| {
-                        search.matches.clear();
-                        let label = chosen.label();
-                        search.input.update(cx, |input, cx| input.set_value(label, window, cx));
-                    });
-                    cx.refresh_windows();
-                })
-                .child(div().min_w_0().truncate().child(SharedString::from(city.name.clone())))
-                .child(div().flex_none().text_color(muted).child(SharedString::from(city.country.clone())))
-        });
-        v_flex()
-            .w(px(FIELD_WIDTH))
-            .rounded(cx.theme().radius)
-            .border_1()
-            .border_color(cx.theme().input)
-            .bg(crate::palette::input_background(cx))
-            .py(px(3.0))
-            .children(rows)
+        let rows: Vec<AnyElement> = matches
+            .into_iter()
+            .map(|city| {
+                let saved = city.label() == label;
+                result_row(id, city, saved, search.clone(), cx)
+            })
+            .collect();
+        v_flex().w_full().rounded(px(RESULTS_RADIUS)).bg(crate::palette::input_background(cx)).p(px(4.0)).children(rows)
     });
-    v_flex().w(px(FIELD_WIDTH)).gap(px(6.0)).child(field_box).children(results).into_any_element()
+    v_flex().w_full().gap(px(8.0)).child(field_box).children(results).child(users_of_the_city(cx)).into_any_element()
 }
 
 #[cfg(test)]

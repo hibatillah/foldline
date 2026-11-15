@@ -1,13 +1,13 @@
 //! The System stats page's choices: which disks and GPUs it shows. The notch publishes what exists
 //! (`stats.known_disks`, `stats.known_gpus`) when the page is shown; this page writes `stats.disks` and `stats.gpus`.
 
-use crate::i18n::tr;
-use gpui::{AnyElement, App, ElementId, SharedString, Window, div, prelude::*};
-use gpui_component::{ActiveTheme as _, Disableable as _, checkbox::Checkbox, v_flex};
+mod disk_info;
+mod rows;
+
 use store::Settings;
 
 use crate::{
-    field,
+    i18n::tr,
     layout::{Group, Item, Page},
 };
 
@@ -27,8 +27,6 @@ struct Kind {
     separator: char,
     limit: usize,
     id_prefix: &'static str,
-    /// "Up to 3 disks".
-    limit_hint: fn() -> &'static str,
     /// Shown while the notch has not published the list.
     unlisted: fn() -> &'static str,
     /// Shown when the list is published and empty.
@@ -41,7 +39,6 @@ const DISKS: Kind = Kind {
     separator: ',',
     limit: MAX_DISKS,
     id_prefix: "stats-disk",
-    limit_hint: || tr!("stats.disks_title"),
     unlisted: || tr!("stats.disks_hint"),
     none_found: || tr!("stats.disks_none"),
 };
@@ -52,7 +49,6 @@ const GPUS: Kind = Kind {
     separator: '|',
     limit: MAX_GPUS,
     id_prefix: "stats-gpu",
-    limit_hint: || tr!("stats.gpus_title"),
     unlisted: || tr!("stats.gpus_hint"),
     none_found: || tr!("stats.gpus_none"),
 };
@@ -123,52 +119,30 @@ fn list_text(names: &[String], kind: Kind) -> String {
     names.join(&kind.separator.to_string())
 }
 
-fn muted_message(text: &'static str, cx: &App) -> AnyElement {
-    div().text_sm().text_color(cx.theme().muted_foreground).child(text).into_any_element()
-}
-
-fn rows(kind: Kind, _window: &mut Window, cx: &mut App) -> AnyElement {
+/// "Pick up to 3 · 2 of 3", the note at the right of a heading.
+fn pick_note(kind: Kind) -> gpui::SharedString {
     let settings = Settings::load();
-    let known = match availability(&settings, kind) {
-        Availability::Unlisted => return muted_message((kind.unlisted)(), cx),
-        Availability::NoneFound => return muted_message((kind.none_found)(), cx),
-        Availability::Devices(known) => known,
+    let chosen = match availability(&settings, kind) {
+        Availability::Devices(known) => selected(&known, settings.get_string(kind.key), kind).len(),
+        _ => 0,
     };
-    let chosen = selected(&known, settings.get_string(kind.key), kind);
-    let full = chosen.len() >= kind.limit;
-    let any_disabled = full && known.iter().any(|name| !chosen.contains(name));
-    let checkboxes = known.iter().map(|name| {
-        let checked = chosen.contains(name);
-        let device = name.clone();
-        Checkbox::new(ElementId::Name(SharedString::from(format!("{}-{name}", kind.id_prefix))))
-            .label(name.clone())
-            .checked(checked)
-            .disabled(full && !checked)
-            .on_click(move |on: &bool, _window, cx| {
-                let settings = Settings::load();
-                let known = match availability(&settings, kind) {
-                    Availability::Devices(known) => known,
-                    _ => return,
-                };
-                if let Some(names) = toggled(&known, settings.get_string(kind.key), kind, &device, *on) {
-                    field::write(kind.key, &list_text(&names, kind), cx);
-                }
-            })
-    });
-    v_flex()
-        .gap_3()
-        .children(checkboxes)
-        .children(any_disabled.then(|| muted_message((kind.limit_hint)(), cx)))
-        .into_any_element()
+    tr!("stats.pick_note", limit = kind.limit, chosen = chosen).into()
 }
 
 pub fn page() -> Page {
-    Page::new(
+    Page::plain(
         tr!("stats.title"),
-        tr!("stats.description"),
         vec![
-            Group::titled(tr!("stats.group_disks"), vec![Item::custom(|window, cx| rows(DISKS, window, cx))]),
-            Group::titled(tr!("stats.group_gpus"), vec![Item::custom(|window, cx| rows(GPUS, window, cx))]),
+            Group::titled(
+                tr!("stats.group_disks"),
+                vec![Item::custom(|window, cx| rows::list(DISKS, window, cx)).outside_block()],
+            )
+            .live_description(|| pick_note(DISKS)),
+            Group::titled(
+                tr!("stats.group_gpus"),
+                vec![Item::custom(|window, cx| rows::list(GPUS, window, cx)).outside_block()],
+            )
+            .live_description(|| pick_note(GPUS)),
         ],
     )
 }

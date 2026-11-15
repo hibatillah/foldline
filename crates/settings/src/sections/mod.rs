@@ -1,14 +1,16 @@
 mod about;
+mod account;
 mod advanced;
 mod behavior;
 mod calendar;
 mod general;
 mod language;
+mod lock;
 mod pages;
 mod pause;
-mod screen;
 mod shalat;
 mod stats;
+mod timer;
 mod weather;
 
 use store::Settings;
@@ -38,11 +40,13 @@ pub fn all() -> Vec<NavEntry> {
         NavEntry::new(NavGroup::Notch, icons::GENERAL, general::page()),
         NavEntry::new(NavGroup::Notch, icons::PAGES, pages::page()),
         NavEntry::new(NavGroup::Notch, icons::BEHAVIOR, behavior::page()),
+        NavEntry::new(NavGroup::Notch, icons::ADVANCED, advanced::page()),
         NavEntry::new(NavGroup::PageSettings, icons::CALENDAR, calendar::page()),
+        NavEntry::new(NavGroup::PageSettings, icons::TIMER, timer::page()),
         NavEntry::new(NavGroup::PageSettings, icons::SHALAT, shalat::page()),
         NavEntry::new(NavGroup::PageSettings, icons::STATS, stats::page()),
         NavEntry::new(NavGroup::PageSettings, icons::WEATHER, weather::page()),
-        NavEntry::new(NavGroup::Notch, icons::ADVANCED, advanced::page()),
+        NavEntry::new(NavGroup::Footer, icons::ACCOUNT, account::page()),
         NavEntry::new(NavGroup::Footer, icons::ABOUT, about::page()),
     ]
 }
@@ -52,7 +56,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_page_has_its_own_icon_and_a_description() {
+    fn every_page_has_its_own_icon_and_a_description_is_a_whole_sentence() {
         let entries = all();
         let icons = entries.iter().map(|entry| entry.icon).collect::<Vec<_>>();
         assert_eq!(
@@ -61,11 +65,13 @@ mod tests {
                 icons::GENERAL,
                 icons::PAGES,
                 icons::BEHAVIOR,
+                icons::ADVANCED,
                 icons::CALENDAR,
+                icons::TIMER,
                 icons::SHALAT,
                 icons::STATS,
                 icons::WEATHER,
-                icons::ADVANCED,
+                icons::ACCOUNT,
                 icons::ABOUT
             ]
         );
@@ -74,7 +80,9 @@ mod tests {
         unique.dedup();
         assert_eq!(unique.len(), icons.len());
         for entry in &entries {
-            assert!(entry.page.description().trim().len() > 20, "{} needs a description sentence", entry.page.title);
+            if let Some(description) = entry.page.description() {
+                assert!(description.trim().len() > 20, "{} needs a whole description sentence", entry.page.title);
+            }
         }
     }
 
@@ -86,8 +94,8 @@ mod tests {
         let indonesian = with_override(Language::Indonesian, || titles(all()));
         assert_eq!(english[0], "General");
         assert_eq!(indonesian[0], "Umum");
-        assert_eq!(indonesian[3], "Kalender");
-        assert_eq!(indonesian[8], "Tentang");
+        assert_eq!(indonesian[4], "Kalender");
+        assert_eq!(indonesian[10], "Tentang");
     }
 
     #[test]
@@ -97,7 +105,13 @@ mod tests {
         assert_eq!(last.page.title, "About");
         assert_eq!(last.icon, icons::ABOUT);
         assert_eq!(last.group, NavGroup::Footer);
-        assert_eq!(entries.iter().filter(|entry| entry.group == NavGroup::Footer).count(), 1);
+    }
+
+    #[test]
+    fn the_account_page_sits_above_about_in_the_footer() {
+        let footer: Vec<&'static str> =
+            all().iter().filter(|entry| entry.group == NavGroup::Footer).map(|entry| entry.icon).collect();
+        assert_eq!(footer, [icons::ACCOUNT, icons::ABOUT]);
     }
 
     #[test]

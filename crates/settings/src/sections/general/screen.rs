@@ -1,17 +1,24 @@
-//! The chosen-screen item of the General page: a dropdown of the connected screens that writes `notch.monitor_id`.
+//! The chosen-screen picker of the General page: the connected screens drawn where they stand on the desktop, scaled
+//! down; a click on one writes its id to `notch.monitor_id`.
 
-use std::rc::Rc;
-
-use gpui::{AppContext as _, Entity, SharedString, Subscription, div, prelude::*, px};
-use gpui_component::IndexPath;
-use gpui_component::select::{Select, SelectEvent, SelectItem, SelectState};
+use gpui::{AnyElement, App, SharedString, div, prelude::*, px, rgba};
+use gpui_component::{ActiveTheme as _, tooltip::Tooltip, v_flex};
 use store::{Settings, screens::Screen};
 
-use super::general::chosen_is_selected;
-use crate::{i18n::tr, layout::Item};
+use super::monitor::chosen_is_selected;
+use crate::{i18n::tr, illustration, layout::Item, picture::color};
 
 pub const MONITOR_ID_KEY: &str = "notch.monitor_id";
-const DROPDOWN_WIDTH: f32 = 280.0;
+/// The drawing's size; the screens are scaled to fit inside it with `MAP_PADDING` around them.
+const MAP_HEIGHT: f32 = 132.0;
+const MAP_PADDING: f32 = 14.0;
+/// The drawing's width for the fit; the drawing itself fills its row and the screens stay centered.
+const FIT_WIDTH: f32 = 420.0;
+/// The space between two screens that touch on the desktop, so each reads as its own.
+const SCREEN_GAP: f32 = 4.0;
+const SCREEN_RADIUS: f32 = 5.0;
+const NOTCH_WIDTH: f32 = 22.0;
+const NOTCH_HEIGHT: f32 = 6.0;
 
 /// "Screen 2, LG UltraGear, 1920x1080 (main)": the model only when Windows names one, "(main)" only on the primary.
 fn screen_label(position: usize, screen: &Screen, screen_word: &str, main_word: &str) -> String {
@@ -42,107 +49,138 @@ fn store_picked_screen(settings: &mut Settings, picked_id: &str) -> bool {
     if settings.get_string(MONITOR_ID_KEY) == Some(picked_id) {
         return false;
     }
-    super::apply(settings, MONITOR_ID_KEY, picked_id);
+    super::super::apply(settings, MONITOR_ID_KEY, picked_id);
     true
-}
-
-#[derive(Clone, PartialEq, Eq)]
-struct ScreenOption {
-    id: SharedString,
-    label: SharedString,
-}
-
-impl SelectItem for ScreenOption {
-    type Value = SharedString;
-
-    fn title(&self) -> SharedString {
-        self.label.clone()
-    }
-
-    fn value(&self) -> &Self::Value {
-        &self.id
-    }
-}
-
-fn options_of(screens: &[Screen]) -> Vec<ScreenOption> {
-    let (screen_word, main_word) = (tr!("general.screen_word"), tr!("general.screen_main"));
-    screens
-        .iter()
-        .enumerate()
-        .map(|(index, screen)| ScreenOption {
-            id: screen.id.clone().into(),
-            label: screen_label(index + 1, screen, screen_word, main_word).into(),
-        })
-        .collect()
-}
-
-struct ScreenBox {
-    select: Entity<SelectState<Vec<ScreenOption>>>,
-    options: Vec<ScreenOption>,
-    _subscription: Subscription,
 }
 
 fn stored_chosen(screens: &[Screen]) -> ChosenScreen {
     resolve_chosen(Settings::load().get_string(MONITOR_ID_KEY), screens)
 }
 
-fn dropdown() -> crate::layout::Render {
-    Rc::new(|window, cx| {
-        let screens = store::screens::list();
-        let options = options_of(&screens);
-        let chosen = stored_chosen(&screens);
-        let selected_position = match chosen {
-            ChosenScreen::Connected(position) => Some(position),
-            ChosenScreen::Unset | ChosenScreen::NotConnected => None,
-        };
-        let state = window.use_keyed_state("chosen-screen", cx, {
-            let options = options.clone();
-            move |window, cx| {
-                let select = cx.new(|cx| SelectState::new(options.clone(), None, window, cx));
-                let _subscription = cx.subscribe_in(
-                    &select,
-                    window,
-                    |_box: &mut ScreenBox, _select, event: &SelectEvent<Vec<ScreenOption>>, _window, cx| {
-                        let SelectEvent::Confirm(Some(id)) = event else { return };
-                        if store_picked_screen(&mut Settings::load(), id) {
-                            cx.refresh_windows();
-                        }
-                    },
-                );
-                ScreenBox { select, options, _subscription }
-            }
-        });
-        // The list is read on this paint; a screen that came or went changes the items, never the stored id.
-        state.update(cx, |screen_box, cx| {
-            if screen_box.options != options {
-                screen_box.options = options;
-                let items = screen_box.options.clone();
-                screen_box.select.update(cx, |select, cx| select.set_items(items, window, cx));
-            }
-            let wanted = selected_position.map(IndexPath::new);
-            screen_box.select.update(cx, |select, cx| {
-                if select.selected_index(cx) != wanted {
-                    select.set_selected_index(wanted, window, cx);
-                }
-            });
-        });
-        let placeholder = match chosen {
-            ChosenScreen::NotConnected => tr!("general.screen_not_connected"),
-            ChosenScreen::Unset | ChosenScreen::Connected(_) => tr!("general.screen_choose"),
-        };
-        let select = state.read(cx).select.clone();
-        div().w(px(DROPDOWN_WIDTH)).child(Select::new(&select).placeholder(placeholder)).into_any_element()
-    })
+/// A screen's place in the drawing, in pixels from the drawing's top-left corner.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Placed {
+    left: f32,
+    top: f32,
+    width: f32,
+    height: f32,
 }
 
-/// The row under "Show the notch on"; left out of the page unless "A chosen screen" is selected.
+/// Scales the screens' desktop rectangles down to fit `width` by `height` less the padding, keeping their proportions
+/// and where they stand to each other, and centers the whole arrangement.
+fn fit(screens: &[Screen], width: f32, height: f32) -> Vec<Placed> {
+    let (Some(min_x), Some(min_y)) =
+        (screens.iter().map(|screen| screen.left).min(), screens.iter().map(|screen| screen.top).min())
+    else {
+        return Vec::new();
+    };
+    let max_x = screens.iter().map(|screen| screen.left + screen.width).max().unwrap_or(min_x);
+    let max_y = screens.iter().map(|screen| screen.top + screen.height).max().unwrap_or(min_y);
+    let (desk_width, desk_height) = ((max_x - min_x).max(1) as f32, (max_y - min_y).max(1) as f32);
+    let scale = ((width - 2.0 * MAP_PADDING) / desk_width).min((height - 2.0 * MAP_PADDING) / desk_height);
+    let offset_x = (width - desk_width * scale) / 2.0;
+    let offset_y = (height - desk_height * scale) / 2.0;
+    screens
+        .iter()
+        .map(|screen| Placed {
+            left: offset_x + (screen.left - min_x) as f32 * scale,
+            top: offset_y + (screen.top - min_y) as f32 * scale,
+            width: screen.width as f32 * scale,
+            height: screen.height as f32 * scale,
+        })
+        .collect()
+}
+
+fn drawn_screen(index: usize, screen: &Screen, place: Placed, chosen: bool, cx: &App) -> AnyElement {
+    let accent = crate::palette::accent(cx);
+    let label = screen_label(index + 1, screen, tr!("general.screen_word"), tr!("general.screen_main"));
+    let id = screen.id.clone();
+    let (fill, border) =
+        if chosen { (accent.opacity(0.18), accent) } else { (color(0x26304a), rgba(0xffffff40).into()) };
+    let inset = SCREEN_GAP / 2.0;
+    div()
+        .id(SharedString::from(format!("screen-{}", screen.id)))
+        .absolute()
+        .left(px(place.left + inset))
+        .top(px(place.top + inset))
+        .w(px((place.width - SCREEN_GAP).max(8.0)))
+        .h(px((place.height - SCREEN_GAP).max(8.0)))
+        .rounded(px(SCREEN_RADIUS))
+        .border(px(1.5))
+        .border_color(border)
+        .bg(fill)
+        .cursor_pointer()
+        .hover(move |style| style.border_color(accent))
+        .tooltip(move |window, cx| Tooltip::new(label.clone()).build(window, cx))
+        .on_click(move |_event, _window, cx| {
+            if store_picked_screen(&mut Settings::load(), &id) {
+                cx.refresh_windows();
+            }
+        })
+        .when(chosen, |drawn| {
+            drawn.child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .w_full()
+                    .flex()
+                    .justify_center()
+                    .child(div().w(px(NOTCH_WIDTH)).h(px(NOTCH_HEIGHT)).rounded_b(px(3.0)).bg(color(0x000000))),
+            )
+        })
+        .child(
+            v_flex()
+                .size_full()
+                .items_center()
+                .justify_center()
+                .child(div().text_sm().font_weight(gpui::FontWeight::SEMIBOLD).child(format!("{}", index + 1)))
+                .child(
+                    div()
+                        .text_size(px(10.5))
+                        .text_color(cx.theme().muted_foreground)
+                        .child(format!("{}x{}", screen.width, screen.height)),
+                )
+                .when(screen.is_primary, |text| {
+                    text.child(div().text_size(px(10.5)).text_color(accent).child(tr!("general.screen_main_badge")))
+                }),
+        )
+        .into_any_element()
+}
+
+/// The drawing of the connected screens, read when the page paints; the stored id is never overwritten by painting.
+fn screen_map(cx: &App) -> AnyElement {
+    let screens = store::screens::list();
+    let chosen = stored_chosen(&screens);
+    let places = fit(&screens, FIT_WIDTH, MAP_HEIGHT);
+    let drawn = screens.iter().zip(places).enumerate().map(|(index, (screen, place))| {
+        drawn_screen(index, screen, place, chosen == ChosenScreen::Connected(index), cx)
+    });
+    let map = div().relative().w(px(FIT_WIDTH)).h(px(MAP_HEIGHT)).children(drawn);
+    illustration::scene(MAP_HEIGHT).flex().justify_center().child(map).into_any_element()
+}
+
+/// The title, the hint and the drawing; left out of the page unless "A chosen screen" is selected.
 pub fn item() -> Item {
-    Item::new(tr!("general.screen_title"), dropdown()).visible_when(|| chosen_is_selected(&Settings::load())).note_when(
-        || {
-            matches!(stored_chosen(&store::screens::list()), ChosenScreen::NotConnected)
-                .then(|| tr!("general.screen_not_connected_note"))
-        },
-    )
+    Item::picture_row(|_window, cx| {
+        let screens = store::screens::list();
+        let hint = match stored_chosen(&screens) {
+            ChosenScreen::NotConnected => tr!("general.screen_not_connected_note"),
+            ChosenScreen::Unset => tr!("general.screen_choose"),
+            ChosenScreen::Connected(_) => tr!("general.screen_pick_note"),
+        };
+        v_flex()
+            .gap(px(8.0))
+            .child(
+                v_flex()
+                    .gap(px(1.0))
+                    .child(div().text_base().font_weight(gpui::FontWeight::MEDIUM).child(tr!("general.screen_title")))
+                    .child(div().text_sm().text_color(cx.theme().muted_foreground).child(hint)),
+            )
+            .child(screen_map(cx))
+            .into_any_element()
+    })
+    .visible_when(|| chosen_is_selected(&Settings::load()))
 }
 
 #[cfg(test)]
@@ -150,13 +188,21 @@ mod tests {
     use super::*;
 
     fn screen(id: &str, model: Option<&str>, is_primary: bool, width: i32, height: i32) -> Screen {
-        Screen { id: id.to_owned(), model: model.map(str::to_owned), is_primary, width, height }
+        Screen { id: id.to_owned(), model: model.map(str::to_owned), is_primary, left: 0, top: 0, width, height }
+    }
+
+    fn placed_screen(left: i32, top: i32, width: i32, height: i32) -> Screen {
+        Screen { id: format!("{left}-{top}"), model: None, is_primary: left == 0 && top == 0, left, top, width, height }
     }
 
     fn temporary_settings(name: &str, text: &str) -> Settings {
         let path = std::env::temp_dir().join(format!("notch-settings-{name}-{}.txt", std::process::id()));
         std::fs::write(&path, text).unwrap();
         Settings::at(Some(path))
+    }
+
+    fn settings_path(name: &str) -> Option<std::path::PathBuf> {
+        Some(std::env::temp_dir().join(format!("notch-settings-{name}-{}.txt", std::process::id())))
     }
 
     #[test]
@@ -220,7 +266,27 @@ mod tests {
         let _ = std::fs::remove_file(settings_path("keep").unwrap());
     }
 
-    fn settings_path(name: &str) -> Option<std::path::PathBuf> {
-        Some(std::env::temp_dir().join(format!("notch-settings-{name}-{}.txt", std::process::id())))
+    #[test]
+    fn one_screen_is_drawn_centered_and_as_large_as_the_padding_allows() {
+        let places = fit(&[placed_screen(0, 0, 1920, 1080)], 420.0, 132.0);
+        let place = places[0];
+        assert!((place.height - (132.0 - 2.0 * MAP_PADDING)).abs() < 0.01, "{place:?}");
+        assert!((place.left + place.width / 2.0 - 210.0).abs() < 0.01, "{place:?}");
+        assert!((place.width / place.height - 1920.0 / 1080.0).abs() < 0.01, "{place:?}");
+    }
+
+    #[test]
+    fn a_screen_left_of_the_main_one_is_drawn_left_of_it_at_the_same_scale() {
+        let screens = [placed_screen(0, 0, 1920, 1080), placed_screen(-2560, -360, 2560, 1440)];
+        let places = fit(&screens, 420.0, 132.0);
+        let (main, left) = (places[0], places[1]);
+        assert!((left.left + left.width - main.left).abs() < 0.01, "the screens touch: {places:?}");
+        assert!(left.top < main.top, "the taller screen starts higher: {places:?}");
+        assert!((left.width / main.width - 2560.0 / 1920.0).abs() < 0.01, "{places:?}");
+    }
+
+    #[test]
+    fn no_screens_draw_nothing() {
+        assert!(fit(&[], 420.0, 132.0).is_empty());
     }
 }

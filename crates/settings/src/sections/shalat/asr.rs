@@ -6,7 +6,10 @@ use gpui_component::v_flex;
 use store::Settings;
 
 use super::{HANAFI_KEY, pictures};
-use crate::{card, field, layout::Item};
+use crate::{
+    card, field,
+    layout::{self, Item},
+};
 
 struct Rule {
     hanafi: bool,
@@ -35,7 +38,7 @@ const RULES: [Rule; 2] = [
 
 fn rule_card(rule: &'static Rule, selected: bool, cx: &App) -> AnyElement {
     let hanafi = rule.hanafi;
-    card::frame(SharedString::from(format!("{HANAFI_KEY}-{}", rule.hanafi)), selected, 10.0, 10.0, cx)
+    card::frame(SharedString::from(format!("{HANAFI_KEY}-{}", rule.hanafi)), selected, cx)
         .cursor_pointer()
         .on_click(move |_event, _window, cx| field::write(HANAFI_KEY, field::on_off(hanafi), cx))
         .child(card::header((rule.label)(), Some((rule.schools)()), selected, cx))
@@ -49,7 +52,7 @@ pub fn item() -> Item {
         let cards = RULES.iter().map(|rule| rule_card(rule, rule.hanafi == hanafi, cx)).collect();
         v_flex()
             .gap_3()
-            .child(card::described(tr!("shalat.asr_title"), tr!("shalat.asr_description"), cx))
+            .child(layout::block_heading(tr!("shalat.asr_title"), None, cx))
             .child(card::grid(2, cards))
             .into_any_element()
     })

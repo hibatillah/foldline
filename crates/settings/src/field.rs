@@ -1,25 +1,19 @@
-use std::{ops::RangeInclusive, rc::Rc};
+use std::rc::Rc;
 
 use gpui::{
     AnyElement, App, AppContext as _, ElementId, Entity, Focusable as _, SharedString, Subscription, Window, div,
     prelude::*, px,
 };
 use gpui_component::{
-    ActiveTheme as _, IndexPath,
+    ActiveTheme as _, Icon,
     input::{Input, InputEvent, InputState},
-    select::{Select, SelectEvent, SelectItem, SelectState},
-    switch::Switch,
 };
 use store::Settings;
 
-use crate::{layout::Render, sections::apply};
+use crate::{layout::Render, sections::apply, switch::Switch};
 
 pub fn on_off(enabled: bool) -> &'static str {
     if enabled { "on" } else { "off" }
-}
-
-fn parse_whole_number(input: &str, range: &RangeInclusive<u32>) -> Option<u32> {
-    input.trim().parse::<u32>().ok().filter(|number| range.contains(number))
 }
 
 /// Saves the key and repaints, so a control shows its new state at once.
@@ -52,41 +46,34 @@ pub fn toggle(key: &'static str, default: bool) -> Render {
 
 #[derive(Clone)]
 pub enum Kind {
-    Text {
-        width: f32,
-    },
+    /// A file path, with a file icon before it.
+    Path { width: f32 },
     /// Shown as dots, with a button that reveals it.
-    Secret {
-        width: f32,
-    },
-    WholeNumber {
-        default: u32,
-        range: RangeInclusive<u32>,
-    },
+    Secret { width: f32 },
 }
 
 impl Kind {
     fn width(&self) -> f32 {
         match self {
-            Kind::Text { width } | Kind::Secret { width } => *width,
-            Kind::WholeNumber { .. } => 96.0,
+            Kind::Path { width } | Kind::Secret { width } => *width,
         }
     }
 }
 
 fn shown_value(settings: &Settings, key: &str, kind: &Kind) -> String {
     match kind {
-        Kind::Text { .. } | Kind::Secret { .. } => settings.get_string(key).unwrap_or_default().to_owned(),
-        Kind::WholeNumber { default, .. } => {
-            // The notch accepts any positive value, so a hand edit outside the field's range is shown as stored.
-            settings
-                .get_string(key)
-                .and_then(|text| text.trim().parse::<u32>().ok())
-                .filter(|number| *number > 0)
-                .unwrap_or(*default)
-                .to_string()
-        }
+        Kind::Path { .. } | Kind::Secret { .. } => settings.get_string(key).unwrap_or_default().to_owned(),
     }
+}
+
+/// A stored positive whole number, else `default`. The notch accepts any positive value, so a hand edit outside a
+/// control's range is shown as stored.
+pub fn stored_whole_number(settings: &Settings, key: &str, default: u32) -> u32 {
+    settings
+        .get_string(key)
+        .and_then(|text| text.trim().parse::<u32>().ok())
+        .filter(|number| *number > 0)
+        .unwrap_or(default)
 }
 
 struct InputBox {
@@ -125,28 +112,32 @@ fn input_element(
         }
     });
     let input = state.read(cx).input.clone();
+    let focused = input.focus_handle(cx).is_focused(window);
     // A hand edit or the tray's own write shows up here instead of being overwritten by a stale value.
-    if !input.focus_handle(cx).is_focused(window) && input.read(cx).value() != stored {
+    if !focused && input.read(cx).value() != stored {
         input.update(cx, |input, cx| input.set_value(stored, window, cx));
     }
+    let file_icon = || Icon::default().path(crate::icons::FILE).size(px(13.0)).text_color(cx.theme().muted_foreground);
     framed(
-        kind.width(),
+        focused,
         match kind {
             Kind::Secret { .. } => Input::new(&input).appearance(false).mask_toggle(),
-            _ => Input::new(&input).appearance(false),
+            Kind::Path { .. } => Input::new(&input).appearance(false).prefix(file_icon()),
         },
         cx,
     )
+    .w(px(kind.width()))
     .into_any_element()
 }
 
-/// The box around a text input: a border and a field background a step lighter than the group.
-pub fn framed(width: f32, input: Input, cx: &App) -> gpui::Div {
+const FIELD_RADIUS: f32 = 8.0;
+
+/// The box around a text input: a thin border (the accent while it has focus) on a fill darker than the block.
+pub fn framed(focused: bool, input: Input, cx: &App) -> gpui::Div {
     div()
-        .w(px(width))
-        .rounded(cx.theme().radius)
+        .rounded(px(FIELD_RADIUS))
         .border_1()
-        .border_color(cx.theme().input)
+        .border_color(if focused { crate::palette::accent(cx) } else { crate::palette::input_border(cx) })
         .bg(crate::palette::input_background(cx))
         .child(input)
 }
@@ -154,8 +145,7 @@ pub fn framed(width: f32, input: Input, cx: &App) -> gpui::Div {
 fn commit(key: &'static str, kind: &Kind, input: &Entity<InputState>, window: &mut Window, cx: &mut App) {
     let typed = input.read(cx).value();
     let accepted = match kind {
-        Kind::Text { .. } | Kind::Secret { .. } => Some(typed.trim().to_owned()),
-        Kind::WholeNumber { range, .. } => parse_whole_number(&typed, range).map(|number| number.to_string()),
+        Kind::Path { .. } | Kind::Secret { .. } => Some(typed.trim().to_owned()),
     };
     let stored = shown_value(&Settings::load(), key, kind);
     let shown = match accepted {
@@ -170,70 +160,6 @@ fn commit(key: &'static str, kind: &Kind, input: &Entity<InputState>, window: &m
     input.update(cx, |input, cx| input.set_value(shown, window, cx));
 }
 
-/// One option of a dropdown: the word written to the file and the text shown for it.
-#[derive(Clone)]
-pub struct Choice {
-    pub word: &'static str,
-    pub label: SharedString,
-}
-
-impl SelectItem for Choice {
-    type Value = &'static str;
-
-    fn title(&self) -> SharedString {
-        self.label.clone()
-    }
-
-    fn value(&self) -> &Self::Value {
-        &self.word
-    }
-}
-
-struct ChoiceBox {
-    select: Entity<SelectState<Vec<Choice>>>,
-    _subscription: Subscription,
-}
-
-fn choice_index(choices: &[Choice], word: &str) -> Option<IndexPath> {
-    choices.iter().position(|choice| choice.word == word).map(IndexPath::new)
-}
-
-/// A dropdown that writes the chosen word to `key`; `shown` gives the word to select, read again on every paint.
-pub fn choice(key: &'static str, width: f32, choices: Vec<Choice>, shown: impl Fn() -> String + 'static) -> Render {
-    Rc::new(move |window, cx| {
-        let selected = shown();
-        let state = window.use_keyed_state(SharedString::from(format!("choice-{key}")), cx, {
-            let (choices, selected) = (choices.clone(), selected.clone());
-            move |window, cx| {
-                let index = choice_index(&choices, &selected);
-                let select = cx.new(|cx| SelectState::new(choices, index, window, cx));
-                let _subscription = cx.subscribe_in(
-                    &select,
-                    window,
-                    move |_box: &mut ChoiceBox, _select, event: &SelectEvent<Vec<Choice>>, _window, cx| {
-                        let SelectEvent::Confirm(Some(word)) = event else { return };
-                        if Settings::load().get_string(key) != Some(*word) {
-                            write(key, word, cx);
-                        }
-                    },
-                );
-                ChoiceBox { select, _subscription }
-            }
-        });
-        let select = state.read(cx).select.clone();
-        // A hand edit or the tray's own write shows up here instead of a stale choice.
-        if select.read(cx).selected_value().copied() != Some(shown_static(&choices, &selected)) {
-            let index = choice_index(&choices, &selected);
-            select.update(cx, |select, cx| select.set_selected_index(index, window, cx));
-        }
-        div().w(px(width)).child(Select::new(&select)).into_any_element()
-    })
-}
-
-fn shown_static(choices: &[Choice], word: &str) -> &'static str {
-    choices.iter().find(|choice| choice.word == word).map_or("", |choice| choice.word)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -245,27 +171,15 @@ mod tests {
     }
 
     #[test]
-    fn numbers_outside_the_range_are_rejected() {
-        let range = 5..=120;
-        assert_eq!(parse_whole_number("4", &range), None);
-        assert_eq!(parse_whole_number("121", &range), None);
-        assert_eq!(parse_whole_number("abc", &range), None);
-        assert_eq!(parse_whole_number("", &range), None);
-        assert_eq!(parse_whole_number(" 5 ", &range), Some(5));
-        assert_eq!(parse_whole_number("120", &range), Some(120));
-    }
-
-    #[test]
-    fn a_stored_value_outside_the_range_is_shown_not_replaced_by_the_default() {
+    fn a_stored_value_outside_a_controls_range_is_shown_not_replaced_by_the_default() {
         let path = std::env::temp_dir().join(format!("notch-settings-shown-{}.txt", std::process::id()));
         std::fs::write(&path, "timer.short_break_minutes=180\ntimer.long_break_minutes=0\ntimer.focus_minutes=abc\n")
             .unwrap();
         let settings = Settings::at(Some(path.clone()));
         let _ = std::fs::remove_file(&path);
-        let kind = |default| Kind::WholeNumber { default, range: 1..=120 };
-        assert_eq!(shown_value(&settings, "timer.short_break_minutes", &kind(5)), "180");
-        assert_eq!(shown_value(&settings, "timer.long_break_minutes", &kind(15)), "15");
-        assert_eq!(shown_value(&settings, "timer.focus_minutes", &kind(25)), "25");
-        assert_eq!(shown_value(&settings, "missing", &kind(7)), "7");
+        assert_eq!(stored_whole_number(&settings, "timer.short_break_minutes", 5), 180);
+        assert_eq!(stored_whole_number(&settings, "timer.long_break_minutes", 15), 15);
+        assert_eq!(stored_whole_number(&settings, "timer.focus_minutes", 25), 25);
+        assert_eq!(stored_whole_number(&settings, "missing", 7), 7);
     }
 }

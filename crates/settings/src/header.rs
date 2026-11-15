@@ -8,8 +8,12 @@ use gpui_component::{ActiveTheme as _, Icon, IconName, Sizable as _, h_flex};
 
 use crate::palette;
 
-pub const HEIGHT: f32 = 36.0;
+const HEIGHT: f32 = 44.0;
 const BUTTON_WIDTH: f32 = 36.0;
+/// The breadcrumb's inset from the card's left edge, and the space around its chevron.
+const TRAIL_PADDING_LEFT: f32 = 22.0;
+const TRAIL_GAP: f32 = 10.0;
+const CHEVRON_SIZE: f32 = 13.0;
 
 /// The breadcrumb as the two names it joins: "Settings" and the page's title.
 pub fn breadcrumb(page_title: &'static str) -> [&'static str; 2] {
@@ -53,13 +57,13 @@ pub fn render(page_title: &'static str, window: &Window, cx: &App) -> impl IntoE
         .window_control_area(WindowControlArea::Drag)
         .flex_1()
         .h_full()
-        .pl_4()
-        .gap_2()
+        .pl(px(TRAIL_PADDING_LEFT))
+        .gap(px(TRAIL_GAP))
         .items_center()
-        .text_sm()
+        .text_base()
         .child(div().text_color(palette::muted(cx)).child(root))
-        .child(Icon::new(IconName::ChevronRight).size_3p5().text_color(palette::muted(cx)))
-        .child(div().text_color(palette::accent(cx)).child(page));
+        .child(Icon::new(IconName::ChevronRight).size(px(CHEVRON_SIZE)).text_color(palette::muted(cx)))
+        .child(div().font_weight(gpui::FontWeight::MEDIUM).text_color(palette::accent(cx)).child(page));
     let maximize = if window.is_maximized() { IconName::WindowRestore } else { IconName::WindowMaximize };
     h_flex()
         .h(px(HEIGHT))
@@ -93,11 +97,13 @@ mod tests {
                 "Settings › General",
                 "Settings › Pages",
                 "Settings › Behavior",
+                "Settings › Advanced",
                 "Settings › Calendar",
-                "Settings › Shalat",
+                "Settings › Timer",
+                "Settings › Prayer",
                 "Settings › System stats",
                 "Settings › Weather",
-                "Settings › Advanced",
+                "Settings › Account",
                 "Settings › About",
             ]
         );

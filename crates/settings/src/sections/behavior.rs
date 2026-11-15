@@ -1,6 +1,5 @@
 use crate::i18n::tr;
-use gpui::{App, SharedString, div, prelude::*, px};
-use gpui_component::{ActiveTheme as _, Icon, IconName, Sizable as _, h_flex, v_flex};
+use gpui::{App, SharedString, prelude::*};
 use store::Settings;
 
 use crate::{
@@ -39,7 +38,8 @@ pub fn shown_word(settings: &Settings, key: &str, default: &'static str) -> &'st
         .map_or(default, |choice| choice.word)
 }
 
-/// One picture card; a click saves the choice, and the selected card gets a filled radio, a lighter fill and an outline.
+/// One picture card, the picture above the choice and its sentence; a click saves the choice, and the selected card gets
+/// an accent check, a tinted fill and an accent outline.
 fn choice_card(
     key: &'static str,
     backdrop: Backdrop,
@@ -48,88 +48,24 @@ fn choice_card(
     cx: &App,
 ) -> impl IntoElement {
     let word = choice.word;
-    card::frame(SharedString::from(format!("{key}-{word}")), selected, 10.0, 10.0, cx)
+    card::frame(SharedString::from(format!("{key}-{word}")), selected, cx)
         .cursor_pointer()
         .on_click(move |_event, _window, cx| field::write(key, word, cx))
-        .child(card::header((choice.label)(), None, selected, cx))
         .child(picture(backdrop, pill_for(word)))
+        .child(card::checked_header((choice.label)(), (choice.description)(), selected, cx))
 }
 
-/// The label, the four picture cards two by two and the sentence of the selected choice.
-fn choice_item(
-    title: &'static str,
-    description: &'static str,
-    key: &'static str,
-    default: &'static str,
-    backdrop: Backdrop,
-) -> Item {
+/// The four picture cards in one row, drawn on the page above the section's switch row.
+fn choice_item(key: &'static str, default: &'static str, backdrop: Backdrop) -> Item {
     Item::custom(move |_window, cx| {
         let shown = shown_word(&Settings::load(), key, default);
         let cards: Vec<_> = CHOICES
             .iter()
             .map(|choice| choice_card(key, backdrop, choice, choice.word == shown, cx).into_any_element())
             .collect();
-        let sentence = CHOICES.iter().find(|choice| choice.word == shown).map_or("", |choice| (choice.description)());
-        v_flex()
-            .gap_3()
-            .child(
-                v_flex()
-                    .gap_0p5()
-                    .child(div().text_sm().child(title))
-                    .child(div().text_sm().text_color(cx.theme().muted_foreground).child(description)),
-            )
-            .child(v_flex().gap(px(10.0)).child(card::grid(2, cards)).child(
-                div().text_size(px(12.0)).line_height(px(16.0)).text_color(cx.theme().muted_foreground).child(sentence),
-            ))
-            .into_any_element()
+        card::grid(card::COLUMNS, cards).into_any_element()
     })
-}
-
-fn intro() -> &'static str {
-    tr!("behavior.intro")
-}
-
-fn matrix_columns() -> [&'static str; 3] {
-    [tr!("behavior.column_messages"), tr!("behavior.column_lyrics"), tr!("behavior.column_idle_pill")]
-}
-const LABEL_WIDTH: f32 = 170.0;
-
-/// Whether a level (its index in `CHOICES`) shows a column: column 0 needs level 1, column 1 level 2, column 2 level 3.
-fn level_shows(level: usize, column: usize) -> bool {
-    level > column
-}
-
-/// One matrix row: the level label, then a check or a dash for each column.
-fn matrix_row(level: usize, cx: &App) -> gpui::Div {
-    let cell = move |column: usize| {
-        let mark = if level_shows(level, column) {
-            Icon::new(IconName::Check).small().text_color(cx.theme().primary).into_any_element()
-        } else {
-            div().w(px(10.0)).h(px(2.0)).rounded_full().bg(cx.theme().muted_foreground.opacity(0.4)).into_any_element()
-        };
-        div().flex_1().flex().justify_center().child(mark)
-    };
-    h_flex()
-        .h(px(32.0))
-        .items_center()
-        .child(div().w(px(LABEL_WIDTH)).text_sm().child((CHOICES[level].label)()))
-        .children((0..matrix_columns().len()).map(cell))
-}
-
-/// The intro sentence and the read-only matrix of what each level shows.
-fn levels_item() -> Item {
-    Item::custom(move |_window, cx| {
-        let muted = cx.theme().muted_foreground;
-        let header =
-            h_flex().child(div().w(px(LABEL_WIDTH))).children(matrix_columns().into_iter().map(move |name| {
-                div().flex_1().flex().justify_center().text_size(px(12.0)).text_color(muted).child(name)
-            }));
-        v_flex()
-            .gap_3()
-            .child(div().text_sm().text_color(muted).child(intro()))
-            .child(v_flex().child(header).children((0..CHOICES.len()).map(|level| matrix_row(level, cx))))
-            .into_any_element()
-    })
+    .outside_block()
 }
 
 fn situation(
@@ -138,25 +74,24 @@ fn situation(
     key: &'static str,
     default: &'static str,
     backdrop: Backdrop,
-    open_by_pointer_key: &'static str,
-    open_by_pointer_description: &'static str,
+    open_on_hover_key: &'static str,
+    open_on_hover_description: &'static str,
 ) -> Group {
     Group::titled(
         heading,
         vec![
-            choice_item(tr!("behavior.group_shows"), description, key, default, backdrop),
-            Item::new(tr!("behavior.group_open_by_pointer"), field::toggle(open_by_pointer_key, true))
-                .description(open_by_pointer_description),
+            choice_item(key, default, backdrop),
+            Item::new(tr!("behavior.open_on_hover"), field::toggle(open_on_hover_key, true))
+                .description(open_on_hover_description),
         ],
     )
+    .description(description)
 }
 
 pub fn page() -> Page {
-    Page::new(
+    Page::plain(
         tr!("behavior.title"),
-        tr!("behavior.description"),
         vec![
-            Group::titled(tr!("behavior.group_levels"), vec![levels_item()]),
             situation(
                 tr!("behavior.over_maximized"),
                 tr!("behavior.over_maximized_note"),
@@ -164,7 +99,7 @@ pub fn page() -> Page {
                 DEFAULT_MAXIMIZED,
                 Backdrop::MaximizedWindow,
                 HOVER_MAXIMIZED_KEY,
-                tr!("behavior.open_by_pointer_maximized_note"),
+                tr!("behavior.open_on_hover_maximized_note"),
             ),
             situation(
                 tr!("behavior.over_fullscreen"),
@@ -173,7 +108,7 @@ pub fn page() -> Page {
                 DEFAULT_FULLSCREEN,
                 Backdrop::FullScreenApp,
                 HOVER_FULLSCREEN_KEY,
-                tr!("behavior.open_by_pointer_fullscreen_note"),
+                tr!("behavior.open_on_hover_fullscreen_note"),
             ),
         ],
     )
@@ -187,16 +122,6 @@ mod tests {
         let path = std::env::temp_dir().join(format!("notch-settings-behavior-{}-{name}.txt", std::process::id()));
         std::fs::write(&path, contents).unwrap();
         (Settings::at(Some(path.clone())), path)
-    }
-
-    #[test]
-    fn each_level_shows_its_own_column_and_every_one_below() {
-        let rows: Vec<Vec<bool>> =
-            (0..4).map(|level| (0..3).map(|column| level_shows(level, column)).collect()).collect();
-        assert_eq!(
-            rows,
-            [vec![false, false, false], vec![true, false, false], vec![true, true, false], vec![true, true, true],]
-        );
     }
 
     #[test]
@@ -216,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn the_open_by_pointer_keys_match_the_ones_the_host_reads() {
+    fn the_open_on_hover_keys_match_the_ones_the_host_reads() {
         let host = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../notch/src/host/visibility.rs"))
             .expect("host visibility source");
         for key in [HOVER_MAXIMIZED_KEY, HOVER_FULLSCREEN_KEY] {

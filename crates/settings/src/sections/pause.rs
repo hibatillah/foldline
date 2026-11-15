@@ -1,19 +1,16 @@
-//! The Pause item of the General page: four lengths while the notch runs, a status and Resume while it is paused.
+//! The Pause item of the Advanced page: four lengths while the notch runs, a status and Resume while it is paused.
 
 use std::rc::Rc;
 
-use gpui::{AnyElement, App, prelude::*};
-use gpui_component::{
-    Sizable as _,
-    button::{Button, ButtonVariants as _},
-    h_flex,
-};
+use gpui::{AnyElement, App, div, prelude::*};
+use gpui_component::h_flex;
 use store::{
     Settings,
     pause::{PAUSED_UNTIL_KEY, Pause, PauseChoice, clock_text, now_unix},
 };
 use windows::Win32::System::Time::{GetTimeZoneInformation, TIME_ZONE_INFORMATION};
 
+use super::about::widgets::{Handler, pill};
 use crate::{field, i18n::tr, layout::Item};
 
 /// `GetTimeZoneInformation` returns this while daylight saving time applies.
@@ -62,36 +59,27 @@ fn resume(cx: &mut App) {
     field::write(PAUSED_UNTIL_KEY, &Pause::Off.as_text(), cx);
 }
 
-fn controls() -> AnyElement {
+fn controls(cx: &App) -> AnyElement {
     let pause = stored_pause();
     match status_text(pause, local_utc_offset_seconds()) {
         None => h_flex()
             .gap_2()
             .children(PauseChoice::ALL.into_iter().enumerate().map(|(position, choice)| {
-                Button::new(("pause-choice", position))
-                    .small()
-                    .outline()
-                    .label(choice_label(choice))
-                    .on_click(move |_event, _window, cx| start_pause(choice, cx))
+                let start: Handler = Rc::new(move |_window, cx| start_pause(choice, cx));
+                pill(&format!("pause-choice-{position}"), choice_label(choice), None, Some(start), cx)
             }))
             .into_any_element(),
         Some(status) => h_flex()
             .gap_3()
             .items_center()
-            .child(status)
-            .child(
-                Button::new("pause-resume")
-                    .small()
-                    .primary()
-                    .label(tr!("pause.resume"))
-                    .on_click(|_event, _window, cx| resume(cx)),
-            )
+            .child(div().text_sm().child(status))
+            .child(pill("pause-resume", tr!("pause.resume"), None, Some(Rc::new(|_window, cx| resume(cx))), cx))
             .into_any_element(),
     }
 }
 
 pub fn item() -> Item {
-    Item::new(tr!("pause.title"), Rc::new(|_window, _cx| controls())).description(tr!("pause.note"))
+    Item::new(tr!("pause.title"), Rc::new(|_window, cx| controls(cx))).description(tr!("pause.note"))
 }
 
 #[cfg(test)]
