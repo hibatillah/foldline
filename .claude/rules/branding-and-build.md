@@ -12,7 +12,7 @@ paths:
 
 `docs/how-to/build-run-and-debug.md` (branding) and `docs/how-to/cut-a-release.md` describe the icon pipeline.
 
-- `tile-stable` is the blue tile and `tile-dev` the orange one. The SVG files are the masters; the PNG (256 px) and `.ico`
+- `tile-stable` is the blue tile and `tile-dev` the indigo one. The SVG files are the masters; the PNG (256 px) and `.ico`
   files come from the designer's logo set and are committed as supplied (no export script). The settings sidebar and the About card
   show the tile of the build's channel (`crates/settings/src/brand.rs`). The three marks (`mark-cream.png`, `mark-charcoal.png`,
   `mark-orange.png`) are archive; nothing uses them. `AGENTS.md` defines the words mark and tile.

@@ -79,6 +79,7 @@ its description; an agent without a subagent mechanism reads the matching file i
 | `notch-host` | `crates/notch/src/host`, `crates/notch/src/platform` |
 | `notch-pages` | `crates/notch/src/pages`, `activities`, `page.rs`, `activity.rs`, `crates/places` |
 | `settings-gpui` | `crates/settings`, `crates/store` |
+| main session | `crates/account` (catalog, grants, signed token and policy, `account.txt`, the account server calls), `scripts/mock-account-server.*` |
 | `perf-auditor` | read-only budget review after timers, drawing, threads or caching change |
 | `docs-writer` | `docs/**`, `README.md`, `ONBOARDING.md` |
 
@@ -94,8 +95,8 @@ a single-quoted one) stops that agent from loading.
 ## Code layout
 
 The repository is a Cargo workspace: `crates/notch` (the pill), `crates/settings` (the settings window, built as
-`notch-settings.exe`), `crates/store` (the shared settings file code) and `crates/places` (the city list and the shared
-location), with the patched `salah` crate in
+`notch-settings.exe`), `crates/store` (the shared settings file code), `crates/places` (the city list and the shared
+location) and `crates/account` (accounts and permissions, shared by both programs), with the patched `salah` crate in
 `vendor/salah`. The layout of the code is defined in `ARCHITECTURE.md` (the overview), `docs/explanation/host-and-pages.md` (the reasons) and
 `docs/reference/source-map.md` (where each module lives, and how a module is laid out); keep new code to it.
 
@@ -127,7 +128,7 @@ holds the logo files and nothing else of the logo:
 | File | What it is | Used for |
 | --- | --- | --- |
 | `tile-stable.svg` / `.png` (256 px) / `.ico` | blue tile | executables, taskbar, installer and shortcuts of a stable build; the settings sidebar and About card of a stable build |
-| `tile-dev.svg` / `.png` / `.ico` | orange tile | the same for a pre-release build (alpha, beta, rc) |
+| `tile-dev.svg` / `.png` / `.ico` | indigo tile | the same for a pre-release build (alpha, beta, rc) |
 | `mark-cream.png`, `mark-charcoal.png`, `mark-orange.png` | marks without a square | archive only; nothing uses them |
 
 The settings sidebar and the About card show the tile of the build's channel (`crates/settings/src/brand.rs`), in both themes.
@@ -144,6 +145,6 @@ one, say so and propose a rule with its reason for that doc; write it in the sam
 ## Debugging
 
 `NOTCH_DEBUG=<file>` writes a timestamped log (Unix milliseconds). `NOTCH_PAGES=shelf,media` picks pages,
-`NOTCH_LYRICS=off` stops lyric lookups, `NOTCH_TOP=<px>` moves the pill down, and `NOTCH_SETTINGS_SOLID=1` gives the
+`NOTCH_LYRICS=off` stops lyric lookups, and `NOTCH_SETTINGS_SOLID=1` gives the
 settings window an opaque frame instead of the blurred translucent one. Settings are in
 `%APPDATA%\notch\settings.txt`; every key is in `docs/reference/settings-keys.md`.
