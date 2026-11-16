@@ -6,8 +6,12 @@ mod backup;
 mod passes;
 
 use std::{
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        mpsc::{self, Receiver},
+    },
     thread::{self, JoinHandle},
+    time::Duration,
 };
 
 use windows::{
@@ -29,8 +33,12 @@ pub(super) fn wants_hidden(settings: &store::Settings) -> bool {
 
 static WORKER: Mutex<Option<Worker>> = Mutex::new(None);
 
+/// A pass reads and writes a few registry values per app in milliseconds; a longer wait means the watch is stuck.
+const STOP_TIMEOUT: Duration = Duration::from_secs(1);
+
 struct Worker {
     stop: Arc<Signal>,
+    finished: Receiver<()>,
     thread: JoinHandle<()>,
 }
 
@@ -48,7 +56,8 @@ pub(super) fn set_hidden(is_hidden: bool) {
     }
 }
 
-/// At exit: a newer notch that replaced this one owns the saved values and keeps banners off.
+/// At exit: a newer notch that replaced this one owns the saved values and keeps banners off. Values not restored
+/// in time stay in the backup for a later restore.
 pub(super) fn release_at_exit(own_window: HWND) {
     stop();
     if is_another_notch_running(own_window) {
@@ -74,18 +83,28 @@ fn start() {
         return;
     };
     let thread_stop = stop.clone();
-    match thread::Builder::new().name("notification-banners".into()).spawn(move || watch(&thread_stop)) {
-        Ok(thread) => *worker = Some(Worker { stop, thread }),
+    let (finished_sender, finished) = mpsc::channel();
+    let spawned = thread::Builder::new().name("notification-banners".into()).spawn(move || {
+        watch(&thread_stop);
+        let _ = finished_sender.send(());
+    });
+    match spawned {
+        Ok(thread) => *worker = Some(Worker { stop, finished, thread }),
         Err(error) => log::debug(&format!("could not start the notification banner watch: {error}")),
     }
 }
 
+/// Bounded, so quitting never hangs on a pass stuck in a registry or file call.
 fn stop() {
     let Some(worker) = WORKER.lock().ok().and_then(|mut worker| worker.take()) else { return };
-    worker.stop.set();
-    if worker.thread.join().is_err() {
-        log::debug("could not stop the notification banner watch");
-    }
+    let stop = worker.stop;
+    super::shutdown::stop_worker(
+        "notification banner watch",
+        || stop.set(),
+        &worker.finished,
+        worker.thread,
+        STOP_TIMEOUT,
+    );
 }
 
 /// Wakes only when Windows writes a notification setting, e.g. when an app shows its first toast and gets its key.

@@ -72,9 +72,25 @@ fn stop_hiding() {
 
 /// Puts the flyout's own shape back, from any thread; the notch is leaving or the setting went off.
 pub(super) fn release() {
-    let flyout = FLYOUT_WINDOW.load(Ordering::Relaxed);
-    if flyout != 0 {
-        reveal(HWND(flyout as *mut _));
+    match FLYOUT_WINDOW.load(Ordering::Relaxed) {
+        0 => release_left_behind(),
+        flyout => reveal(HWND(flyout as *mut _)),
+    }
+}
+
+/// A notch that was ended by force leaves the flyout's empty region on Explorer's window; the next start puts it back.
+pub(super) fn release_left_behind() {
+    let shell = unsafe { GetShellWindow() };
+    if shell.is_invalid() {
+        return;
+    }
+    let mut explorer_process = 0;
+    unsafe { GetWindowThreadProcessId(shell, Some(&mut explorer_process)) };
+    if let Some(flyout) = find_flyout(explorer_process)
+        && has_empty_region(flyout)
+    {
+        log::debug("volume flyout: putting back a flyout an earlier notch left concealed");
+        reveal(flyout);
     }
 }
 

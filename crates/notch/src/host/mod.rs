@@ -21,6 +21,7 @@ mod screen_mode;
 mod scroll_gate;
 mod settings;
 mod settings_launcher;
+mod shutdown;
 mod tray;
 mod visibility;
 mod volume_flyout;

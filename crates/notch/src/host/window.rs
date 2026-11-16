@@ -41,7 +41,7 @@ use super::{
     notification_banners, registry,
     screen_mode::{self, ScreenMode},
     settings::Settings,
-    settings_launcher, tray, volume_flyout,
+    settings_launcher, shutdown, tray, volume_flyout,
 };
 use store::pause::Pause;
 
@@ -83,7 +83,13 @@ fn show_menu(window: HWND) {
     let state = tray::MenuState { paused_line };
     match tray::show_context_menu(window, &state) {
         Some(tray::MenuChoice::OpenSettings) => settings_launcher::open_settings_window(),
-        Some(tray::MenuChoice::Quit) => unsafe { PostQuitMessage(0) },
+        // Destroying first takes the pill and the tray icon away at once; WM_DESTROY then ends the message loop.
+        Some(tray::MenuChoice::Quit) => {
+            if let Err(error) = unsafe { DestroyWindow(window) } {
+                log::debug(&format!("could not destroy the notch window: {error}"));
+                unsafe { PostQuitMessage(0) };
+            }
+        }
         Some(tray::MenuChoice::Pause(choice)) => {
             let now_unix = store::pause::now_unix();
             with_notch(|notch| notch.set_pause(choice.pause_from(now_unix), now_unix));
@@ -338,6 +344,7 @@ fn register_window_class(scale: f32, instance: HINSTANCE) -> Result<(Icon, Icon)
 pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Result<()> {
     let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
     unsafe { RoInitialize(RO_INIT_MULTITHREADED) }?;
+    shutdown::restore_popups_on_panic();
 
     let settings = Settings::load();
     let monitor_mode = monitor::read_mode(&settings, Default::default());
@@ -368,6 +375,10 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
             None,
         )
     }?;
+    shutdown::remember_own_window(window);
+    if previous_window.is_none() {
+        volume_flyout::release_left_behind();
+    }
 
     drop_target::start(window, scale, screen_position.x + width / 2, screen_position.y);
 
@@ -419,7 +430,10 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
         let _ = unsafe { TranslateMessage(&message) };
         unsafe { DispatchMessageW(&message) };
     }
-    notification_banners::release_at_exit(window);
-    volume_flyout::release_at_exit(window);
+    shutdown::restore_windows_popups();
+    // Dropped in a thread-local destructor, the notch would run inside ExitProcess after every other thread ended.
+    let notch = NOTCH.with(|cell| cell.try_borrow_mut().ok().and_then(|mut slot| slot.take()));
+    std::mem::forget(notch);
+    log::debug("notch exited");
     Ok(())
 }
