@@ -31,12 +31,18 @@ pub fn apply_language(choice: LanguageChoice, cx: &mut App) {
     cx.refresh_windows();
 }
 
-/// The `en` and `id` lines of one key in a locale file.
+/// The key line and its `en` and `id` lines in a locale file; a checkout with CRLF line endings reads the same as LF.
 #[cfg(test)]
 fn locale_entry(file: &std::path::Path, key: &str) -> Option<String> {
-    let text = std::fs::read_to_string(file).ok()?;
-    let start = text.find(&format!("\n{key}:\n"))?;
-    Some(text[start + 1..].lines().take(3).collect::<Vec<_>>().join("\n"))
+    entry_in(&std::fs::read_to_string(file).ok()?, key)
+}
+
+#[cfg(test)]
+fn entry_in(text: &str, key: &str) -> Option<String> {
+    let header = format!("{key}:");
+    let mut lines = text.lines();
+    lines.find(|line| *line == header)?;
+    Some(std::iter::once(header.as_str()).chain(lines.take(2)).collect::<Vec<_>>().join("\n"))
 }
 
 /// Whether a picture's word reads the same here as in the notch, in both languages.
@@ -54,6 +60,22 @@ mod tests {
 
     /// Keys built at run time, listed by prefix.
     const DYNAMIC_KEY_PREFIXES: &[&str] = &[];
+
+    #[test]
+    fn a_locale_entry_reads_the_same_with_crlf_and_lf_line_endings() {
+        let unix = "a:\n  en: \"A\"\n  id: \"B\"\nb:\n  en: \"C\"\n  id: \"D\"\n";
+        let windows = unix.replace('\n', "\r\n");
+        assert_eq!(super::entry_in(&windows, "b"), super::entry_in(unix, "b"));
+        assert_eq!(super::entry_in(unix, "b").as_deref(), Some("b:\n  en: \"C\"\n  id: \"D\""));
+        assert_eq!(super::entry_in(unix, "c"), None);
+    }
+
+    #[test]
+    fn a_locale_entry_that_differs_between_files_is_not_the_same() {
+        let first = "a:\n  en: \"A\"\n  id: \"B\"\n";
+        let second = "a:\n  en: \"A\"\n  id: \"X\"\n";
+        assert_ne!(super::entry_in(first, "a"), super::entry_in(second, "a"));
+    }
 
     #[test]
     fn a_text_follows_the_language_of_its_thread() {
