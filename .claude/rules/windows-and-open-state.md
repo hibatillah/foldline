@@ -34,7 +34,7 @@ paths:
 - `GetCurrentInputMessageSource` tells a touchpad scroll from a wheel; when a driver gives no source, `scrolled()` falls
   back to the delta size and the active gesture.
 - Hiding Windows' own popups is reversible by design: the volume and brightness flyout gets an empty window region, found by a hook on Explorer's show event
-  (`host/volume_flyout.rs`), which is put back when the notch exits or the switch goes off (a forced end leaves it until the notch is started and closed again); the banners are turned off per app with the previous
+  (`host/volume_flyout.rs`), which is put back when the notch exits or the switch goes off (a forced end leaves it until the next start (a new copy puts it back)); the banners are turned off per app with the previous
   values saved to `%APPDATA%\notch\notification-banners.txt` (`host/notification_banners/passes.rs`) and restored on
   switch-off, on quit and at the next start after a crash. Both settings are on by default (an unset key counts as on,
   through `wants_hidden`), so the first start already saves the previous values. Keep both undoable before changing either.
