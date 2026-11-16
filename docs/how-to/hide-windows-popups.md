@@ -26,8 +26,9 @@ Both switches are under **Settings > General > Windows popups** and are on by de
   with quick key presses: the box was already drawn when the hide arrived.
 - A test with the real keys on build 26300, with the region emptied, showed no box at all for volume and brightness.
 - The region is put back when the notch exits, when the switch is turned off and at the end of a Windows session. A newer
-  notch that replaces a running one keeps the flyout concealed. A notch ended by force cannot put it back: the box then
-  stays away until the notch is started and closed again, or Explorer restarts.
+  notch that replaces a running one keeps the flyout concealed. A notch ended by force (Task Manager) cannot put it
+  back: the box stays away until the next start, which puts an empty region left by an earlier notch back first,
+  whatever the switch says, or until Explorer restarts.
 - A Windows update can change the window. The box then simply shows again; no other window is touched, because the
   notch checks the class, the missing title, the extended style and the position.
 
@@ -51,6 +52,19 @@ app, while the notch runs:
   and at the next start if the notch crashed. A value changed since (for example by turning the banner back on in
   Windows Settings, which the notch then turns off again) and an app removed meanwhile are left alone.
 - When a newer notch replaces a running one, the old one leaves the values to the new one.
+
+## What quitting guarantees
+
+`crates/notch/src/host/shutdown.rs` holds the exit path:
+
+- **Quit Notch** destroys the window first, so the pill and the tray icon go at once, then both popups are put back.
+  Putting them back runs on a short-lived thread and gets 3 seconds; the banner watch gets 1 second to stop. After
+  that the process ends anyway, and values not yet restored stay in the backup for a later restore.
+- The notch's state is not dropped at exit. Rust runs the main thread's thread-local destructors inside
+  `ExitProcess`, after Windows has ended every other thread, so a destructor that waits on one of them never returns.
+- A panic in a release build (`panic = "abort"`) puts both popups back from the panic hook before the process aborts.
+- Nothing runs when the process is ended by force; see the flyout and banner sections above for what the next start
+  puts back.
 
 Tested on build 26300 with a test app:
 
