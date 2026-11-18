@@ -2,7 +2,7 @@
 
 > **How-to.** Read when: Windows shows its own volume or brightness box or notification banner next to the notch and you want only the notch. Skip if: you want Windows' popups as well.
 
-Both switches are under **Settings > General > Windows popups** and are on by default (an unset key counts as on); switch one off to get that Windows popup back. To get both back for a while, pause the notch from the tray or **Settings > General > Pause Notch**: the notch is hidden completely and Windows' popups show as usual until the pause ends, then are hidden again ([pausing the notch](../reference/settings-keys.md#pausing-the-notch)).
+Both switches are under **Settings > General > Windows popups** and are on by default (an unset key counts as on); switch one off to get that Windows popup back. To get both back for a while, pause the notch from the tray or **Settings > General > Pause Foldline**: the notch is hidden completely and Windows' popups show as usual until the pause ends, then are hidden again ([pausing the notch](../reference/settings-keys.md#pausing-the-notch)).
 
 ## The volume and brightness popups
 
@@ -57,7 +57,7 @@ app, while the notch runs:
 
 `crates/notch/src/host/shutdown.rs` holds the exit path:
 
-- **Quit Notch** destroys the window first, so the pill and the tray icon go at once, then both popups are put back.
+- **Quit Foldline** destroys the window first, so the pill and the tray icon go at once, then both popups are put back.
   Putting them back runs on a short-lived thread and gets 3 seconds; the banner watch gets 1 second to stop. After
   that the process ends anyway, and values not yet restored stay in the backup for a later restore.
 - The notch's state is not dropped at exit. Rust runs the main thread's thread-local destructors inside

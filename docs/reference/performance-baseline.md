@@ -28,7 +28,7 @@ The run used `scripts/perf.sh` (release build) and passed every baseline gate.
 | Open events | 20/20 | exactly 20 |
 | Idle CPU after cycles | 0% | 0.1% |
 
-Notch settled after startup and after the animations. Normal pages were restored after the test.
+Foldline settled after startup and after the animations. Normal pages were restored after the test.
 This baseline did not measure music playback, live lyrics, the notch held open by the pointer, swiping or a pinned notch.
 
 A new run is pending: `scripts/perf.sh` now also checks the devices page (`NOTCH_PAGES=shelf,devices`), the stats page
@@ -90,5 +90,5 @@ The physical lock/unlock cycle was not tested; see the manual checklist in [test
 Run `scripts/perf.sh` from Git Bash for the baseline, or add `--extended` for the notch held open by the pointer, swipes and recovery.
 For live lyrics, play a track with synced lyrics and use `--lyrics-only`.
 
-The check moves the pointer and replaces the running Notch. Leave the mouse alone during measurement, then run
+The check moves the pointer and replaces the running Foldline. Leave the mouse alone during measurement, then run
 `scripts/reload.sh` to restore normal pages. See [test and snapshot](../how-to/test-and-snapshot.md) for the gates and workload details.

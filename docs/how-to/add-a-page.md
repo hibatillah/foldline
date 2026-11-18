@@ -144,8 +144,7 @@ What each part does:
 - A page that uses right-click answers `uses_right_click` for those points and then gets `PointerEvent::SecondaryReleased`; the shelf does this for its files. A right-click elsewhere does nothing.
   Positions are units in the same space as its own `frame.bounds`, from the page's top-left.
 - A page with a scrolling area answers `claims_scroll` for the points where the vertical wheel or a touchpad swipe scrolls it and then gets `PointerEvent::Scrolled { notches }` (positive moves toward later content, one wheel notch is 1.0); the calendar's event list does this. Elsewhere the wheel still switches pages, and a horizontal swipe always does.
-- A page that must not hold anything while it is off (the clipboard page) answers `on_enabled_changed`, which runs at start and whenever the settings window switches the page, and also when the account locks or unlocks the page (a locked page gets `false` and stops its work; the user's own choice comes back with access). A page that wants a Windows message (the clipboard) calls `context.listen_to_clipboard()` in `on_start` and reads it in `on_system_message`; only a page that is on gets it. `context.request_close()` closes the notch, except while the user has pinned it open: then the request does nothing.
-- A page asks for its own sub-features, not the host. Name each one as an action of the page in the catalog (`crates/account/src/catalog.rs`: `media` has `lyrics`, `weather` has `rain_alert`), read it with `context.allows("lyrics")` in `on_start`, keep the answer in a field (`is_lyrics_allowed`) next to the user's own switch (`lyrics_enabled`), and show or run the feature only while both are on. Ask again in `on_access_changed(&mut self, context)`: on a loss, drop the feature's state and stop its timers, threads and requests (the media page tells its watcher to stop looking lyrics up and the weather page kills its alert timer and clears the shown alert); on a gain, resume from the user's switch. A locked sub-feature leaves nothing running and nothing drawn, and the user's own choice stays in the settings for when access returns. The media page is the example: its `are_lyrics_on()` is `lyrics_enabled && is_lyrics_allowed`, and every lyric path (pill, panel, lookup, button) goes through it.
+- A page that must not hold anything while it is off (the clipboard page) answers `on_enabled_changed`, which runs at start and whenever the settings window switches the page. A page that wants a Windows message (the clipboard) calls `context.listen_to_clipboard()` in `on_start` and reads it in `on_system_message`; only a page that is on gets it. `context.request_close()` closes the notch, except while the user has pinned it open: then the request does nothing.
 - A page that takes typing (the todo page's add field) calls `context.take_keyboard()` from a click, never on hover,
   and gets `on_key` with a `KeyInput` until it calls `context.release_keyboard()`. The notch stays open meanwhile. When
   the user clicks another window first, the page gets `on_keyboard_lost` and stops editing. `ui::TextField` handles
@@ -171,15 +170,7 @@ The order matters only for ties: when two pages have the same priority, the earl
 the media page are both `NORMAL`, so the media page wins while music plays and the greeting shows the rest of the
 time.
 
-### 4. Add its catalog row
-
-The account decides who may open a page, so the page's id must be a resource in `crates/account/src/catalog.rs`:
-`Resource { name: "greeting", actions: &["page"], has_base: true }`. A trial, a paid account and the free launch get every
-catalog action by themselves; a guest and a member get only what `Grants::built_in()` in `grants.rs` lists, so add the id
-to the guest and member pages there only if the page is free. The test `every_registered_page_and_activity_is_in_the_catalog`
-(`host/notch/tests/access.rs`) fails until the row exists. The tables are in [permissions](../reference/permissions.md).
-
-### 5. Run it
+### 4. Run it
 
 `scripts/reload.sh` builds and starts it. To see your page on its own, hide the others:
 
@@ -187,7 +178,7 @@ to the guest and member pages there only if the page is free. The test `every_re
 set NOTCH_PAGES=shelf,greeting
 ```
 
-Nothing else in the project needs to change except the catalog row and, for a free page, its built-in grant: the host, the drawing code and the other pages do not know your page
+Nothing else in the project needs to change: the host, the drawing code and the other pages do not know your page
 exists.
 
 ## Next

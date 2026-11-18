@@ -128,7 +128,6 @@ the marks of what is going on, then the battery ring, then the camera and microp
 - A notification opens the pill into a 380 px card: app icon, sender, two lines of the message. The two lines are
   clamped with an ellipsis, hovered or not; hover adds buttons and never grows the text, so the buttons do not move
   under the pointer.
-- The account notice ("Signed out: this account signed in on another PC") is a 5 s message with the bell icon (`Icon::Bell`), white text.
 - The heading is the sender in white, then the app name in grey (`#8e8e99`, regular weight) with no separator, so a
   missing sender cannot leave a dangling mark. A sender that is empty or only whitespace counts as missing and the
   app name takes its place, in white.
@@ -144,12 +143,11 @@ the marks of what is going on, then the battery ring, then the camera and microp
 The picture of the redesigned window leads where it differs from earlier text. The colors are `Palette` in
 `crates/settings/src/palette.rs`, which has tests for their contrast.
 
-- **A translucent neutral frame, the sidebar on it, and one solid card.** The window's frame is one flat neutral color
+- **A translucent neutral sidebar and one solid, flush content pane (shadcn's "sidebar" variant).** The sidebar is one flat neutral color
   over a blurred backdrop (`WindowBackgroundAppearance::Blurred`, Windows acrylic), so the desktop shows through frosted;
-  there is no tint, gradient or glow, and the sidebar sits on it with no card and no solid fill. Dark theme: `#101010` at
+  there is no tint, gradient or glow. Dark theme: `#101010` at
   64 %. Light theme: white at 35 %. `NOTCH_SETTINGS_SOLID=1` makes it opaque and neutral (`#141414` dark, `#eeeeee`
-  light). The content is the only solid surface: one rounded (14 px), thinly bordered card inset 8 px from the top, right
-  and bottom edges. Dark theme (the v7 board's surfaces): card `#1b1b1d`, card border `#2a2a2e`, header `#1e1e21`, a section's block
+  light). The content is the only solid surface: a pane that fills the window to the top, right and bottom edges with no padding, margin or rounded corner, and a 1 px hairline in the card border color between it and the sidebar. Dark theme (the v7 board's surfaces): card `#1b1b1d`, card border `#2a2a2e`, header `#1e1e21`, a section's block
   `#2a2a2d` (its border is the card border, so it reads as a plain lighter block), inputs `#1d1d1f` with a `#3a3a3e`
   border (darker than the block), buttons `#38383b` with a `#444448` border (lighter than the block), row divider
   `#353538`, switch off `#47474f`, titles `#f4f6fa`, muted text `#a3a3aa` (the board's `#8e8e98` would fall under 4.5:1
@@ -165,24 +163,22 @@ The picture of the redesigned window leads where it differs from earlier text. T
   the selected option card's border and radio. Text stays white or muted. The tests keep the accent at 4.5:1 as text on
   the card and 3:1 as an icon on a block; as an icon on the frame it is held at 2:1 (over a bright wallpaper in the dark
   theme, over a mid-grey desktop in the light theme).
-- **The sidebar** is 216 px wide with 16 px of padding above, 10 px at the sides and 12 px below. It opens with the brand (the tile 16 px from the window top and 18 px from the left edge; the squared tile logo, 28 px, then "Notch" in `text_lg`
-  semibold and the version in `text_xs`, muted, 8 px apart, with 4 px below), then two labelled groups (`text_sm`, muted, 12 px above the label and 5 px below): "Notch" (General, Pages, Behavior, Advanced) and
-  "Page settings" (Calendar, Timer, Prayer, System stats, Weather; Prayer is the Shalat page, "Shalat" in Indonesian), with **Account** and **About** at the bottom, without a label. The empty sidebar (the strips between and below the items, at their sides, and the group labels) moves the window like the header; the items never do. Items are 36 px
+- **The sidebar** is 216 px wide with 16 px of padding above, 10 px at the sides and 12 px below. It opens with the brand (the tile 16 px from the window top and 18 px from the left edge; the squared tile logo, 28 px, then "Foldline" in `text_lg`
+  semibold and the version in `text_xs`, muted, 8 px apart, with 4 px below), then two labelled groups (`text_sm`, muted, 12 px above the label and 5 px below): "Foldline" (General, Pages, Behavior, Advanced) and
+  "Page settings" (Calendar, Timer, Shalat, System stats, Weather), with **About** at the bottom, without a label. The empty sidebar (the strips between and below the items, at their sides, and the group labels) moves the window like the header; the items never do. Items are 36 px
   high and 1 px apart, `text_base` text 11 px from a 17 px blue icon; the selected one has a rounded (10 px), faint white fill and a medium-weight label. The tile is blue in a
   stable build and indigo in a pre-release build, in both themes. The icons are General the hex nut (the same drawing as
-  the notch's gear), Pages Lucide "layers", Behavior "puzzle", Calendar "calendar-days", Timer "timer", Prayer "moon-star" (the shalat
-  icon in the notch too), System stats "chart-column", Weather "cloud-drizzle", Advanced "wrench", Account "circle-user" and About "info"; "lock" marks a locked page. They
+  the notch's gear), Pages Lucide "layers", Behavior "puzzle", Calendar "calendar-days", Timer "timer", Shalat "moon-star" (the shalat
+  icon in the notch too), System stats "chart-column", Weather "cloud-drizzle", Advanced "wrench" and About "info". They
   are SVG files in `crates/settings/assets/icons`, served by `crates/settings/src/icons.rs`; the Lucide ISC notice is in
   `THIRD-PARTY-LICENSES.txt`.
-- **The card's header** is 44 px with its own fill, a little lighter than the card, over a divider. It reads
-  "Settings › <Page>" (`text_base`, 22 px from the card's edge, 10 px around the chevron; Settings muted, the page in the accent blue and medium weight) with the window buttons (minimize, maximize, close) at
+- **The pane's header** is 44 px with its own fill, a little lighter than the pane, over a divider. It reads
+  "Settings › <Page>" (`text_base`, 22 px from the pane's edge, 10 px around the chevron; Settings muted, the page in the accent blue and medium weight) with the window buttons (minimize, maximize, close) at
   the right end, and it is the drag area together with the brand strip. The window draws it itself and not the component
-  library's title bar: the header's top corners are rounded to match the card (radius less the 1 px border), and the close
-  button rounds its own top-right corner, so its red hover follows the card's corner instead of poking out of it.
-- **A redesigned page opens with its first section**, as the v7 boards do: General, Pages, Behavior, Advanced, Account
+  library's title bar: the header has square corners because the pane is flush with the window, so the close button's red hover fills the window's top-right corner.
+- **A redesigned page opens with its first section**, as the v7 boards do: General, Pages, Behavior, Advanced
   and About have no description sentence (`Page::plain`); the page settings keep theirs (one sentence in `text_base`
-  and the full title color) until their boards are built. A section heading with an icon (Files on About) is set at
-  14 px in the full title color, because it names a group rather than describing it.
+  and the full title color) until their boards are built. A section heading has no icon; a block that needs no name (the files on About) has no heading.
 - **Pictures explain a setting where words alone would not**: the three Hide-when-idle pictures, the city map, the two
   notification banners, the screens of **Show the notch on**, the page dots on Pages, the log sample on Advanced. They
   sit in their own row of the block (12 px by 14 px padding), drawn with GPUI elements on a dark blue scene
@@ -201,7 +197,7 @@ The picture of the redesigned window leads where it differs from earlier text. T
   weight (`text_base`) in the full foreground.
 - **Rows** are at least 50 px high with 9 px by 14 px padding: the title and a muted description (17 px lines) at the
   left, 12 px from the control at the right. A switch is 42 x 25 (the window's own `switch.rs`). A button
-  is rounded (30 px high, 8 px radius, 13 px medium text), a step lighter than the block with a thin border; one that does nothing yet (What's new) is dimmed to 40 %, with "Coming soon" to its left. A field is 8 px round, darker than the block, and its border turns to the accent while it has focus. A page, sub-feature (Rain alert) or activity the account does not unlock keeps its switch and shows, before it, a 16 px lock in the accent blue and a pill (**Sign in** or **Upgrade**); the lock is the only sign of it, with no dimming or color change of the row.
+  is rounded (30 px high, 8 px radius, 13 px medium text), a step lighter than the block with a thin border; one that does nothing yet (What's new, the only one) is dimmed to 40 %, with "Coming soon" to its left. A field is 8 px round, darker than the block, and its border turns to the accent while it has focus.
 - **The font is Geist**, set through the component library's `theme.font_family`, so every control uses it.
 - **One scale knob.** The window follows the Windows display scale (GPUI sizes are logical pixels times the monitor's scale factor). On top of that, `theme.font_size` (`UI_FONT_SIZE` in `main.rs`, 14.5 instead of the library's 16, set in `palette::apply`) is the window's rem size, so every rem-based size shrinks together: `text_*` (`text_xs` is about 10.9 px, `text_sm` 12.7 px, `text_base` 14.5 px, `text_lg` 16.3 px), `px_*`, `gap_*` and the library's controls. Sizes written in `px(..)` (sidebar, header, brand) do not follow it.
 - **Option cards** are for picking among pictures (the calculation methods, the Asr choice, what the notch shows over a
@@ -428,7 +424,7 @@ The bar stays at the bottom of the page in both heights.
 - Empty: the same 508 px width as a list, 86 px high, with the title and Add on top and "All clear" centered below;
   pressing Add shows the input as the only row.
 
-## Prayer page
+## Shalat page
 
 - The left column (124 px): "Next" (11 px grey; "Starts soon" in the last ten minutes, "Tomorrow" after Isha), the
   prayer's name in 26 px, the countdown in green `#63e6be` (12 px) and the city (10 px dim). The name leads, not the time.
@@ -471,8 +467,8 @@ The bar stays at the bottom of the page in both heights.
 ## Opening settings
 
 - The gear in the open header and the tray's **Settings** item open the settings window (`notch-settings.exe`); settings
-  are edited only there, and the notch has no settings panel and no right-click menu. **Pause Notch**, **Settings**
-  and **Quit Notch** are in the tray menu. A page that uses right-click for its own content (a file on the shelf) keeps it.
+  are edited only there, and the notch has no settings panel and no right-click menu. **Pause Foldline**, **Settings**
+  and **Quit Foldline** are in the tray menu. A page that uses right-click for its own content (a file on the shelf) keeps it.
 
 ## Open
 

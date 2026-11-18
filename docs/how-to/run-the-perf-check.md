@@ -66,7 +66,7 @@ in constants at the top of `crates/notch/examples/perf.rs`; they exist to catch 
 depends on the track and on how often its lyrics change.
 
 `--extended` adds 20-second samples while held open by the pointer, after the touchpad release snap, and collapsed after swiping. Its swipe
-workload sends horizontal wheel messages to its own Notch window and verifies that the window width changes.
+workload sends horizontal wheel messages to its own notch window and verifies that the window width changes.
 `--screen-mode` opens a plain window of the measuring program, brings it to the front, and maximizes and restores it
 six times, 1.5 s each, so the notch hides and comes back through its 500 ms reveal delay every time. It is off by
 default because it shows a window over your screen; it reports NOT RUN when Windows keeps another window in front.

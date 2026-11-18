@@ -1,10 +1,10 @@
 # Onboarding
 
-This is the guide for people joining the Notch team. Notch is closed-source and takes no outside contributions; see [LICENSE](LICENSE). Read this once, then use [AGENTS.md](AGENTS.md) and [docs/README.md](docs/README.md) as the day-to-day index.
+This is the guide for people who work on Foldline, team members and outside contributors alike. Foldline is open source under the MIT license (see [LICENSE](LICENSE)) and takes contributions through pull requests (see [docs/how-to/work-with-branches.md](docs/how-to/work-with-branches.md)). Read this once, then use [AGENTS.md](AGENTS.md) and [docs/README.md](docs/README.md) as the day-to-day index.
 
 ## What the project is
 
-Notch is a Windows "dynamic island" written in Rust: a black pill at the top of the screen, drawn with Direct2D and no UI framework. Two programs ship together:
+Foldline is a Windows "dynamic island" written in Rust: a black pill at the top of the screen, drawn with Direct2D and no UI framework. Two programs ship together:
 
 - `notch.exe` (`crates/notch/`) is the pill. It idles at 0 % CPU and stays under 50 MB of memory. Every change to it is held to that budget.
 - `notch-settings.exe` (`crates/settings/`, built with GPUI) is the settings window that the gear in the open notch and the tray's **Settings** item start; settings are edited only there, and its About page shows the version and opens the licenses and the data files. `crates/store/` holds the settings-file code both programs share.

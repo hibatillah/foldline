@@ -115,12 +115,12 @@ overlay is `Capture`: any window of `ScreenClippingHost.exe` (Win+Shift+S, Print
 (`OpenProcess` and `QueryFullProcessImageNameW`) and kept for that window's moves. `Capture` always means `hidden` and no
 opening by the pointer, whatever the settings say, and it hides a pinned notch too.
 
-Every foreground change reaches the host, even when the screen mode is unchanged, so a demoted Notch window can
+Every foreground change reaches the host, even when the screen mode is unchanged, so a demoted notch window can
 regain topmost status without taking focus. Opening for the pointer restores topmost before the drop-target overlay steps aside.
 Session lock/unlock and automatic resume reset the pointer, capture, drag and reveal state (a pinned notch keeps its pin and stays open), then restore the overlay's
 placement. Session notifications use `WTSRegisterSessionNotification` for the current session; if registration fails,
 the error is logged and foreground recovery remains available. Leave tracking is armed only while
-`WindowFromPoint` identifies the Notch window, preventing repeated leave messages from an occluded window.
+`WindowFromPoint` identifies the notch window, preventing repeated leave messages from an occluded window.
 
 ### Navigation
 
@@ -171,7 +171,7 @@ device-independent units starting at zero and do not multiply by a scale; widget
 
 Windows messages reach `window.rs`, which calls the notch. The notch routes pointer events to the page chosen for the
 open mode, and `host/notch/units.rs` converts each position to units from the top-left of that page's frame (or of the
-banner's or badge's area), the same space the page draws in. A right click reaches only a page that uses it for its own content (the shelf's files); the notch has no menu of its own. The tray icon has the items Pause Notch (a submenu of four lengths, replaced by the status line and Resume Notch while paused), Settings and Quit Notch
+banner's or badge's area), the same space the page draws in. A right click reaches only a page that uses it for its own content (the shelf's files); the notch has no menu of its own. The tray icon has the items Pause Foldline (a submenu of four lengths, replaced by the status line and Resume Foldline while paused), Settings and Quit Foldline
 (`host/tray.rs`), and the gear in the open header starts the settings window the way the tray's Settings item does (`host/settings_launcher.rs`). A page's timers (`Context::set_timer`) are Windows timers whose ids encode the page and the
 timer number, so each page has its own. The host's own timers are constants in `host/notch.rs` (the last, id 12, ends a timed pause: one-shot, set when a timed pause begins and killed when it ends).
 

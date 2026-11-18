@@ -19,7 +19,7 @@ crates/
                       out, the picture Explorer shows, whether the machine has a battery (`power.rs`), each app's notification banner value and a watch on those values (`notification_settings.rs`), the Downloads folder (`downloads_folder.rs`), the icon Windows shows for a file extension (`file_icon.rs`), open a file or show it in Explorer (`shell_open.rs`), paired Bluetooth devices, their battery and the radio (`bluetooth_devices.rs`), one read of the device position (`geolocation.rs`), devices behind a 2.4 GHz USB receiver and a Logitech receiver's HID++ battery (`dongle_devices.rs`; `dongle_devices/` holds the tree walk, the HID channel, the receiver rules and the HID++ messages), opening a notification's app as a click on Windows' banner does (`toast_activation.rs`; `toast_activation/` holds the toast XML rules, the read of Windows' notification database, the toast activator lookup, the click's deadline and cap on stuck activator threads, and the foreground hook that tells whether the app came forward)
       ui/             reusable widgets: IconButton (with its hover wash, `draw_hover_wash`), PillButton, Ring, TextField (the todo page's add field), icons (`icons/`: the shapes in `paths.rs`; the gear and the pin included; the Lucide weather icons as SVG path data in `weather.rs`), line icons from SVG path data in several colors (`svg_icon.rs`), the dashed outline, the shared list scroll offset (`scroll.rs`), the one hovered thing on a page (`hover.rs`), the HUD layouts, the shared colors (`palette.rs`) and text styles (`type_styles.rs`), a banner's Dismiss and Open buttons (`banner_buttons.rs`, labels passed in), the input types `PointerEvent` and `KeyInput` (`input.rs`, re-exported by `page`)
       activities/     the registry (mod.rs) and one file or folder per activity: volume, brightness, battery, Bluetooth,
-                      account notice, microphone, camera, clipboard, Caps Lock, notifications (`notifications/`: the card, the item and
+                      microphone, camera, clipboard, Caps Lock, notifications (`notifications/`: the card, the item and
                       its heading, the listener thread and its rounds of asking by id, `logos.rs` the icon cache that retries failures), browser downloads (`downloads/`: the tracker of partial files and the size text, both pure; `watcher.rs` the `ReadDirectoryChangesW` thread; the card)
       pages/
         mod.rs        the registry: the only place pages are listed
@@ -34,43 +34,18 @@ crates/
         weather/      weather: the MET Norway request (fetch.rs), the forecast (forecast.rs), the sky icons (symbol.rs maps a sky to its Lucide icon, picture.rs tints and draws it), the message states and their width (message.rs), the page's drawing and the Today/Week pill (draw.rs), the rain alert (alert.rs: the banner, badge.rs: the countdown badge), the weather.com addresses (link.rs) the clickable cells (click.rs), fetch and rain-alert scheduling (refresh.rs), pointer input (input.rs) and the snapshot samples (sample.rs)
         todo/         todo list: the list, its todo.txt file and the undo of the last removal (list.rs), which rows show and where (layout.rs), presses: add, clear, undo, copy, delete, tick (actions.rs), the green check after a copy (copy_check.rs), drawing (draw.rs), the snapshot scenarios (sample.rs), the page tests (tests.rs), the page
   places/                the city list and the shared `location.*` keys, used by the notch and the settings window
-  account/               the account: catalog, grants, statuses, the signed token and policy, account.txt and the site calls; used by the notch and the settings window
-    src/
-      catalog.rs     the resources (pages and activity families) and their actions: the catalog
-      status.rs      the statuses (guest, member, trial, launch, paid) and `effective_status`
-      access.rs      `Access`: one status with its grants; `allows`, `allows_page`, `allows_activity`, `may_hide_volume_flyout`
-      grants.rs      the built-in grants and the server grants a policy may replace them with, and their validation
-      payload.rs     reads a signed token and a signed policy into `DeviceToken` and `Policy`
-      json.rs        reads the JSON of a token payload and a policy
-      signature.rs   ECDSA P-256 / SHA-256 verification with Windows CNG
-      keys.rs        the public keys by id, and `is_enforced` (debug builds and a release build with a production key)
-      base64url.rs   unpadded URL-safe base64
-      hash.rs        SHA-256 and hexadecimal text (CNG)
-      random.rs      random bytes (CNG)
-      pkce.rs        the verifier, challenge and `state` of one sign-in attempt
-      device.rs      the device hash from the machine GUID
-      protect.rs     DPAPI protect and unprotect for the device secret
-      stored.rs      `StoredAccount`: `%APPDATA%
-otchccount.txt`, written atomically
-      schedule.rs    when the daily check is due (`should_check`) and what a check outcome changes in the stored account (`apply`)
-      reply.rs       request bodies and the meaning of the site's replies (no network)
-      client.rs      the `Windows.Web.Http` calls to the account site: claim, the device check, the policy alone for a guest, sign out (each blocks, so call off the UI thread)
-      samples/       signed tokens, policies and the test public key the tests read
-    tests/           `mock_server.rs`, ignored tests that need the mock account server running (docs/how-to/run-the-mock-account-server.md)
   store/                 the settings file code shared by the notch and the settings window (per-key atomic writes) `language.rs`, the language both programs read, `screens.rs`, the connected screens and the identifier of a chosen one, and `pause.rs`, the `notch.paused_until` value (its parse, text, end time and clock text) that the notch, the tray and the settings window share
   settings/              the settings window, a separate GPUI executable named notch-settings.exe (needs the MSVC host
                          toolchain); src/sections/ holds one file per section (shalat/ one file per card group, about/ the
-                         About page: app card, links, licenses file, data paths; pause.rs the Pause item of Advanced; timer/ the Timer page (steppers and the round picture); weather/ the Weather page (the Rain alert switch); general/ the General page (monitor cards, screen.rs the chosen-screen picker, city_map.rs); account.rs the Account page; lock.rs the lock badge on locked rows; sections/mod.rs lists them and writes
-                         every key through `apply`); main.rs the window (frame, brand strip, sidebar and content card,
+                         About page: app card, links, licenses file, data paths; pause.rs the Pause item of General, language.rs its Language item, advanced.rs the Advanced page (the Troubleshooting section, the debug log), behavior.rs the Behavior page; pages/ the Pages page; calendar/ the Calendar page; stats/ the System stats page; timer/ the Timer page (steppers and the round picture); weather/ the Weather page (the Rain alert switch); general/ the General page (monitor cards, screen.rs the chosen-screen picker, city_map.rs); sections/mod.rs lists them and writes
+                         every key through `apply`); main.rs the window (the translucent sidebar and the flush solid content pane,
                          in the system's light or dark theme), field.rs the switch and the text and number fields bound
                          to a key and their save rules, switch.rs the 42 by 25 switch they draw, notify.rs posts WM_SETTINGS_CHANGED to the notch,
                          single_instance.rs allows one window and focuses the open one, startup.rs the Run registry
                          value behind Start with Windows, palette.rs the colors (dark and light, with contrast tests), sidebar.rs the groups and icons, header.rs the breadcrumb header and window
                          buttons, icons.rs the bundled SVG icons (assets/icons) and their asset source, layout.rs the page
                          description, bordered sections and rows, location.rs the city search, card.rs and picture.rs the
-                         picture cards, sign_in.rs the browser sign-in (sign_in/listener.rs the loopback port, complete.rs
-                         claim and save, flow.rs the one sign-in at a time), standing.rs the account status and page locks,
-                         account_refresh.rs the one account check when the Account page is shown or Upgrade is clicked
+                         picture cards
 vendor/salah/     the prayer-time crate with one crash fix (see docs/reference/dependencies-and-licenses.md)
 installer/        the Inno Setup script the release workflow builds the installer from
 assets/fonts/     Geist, the bundled font, and its license
@@ -101,14 +76,13 @@ assets/fonts/     Geist, the bundled font, and its license
 | `activity_layout.rs` | which transient activities show and where each one starts (pure functions) |
 | `claimed_row.rs` | the collapsed pill while a page claims it: lead, dots, content, group (pure) |
 | `settings.rs` | re-exports `Settings` from the `store` crate, the persistent key-value store pages and activities share |
-| `tray.rs` | the tray icon and its menu: Pause Notch (a submenu, or the status line and Resume Notch while paused), Settings, Quit Notch; the notch has no menu of its own |
+| `tray.rs` | the tray icon and its menu: Pause Foldline (a submenu, or the status line and Resume Foldline while paused), Settings, Quit Foldline; the notch has no menu of its own |
 | `settings_launcher.rs` | starts `notch-settings.exe` from the folder of the running `notch.exe`, without waiting; the gear in the header and the tray's Settings item both call it |
 | `display.rs` | display scale and refresh rate |
 | `monitor.rs` | the monitors (`list`), the foreground window's monitor, the `notch.monitor` word, `notch.monitor_id` and the start placement; the identifier itself comes from `store::screens` (Windows calls) |
 | `monitor/choose.rs` | which monitor the notch sits on (`target_monitor`) and the window's position and size there (`placement`) (pure) |
 | `location_tracker.rs` | keeps the saved city where the device is (`location.track`): a worker thread that reads Windows' position once, the answer's message, and what an answer changes (pure `update_for`); `location_tracker/network.rs` registers a callback on network interface changes while tracking is on |
 | `volume_flyout.rs` | keeps Windows' volume and brightness flyout from drawing by giving its window an empty region, found by a show hook on the flyout's thread (`notch.hide_windows_volume_popup`); `volume_flyout/identity.rs` tells the flyout from Explorer's other island windows (pure); `volume_flyout/hook_thread.rs` runs the hook on a thread of its own |
-| `account_check.rs` | the daily account check's request (a device check when signed in, the policy alone for a guest) on a thread that ends with it, `WM_ACCOUNT_CHECKED`, and what an outcome writes to `account.txt` (`settle`, pure: nothing when the file now holds another device) |
 | `notification_banners.rs` | turns off Windows' notification banner for every app while the notch runs and puts the values back (`notch.hide_windows_notifications`), from a thread that waits on registry changes; `notification_banners/backup.rs` is the saved values and what a pass changes (pure), `notification_banners/passes.rs` reads and writes them |
 
 ### The notch's files
@@ -132,8 +106,6 @@ owns a small struct for it, defined beside its logic and held by `Notch` (`sprin
 | `animation.rs` | the springs, the frame the springs describe, the animation timer | `Springs`, `FrameTimer` |
 | `keyboard.rs` | typing: who owns the keyboard, text keys, pasted text, the keyboard lost to another window | `KeyboardState` |
 | `settings_reload.rs` | applying a changed settings file after `WM_SETTINGS_CHANGED` | |
-| `access.rs` | what the account allows (`account.txt` read at start, on resume and after `WM_SETTINGS_CHANGED`; on open only once a trial or launch has ended): locked pages and activities, which Windows popups may stay hidden, `Page::on_access_changed` | `AccessState` |
-| `daily_check.rs` | the daily account check: one request at start-up and on resume when a day has passed (`should_check`), none while one runs and no retry; applying the outcome, reloading the access, and `Activity::on_account_signed_out_elsewhere` on started activities for the pill message | `DailyCheck` |
 | `location.rs` | following `location.track`: start and stop watching, the 10 s wait after a network change, saving the city a position gives | |
 | `resting_row.rs` | the idle row and the claimed pill's row: the group, the battery ring, the dot column, short badges, their drawing | `RestingRow` |
 | `row_motion.rs` | one spring per row item and for the clocks, so items slide when the row changes | `RowMotion` |
@@ -142,7 +114,7 @@ owns a small struct for it, defined beside its logic and held by `Notch` (`sprin
 | `paint.rs` | drawing the pill, the header, the banner, the badges and the shadow | |
 | `relocate.rs` | moving the notch to the monitor `notch.monitor` picks: when a move waits, the one-message scale change (`Surface::resize`, new fonts, rebuilt cached text), the window move | |
 | `monitor_state.rs` | what the notch knows about its monitor: the mode, the current monitor, the last placement, a move that waits, and the seam that lets tests inject monitors | `MonitorState` |
-| `tests/` | behavior tests (`access.rs`, `hiding_rules.rs`, `screen_mode.rs`, `relocate.rs`, `settings_reload.rs`, `daily_check.rs`, `page_navigation.rs`, `page_states.rs`, `clipboard_states.rs`, `resting_row.rs`, `row_motion.rs`, `header_row.rs`, `header_hover.rs`, `pin.rs`, `pause.rs`) and the pictures (`images.rs`) on an off-screen `Notch` built in `tests/mod.rs` | |
+| `tests/` | behavior tests (`hiding_rules.rs`, `screen_mode.rs`, `relocate.rs`, `settings_reload.rs`, `page_navigation.rs`, `page_states.rs`, `clipboard_states.rs`, `resting_row.rs`, `row_motion.rs`, `header_row.rs`, `header_hover.rs`, `pin.rs`, `pause.rs`) and the pictures (`images.rs`) on an off-screen `Notch` built in `tests/mod.rs` | |
 
 ## How a module is laid out
 
