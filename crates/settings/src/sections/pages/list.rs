@@ -11,8 +11,7 @@ use super::order::{
 };
 use crate::{
     field, icons,
-    sections::{apply, lock::lock_badge},
-    standing,
+    sections::apply,
     tag::{Tone, tag},
 };
 
@@ -184,7 +183,6 @@ fn page_row(index: usize, id: &str, label: SharedString, enabled: bool, hint: Ke
             cx.refresh_windows();
         })
         .child(lead)
-        .children(standing::current().lock_for(id).map(|lock| lock_badge(&format!("page-{id}"), lock, cx)))
         .child(switch)
         .into_any_element()
 }

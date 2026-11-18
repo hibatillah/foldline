@@ -22,8 +22,7 @@ pub fn page() -> Page {
             Group::titled(tr!("shalat.group_asr"), vec![asr::item()]).description(tr!("shalat.group_asr_note")),
             Group::titled(tr!("shalat.group_reminders"), vec![reminders::item()])
                 .description(tr!("shalat.group_reminders_note")),
-            Group::titled(tr!("shalat.group_adjust"), vec![adjust::item()])
-                .description(tr!("shalat.group_adjust_note")),
+            Group::titled(tr!("shalat.group_adjust"), adjust::items()).description(tr!("shalat.group_adjust_note")),
         ],
     )
 }

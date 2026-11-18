@@ -1,15 +1,15 @@
-//! Fine-tuning each prayer by up to 30 minutes, with a day bar that shows where each prayer falls.
+//! Fine-tuning each prayer by up to 30 minutes: one card with a day bar that shows where each prayer falls, then one row
+//! per prayer with its name at the left and a minus and plus stepper at the right.
 
 use crate::i18n::tr;
 use std::rc::Rc;
 
 use gpui::{AnyElement, App, SharedString, div, linear_color_stop, linear_gradient, prelude::*, px, relative};
-use gpui_component::{h_flex, v_flex};
 use store::Settings;
 
 use crate::{
     field,
-    layout::{self, Item},
+    layout::{Item, Render},
     picture::color,
     stepper::{self, Step},
 };
@@ -18,7 +18,6 @@ const OFFSET_LIMIT: i64 = 30;
 // The bar covers 03:30 to 20:30, where the prayers of a city near the equator fall.
 const DAY_START_MINUTE: i64 = 3 * 60 + 30;
 const DAY_MINUTES: i64 = 17 * 60;
-const COLUMN_MIN_WIDTH: f32 = 104.0;
 const DOT_SIZE: f32 = 10.0;
 const DOT_RING: f32 = 3.0;
 const BAR_HEIGHT: f32 = 12.0;
@@ -134,43 +133,30 @@ fn step_by(key: &'static str, delta: i64, offset: i64) -> Option<Step> {
     })
 }
 
-fn prayer_column(prayer: &'static Prayer, offset: i64, cx: &App) -> AnyElement {
-    v_flex()
-        .flex_1()
-        .min_w(px(COLUMN_MIN_WIDTH))
-        .items_center()
-        .gap(px(6.0))
-        .child(div().text_size(px(13.0)).child((prayer.name)()))
-        .child(stepper::stepper(
+fn prayer_row(prayer: &'static Prayer) -> Item {
+    let control: Render = Rc::new(move |_window, cx| {
+        let offset = read_offset(&Settings::load(), prayer.key);
+        stepper::stepper(
             prayer.key,
             SharedString::from(offset_value(offset)),
             tr!("stepper.minutes"),
             step_by(prayer.key, -1, offset),
             step_by(prayer.key, 1, offset),
-            stepper::COMPACT,
+            stepper::REGULAR,
             cx,
-        ))
-        .into_any_element()
+        )
+    });
+    Item::new((prayer.name)(), control)
 }
 
-pub fn item() -> Item {
-    Item::custom(|_window, cx| {
+/// The day bar, then a row for each prayer; the section draws them as one card with a divider between rows.
+pub fn items() -> Vec<Item> {
+    let day_bar = Item::picture_row(|_window, _cx| {
         let settings = Settings::load();
         let offsets: [i64; 6] = std::array::from_fn(|index| read_offset(&settings, PRAYERS[index].key));
-        let columns = PRAYERS.iter().zip(offsets).map(|(prayer, offset)| prayer_column(prayer, offset, cx));
-        v_flex()
-            .gap_3()
-            .child(layout::block_heading(tr!("shalat.adjust_title"), None, cx))
-            .child(
-                v_flex()
-                    .gap(px(14.0))
-                    .px(px(16.0))
-                    .py(px(8.0))
-                    .child(day_bar(&offsets))
-                    .child(h_flex().flex_wrap().gap(px(4.0)).children(columns)),
-            )
-            .into_any_element()
-    })
+        day_bar(&offsets)
+    });
+    std::iter::once(day_bar).chain(PRAYERS.iter().map(prayer_row)).collect()
 }
 
 #[cfg(test)]
@@ -194,6 +180,11 @@ mod tests {
             let line = format!("Prayer::{} => \"{}\"", (prayer.name)(), prayer.key);
             assert!(source.contains(&line), "{line} missing in times.rs");
         }
+    }
+
+    #[test]
+    fn the_card_holds_the_day_bar_then_one_row_for_each_prayer() {
+        assert_eq!(items().len(), 1 + PRAYERS.len());
     }
 
     #[test]

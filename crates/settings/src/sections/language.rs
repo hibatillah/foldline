@@ -1,6 +1,7 @@
-//! The language cards on the Advanced page: Automatic, English and Bahasa Indonesia.
+//! The language cards on the General page: Automatic, English and Bahasa Indonesia.
 
-use gpui::{AnyElement, App, SharedString, prelude::*};
+use gpui::{AnyElement, App, SharedString, prelude::*, px};
+use gpui_component::v_flex;
 use store::{
     Settings,
     language::{LANGUAGE_KEY, Language, LanguageChoice},
@@ -9,8 +10,11 @@ use store::{
 use crate::{
     card,
     i18n::{apply_language, tr},
-    layout::Item,
+    layout::{Item, row_description},
 };
+
+/// Between the description lines and the cards.
+const CARDS_GAP: f32 = 10.0;
 
 pub struct Card {
     pub choice: LanguageChoice,
@@ -33,19 +37,28 @@ pub fn auto_description(system: Language) -> &'static str {
 
 fn card_for(card: &'static Card, selected: bool, cx: &App) -> AnyElement {
     let choice = card.choice;
-    let description = (choice == LanguageChoice::Auto).then(|| auto_description(store::language::system_language()));
     card::frame(SharedString::from(format!("{LANGUAGE_KEY}-{}", choice.setting_word())), selected, cx)
         .cursor_pointer()
         .on_click(move |_event, _window, cx| apply_language(choice, cx))
-        .child(card::header((card.label)(), description, selected, cx))
+        .child(card::header((card.label)(), None, selected, cx))
         .into_any_element()
+}
+
+/// What the section says above its cards, and what Automatic follows now; each card holds only a radio and its name.
+pub fn description_lines() -> [SharedString; 2] {
+    [tr!("general.language_description").into(), auto_description(store::language::system_language()).into()]
 }
 
 pub fn item() -> Item {
     Item::picture_row(|_window, cx| {
         let picked = LanguageChoice::from_setting(Settings::load().get_string(LANGUAGE_KEY));
         let cards = CHOICES.iter().map(|card| card_for(card, card.choice == picked, cx)).collect();
-        card::grid(3, cards).into_any_element()
+        let [description, automatic] = description_lines();
+        v_flex()
+            .gap(px(CARDS_GAP))
+            .child(v_flex().gap(px(1.0)).child(row_description(description, cx)).child(row_description(automatic, cx)))
+            .child(card::grid(3, cards))
+            .into_any_element()
     })
 }
 
@@ -61,6 +74,13 @@ mod tests {
         for card in CHOICES {
             assert_eq!(LanguageChoice::from_setting(Some(card.choice.setting_word())), card.choice);
         }
+    }
+
+    #[test]
+    fn the_description_lines_say_what_the_section_is_for_then_what_automatic_follows() {
+        let [purpose, automatic] = description_lines();
+        assert_eq!(purpose, tr!("general.language_description"));
+        assert_eq!(automatic, auto_description(store::language::system_language()));
     }
 
     #[test]

@@ -1,4 +1,4 @@
-//! The General page: startup, the city, notifications, the screen the notch sits on, and Windows' popups.
+//! The General page: startup, pause, the city, notifications, the screen the notch sits on, language, and Windows' popups.
 
 mod city_map;
 mod idle_pictures;
@@ -11,7 +11,6 @@ use std::rc::Rc;
 use gpui::{div, prelude::*, px};
 use gpui_component::h_flex;
 
-use super::lock;
 use crate::i18n::tr;
 use crate::{
     field,
@@ -57,6 +56,7 @@ pub fn page() -> Page {
                     idle_pictures::item(),
                 ],
             ),
+            Group::titled(tr!("pause.group"), vec![super::pause::item()]),
             Group::titled(
                 tr!("general.group_location"),
                 vec![
@@ -69,28 +69,20 @@ pub fn page() -> Page {
             Group::titled(
                 tr!("general.group_notifications"),
                 vec![
-                    Item::new(
-                        tr!("general.show_notifications"),
-                        lock::locked("activity", "notifications", field::toggle("activity.notifications", true)),
-                    )
-                    .description(tr!("general.show_notifications_note")),
+                    Item::new(tr!("general.show_notifications"), field::toggle("activity.notifications", true))
+                        .description(tr!("general.show_notifications_note")),
                     Item::new(tr!("general.show_notification_text"), field::toggle("notifications.show_text", true))
                         .description(tr!("general.show_notification_text_note")),
                     notification_cards::item(),
-                    Item::new(
-                        tr!("general.device_battery"),
-                        lock::locked("activity", "device_battery", field::toggle("activity.device_battery", true)),
-                    )
-                    .description(tr!("general.device_battery_note")),
-                    Item::new(
-                        tr!("general.downloads"),
-                        lock::locked("activity", "downloads", field::toggle("activity.downloads", true)),
-                    )
-                    .description(tr!("general.downloads_note")),
+                    Item::new(tr!("general.device_battery"), field::toggle("activity.device_battery", true))
+                        .description(tr!("general.device_battery_note")),
+                    Item::new(tr!("general.downloads"), field::toggle("activity.downloads", true))
+                        .description(tr!("general.downloads_note")),
                 ],
             ),
             Group::titled(tr!("general.monitor"), vec![monitor::item(), screen::item()])
                 .description(tr!("general.monitor_note")),
+            Group::titled(tr!("general.language_title"), vec![super::language::item()]),
             Group::titled(
                 tr!("general.group_windows_popups"),
                 vec![
@@ -102,4 +94,16 @@ pub fn page() -> Page {
             ),
         ],
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_page_opens_with_startup_then_pause_and_keeps_language_above_the_windows_popups() {
+        let titles = page().group_titles();
+        assert_eq!(&titles[..2], ["Startup", "Pause"]);
+        assert_eq!(&titles[titles.len() - 2..], ["Language", "Windows popups"]);
+    }
 }

@@ -1,7 +1,6 @@
-//! The Calendar page: how the address reaches the notch, the address and refresh rows, the steps to find the address
-//! and the month or week view.
+//! The Calendar page: the month or week view, the address and refresh rows, and the collapsible help
+//! that finds the address.
 
-mod flow;
 mod steps;
 
 use std::rc::Rc;
@@ -13,10 +12,8 @@ use store::Settings;
 use super::about::widgets::{Handler, pill};
 use crate::{
     card, chips,
-    field::{self, Kind, stored_whole_number},
+    field::{self, Kind},
     i18n::tr,
-    icons,
-    info_box::{info_box, warning_box},
     layout::{Group, Item, Page, Render},
     stepper::{self, REGULAR},
 };
@@ -41,26 +38,14 @@ const VIEWS: [View; 2] = [
     View { word: "week", label: || tr!("calendar.view_week"), description: || tr!("calendar.view_week_note") },
 ];
 
-/// How often the notch downloads the calendar, read as the page reads it.
-fn refresh_minutes(settings: &Settings) -> u32 {
-    stored_whole_number(settings, REFRESH_KEY, REFRESH_DEFAULT)
-}
-
 pub fn page() -> Page {
     Page::plain(
         tr!("calendar.title"),
         vec![
-            Group::titled(
-                tr!("calendar.group_google"),
-                vec![Item::picture_row(flow::flow), address_item(), refresh_item()],
-            )
-            .description(tr!("calendar.group_google_note")),
-            Group::titled(tr!("calendar.group_steps"), steps::items()).description(tr!("calendar.group_steps_note")),
-            Group::loose(vec![
-                Item::custom(|_window, cx| warning_box(icons::WARNING, tr!("calendar.google_note1"), cx)),
-                Item::custom(|_window, cx| info_box(icons::ABOUT, tr!("calendar.google_note2"), cx)),
-            ]),
             Group::loose(vec![view_item()]),
+            Group::titled(tr!("calendar.group_google"), vec![address_item(), refresh_item()])
+                .description(tr!("calendar.group_google_note")),
+            Group::loose(vec![steps::item()]),
         ],
     )
 }
@@ -118,6 +103,7 @@ fn view_item() -> Item {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::field::stored_whole_number;
 
     fn settings_with(text: &str, name: &str) -> Settings {
         let path = std::env::temp_dir().join(format!("notch-settings-calendar-{name}-{}.txt", std::process::id()));
@@ -149,12 +135,19 @@ mod tests {
 
     #[test]
     fn a_missing_refresh_is_fifteen_minutes() {
-        assert_eq!(refresh_minutes(&settings_with("", "missing")), 15);
+        assert_eq!(stored_whole_number(&settings_with("", "missing"), REFRESH_KEY, REFRESH_DEFAULT), 15);
     }
 
     #[test]
     fn a_stored_refresh_is_shown_as_stored() {
-        assert_eq!(refresh_minutes(&settings_with("calendar.refresh_minutes=45\n", "stored")), 45);
+        assert_eq!(
+            stored_whole_number(
+                &settings_with("calendar.refresh_minutes=45\n", "stored"),
+                REFRESH_KEY,
+                REFRESH_DEFAULT
+            ),
+            45
+        );
     }
 
     #[test]

@@ -1,6 +1,5 @@
-//! The content card's header: the breadcrumb on the left, the window buttons at the right end. The strip is the
-//! window's drag area. The buttons are drawn here (not by the component library's title bar) so the close button's red
-//! hover can follow the card's rounded top-right corner; GPUI clips children to a rectangle only.
+//! The content pane's header: the breadcrumb on the left, the window buttons at the right end. The strip is the
+//! window's drag area. The buttons are drawn here, not by the component library's title bar, to keep the header's height and colors.
 
 use crate::i18n::tr;
 use gpui::{App, ElementId, IntoElement, Window, WindowControlArea, div, prelude::*, px};
@@ -26,11 +25,6 @@ pub fn breadcrumb_text(page_title: &'static str) -> String {
     breadcrumb(page_title).join(" › ")
 }
 
-/// The card's inner corner radius: its outer radius less the 1 px border, so the header's corners match the card's.
-pub fn inner_radius() -> f32 {
-    crate::CARD_RADIUS - 1.0
-}
-
 fn control(id: &'static str, icon: IconName, area: WindowControlArea, is_close: bool, cx: &App) -> impl IntoElement {
     let theme = cx.theme();
     let (hover_fill, hover_text) =
@@ -45,7 +39,6 @@ fn control(id: &'static str, icon: IconName, area: WindowControlArea, is_close: 
         .justify_center()
         .text_color(theme.foreground)
         .window_control_area(area)
-        .when(is_close, |button| button.rounded_tr(px(inner_radius())))
         .hover(move |style| style.bg(hover_fill).text_color(hover_text))
         .child(Icon::new(icon).small())
 }
@@ -68,7 +61,6 @@ pub fn render(page_title: &'static str, window: &Window, cx: &App) -> impl IntoE
     h_flex()
         .h(px(HEIGHT))
         .flex_none()
-        .rounded_t(px(inner_radius()))
         .bg(palette::header(cx))
         .border_b_1()
         .border_color(palette::row_divider(cx))
@@ -100,10 +92,9 @@ mod tests {
                 "Settings › Advanced",
                 "Settings › Calendar",
                 "Settings › Timer",
-                "Settings › Prayer",
+                "Settings › Shalat",
                 "Settings › System stats",
                 "Settings › Weather",
-                "Settings › Account",
                 "Settings › About",
             ]
         );

@@ -1,4 +1,4 @@
-//! The Pause item of the Advanced page: four lengths while the notch runs, a status and Resume while it is paused.
+//! The Pause item of the General page: four lengths while the notch runs, a status and Resume while it is paused.
 
 use std::rc::Rc;
 

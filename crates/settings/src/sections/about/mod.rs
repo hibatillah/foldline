@@ -141,11 +141,7 @@ pub fn page() -> Page {
     });
     Page::plain(
         tr!("about.title"),
-        vec![
-            Group::new(vec![card]),
-            Group::new(items(link_rows())),
-            Group::titled(tr!("about.group_files"), items(file_rows())).icon(crate::icons::FOLDER),
-        ],
+        vec![Group::new(vec![card]), Group::new(items(link_rows())), Group::new(items(file_rows()))],
     )
 }
 

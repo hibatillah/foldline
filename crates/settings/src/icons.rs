@@ -21,14 +21,8 @@ pub const STATS: &str = "icons/chart-column.svg";
 pub const ADVANCED: &str = "icons/wrench.svg";
 /// Lucide "cloud-drizzle".
 pub const WEATHER: &str = "icons/cloud-drizzle.svg";
-/// Lucide "folder".
-pub const FOLDER: &str = "icons/folder.svg";
 /// Lucide "info".
 pub const ABOUT: &str = "icons/info.svg";
-/// Lucide "circle-user".
-pub const ACCOUNT: &str = "icons/circle-user.svg";
-/// Lucide "lock", the badge of a page the account does not unlock.
-pub const LOCK: &str = "icons/lock.svg";
 
 /// Lucide "play", the media page.
 pub const PLAY: &str = "icons/play.svg";
@@ -53,7 +47,7 @@ pub const WARNING: &str = "icons/triangle-alert.svg";
 /// Lucide "file"; the component library's bundle serves it.
 pub const FILE: &str = "icons/file.svg";
 
-const OWN_ICONS: [(&str, &str); 21] = [
+const OWN_ICONS: [(&str, &str); 18] = [
     (GENERAL, include_str!("../assets/icons/hex-nut.svg")),
     (PAGES, include_str!("../assets/icons/layers.svg")),
     (BEHAVIOR, include_str!("../assets/icons/puzzle.svg")),
@@ -62,10 +56,7 @@ const OWN_ICONS: [(&str, &str); 21] = [
     (STATS, include_str!("../assets/icons/chart-column.svg")),
     (ADVANCED, include_str!("../assets/icons/wrench.svg")),
     (WEATHER, include_str!("../assets/icons/cloud-drizzle.svg")),
-    (FOLDER, include_str!("../assets/icons/folder.svg")),
     (ABOUT, include_str!("../assets/icons/info.svg")),
-    (ACCOUNT, include_str!("../assets/icons/circle-user.svg")),
-    (LOCK, include_str!("../assets/icons/lock.svg")),
     (PLAY, include_str!("../assets/icons/play.svg")),
     (TIMER, include_str!("../assets/icons/timer.svg")),
     (TODO, include_str!("../assets/icons/square-check.svg")),

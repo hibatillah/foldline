@@ -12,7 +12,7 @@ use crate::{field::stored_whole_number, i18n::tr, layout::Render};
 /// What a click does: it reads the stored value again and writes the next one.
 pub type Step = Rc<dyn Fn(&mut App)>;
 
-/// The two sizes on the boards: a row's stepper, and the smaller one under each prayer.
+/// The size of a row's stepper.
 #[derive(Clone, Copy, Debug)]
 pub struct Size {
     button: f32,
@@ -22,7 +22,6 @@ pub struct Size {
 }
 
 pub const REGULAR: Size = Size { button: 26.0, value_width: 52.0, text: 14.0, gap: 8.0 };
-pub const COMPACT: Size = Size { button: 24.0, value_width: 48.0, text: 12.5, gap: 3.0 };
 
 const BUTTON_RADIUS: f32 = 7.0;
 const GLYPH_SIZE: f32 = 16.0;

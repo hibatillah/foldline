@@ -96,7 +96,7 @@ pub fn app_card(open_store: Option<Handler>, cx: &App) -> AnyElement {
                 .child(img(brand::tile_image()).size(px(TILE_SIZE)).flex_none())
                 .child(
                     v_flex()
-                        .child(div().text_size(px(NAME_SIZE)).font_weight(gpui::FontWeight::SEMIBOLD).child("Notch"))
+                        .child(div().text_size(px(NAME_SIZE)).font_weight(gpui::FontWeight::SEMIBOLD).child("Foldline"))
                         .child(
                             div()
                                 .text_size(px(VERSION_SIZE))

@@ -1,4 +1,4 @@
-//! The Advanced page: the debug log, the language and pausing the notch.
+//! The Advanced page: the debug log.
 
 use std::{
     path::{Path, PathBuf},
@@ -26,7 +26,7 @@ const SAMPLE_LINE_HEIGHT: f32 = 19.0;
 /// Three lines as `log::debug` in the notch writes them: milliseconds since 1970, then the message.
 const SAMPLE_LINES: [(&str, &str); 3] = [
     ("1763107498120 ms", "drop target ready"),
-    ("1763107498410 ms", "account check started"),
+    ("1763107498410 ms", "frame timer started"),
     ("1763107512006 ms", "frame timer stopped"),
 ];
 
@@ -100,20 +100,15 @@ fn log_sample(cx: &App) -> AnyElement {
 pub fn page() -> Page {
     Page::plain(
         tr!("advanced.title"),
-        vec![
-            Group::titled(
-                tr!("advanced.group_troubleshooting"),
-                vec![
-                    Item::new(tr!("advanced.debug_log"), Rc::new(log_file_control))
-                        .tag(tr!("advanced.after_restart"))
-                        .description(tr!("advanced.debug_log_note")),
-                    Item::picture_row(|_window, cx| log_sample(cx)),
-                ],
-            ),
-            Group::titled(tr!("general.language_title"), vec![super::language::item()])
-                .description(tr!("general.language_description")),
-            Group::titled(tr!("pause.group"), vec![super::pause::item()]),
-        ],
+        vec![Group::titled(
+            tr!("advanced.group_troubleshooting"),
+            vec![
+                Item::new(tr!("advanced.debug_log"), Rc::new(log_file_control))
+                    .tag(tr!("advanced.after_restart"))
+                    .description(tr!("advanced.debug_log_note")),
+                Item::picture_row(|_window, cx| log_sample(cx)),
+            ],
+        )],
     )
 }
 
@@ -137,9 +132,9 @@ mod tests {
     }
 
     #[test]
-    fn the_page_opens_with_troubleshooting_and_keeps_language_and_pause() {
+    fn the_page_holds_only_troubleshooting() {
         let settings_page = page();
         let titles = settings_page.group_titles();
-        assert_eq!(titles, ["Troubleshooting", "Language", "Pause"]);
+        assert_eq!(titles, ["Troubleshooting"]);
     }
 }

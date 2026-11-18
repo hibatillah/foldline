@@ -3,7 +3,6 @@
 
 mod pictures;
 
-use super::lock;
 use crate::i18n::tr;
 use crate::{
     field,
@@ -19,11 +18,8 @@ pub fn page() -> Page {
             Group::titled(
                 tr!("weather.group_alerts"),
                 vec![
-                    Item::new(
-                        tr!("weather.rain_alert"),
-                        lock::locked("weather", "rain_alert", field::toggle(RAIN_ALERT_KEY, true)),
-                    )
-                    .description(tr!("weather.rain_alert_note")),
+                    Item::new(tr!("weather.rain_alert"), field::toggle(RAIN_ALERT_KEY, true))
+                        .description(tr!("weather.rain_alert_note")),
                     Item::picture_row(pictures::rain_alert),
                 ],
             )

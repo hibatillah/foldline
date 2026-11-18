@@ -35,9 +35,9 @@ const BRAND_PADDING_BOTTOM: f32 = 4.0;
 pub enum NavGroup {
     /// The notch as a whole.
     Notch,
-    /// Settings that belong to one page of the notch (Calendar, Prayer).
+    /// Settings that belong to one page of the notch (Calendar, Shalat).
     PageSettings,
-    /// Items pinned to the bottom of the sidebar without a label (Account, About); not part of `ORDER`.
+    /// Items pinned to the bottom of the sidebar without a label (About); not part of `ORDER`.
     Footer,
 }
 
@@ -46,7 +46,7 @@ impl NavGroup {
 
     pub fn label(self) -> &'static str {
         match self {
-            NavGroup::Notch => "Notch",
+            NavGroup::Notch => "Foldline",
             NavGroup::PageSettings => tr!("sidebar.page_settings"),
             NavGroup::Footer => "",
         }
@@ -225,7 +225,7 @@ mod tests {
 
     #[test]
     fn the_group_labels_are_notch_and_page_settings() {
-        assert_eq!(NavGroup::Notch.label(), "Notch");
+        assert_eq!(NavGroup::Notch.label(), "Foldline");
         assert_eq!(NavGroup::PageSettings.label(), "Page settings");
     }
 
@@ -236,7 +236,7 @@ mod tests {
             entries.iter().filter(|entry| entry.group == group).map(|entry| entry.page.title).collect::<Vec<_>>()
         };
         assert_eq!(titles(NavGroup::Notch), ["General", "Pages", "Behavior", "Advanced"]);
-        assert_eq!(titles(NavGroup::PageSettings), ["Calendar", "Timer", "Prayer", "System stats", "Weather"]);
+        assert_eq!(titles(NavGroup::PageSettings), ["Calendar", "Timer", "Shalat", "System stats", "Weather"]);
     }
 
     #[test]
@@ -251,11 +251,11 @@ mod tests {
     }
 
     #[test]
-    fn shalat_is_listed_as_prayer() {
+    fn shalat_is_listed_under_page_settings() {
         let entries = crate::sections::all();
         let shalat = entries.iter().find(|entry| entry.icon == crate::icons::SHALAT).expect("shalat entry");
         assert_eq!(shalat.group, NavGroup::PageSettings);
-        assert_eq!(shalat.page.title, "Prayer");
+        assert_eq!(shalat.page.title, "Shalat");
     }
 
     #[test]

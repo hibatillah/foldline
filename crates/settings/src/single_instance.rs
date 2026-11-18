@@ -7,7 +7,7 @@ use windows::{
     core::{PCWSTR, w},
 };
 
-pub const WINDOW_TITLE: PCWSTR = w!("Notch Settings");
+pub const WINDOW_TITLE: PCWSTR = w!("Foldline Settings");
 
 /// Holds the named mutex for as long as this settings window lives.
 pub struct InstanceGuard(HANDLE);

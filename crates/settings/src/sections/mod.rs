@@ -1,11 +1,9 @@
 mod about;
-mod account;
 mod advanced;
 mod behavior;
 mod calendar;
 mod general;
 mod language;
-mod lock;
 mod pages;
 mod pause;
 mod shalat;
@@ -46,7 +44,6 @@ pub fn all() -> Vec<NavEntry> {
         NavEntry::new(NavGroup::PageSettings, icons::SHALAT, shalat::page()),
         NavEntry::new(NavGroup::PageSettings, icons::STATS, stats::page()),
         NavEntry::new(NavGroup::PageSettings, icons::WEATHER, weather::page()),
-        NavEntry::new(NavGroup::Footer, icons::ACCOUNT, account::page()),
         NavEntry::new(NavGroup::Footer, icons::ABOUT, about::page()),
     ]
 }
@@ -71,7 +68,6 @@ mod tests {
                 icons::SHALAT,
                 icons::STATS,
                 icons::WEATHER,
-                icons::ACCOUNT,
                 icons::ABOUT
             ]
         );
@@ -95,7 +91,7 @@ mod tests {
         assert_eq!(english[0], "General");
         assert_eq!(indonesian[0], "Umum");
         assert_eq!(indonesian[4], "Kalender");
-        assert_eq!(indonesian[10], "Tentang");
+        assert_eq!(indonesian[9], "Tentang");
     }
 
     #[test]
@@ -105,13 +101,6 @@ mod tests {
         assert_eq!(last.page.title, "About");
         assert_eq!(last.icon, icons::ABOUT);
         assert_eq!(last.group, NavGroup::Footer);
-    }
-
-    #[test]
-    fn the_account_page_sits_above_about_in_the_footer() {
-        let footer: Vec<&'static str> =
-            all().iter().filter(|entry| entry.group == NavGroup::Footer).map(|entry| entry.icon).collect();
-        assert_eq!(footer, [icons::ACCOUNT, icons::ABOUT]);
     }
 
     #[test]

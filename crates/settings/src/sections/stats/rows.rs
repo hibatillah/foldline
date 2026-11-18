@@ -1,7 +1,7 @@
 //! The device lists of the System stats page: one row per disk or graphics card, with a tick that shows it on the page.
 
 use gpui::{AnyElement, App, ElementId, SharedString, Window, div, prelude::*, px};
-use gpui_component::{ActiveTheme as _, Disableable as _, checkbox::Checkbox, h_flex, v_flex};
+use gpui_component::{ActiveTheme as _, Disableable as _, checkbox::Checkbox, h_flex};
 use store::Settings;
 
 use super::{
@@ -14,6 +14,8 @@ use crate::{field, layout::block_frame};
 const ROW_PADDING_X: f32 = 14.0;
 const ROW_PADDING_Y: f32 = 9.0;
 const ROW_MIN_HEIGHT: f32 = 50.0;
+/// Between a device's name and its muted description.
+const NAME_GAP: f32 = 8.0;
 const BAR_WIDTH: f32 = 92.0;
 const BAR_HEIGHT: f32 = 5.0;
 const PERCENT_WIDTH: f32 = 36.0;
@@ -78,12 +80,29 @@ fn row(
                 field::write(kind.key, &list_text(&names, kind), cx);
             }
         });
-    let text = v_flex()
+    // The bold name and the muted description share one baseline; this block also takes the free width, so the bar sits at the right.
+    let text = h_flex()
         .flex_1()
         .min_w_0()
-        .gap(px(1.0))
-        .child(div().text_base().font_weight(gpui::FontWeight::MEDIUM).child(SharedString::from(name.to_owned())))
-        .children(info.map(|info| div().text_sm().text_color(cx.theme().muted_foreground).child(disk_subtitle(info))));
+        .gap(px(NAME_GAP))
+        .items_baseline()
+        .child(
+            div()
+                .flex_none()
+                .text_base()
+                .font_weight(gpui::FontWeight::SEMIBOLD)
+                .child(SharedString::from(name.to_owned())),
+        )
+        .children(info.map(|info| {
+            div()
+                .min_w_0()
+                .overflow_hidden()
+                .whitespace_nowrap()
+                .text_ellipsis()
+                .text_sm()
+                .text_color(cx.theme().muted_foreground)
+                .child(disk_subtitle(info))
+        }));
     h_flex()
         .w_full()
         .min_h(px(ROW_MIN_HEIGHT))

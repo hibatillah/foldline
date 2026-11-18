@@ -13,7 +13,6 @@ use crate::{
     i18n::tr,
     icons, info_box,
     layout::{Group, Item, Page, block_frame, section_title},
-    standing,
 };
 use order::{DISABLED_KEY, KNOWN_KEY, KeyHint, ORDER_KEY, current_order, disabled_pages, key_hints, parse_known};
 
@@ -26,9 +25,7 @@ fn listed_pages() -> Vec<list::ListedPage> {
     let known = parse_known(settings.get_string(KNOWN_KEY));
     let order = current_order(&known, settings.get_string(ORDER_KEY));
     let disabled = disabled_pages(&known, settings.get_string(DISABLED_KEY));
-    let standing = standing::current();
-    let skipped: Vec<String> =
-        order.iter().filter(|id| disabled.contains(id) || standing.lock_for(id).is_some()).cloned().collect();
+    let skipped: Vec<String> = order.iter().filter(|id| disabled.contains(id)).cloned().collect();
     let hints = key_hints(&order, &skipped);
     order
         .into_iter()
@@ -76,7 +73,7 @@ fn list_section(cx: &App) -> AnyElement {
     }
     v_flex()
         .gap(px(SECTION_TITLE_GAP))
-        .child(section_title(tr!("pages.group_pages"), None, Some(count_note(&pages)), cx))
+        .child(section_title(tr!("pages.group_pages"), Some(count_note(&pages)), cx))
         .child(block_frame(cx).children(list::rows(&pages, cx)))
         .into_any_element()
 }
@@ -89,9 +86,11 @@ pub fn page() -> Page {
                 tr!("pages.group_preview"),
                 vec![Item::custom(|_window, cx| preview_section(cx)).outside_block()],
             ),
+            Group::loose(vec![Item::custom(|_window, cx| {
+                info_box::info_box(icons::KEYBOARD, tr!("pages.keys_hint"), cx)
+            })]),
             Group::loose(vec![
                 Item::custom(|_window, cx| list_section(cx)),
-                Item::custom(|_window, cx| info_box::info_box(icons::KEYBOARD, tr!("pages.keys_hint"), cx)),
                 Item::custom(|_window, cx| info_box::info_box(icons::ABOUT, tr!("pages.off_hint"), cx)),
             ]),
         ],
@@ -104,6 +103,13 @@ mod tests {
 
     fn listed(enabled: bool) -> list::ListedPage {
         list::ListedPage { id: "media".to_owned(), label: "Media".into(), enabled, hint: KeyHint::Skipped }
+    }
+
+    #[test]
+    fn the_page_opens_with_the_preview_and_the_key_hint_comes_second() {
+        let page = page();
+        assert_eq!(page.group_titles().first().copied(), Some("How it looks in the notch"));
+        assert_eq!(page.group_titles().len(), 1, "the hint and the list groups carry no title");
     }
 
     #[test]

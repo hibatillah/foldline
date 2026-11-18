@@ -8,10 +8,10 @@ use super::{Lengths, SESSIONS_PER_ROUND};
 use crate::{i18n::tr, illustration, picture::color};
 
 const SCENE_HEIGHT: f32 = 76.0;
-/// The open page inside the scene: inset from the top and both sides, standing on the bottom edge.
-const PAGE_INSET_TOP: f32 = 6.0;
+/// The open page inside the scene: flush with the top edge as the real notch is, inset at both sides, and running past the
+/// bottom edge so the scene cuts it off.
 const PAGE_INSET_X: f32 = 10.0;
-const PAGE_RADIUS: f32 = 10.0;
+const PAGE_BLEED_BOTTOM: f32 = 10.0;
 const TIME_SIZE: f32 = 22.0;
 const LABEL_SIZE: f32 = 10.5;
 const BUTTON_SIZE: f32 = 10.0;
@@ -68,14 +68,13 @@ fn page_button(text: &'static str, fill: u32) -> gpui::Div {
 fn open_page(minutes: u32, label: SharedString) -> AnyElement {
     let page = v_flex()
         .absolute()
-        .top(px(PAGE_INSET_TOP))
+        .top_0()
         .left(px(PAGE_INSET_X))
         .right(px(PAGE_INSET_X))
-        .bottom_0()
+        .bottom(px(-PAGE_BLEED_BOTTOM))
         .px(px(12.0))
-        .py(px(8.0))
+        .pt(px(8.0))
         .gap(px(4.0))
-        .rounded_t(px(PAGE_RADIUS))
         .bg(color(0x000000))
         .text_color(color(0xffffff))
         .child(

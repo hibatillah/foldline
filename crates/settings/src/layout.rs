@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use gpui::{AnyElement, App, SharedString, Window, div, prelude::*, px};
-use gpui_component::{ActiveTheme as _, Icon, h_flex, v_flex};
+use gpui_component::{ActiveTheme as _, h_flex, v_flex};
 
 /// From one section's last block to the next section's heading.
 const SECTION_GAP: f32 = 14.0;
@@ -17,8 +17,6 @@ const ROW_MIN_HEIGHT: f32 = 50.0;
 /// Between a row's text and its control.
 const ROW_GAP: f32 = 12.0;
 const ROW_DESCRIPTION_LINE_HEIGHT: f32 = 17.0;
-/// A heading with an icon (Files on About) is set a little larger than a plain one.
-const ICON_HEADING_SIZE: f32 = 14.0;
 /// The title inside a picture block, a little larger than a row title and semibold.
 const BLOCK_HEADING_SIZE: f32 = 14.5;
 /// The vertical padding of a row that holds pictures or a wide control instead of a title.
@@ -29,22 +27,10 @@ fn description_heading(text: &'static str, cx: &App) -> gpui::Div {
     div().text_base().text_color(crate::palette::heading(cx)).child(text)
 }
 
-/// A section's heading row: its title (with its small blue icon when it has one) at the left, its description at the right.
-/// A heading with an icon reads as a group's name (the Files of About): full title color and a larger size.
-pub fn section_title(
-    text: impl Into<SharedString>,
-    icon: Option<&'static str>,
-    description: Option<SharedString>,
-    cx: &App,
-) -> gpui::Div {
+/// A section's heading row: its title at the left, its description at the right.
+pub fn section_title(text: impl Into<SharedString>, description: Option<SharedString>, cx: &App) -> gpui::Div {
     let muted = cx.theme().muted_foreground;
-    let title = h_flex()
-        .flex_none()
-        .gap_2()
-        .items_center()
-        .when(icon.is_some(), |title| title.text_size(px(ICON_HEADING_SIZE)).text_color(crate::palette::heading(cx)))
-        .children(icon.map(|path| Icon::default().path(path).size_4().text_color(crate::palette::accent(cx))))
-        .child(text.into());
+    let title = h_flex().flex_none().gap_2().items_center().child(text.into());
     h_flex()
         .w_full()
         .px(px(SECTION_TITLE_PADDING_X))
@@ -77,7 +63,8 @@ fn parts(in_block: &[bool]) -> Vec<Part> {
     parts
 }
 
-fn row_description(text: SharedString, cx: &App) -> gpui::Div {
+/// The muted `text_sm` line under a row title, or at the top of a picture row.
+pub fn row_description(text: SharedString, cx: &App) -> gpui::Div {
     div().text_sm().line_height(px(ROW_DESCRIPTION_LINE_HEIGHT)).text_color(cx.theme().muted_foreground).child(text)
 }
 
@@ -170,18 +157,6 @@ impl Item {
     }
 }
 
-/// A row's insides: the title over its muted lines at the left, the control at the right; for custom items whose
-/// title changes while the page is shown.
-pub fn control_row(
-    title: SharedString,
-    lines: impl IntoIterator<Item = SharedString>,
-    control: AnyElement,
-    top_aligned: bool,
-    cx: &App,
-) -> AnyElement {
-    control_row_element(title_with_tag(title, None, cx), lines, control, top_aligned, cx)
-}
-
 /// A row title in medium weight, with its tag after it when it has one.
 pub fn title_with_tag(title: SharedString, tag: Option<&'static str>, cx: &App) -> AnyElement {
     h_flex()
@@ -222,7 +197,6 @@ type Note = Rc<dyn Fn() -> SharedString>;
 
 pub struct Group {
     title: Option<&'static str>,
-    icon: Option<&'static str>,
     description: Option<Note>,
     items: Vec<Item>,
     boxed: bool,
@@ -230,22 +204,16 @@ pub struct Group {
 
 impl Group {
     pub fn new(items: Vec<Item>) -> Self {
-        Self { title: None, icon: None, description: None, items, boxed: true }
+        Self { title: None, description: None, items, boxed: true }
     }
 
     /// Items drawn straight onto the page, for rows that bring their own border.
     pub fn loose(items: Vec<Item>) -> Self {
-        Self { title: None, icon: None, description: None, items, boxed: false }
+        Self { title: None, description: None, items, boxed: false }
     }
 
     pub fn titled(title: &'static str, items: Vec<Item>) -> Self {
-        Self { title: Some(title), icon: None, description: None, items, boxed: true }
-    }
-
-    /// A small blue icon (an SVG path from `icons`) before the title.
-    pub fn icon(mut self, path: &'static str) -> Self {
-        self.icon = Some(path);
-        self
+        Self { title: Some(title), description: None, items, boxed: true }
     }
 
     /// A short line at the right end of the heading row that says what the section is for.
@@ -263,8 +231,7 @@ impl Group {
     fn render(&self, window: &mut Window, cx: &mut App) -> AnyElement {
         let visible: Vec<&Item> = self.items.iter().filter(|item| item.is_visible()).collect();
         let in_block: Vec<bool> = visible.iter().map(|item| self.boxed && item.in_block).collect();
-        let heading =
-            self.title.map(|title| section_title(title, self.icon, self.description.as_ref().map(|note| note()), cx));
+        let heading = self.title.map(|title| section_title(title, self.description.as_ref().map(|note| note()), cx));
         let parts = parts(&in_block).into_iter().map(|part| match part {
             Part::Loose(index) => visible[index].render(window, cx),
             Part::Block(indexes) => block(indexes.iter().map(|&index| visible[index]), window, cx),

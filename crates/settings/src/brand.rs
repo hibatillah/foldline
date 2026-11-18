@@ -1,4 +1,4 @@
-//! The app's tile logo: the blue tile of a stable build, the orange tile of a pre-release build.
+//! The app's tile logo: the blue tile of a stable build, the indigo tile of a pre-release build.
 
 use std::sync::{Arc, OnceLock};
 

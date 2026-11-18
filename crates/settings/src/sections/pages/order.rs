@@ -90,7 +90,7 @@ pub fn switch_page(order: &[String], disabled: &mut Vec<String>, id: &str, enabl
 /// The digit key that leads to a page while the open notch is hovered (`page_hotkeys.rs` in the notch).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KeyHint {
-    /// A page that is off or locked: the notch skips it, so no key leads there.
+    /// A page that is off: the notch skips it, so no key leads there.
     Skipped,
     /// 1 to 9.
     Digit(u8),
@@ -100,8 +100,7 @@ pub enum KeyHint {
     Zero,
 }
 
-/// The key of each page in `order`: 1 to 9 for the first nine pages shown, 0 for the last; a page in `skipped` (off,
-/// or locked by the account) gets none.
+/// The key of each page in `order`: 1 to 9 for the first nine pages shown, 0 for the last; a page in `skipped` (off) gets none.
 pub fn key_hints(order: &[String], skipped: &[String]) -> Vec<KeyHint> {
     let shown_count = order.iter().filter(|page| !skipped.contains(page)).count();
     let mut position = 0;
