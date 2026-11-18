@@ -1,4 +1,4 @@
-# Notch
+# Foldline
 
 A Windows "dynamic island" written in Rust: a black pill at the top of the screen, drawn with Direct2D, no UI
 framework. `notch.exe` idles at 0 % CPU and stays under 50 MB of memory. Windows only.
@@ -47,8 +47,8 @@ runs; `codegraph sync` catches up after changes made outside a session.
 
 `.claude/rules/` holds the constraints, loaded by the paths they cover. Three always apply: `workflow.md` (checks before
 done, no commits unless asked, never replace the running notch except through the scripts, specs and plans go to
-`.superpowers/`), `performance.md` (no polling, memory budget) and `contributions.md` (closed source, no outside
-contributions). `module-layout.md` sets how Rust files are cut (one job per file, about 400 lines) and applies to every
+`.superpowers/`), `performance.md` (no polling, memory budget) and `contributions.md` (open source under MIT, no accounts or paid
+tiers). `module-layout.md` sets how Rust files are cut (one job per file, about 400 lines) and applies to every
 source file; `code-style.md` and `testing.md` cover the notch's Rust code and scripts.
 
 Privacy: the clipboard page, when the user switches it on, keeps the last seven copies in memory only. Nothing is
@@ -79,7 +79,6 @@ its description; an agent without a subagent mechanism reads the matching file i
 | `notch-host` | `crates/notch/src/host`, `crates/notch/src/platform` |
 | `notch-pages` | `crates/notch/src/pages`, `activities`, `page.rs`, `activity.rs`, `crates/places` |
 | `settings-gpui` | `crates/settings`, `crates/store` |
-| main session | `crates/account` (catalog, grants, signed token and policy, `account.txt`, the account server calls), `scripts/mock-account-server.*` |
 | `perf-auditor` | read-only budget review after timers, drawing, threads or caching change |
 | `docs-writer` | `docs/**`, `README.md`, `ONBOARDING.md` |
 
@@ -96,7 +95,7 @@ a single-quoted one) stops that agent from loading.
 
 The repository is a Cargo workspace: `crates/notch` (the pill), `crates/settings` (the settings window, built as
 `notch-settings.exe`), `crates/store` (the shared settings file code), `crates/places` (the city list and the shared
-location) and `crates/account` (accounts and permissions, shared by both programs), with the patched `salah` crate in
+location), with the patched `salah` crate in
 `vendor/salah`. The layout of the code is defined in `ARCHITECTURE.md` (the overview), `docs/explanation/host-and-pages.md` (the reasons) and
 `docs/reference/source-map.md` (where each module lives, and how a module is laid out); keep new code to it.
 
@@ -138,7 +137,7 @@ designer's logo set and are committed as supplied. No script exports them.
 
 ## Design rules
 
-The "Notch Design" canvas and `docs/reference/design-rules.md` set what the user sees and why. Follow them for every visual
+The "Foldline Design" canvas and `docs/reference/design-rules.md` set what the user sees and why. Follow them for every visual
 change. When the user decides something they do not cover (an order, a gap, a color, a font), or a change would break
 one, say so and propose a rule with its reason for that doc; write it in the same change once the user agrees.
 

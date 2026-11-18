@@ -18,9 +18,7 @@ Read `docs/how-to/add-a-page.md` before writing a page, `docs/how-to/add-an-acti
 ## Pages
 
 - A page lives in `crates/notch/src/pages/<name>/` and is listed only in `crates/notch/src/pages/mod.rs`; adding or removing one touches no
-  other file except its row in the account catalog (`crates/account/src/catalog.rs`, resource = the page id) and the
-  built-in grants (`grants.rs`); the test `every_registered_page_and_activity_is_in_the_catalog` fails without them. A
-  page asks for its own sub-features with `Context::allows(action)` and re-asks in `Page::on_access_changed`. The pages are media, shelf, calendar, timer, todo, shalat, stats, weather, devices and clipboard.
+  other file. The pages are media, shelf, calendar, timer, todo, shalat, stats, weather, devices and clipboard.
 - A page depends on `page`, `activity` (for `Presence` and `Flash`), `gfx`, `ui`, `platform` and the `places` crate, plus
   `host::Settings` for its own keys; it uses nothing else of `host`.
 - `host`, `gfx`, `ui`, `page` and `activity` stay ignorant of any particular page or activity. The one known exception is
@@ -49,8 +47,7 @@ Read `docs/how-to/add-a-page.md` before writing a page, `docs/how-to/add-an-acti
 
 ## Activities
 
-- An activity lives in `crates/notch/src/activities/` and is listed only in `crates/notch/src/activities/mod.rs`, plus
-  its id as an `activity` action in the account catalog and the built-in grants (as for pages). It depends on `activity`, `page`
+- An activity lives in `crates/notch/src/activities/` and is listed only in `crates/notch/src/activities/mod.rs`. It depends on `activity`, `page`
   (for `Context`), `gfx`, `ui` and `platform`, never on a page or another activity.
 - An activity never polls: it listens to a Windows callback, message, event, blocking wait or watcher and wakes the UI
   thread through its `Notifier`. The slow behaviours allowed are one-shot: a `Flash` timer that hides its message, a

@@ -1,5 +1,5 @@
 # Contributions
 
-The project is closed-source and takes no outside contributions. Do not suggest cloning or forking the repository, and
-leave out pull request or issue templates. `ONBOARDING.md` is the onboarding guide for team members, not an invitation:
-keep it to setup, structure and the rules the code follows.
+The project is open source under the MIT license (`LICENSE`). Outside contributions are welcome through forks and pull
+requests; keep `ONBOARDING.md` to setup, structure and the rules the code follows. There are no accounts, paid tiers or
+permissions: every page and activity is available to everyone, and neither program contacts a Foldline server.
