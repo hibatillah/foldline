@@ -25,7 +25,7 @@ use crate::i18n::tr;
 
 pub(super) const WM_TRAY: u32 = WM_APP + 2;
 const TRAY_ICON_ID: u32 = 1;
-const TOOLTIP: &str = "Notch";
+const TOOLTIP: &str = "Foldline";
 const MENU_COMMAND_QUIT: usize = 1;
 const MENU_COMMAND_OPEN_SETTINGS: usize = 7;
 /// The four pause lengths take the commands from here, in the order of `PauseChoice::ALL`.

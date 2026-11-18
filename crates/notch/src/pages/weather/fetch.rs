@@ -9,7 +9,7 @@ use crate::{log, page::Notifier};
 /// MET Norway asks every client to say who it is; a missing or generic name is blocked.
 /// The site must be a comment in parentheses: a bare `github.com/...` is not a valid product token, so `HttpClient`
 /// drops the header without an error and sends its own, which MET Norway answers with 403.
-const USER_AGENT: &str = concat!("Notch/", env!("CARGO_PKG_VERSION"), " (+https://github.com/hibatillah/notch)");
+const USER_AGENT: &str = concat!("Foldline/", env!("CARGO_PKG_VERSION"), " (+https://github.com/hibatillah/notch)");
 
 /// Why a request gave no forecast: the network is unreachable (a real offline state), or the service answered with
 /// something that is not a forecast (a status other than 200); both carry the reason for the log.
@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn the_client_says_who_it_is() {
-        assert!(USER_AGENT.starts_with("Notch/"));
+        assert!(USER_AGENT.starts_with("Foldline/"));
         assert!(USER_AGENT.contains("github.com"));
     }
 

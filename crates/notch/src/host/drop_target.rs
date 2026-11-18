@@ -161,7 +161,7 @@ fn run(placement: Placement) -> Result<()> {
         CreateWindowExW(
             WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
             w!("NotchDropTarget"),
-            w!("Notch drop target"),
+            w!("Foldline drop target"),
             WS_POPUP,
             0,
             0,

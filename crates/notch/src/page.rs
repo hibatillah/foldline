@@ -9,8 +9,6 @@ use windows::{
     core::GUID,
 };
 
-use account::access::Access;
-
 use crate::{
     activity::{Presence, SystemMessage},
     gfx::{Canvas, Fonts, ImageBrush, ImageData, Point, Rect, Size, Surface},
@@ -170,9 +168,6 @@ pub trait Page {
     /// Called after another program changed settings.txt and the host re-read it: re-read this page's keys here.
     fn on_settings_changed(&mut self, _context: &mut Context) {}
 
-    /// What the account allows changed: ask `Context::allows` again for the page's own sub-features.
-    fn on_access_changed(&mut self, _context: &mut Context) {}
-
     /// The language changed, or the notch moved to a monitor of another scale: rebuild any cached text. Called once per change, after `on_settings_changed`.
     fn on_language_changed(&mut self, _context: &mut Context) {}
 
@@ -277,24 +272,14 @@ pub struct Context<'a> {
     surface: &'a Surface,
     fonts: &'a Fonts,
     requests: &'a mut Requests,
-    /// The page's id, or `"activity"` for an activity: the catalog resource `allows` asks about.
-    resource: &'a str,
-    access: &'a Access,
     /// Persistent settings shared by all pages and activities; prefix keys with the page or activity id.
     pub settings: &'a mut Settings,
-}
-
-/// Where a `Context` belongs and what the account allows it.
-pub(crate) struct Owner<'a> {
-    pub index: usize,
-    pub resource: &'a str,
-    pub access: &'a Access,
 }
 
 impl<'a> Context<'a> {
     pub(crate) fn new(
         window: HWND,
-        page: Owner<'a>,
+        page_index: usize,
         surface: &'a Surface,
         fonts: &'a Fonts,
         requests: &'a mut Requests,
@@ -302,21 +287,19 @@ impl<'a> Context<'a> {
     ) -> Self {
         Self {
             window,
-            owner_index: page.index,
+            owner_index: page_index,
             timer_base: PAGE_TIMER_BASE,
             notify_message: WM_PAGE_NOTIFY,
             surface,
             fonts,
             requests,
-            resource: page.resource,
-            access: page.access,
             settings,
         }
     }
 
     pub(crate) fn for_activity(
         window: HWND,
-        activity: Owner<'a>,
+        activity_index: usize,
         surface: &'a Surface,
         fonts: &'a Fonts,
         requests: &'a mut Requests,
@@ -324,21 +307,14 @@ impl<'a> Context<'a> {
     ) -> Self {
         Self {
             window,
-            owner_index: activity.index,
+            owner_index: activity_index,
             timer_base: crate::activity::ACTIVITY_TIMER_BASE,
             notify_message: crate::activity::WM_ACTIVITY_NOTIFY,
             surface,
             fonts,
             requests,
-            resource: activity.resource,
-            access: activity.access,
             settings,
         }
-    }
-
-    /// Whether the account allows `action` (`"lyrics"`) of this page; ask again in `Page::on_access_changed`.
-    pub fn allows(&self, action: &str) -> bool {
-        self.access.allows(self.resource, action)
     }
 
     pub fn fonts(&self) -> &Fonts {
@@ -434,29 +410,12 @@ pub struct Notifier {
 }
 
 impl Notifier {
-    /// Wakes the host itself with its own `message`, for work no page or activity owns.
-    pub(crate) fn for_host(window: HWND, message: u32) -> Self {
-        Self { window_address: window.0 as isize, owner_index: 0, message }
-    }
-
     pub fn notify(&self) {
         let window = HWND(self.window_address as *mut _);
         unsafe {
             let _ = PostMessageW(Some(window), self.message, WPARAM(self.owner_index), LPARAM(0));
         }
     }
-}
-
-/// Runs `hook` with a `Context` for the page `resource` under `access`, on a window-less surface and empty settings.
-#[cfg(test)]
-pub(crate) fn with_test_context<R>(resource: &str, access: &Access, hook: impl FnOnce(&mut Context) -> R) -> R {
-    let surface = Surface::new(40, 20).unwrap();
-    let fonts = Fonts::new(1.0).unwrap();
-    let mut requests = Requests::default();
-    let mut settings = Settings::at(None);
-    let owner = Owner { index: 0, resource, access };
-    let mut context = Context::new(HWND::default(), owner, &surface, &fonts, &mut requests, &mut settings);
-    hook(&mut context)
 }
 
 #[cfg(test)]

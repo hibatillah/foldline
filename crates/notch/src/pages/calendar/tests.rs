@@ -210,3 +210,9 @@ fn the_all_day_text_fits_the_time_column_in_both_languages() {
         });
     }
 }
+
+#[test]
+fn the_sample_reminder_counts_down_twelve_minutes_whatever_the_time_of_day() {
+    let fonts = Fonts::new(1.0).unwrap();
+    assert_eq!(CalendarPage::sample(&fonts).countdown_seconds(), Some(12 * 60));
+}

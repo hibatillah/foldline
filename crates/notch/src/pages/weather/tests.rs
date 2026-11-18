@@ -58,36 +58,3 @@ fn the_sample_has_a_current_hour_days_and_rain_ahead() {
     assert!(forecast.upcoming_rain(page.now(), RAIN_WINDOW_HOURS).is_some());
     assert!(rain_line(forecast, page.now()).starts_with("Rain from "));
 }
-
-#[test]
-fn the_rain_alert_stays_silent_without_its_grant() {
-    use crate::page::with_test_context;
-    use account::{access::Access, grants::Grants, status::Status};
-    let access_of = |status| Access { status, grants: Grants::built_in() };
-    let (trial, paid) = (access_of(Status::Trial), access_of(Status::Paid));
-    let member = Access { status: Status::Member, grants: Grants::built_in() };
-
-    let mut page = WeatherPage::sample(false);
-    // Rain starts at 10:00, so from 09:35 it is inside the alert's lead time.
-    page.fixed_now = page.fixed_now.map(|now| now + salah::Duration::minutes(30));
-    page.is_rain_alert_allowed = false;
-    with_test_context("weather", &member, |context| page.arm_alert(context));
-    assert_eq!(page.presence(), None, "no banner and no badge");
-    assert_eq!(page.alerted_for, None, "nothing was scheduled");
-
-    with_test_context("weather", &trial, |context| page.on_access_changed(context));
-    assert!(page.is_rain_alert_allowed);
-    assert!(matches!(page.presence(), Some(Presence::Banner { .. })), "the grant lets the alert show");
-    assert!(page.alerted_for.is_some());
-
-    with_test_context("weather", &member, |context| page.on_access_changed(context));
-    assert_eq!(page.presence(), None, "losing the grant clears the shown alert");
-    assert_eq!(page.alerted_for, None);
-    assert!(!page.alert.has_badge(page.now()));
-
-    with_test_context("weather", &member, |context| page.arm_alert(context));
-    assert_eq!(page.presence(), None, "arming again stays silent");
-
-    with_test_context("weather", &paid, |context| page.on_access_changed(context));
-    assert!(page.presence().is_some(), "regaining the grant lets the rain alert resume");
-}

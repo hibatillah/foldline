@@ -63,7 +63,7 @@ impl WeatherPage {
         let Some(hour) = self
             .forecast
             .as_ref()
-            .filter(|_| self.is_rain_alert_on())
+            .filter(|_| self.rain_alert)
             .and_then(|forecast| forecast.upcoming_rain(now, RAIN_WINDOW_HOURS))
         else {
             return;

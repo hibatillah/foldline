@@ -102,10 +102,9 @@ impl Notch {
 
     fn hide_popups_again(&mut self) {
         let wants_flyout_hidden = self.settings.get_bool(volume_flyout::SETTING_KEY, self.pause.flyout_was_hidden);
-        volume_flyout::set_hidden(wants_flyout_hidden && self.may_hide_flyout());
+        volume_flyout::set_hidden(wants_flyout_hidden);
         let wants_banners_hidden =
-            self.settings.get_bool(notification_banners::SETTING_KEY, self.pause.banners_were_hidden)
-                && self.may_hide_banners();
+            self.settings.get_bool(notification_banners::SETTING_KEY, self.pause.banners_were_hidden);
         // Unchanged stays put: switching off restores, which a resume with banners already off must not repeat.
         if wants_banners_hidden != notification_banners::is_hidden() {
             notification_banners::set_hidden(wants_banners_hidden);

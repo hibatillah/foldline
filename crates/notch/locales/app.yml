@@ -3,11 +3,11 @@ tray.settings:
   en: Settings
   id: Pengaturan
 tray.quit:
-  en: Quit Notch
-  id: Keluar dari Notch
+  en: Quit Foldline
+  id: Keluar dari Foldline
 tray.pause:
-  en: Pause Notch
-  id: Jeda Notch
+  en: Pause Foldline
+  id: Jeda Foldline
 tray.pause_10:
   en: For 10 minutes
   id: Selama 10 menit
@@ -21,8 +21,8 @@ tray.pause_manual:
   en: Until I resume
   id: Sampai saya lanjutkan
 tray.resume:
-  en: Resume Notch
-  id: Lanjutkan Notch
+  en: Resume Foldline
+  id: Lanjutkan Foldline
 tray.paused_until:
   en: Paused until %{time}
   id: Dijeda sampai %{time}
@@ -605,6 +605,3 @@ downloads.open:
 downloads.show_in_folder:
   en: "Show in folder"
   id: "Tampilkan di folder"
-account.signed_out_elsewhere:
-  en: "Signed out: this account signed in on another PC"
-  id: "Keluar: akun ini masuk di PC lain"

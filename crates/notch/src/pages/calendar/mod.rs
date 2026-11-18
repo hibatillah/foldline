@@ -89,6 +89,9 @@ pub struct CalendarPage {
     is_shown: bool,
     last_fetch: Option<Instant>,
     labels: Labels,
+    /// A test pins the clock so the sample does not depend on the time of day.
+    #[cfg(test)]
+    fixed_now: Option<i64>,
 }
 
 impl CalendarPage {
@@ -117,11 +120,21 @@ impl CalendarPage {
             is_shown: false,
             last_fetch: None,
             labels: Labels::new(0, 0, &DayGrid::month_of(0)),
+            #[cfg(test)]
+            fixed_now: None,
         }
     }
 
+    fn now(&self) -> i64 {
+        #[cfg(test)]
+        if let Some(fixed) = self.fixed_now {
+            return fixed;
+        }
+        local_now()
+    }
+
     fn refresh(&mut self, fonts: &Fonts) {
-        let now = local_now();
+        let now = self.now();
         self.today = day_of(now);
         self.grid = self.view.grid_of(self.today);
         // A day picked outside the grid is forgotten when the month or the week turns.
@@ -148,16 +161,15 @@ impl CalendarPage {
     #[cfg(test)]
     pub fn sample(fonts: &Fonts) -> Self {
         use dates::civil_from_days;
-        let now = local_now();
+        let now = day_of(local_now()) * dates::SECONDS_PER_DAY + 10 * 3600;
         let at = |seconds: i64| {
             let (year, month, date) = civil_from_days(day_of(seconds));
             let of_day = seconds.rem_euclid(dates::SECONDS_PER_DAY);
             format!("{year:04}{month:02}{date:02}T{:02}{:02}00", of_day / 3600, of_day / 60 % 60)
         };
         let today = |hour: i64, minute: i64| day_of(now) * dates::SECONDS_PER_DAY + hour * 3600 + minute * 60;
-        // Late in the evening the "in 12 minutes" event would fall on the next day (or month); keep every sample event today.
-        let soon_start = (now + 12 * 60).min(today(23, 0));
-        let soon_minutes = ((today(24, 0) - soon_start) / 60).min(60);
+        let soon_start = now + 12 * 60;
+        let soon_minutes = 60;
         let event = |start: i64, minutes: i64, summary: &str, place: &str| {
             format!(
                 "BEGIN:VEVENT\r\nUID:{summary}\r\nDTSTART:{}\r\nDTEND:{}\r\nSUMMARY:{summary}\r\nLOCATION:{place}\r\nEND:VEVENT\r\n",
@@ -172,6 +184,7 @@ impl CalendarPage {
             event(today(23, 0), 60, "Deep learning reading group", ""),
         );
         let mut page = Self::new();
+        page.fixed_now = Some(now);
         // A test that removes the link must never delete the real cached calendar.
         page.storage = None;
         page.link = Some("https://example.invalid/calendar.ics".to_owned());
@@ -239,7 +252,7 @@ impl Page for CalendarPage {
     }
 
     fn countdown_seconds(&self) -> Option<u64> {
-        self.reminder.as_ref().map(|reminder| (reminder.start - local_now()).max(0) as u64)
+        self.reminder.as_ref().map(|reminder| (reminder.start - self.now()).max(0) as u64)
     }
 
     fn draw_resting(&self, _canvas: &Canvas, _frame: &Frame, _opacity: f32) {}

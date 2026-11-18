@@ -29,15 +29,12 @@ use windows::{
     core::{Result, w},
 };
 
-use account::stored::account_path;
-
 use super::{
-    account_check::{self, WM_ACCOUNT_CHECKED},
     drop_target,
     icon::Icon,
     location_tracker::{WM_LOCATION_FOUND, WM_NETWORK_CHANGED},
     monitor,
-    notch::{AccountFile, DailyCheck, MonitorState, Notch, NotchParts},
+    notch::{MonitorState, Notch, NotchParts},
     notification_banners, registry,
     screen_mode::{self, ScreenMode},
     settings::Settings,
@@ -235,8 +232,6 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
                     notch.reset_session_interaction();
                     notch.relocate_if_needed();
                     notch.request_location();
-                    notch.account_may_have_changed();
-                    notch.start_daily_check_if_due(store::pause::now_unix());
                 });
             }
             LRESULT(1)
@@ -262,10 +257,6 @@ extern "system" fn window_procedure(window: HWND, message: u32, wparam: WPARAM, 
         // move the notch is borrowed and `with_notch` skips, which keeps this from looping.
         WM_DPICHANGED => {
             with_notch(|notch| notch.relocate_if_needed());
-            LRESULT(0)
-        }
-        WM_ACCOUNT_CHECKED => {
-            with_notch(|notch| notch.daily_check_finished());
             LRESULT(0)
         }
         WM_LOCATION_FOUND => {
@@ -363,7 +354,7 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
         CreateWindowExW(
             WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
             w!("NotchWindow"),
-            w!("Notch"),
+            w!("Foldline"),
             WS_POPUP,
             screen_position.x,
             screen_position.y,
@@ -388,9 +379,6 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
     let system_language = store::language::system_language();
     store::language::set_current(store::language::resolve_setting(&settings, system_language));
     let pages = registry::enabled_pages(pages, &settings);
-    let account_file = AccountFile::open();
-    let daily_check =
-        DailyCheck::new(account_path(), account_file.device_hash().to_owned(), Box::new(account_check::start));
     let notch = Notch::new(NotchParts {
         window,
         scale,
@@ -403,8 +391,6 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
         ticks_per_second,
         system_language,
         monitor: MonitorState::new(monitor_mode, chosen_id, start_monitor, start_monitor.map(|_| start)),
-        access_source: Box::new(account_file),
-        daily_check,
     });
     NOTCH.with(|cell| *cell.borrow_mut() = Some(notch));
     match unsafe { WTSRegisterSessionNotification(window, NOTIFY_FOR_THIS_SESSION) } {

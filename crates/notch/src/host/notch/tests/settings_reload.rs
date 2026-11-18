@@ -176,3 +176,50 @@ fn reloading_settings_hides_a_switched_off_activity_and_starts_a_switched_on_one
     assert_eq!(starts.get(), 1);
     assert_eq!(settings_changes.get(), 3, "a started activity still hears about changes");
 }
+
+/// A page that records each `on_enabled_changed` it hears.
+struct EnabledCounter {
+    id: &'static str,
+    calls: Rc<std::cell::RefCell<Vec<bool>>>,
+}
+
+impl Page for EnabledCounter {
+    fn id(&self) -> &'static str {
+        self.id
+    }
+
+    fn priority(&self, _mode: crate::page::Mode) -> Option<crate::page::Priority> {
+        Some(crate::page::Priority::BACKGROUND)
+    }
+
+    fn sizes(&self) -> crate::page::PageSizes {
+        crate::page::PageSizes { resting_width: 100.0, expanded: crate::gfx::Size::new(100.0, 40.0) }
+    }
+
+    fn draw_resting(&self, _canvas: &Canvas, _frame: &crate::page::Frame, _opacity: f32) {}
+
+    fn draw_expanded(&self, _canvas: &Canvas, _frame: &crate::page::Frame, _opacity: f32) {}
+
+    fn on_enabled_changed(&mut self, is_enabled: bool, _context: &mut Context) {
+        self.calls.borrow_mut().push(is_enabled);
+    }
+}
+
+#[test]
+fn a_page_hears_once_when_switched_off_once_when_switched_on_and_never_when_its_choice_stays() {
+    let settings_file = SettingsFile::new("reload-enabled-count");
+    let calls = Rc::new(std::cell::RefCell::new(Vec::new()));
+    let pages: Vec<Box<dyn Page>> = vec![
+        Box::new(EnabledCounter { id: "weather", calls: calls.clone() }),
+        Box::new(EnabledCounter { id: "stats", calls: Rc::default() }),
+    ];
+    let mut notch = custom_rig(pages, settings_file.load(), Vec::new());
+
+    fs::write(&settings_file.0, "navigation.disabled=weather\n").unwrap();
+    notch.reload_settings();
+    notch.reload_settings();
+    fs::write(&settings_file.0, "navigation.disabled=\n").unwrap();
+    notch.reload_settings();
+
+    assert_eq!(*calls.borrow(), vec![false, true]);
+}

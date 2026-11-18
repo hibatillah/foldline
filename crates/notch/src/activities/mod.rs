@@ -1,6 +1,5 @@
 //! The only activity registry; optional activities persist their tray choice as activity.<id>=off.
 
-mod account_notice;
 mod battery;
 mod bluetooth;
 mod brightness;
@@ -15,12 +14,6 @@ mod privacy;
 mod volume;
 
 use crate::activity::Activity;
-
-/// The account notice, which nothing shows until the daily check calls its hook.
-#[cfg(test)]
-pub fn sample_account_notice() -> Box<dyn Activity> {
-    Box::new(account_notice::AccountNotice::default())
-}
 
 #[cfg(test)]
 pub fn sample_notification(fonts: &crate::gfx::Fonts) -> Box<dyn Activity> {
@@ -70,6 +63,5 @@ pub fn all() -> Vec<Box<dyn Activity>> {
         Box::new(caps_lock::CapsLockActivity::new()),
         Box::new(notifications::NotificationsActivity::new()),
         Box::new(downloads::DownloadsActivity::new()),
-        Box::new(account_notice::AccountNotice::default()),
     ]
 }

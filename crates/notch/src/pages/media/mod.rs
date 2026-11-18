@@ -55,10 +55,8 @@ pub struct MediaPage {
     artwork: ImageSlot,
     app_icon: ImageSlot,
     follower: LyricFollower,
-    /// The user's `media.lyrics` choice; lyrics show only while the account allows them too.
+    /// The user's `media.lyrics` choice.
     lyrics_enabled: bool,
-    /// Whether the account allows the lyrics; read again in `on_access_changed`.
-    is_lyrics_allowed: bool,
     hovered_control: HoverTarget<Control>,
     is_notch_open: bool,
     theme_color: Option<Color>,
@@ -81,7 +79,6 @@ impl MediaPage {
             app_icon: ImageSlot::default(),
             follower: LyricFollower::new(),
             lyrics_enabled: true,
-            is_lyrics_allowed: true,
             hovered_control: HoverTarget::default(),
             is_notch_open: false,
             theme_color: None,
@@ -219,9 +216,8 @@ impl Page for MediaPage {
 
     fn on_start(&mut self, context: &mut Context) {
         self.lyrics_enabled = context.settings.get_bool(SETTING_LYRICS, true);
-        self.is_lyrics_allowed = context.allows("lyrics");
         let notifier = context.notifier();
-        self.watcher = MediaWatcher::start(self.is_lyrics_allowed, move || notifier.notify())
+        self.watcher = MediaWatcher::start(move || notifier.notify())
             .map_err(|error| log::debug(&format!("media watcher unavailable: {error}")))
             .ok();
         self.apply_snapshot(context);
@@ -241,18 +237,6 @@ impl Page for MediaPage {
         if is_enabled != self.lyrics_enabled {
             self.set_lyrics_enabled(is_enabled, context);
         }
-    }
-
-    fn on_access_changed(&mut self, context: &mut Context) {
-        let is_allowed = context.allows("lyrics");
-        if is_allowed == self.is_lyrics_allowed {
-            return;
-        }
-        self.is_lyrics_allowed = is_allowed;
-        if let Some(watcher) = &self.watcher {
-            watcher.set_lyrics_allowed(is_allowed);
-        }
-        self.set_lyrics_enabled(self.lyrics_enabled, context);
     }
 
     fn on_pointer(&mut self, event: PointerEvent, frame: &Frame, context: &mut Context) {

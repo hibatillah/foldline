@@ -4,11 +4,8 @@ use crate::{
     activity::{Activity, SystemMessage},
     gfx::Point,
     log,
-    page::{Context, Owner, Page},
+    page::{Context, Page},
 };
-
-/// The catalog resource an activity's `Context::allows` asks about; its actions are the activity ids.
-pub(super) const ACTIVITY_RESOURCE: &str = "activity";
 
 const KNOWN_PAGES_SETTING: &str = "pages.known";
 
@@ -41,9 +38,8 @@ impl Notch {
         self.flush();
     }
 
-    /// A locked activity is not started; it starts once access returns and the user has it on.
     pub(super) fn start_activity(&mut self, index: usize) {
-        if self.activities[index].is_started || self.activities[index].is_locked {
+        if self.activities[index].is_started {
             return;
         }
         self.activities[index].is_started = true;
@@ -56,10 +52,9 @@ impl Notch {
         index: usize,
         hook: impl FnOnce(&mut dyn Activity, &mut Context) -> R,
     ) -> R {
-        let owner = Owner { index, resource: ACTIVITY_RESOURCE, access: &self.access.access };
         let mut context = Context::for_activity(
             self.window,
-            owner,
+            index,
             &self.surface,
             &self.fonts,
             &mut self.pending,
@@ -69,9 +64,8 @@ impl Notch {
     }
 
     pub(super) fn with_page<R>(&mut self, index: usize, hook: impl FnOnce(&mut dyn Page, &mut Context) -> R) -> R {
-        let owner = Owner { index, resource: self.pages[index].id(), access: &self.access.access };
         let mut context =
-            Context::new(self.window, owner, &self.surface, &self.fonts, &mut self.pending, &mut self.settings);
+            Context::new(self.window, index, &self.surface, &self.fonts, &mut self.pending, &mut self.settings);
         hook(self.pages[index].as_mut(), &mut context)
     }
 
@@ -175,7 +169,7 @@ impl Notch {
         }
     }
 
-    /// A list that switches every page off is ignored; the account's locks carry over to the new list.
+    /// A list that switches every page off is ignored.
     pub(super) fn reload_page_list(&mut self) {
         let ids = self.page_ids();
         let opt_in: Vec<bool> = self.pages.iter().map(|page| page.is_opt_in()).collect();
@@ -187,11 +181,7 @@ impl Notch {
             Some(self.settings.get_string(PAGES_OFF_SETTING).unwrap_or(&current_disabled)),
         );
         if (0..self.pages.len()).any(|index| page_list.is_chosen(index)) {
-            let locks = self.page_locks();
-            self.change_page_list(|current| {
-                *current = page_list;
-                current.set_locked(locks);
-            });
+            self.change_page_list(|current| *current = page_list);
         }
     }
 

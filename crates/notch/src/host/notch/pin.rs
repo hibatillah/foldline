@@ -50,8 +50,6 @@ impl Notch {
         if is_pinned {
             self.hold_open();
         } else {
-            // A trial that ended while pinned open locks its pages now, not at the next open.
-            self.reevaluate_access_if_due(store::pause::now_unix());
             self.release_pin();
         }
         // The header pin changes color even when nothing else moves.

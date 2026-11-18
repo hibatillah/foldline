@@ -20,10 +20,8 @@ use crate::{
     ui::{self, Icon},
 };
 
-mod access;
 mod badge_input;
 mod clipboard_states;
-mod daily_check;
 mod header_hover;
 mod header_row;
 mod hiding_rules;
@@ -93,8 +91,6 @@ pub(super) fn custom_rig(pages: Vec<Box<dyn Page>>, settings: Settings, activiti
         ticks_per_second: 10_000_000,
         system_language: store::language::Language::English,
         monitor: MonitorState::new(Default::default(), None, None, None),
-        access_source: Box::new(access::Scripted::always(account::status::Status::Launch)),
-        daily_check: daily_check::never_answers(),
     });
     notch.monitor.source = relocate::FAKE_MONITORS;
     notch.page_list = PageList::new(count);

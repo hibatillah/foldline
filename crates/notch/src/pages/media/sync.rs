@@ -93,7 +93,7 @@ impl MediaPage {
 
     pub(super) fn update_lyrics(&mut self, context: &mut Context) {
         let lyrics = match &self.info.lyrics {
-            LyricsStatus::Found(lyrics) if self.are_lyrics_on() => Some(lyrics.clone()),
+            LyricsStatus::Found(lyrics) if self.lyrics_enabled => Some(lyrics.clone()),
             _ => None,
         };
         self.refresh_lyric_wraps(lyrics.as_ref(), context.fonts());
@@ -132,7 +132,7 @@ impl MediaPage {
     }
 
     pub(super) fn hit_control(&self, layout: &super::layout::Layout, point: crate::gfx::Point) -> Option<Control> {
-        super::controls::hit_test(layout, point, self.is_lyrics_allowed)
+        super::controls::hit_test(layout, point)
     }
 
     pub(super) fn activate(&mut self, control: Control, context: &mut Context) {

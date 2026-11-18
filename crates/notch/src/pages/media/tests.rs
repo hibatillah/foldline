@@ -169,36 +169,14 @@ fn the_idle_player_texts_read_in_indonesian() {
 }
 
 #[test]
-fn lyrics_stay_off_without_the_lyrics_grant() {
-    use crate::page::with_test_context;
-    use account::{access::Access, grants::Grants, status::Status};
-    let access_of = |status| Access { status, grants: Grants::built_in() };
-    let (member, paid) = (access_of(Status::Member), access_of(Status::Paid));
-
+fn lyrics_the_user_switched_off_show_no_panel_and_no_lyric_pill() {
     let mut page = with_lyrics(playing_page());
-    assert!(page.claims_pill(), "lyrics show while nothing has said otherwise");
+    assert!(page.claims_pill(), "lyrics show while the user keeps them on");
+    assert_eq!(page.priority(Mode::Resting), Some(Priority::NORMAL));
 
-    with_test_context("media", &member, |context| page.on_access_changed(context));
-    assert!(!page.is_lyrics_allowed);
+    page.lyrics_enabled = false;
     assert!(!page.is_lyric_panel_visible());
     assert!(page.visible_lyric_lines().is_none());
     assert_eq!(page.priority(Mode::Resting), None, "no lyric pill");
     assert_eq!(page.sizes().expanded.width, layout::plain_width(page.text_width), "no lyric panel");
-    let layout = layout::Layout::new(
-        crate::gfx::Rect::new(0.0, 0.0, page.sizes().expanded.width, layout::PLAIN_HEIGHT),
-        page.sizes().expanded.width,
-        1,
-        page.text_width,
-    );
-    let lyrics_button = layout.control_center(controls::Control::Lyrics);
-    assert_eq!(page.hit_control(&layout, lyrics_button), None, "the lyrics button is out of reach");
-
-    with_test_context("media", &paid, |context| page.on_access_changed(context));
-    assert!(page.is_lyric_panel_visible(), "regaining the grant brings the user's choice back");
-    assert_eq!(page.priority(Mode::Resting), Some(Priority::NORMAL));
-
-    page.lyrics_enabled = false;
-    with_test_context("media", &member, |context| page.on_access_changed(context));
-    with_test_context("media", &paid, |context| page.on_access_changed(context));
-    assert!(!page.is_lyric_panel_visible(), "a lyrics setting that is off stays off after the grant returns");
 }

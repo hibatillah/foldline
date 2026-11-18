@@ -1,9 +1,0 @@
-[package]
-name = "account"
-version.workspace = true
-edition.workspace = true
-license-file.workspace = true
-publish.workspace = true
-
-[dependencies]
-windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_System_Registry", "Win32_System_SystemInformation", "Win32_System_WindowsProgramming", "Storage_Streams", "Data_Json", "Web_Http", "Web_Http_Headers", "Foundation", "Win32_System_WinRT"] }
