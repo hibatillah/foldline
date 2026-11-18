@@ -20,10 +20,10 @@
 #if Pos("-", AppVersion) > 0
   #define IsDevBuild
   #define TileName "tile-dev"
-  #define AppDisplayName "Notch " + AppVersion
+  #define AppDisplayName "Foldline " + AppVersion
 #else
   #define TileName "tile-stable"
-  #define AppDisplayName "Notch"
+  #define AppDisplayName "Foldline"
 #endif
 
 ; Keep this ID stable so upgrades find the existing stable installation.
@@ -51,14 +51,14 @@ SolidCompression=yes
 WizardStyle=modern
 LicenseFile=..\LICENSE
 SetupIconFile=..\assets\branding\{#TileName}.ico
-WizardSmallImageFile=..\assets\branding\{#TileName}.png
+WizardSmallImageFile=wizard\{#TileName}-55.png,wizard\{#TileName}-64.png,wizard\{#TileName}-72.png,wizard\{#TileName}-80.png,wizard\{#TileName}-89.png,wizard\{#TileName}-97.png,wizard\{#TileName}-106.png,wizard\{#TileName}-114.png,wizard\{#TileName}-123.png
 UninstallDisplayIcon={app}\{#ExeName}
 CloseApplications=force
 RestartApplications=no
 
 #ifndef IsDevBuild
 [Tasks]
-Name: "startup"; Description: "Start Notch when Windows starts"; GroupDescription: "Options:"
+Name: "startup"; Description: "Start Foldline when Windows starts"; GroupDescription: "Options:"
 #endif
 
 [Files]
@@ -99,14 +99,22 @@ begin
   if StrToVersion(Installed, InstalledVersion) and StrToVersion('{#AppVersion}', NewVersion) then
   begin
     if ComparePackedVersion(InstalledVersion, NewVersion) < 0 then
-      Question := 'Notch ' + Installed + ' is already installed.' + #13#10 + 'Update it to version {#AppVersion}?'
+      Question := 'Foldline ' + Installed + ' is already installed.' + #13#10 + 'Update it to version {#AppVersion}?'
     else if ComparePackedVersion(InstalledVersion, NewVersion) = 0 then
-      Question := 'Notch ' + Installed + ' is already installed.' + #13#10 + 'Install it again?'
+      Question := 'Foldline ' + Installed + ' is already installed.' + #13#10 + 'Install it again?'
     else
-      Question := 'A newer Notch (' + Installed + ') is already installed.' + #13#10 + 'Replace it with version {#AppVersion}?';
+      Question := 'A newer Foldline (' + Installed + ') is already installed.' + #13#10 + 'Replace it with version {#AppVersion}?';
   end
   else
-    Question := 'Notch ' + Installed + ' is already installed.' + #13#10 + 'Replace it with version {#AppVersion}?';
+    Question := 'Foldline ' + Installed + ' is already installed.' + #13#10 + 'Replace it with version {#AppVersion}?';
   Result := SuppressibleMsgBox(Question, mbConfirmation, MB_YESNO, IDYES) = IDYES;
 end;
 #endif
+
+[Code]
+{ Lines the page description up with the page title: the modern wizard style indents it, which looks detached in the header. }
+procedure InitializeWizard();
+begin
+  WizardForm.PageDescriptionLabel.Left := WizardForm.PageNameLabel.Left;
+  WizardForm.PageDescriptionLabel.Width := WizardForm.PageNameLabel.Width;
+end;

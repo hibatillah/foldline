@@ -144,12 +144,12 @@ mod tests {
 
     #[test]
     fn version_info_names_the_program_and_carries_the_four_number_version() {
-        let text = version_info_resource("Notch Settings", "Notch", "0.5.0-alpha.4", "notch-settings.exe");
+        let text = version_info_resource("Foldline Settings", "Foldline", "0.5.0-alpha.4", "notch-settings.exe");
         for expected in [
             "FILEVERSION 0,5,0,0",
             "PRODUCTVERSION 0,5,0,0",
-            "VALUE \"FileDescription\", \"Notch Settings\"",
-            "VALUE \"ProductName\", \"Notch\"",
+            "VALUE \"FileDescription\", \"Foldline Settings\"",
+            "VALUE \"ProductName\", \"Foldline\"",
             "VALUE \"FileVersion\", \"0.5.0-alpha.4\"",
             "VALUE \"ProductVersion\", \"0.5.0-alpha.4\"",
             "VALUE \"InternalName\", \"notch-settings.exe\"",
@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn version_info_of_a_stable_version_has_no_suffix() {
-        let text = version_info_resource("Notch", "Notch", "v0.5.0", "notch.exe");
+        let text = version_info_resource("Foldline", "Foldline", "v0.5.0", "notch.exe");
         assert!(text.contains("VALUE \"FileVersion\", \"0.5.0\""), "{text}");
         assert!(text.contains("FILEVERSION 0,5,0,0"), "{text}");
     }
