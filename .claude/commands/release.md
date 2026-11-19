@@ -10,9 +10,9 @@ Cut a release for this repository. Arguments: `$ARGUMENTS`. The release workflow
 ## 1. Find where we are
 
 - `git fetch --tags origin`, then list tags that start with `v` and sort them by SemVer yourself (a pre-release such as
-  `v0.5.0-beta.1` is lower than `v0.5.0`, and `alpha < beta < rc`; plain `git tag --sort` gets this wrong).
+  `v1.0.0-beta.1` is lower than `v1.0.0`, and `alpha < beta < rc`; plain `git tag --sort` gets this wrong).
 - `latest` is the highest tag. `latest_final` is the highest tag without a suffix.
-- The workspace version in the root `Cargo.toml` (`[workspace.package]`) is the base number (`0.5.0`); every crate inherits it.
+- The workspace version in the root `Cargo.toml` (`[workspace.package]`) is the base number (`1.0.0`); every crate inherits it.
 
 ## 2. Work out the next tag from the arguments
 
@@ -35,7 +35,7 @@ arguments match no row. Pre-release numbers count from 1 and are written `alpha.
   `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace` (use
   `cargo +stable-x86_64-pc-windows-msvc`). Stop and show the output if one fails.
 
-State the plan in one line (`v0.5.0-alpha.1 -> v0.5.0-beta.1`, whether the version files change) and prepare it.
+State the plan in one line (`v1.0.0-alpha.1 -> v1.0.0-beta.1`, whether the version files change) and prepare it.
 
 ## 4. Prepare it locally, do not push
 
@@ -53,7 +53,7 @@ none; commits not pushed yet are not in them.
 
 Show what now exists locally: the tag and the commit it points to (`git log --oneline -1 <tag>`), whether it is a
 pre-release, the version commit if one was made, and what the pushes will do (the tag push starts `release.yml`, which
-builds the installer and publishes a GitHub release of the same name). Then ask the user whether to push. On yes, run
+builds the installer and publishes a GitHub release of the same name; for a tag without a suffix the `store` job then sends the MSIX to the Microsoft Store after a reviewer approves it, see "Publish to the Microsoft Store" in `docs/how-to/cut-a-release.md`). The notes end with a Contributors section for outside contributors only. Then ask the user whether to push. On yes, run
 `git push origin master` when a version commit was made, then `git push origin <tag>`, and show the run it started with
 `gh run list --workflow release.yml --limit 1`. On no, leave everything as it is and mention how to undo it
 (`git tag -d <tag>`, and `git reset --hard HEAD~1` only if the version commit was made and the user wants it gone).
