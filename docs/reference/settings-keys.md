@@ -118,7 +118,7 @@ tray item. The notch reads them only when the new key is missing, at start and o
 | `NOTCH_PAGES` | comma-separated page ids to switch on (see above) |
 | `FOLDLINE_LYRICS=off` | never look up lyrics, so nothing about your music leaves the computer |
 | `FOLDLINE_SETTINGS_SOLID=1` | the settings window draws its frame opaque instead of translucent and blurred |
-| `FOLDLINE_DEBUG=<file>` | append a timestamped log of what the notch is doing to this file; overrides `advanced.debug_log` |
+| `FOLDLINE_DEBUG=<file>` | append a timestamped log of what the notch is doing to this file; overrides `advanced.debug_log`. A lyrics lookup logs the entry it used: id, track name, album, length, whether it came from the exact match or the search, and the player's title and length |
 ## In the code
 
 Things a developer tunes by editing source:

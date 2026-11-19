@@ -23,7 +23,7 @@ crates/
                       its heading, the listener thread and its rounds of asking by id, `logos.rs` the icon cache that retries failures, `package_logo.rs` the logo file a package's manifest declares), browser downloads (`downloads/`: the tracker of partial files and the size text, both pure; `watcher.rs` the `ReadDirectoryChangesW` thread; the card)
       pages/
         mod.rs        the registry: the only place pages are listed
-        media/        media player: session, controls, lyrics, artwork, app icon, the lyric glow
+        media/        media player: session, controls, lyrics (`lyrics/`: the `.lrc` parser, `client.rs` the LRCLIB requests, `ranking.rs` which search entry is used and the track length rounding), artwork, app icon, the lyric glow
         shelf/        file shelf: the list of files (items.rs, with the thumbnail rule and tag colors), the drawn documents (document.rs), the empty row (empty.rs), the places (layout.rs), drawing (draw.rs), pointer input (input.rs), the example files for snapshots (sample.rs), drag in and out
         calendar/     calendar: dates, the iCal reader, the month grid and the day's agenda, the download, the month grid's text (`labels.rs`), when the page wakes and fetches (`wake.rs`), pointer input (`input.rs`), the collapsed badge (`badge.rs`)
         timer/        focus timer: the rules, what is said in each state, the layout, the page's tests (`tests.rs`)

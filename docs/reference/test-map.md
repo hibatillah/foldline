@@ -37,7 +37,7 @@ spread over many files:
 | data folder | `crates/store/src/data_directory.rs` (`%APPDATA%\Foldline`, the one-time copy from `%APPDATA%\notch`: copied, old folder kept, never over an existing folder, idempotent, no panic) |
 | the page header and the page list | `crates/notch/src/host/chrome.rs` (the page dots start at the header's left edge), `navigation.rs` |
 | activities | `crates/notch/src/activities/battery.rs` (charge rules, the ring's color, arc and presence, no ring on a PC), `device_battery/` (the crossing rules, the connect rule, device naming, the watcher values; an ignored probe against real hardware), `volume.rs` and `caps_lock.rs` (the icon badge, the message over it, the ranks), `camera.rs`, `privacy.rs` (the dot companion's presence) |
-| media page | `crates/notch/src/pages/media/tests.rs`, `layout.rs` (control and badge places, the click areas, the 240 unit width a short title keeps), `controls.rs` (which control a press lands on), `lyric_panel.rs` (line fade), `backdrop.rs` (glow ramp), `resting.rs` (lyric pill width, where the line starts), `session.rs`, `lyric_follower.rs`, `lyrics/mod.rs`, `lyrics/client.rs` |
+| media page | `crates/notch/src/pages/media/tests.rs`, `layout.rs` (control and badge places, the click areas, the 240 unit width a short title keeps), `controls.rs` (which control a press lands on), `lyric_panel.rs` (line fade), `backdrop.rs` (glow ramp), `resting.rs` (lyric pill width, where the line starts), `session.rs`, `lyric_follower.rs`, `lyrics/mod.rs`, `lyrics/client.rs`, `lyrics/ranking.rs` (the choice among search entries: length tolerance, tie order, lyrics that run past the track, length rounding) |
 
 To run one file's tests, or a single test, filter by name:
 

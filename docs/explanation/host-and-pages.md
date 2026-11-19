@@ -241,7 +241,7 @@ The media page is the largest example of how to split a page:
 | `mod.rs` | the `MediaPage` type: state, and the `Page` implementation |
 | `session.rs` | mirrors the Windows media session into plain data, on its own threads |
 | `artwork.rs`, `app_icon.rs` | decode the album art and find the player's icon |
-| `lyrics/` | the lyric data model and `.lrc` parser, and the lookup client (`client.rs`) |
+| `lyrics/` | the lyric data model and `.lrc` parser, the LRCLIB lookup client (`client.rs`) and the choice among its search results (`ranking.rs`) |
 | `lyric_follower.rs` | follows which lyric line is being sung and animates the change |
 | `layout.rs` | where everything in the open view goes |
 | `resting.rs`, `expanded.rs` | draw the collapsed and open views |
