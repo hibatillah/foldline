@@ -6,4 +6,5 @@
 /docs/superpowers
 /.codegraph
 /dist
-*.figcraft
+/.delta
+/.agents

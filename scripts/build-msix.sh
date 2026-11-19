@@ -12,7 +12,7 @@ for argument in "$@"; do
     esac
 done
 
-name=$(grep -m1 '^name' crates/notch/Cargo.toml | cut -d'"' -f2)
+name=$(grep -A3 '^\[\[bin\]\]' crates/notch/Cargo.toml | grep -m1 '^name' | cut -d'"' -f2)
 settings_name=$(grep -A3 '^\[\[bin\]\]' crates/settings/Cargo.toml | grep -m1 '^name' | cut -d'"' -f2)
 version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
 # An MSIX version is four numbers and the Store keeps the fourth at 0, so a pre-release suffix has no place in it.
@@ -42,12 +42,12 @@ makepri=$(find_sdk_tool makepri.exe)
 
 if [ "$build" = 1 ]; then
     # A plain version gives both programs the blue stable tile, whatever the latest tag (scripts/release_version.rs).
-    NOTCH_RELEASE_VERSION="$version" cargo +stable-x86_64-pc-windows-msvc build --release
+    FOLDLINE_RELEASE_VERSION="$version" cargo +stable-x86_64-pc-windows-msvc build --release
     # GPUI builds only with the MSVC host toolchain.
-    NOTCH_RELEASE_VERSION="$version" cargo +stable-x86_64-pc-windows-msvc build --release -p settings
+    FOLDLINE_RELEASE_VERSION="$version" cargo +stable-x86_64-pc-windows-msvc build --release -p settings
 fi
 
-release_directory="target/x86_64-pc-windows-msvc/release"
+release_directory="${CARGO_TARGET_DIR:-target}/x86_64-pc-windows-msvc/release"
 # The package carries the blue logos, so binaries with the indigo dev tile (an older --no-build) are refused.
 bash scripts/check-icon.sh "$release_directory/$name.exe" tile-stable
 bash scripts/check-icon.sh "$release_directory/$settings_name.exe" tile-stable

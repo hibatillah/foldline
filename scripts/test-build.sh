@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-name=$(grep -m1 '^name' crates/notch/Cargo.toml | cut -d'"' -f2)
+name=$(grep -A3 '^\[\[bin\]\]' crates/notch/Cargo.toml | grep -m1 '^name' | cut -d'"' -f2)
 settings_name=$(grep -A3 '^\[\[bin\]\]' crates/settings/Cargo.toml | grep -m1 '^name' | cut -d'"' -f2)
 version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
 # A pre-release tag of this series makes the build a dev build (build.rs does the same), so the installer must use its version.
@@ -33,7 +33,7 @@ if [ -n "$iscc" ]; then
         "/DSourceExe=$(cygpath -w "$release_directory/$name.exe")" \
         "/DSettingsExeName=$settings_name.exe" \
         "/DSourceSettingsExe=$(cygpath -w "$release_directory/$settings_name.exe")" \
-        "/O$(cygpath -w "$PWD/dist")" "/F$package-setup" installer/notch.iss
+        "/O$(cygpath -w "$PWD/dist")" "/F$package-setup" installer/foldline.iss
     output="dist/$package-setup.exe"
 else
     echo "Inno Setup not found (winget install JRSoftware.InnoSetup); packing a zip instead." >&2

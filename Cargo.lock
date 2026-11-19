@@ -3605,7 +3605,7 @@ dependencies = [
 
 [[package]]
 name = "notch"
-version = "0.5.0"
+version = "1.0.0"
 dependencies = [
  "places",
  "rust-i18n",
@@ -4146,7 +4146,7 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 
 [[package]]
 name = "places"
-version = "0.5.0"
+version = "1.0.0"
 
 [[package]]
 name = "png"
@@ -5281,7 +5281,7 @@ dependencies = [
 
 [[package]]
 name = "settings"
-version = "0.5.0"
+version = "1.0.0"
 dependencies = [
  "gpui",
  "gpui-component",
@@ -5518,7 +5518,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "store"
-version = "0.5.0"
+version = "1.0.0"
 dependencies = [
  "windows 0.62.2",
 ]

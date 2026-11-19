@@ -8,7 +8,7 @@ pub const DEV_ICON: &str = "tile-dev.ico";
 /// The icon of a stable build.
 pub const STABLE_ICON: &str = "tile-stable.ico";
 
-/// Returns the tag without its `v` when it is a pre-release of `crate_version` (`v0.5.0-alpha.1` for `0.5.0`).
+/// Returns the tag without its `v` when it is a pre-release of `crate_version` (`v1.0.0-alpha.1` for `1.0.0`).
 pub fn pre_release_label(tag: &str, crate_version: &str) -> Option<String> {
     let version = tag.trim().strip_prefix('v')?;
     let (core, suffix) = version.split_once('-')?;
@@ -26,7 +26,7 @@ pub fn icon_for_version(version: Option<&str>) -> &'static str {
 
 /// The `VERSIONINFO` resource text that names a program in Task Manager (its Processes tab shows `file_description`).
 ///
-/// `version` may carry a pre-release suffix (`0.5.0-alpha.4`); the numeric `a,b,c,d` form takes its core and a last 0.
+/// `version` may carry a pre-release suffix (`1.0.0-alpha.4`); the numeric `a,b,c,d` form takes its core and a last 0.
 pub fn version_info_resource(
     file_description: &str,
     product_name: &str,
@@ -88,11 +88,11 @@ fn latest_version_tag(workspace_root: &std::path::Path) -> Option<String> {
 
 /// The version this build is for, and the cargo rebuild triggers that keep it fresh.
 ///
-/// The release build sets `NOTCH_RELEASE_VERSION` (`0.5.0-alpha.1`); a local build derives it from the latest
+/// The release build sets `FOLDLINE_RELEASE_VERSION` (`1.0.0-alpha.1`); a local build derives it from the latest
 /// pre-release tag of this crate version's series, and has none when there is no such tag.
 pub fn current(workspace_root: &std::path::Path) -> Option<String> {
-    println!("cargo:rerun-if-env-changed=NOTCH_RELEASE_VERSION");
-    if let Some(value) = std::env::var("NOTCH_RELEASE_VERSION").ok().filter(|value| !value.trim().is_empty()) {
+    println!("cargo:rerun-if-env-changed=FOLDLINE_RELEASE_VERSION");
+    if let Some(value) = std::env::var("FOLDLINE_RELEASE_VERSION").ok().filter(|value| !value.trim().is_empty()) {
         return Some(value);
     }
     // A `.git` file (worktree) is skipped: its refs live elsewhere and a missing label is acceptable.
@@ -115,45 +115,45 @@ mod tests {
 
     #[test]
     fn accepts_pre_release_of_the_same_series() {
-        assert_eq!(pre_release_label("v0.5.0-alpha.1\n", "0.5.0").as_deref(), Some("0.5.0-alpha.1"));
-        assert_eq!(pre_release_label("v0.5.0-rc.2", "0.5.0").as_deref(), Some("0.5.0-rc.2"));
+        assert_eq!(pre_release_label("v1.0.0-alpha.1\n", "1.0.0").as_deref(), Some("1.0.0-alpha.1"));
+        assert_eq!(pre_release_label("v1.0.0-rc.2", "1.0.0").as_deref(), Some("1.0.0-rc.2"));
     }
 
     #[test]
     fn rejects_stable_tags_and_other_series() {
-        assert_eq!(pre_release_label("v0.5.0", "0.5.0"), None);
-        assert_eq!(pre_release_label("v0.4.0-alpha.1", "0.5.0"), None);
-        assert_eq!(pre_release_label("0.5.0-alpha.1", "0.5.0"), None);
-        assert_eq!(pre_release_label("v0.5.0-", "0.5.0"), None);
-        assert_eq!(pre_release_label("", "0.5.0"), None);
+        assert_eq!(pre_release_label("v1.0.0", "1.0.0"), None);
+        assert_eq!(pre_release_label("v0.9.0-alpha.1", "1.0.0"), None);
+        assert_eq!(pre_release_label("1.0.0-alpha.1", "1.0.0"), None);
+        assert_eq!(pre_release_label("v1.0.0-", "1.0.0"), None);
+        assert_eq!(pre_release_label("", "1.0.0"), None);
     }
 
     #[test]
     fn pre_release_versions_get_the_dev_icon() {
-        for version in ["0.5.0-alpha.1", "v0.5.0-beta.2", "0.5.0-rc.1", " 0.5.0-rc.1\n"] {
+        for version in ["1.0.0-alpha.1", "v1.0.0-beta.2", "1.0.0-rc.1", " 1.0.0-rc.1\n"] {
             assert_eq!(icon_for_version(Some(version)), DEV_ICON, "{version}");
         }
     }
 
     #[test]
     fn stable_or_unknown_versions_get_the_stable_icon() {
-        for version in [Some("0.5.0"), Some("v0.5.0"), Some("0.5.0-"), Some(""), None] {
+        for version in [Some("1.0.0"), Some("v1.0.0"), Some("1.0.0-"), Some(""), None] {
             assert_eq!(icon_for_version(version), STABLE_ICON, "{version:?}");
         }
     }
 
     #[test]
     fn version_info_names_the_program_and_carries_the_four_number_version() {
-        let text = version_info_resource("Foldline Settings", "Foldline", "0.5.0-alpha.4", "notch-settings.exe");
+        let text = version_info_resource("Foldline Settings", "Foldline", "1.0.0-alpha.4", "foldline-settings.exe");
         for expected in [
-            "FILEVERSION 0,5,0,0",
-            "PRODUCTVERSION 0,5,0,0",
+            "FILEVERSION 1,0,0,0",
+            "PRODUCTVERSION 1,0,0,0",
             "VALUE \"FileDescription\", \"Foldline Settings\"",
             "VALUE \"ProductName\", \"Foldline\"",
-            "VALUE \"FileVersion\", \"0.5.0-alpha.4\"",
-            "VALUE \"ProductVersion\", \"0.5.0-alpha.4\"",
-            "VALUE \"InternalName\", \"notch-settings.exe\"",
-            "VALUE \"OriginalFilename\", \"notch-settings.exe\"",
+            "VALUE \"FileVersion\", \"1.0.0-alpha.4\"",
+            "VALUE \"ProductVersion\", \"1.0.0-alpha.4\"",
+            "VALUE \"InternalName\", \"foldline-settings.exe\"",
+            "VALUE \"OriginalFilename\", \"foldline-settings.exe\"",
         ] {
             assert!(text.contains(expected), "{expected}\n{text}");
         }
@@ -161,8 +161,8 @@ mod tests {
 
     #[test]
     fn version_info_of_a_stable_version_has_no_suffix() {
-        let text = version_info_resource("Foldline", "Foldline", "v0.5.0", "notch.exe");
-        assert!(text.contains("VALUE \"FileVersion\", \"0.5.0\""), "{text}");
-        assert!(text.contains("FILEVERSION 0,5,0,0"), "{text}");
+        let text = version_info_resource("Foldline", "Foldline", "v1.0.0", "foldline.exe");
+        assert!(text.contains("VALUE \"FileVersion\", \"1.0.0\""), "{text}");
+        assert!(text.contains("FILEVERSION 1,0,0,0"), "{text}");
     }
 }

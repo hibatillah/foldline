@@ -15,7 +15,7 @@
   #error Pass the built settings executable with /DSourceSettingsExe=path
 #endif
 
-; A version with a suffix (0.5.0-alpha.1) is a dev build: it gets the dev tile, as the executables do, and installs beside
+; A version with a suffix (1.0.0-alpha.1) is a dev build: it gets the dev tile, as the executables do, and installs beside
 ; every other copy instead of replacing one. A stable version replaces the stable copy that is installed.
 #if Pos("-", AppVersion) > 0
   #define IsDevBuild
@@ -37,7 +37,7 @@ AppVerName={#AppDisplayName}
 DefaultDirName={localappdata}\Programs\{#AppDisplayName}
 #else
 AppId={{B4D1E7A2-5C3F-4F68-9A0E-2D7C61B8E4F3}
-DefaultDirName={localappdata}\Programs\Notch
+DefaultDirName={localappdata}\Programs\Foldline
 #endif
 AppName={#AppDisplayName}
 AppVersion={#AppVersion}
@@ -75,7 +75,7 @@ Name: "{autoprograms}\{#AppDisplayName}"; Filename: "{app}\{#ExeName}"; IconFile
 #ifndef IsDevBuild
 [Registry]
 ; The same entry the "Start with Windows" switch on the settings window's General page sets; a dev build never writes it.
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Notch"; ValueData: """{app}\{#ExeName}"""; Flags: uninsdeletevalue; Tasks: startup
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Foldline"; ValueData: """{app}\{#ExeName}"""; Flags: uninsdeletevalue; Tasks: startup
 #endif
 
 [Run]
@@ -117,4 +117,16 @@ procedure InitializeWizard();
 begin
   WizardForm.PageDescriptionLabel.Left := WizardForm.PageNameLabel.Left;
   WizardForm.PageDescriptionLabel.Width := WizardForm.PageNameLabel.Width;
+end;
+
+{ Ends the copy that is running from the install folder before files are replaced: a tray program has no window the installer can close, so the replace failed with "Access is denied". Only the copy in this folder is ended, never another install. }
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+  Script: String;
+begin
+  Result := '';
+  Script := 'Get-Process -Name ''' + ChangeFileExt('{#ExeName}','') + ''',''' + ChangeFileExt('{#SettingsExeName}','') + ''' -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path.StartsWith(''' + ExpandConstant('{app}') + '\'', [StringComparison]::OrdinalIgnoreCase) } | Stop-Process -Force';
+  Exec('powershell.exe', '-NoProfile -NonInteractive -Command "' + Script + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(500);
 end;

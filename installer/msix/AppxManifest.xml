@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Template: scripts/build-msix.sh replaces {{VERSION}} with the workspace version as four parts (0.5.0 gives 0.5.0.0). -->
+<!-- Template: scripts/build-msix.sh replaces {{VERSION}} with the workspace version as four parts (1.0.0 gives 1.0.0.0). -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
   xmlns:uap7="http://schemas.microsoft.com/appx/manifest/uap/windows10/7"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:desktop6="http://schemas.microsoft.com/appx/manifest/desktop/windows10/6"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  IgnorableNamespaces="uap uap3 uap7 desktop rescap">
+  IgnorableNamespaces="uap uap3 uap7 desktop desktop6 rescap">
 
   <!-- Identity values from Partner Center (Product identity). -->
   <Identity
@@ -20,6 +21,9 @@
     <DisplayName>Foldline</DisplayName>
     <PublisherDisplayName>Hibatillah</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
+    <!-- Banner hiding writes HKCU notification settings that Windows itself must read, so registry writes are not redirected. -->
+    <desktop6:RegistryWriteVirtualization>disabled</desktop6:RegistryWriteVirtualization>
+    <desktop6:FileSystemWriteVirtualization>disabled</desktop6:FileSystemWriteVirtualization>
   </Properties>
 
   <Dependencies>
@@ -31,8 +35,8 @@
   </Resources>
 
   <Applications>
-    <!-- notch-settings.exe ships beside notch.exe as a plain file: the tray and the header gear start it, as in the Inno install. -->
-    <Application Id="Notch" Executable="notch.exe" EntryPoint="Windows.FullTrustApplication">
+    <!-- foldline-settings.exe ships beside foldline.exe as a plain file: the tray and the header gear start it, as in the Inno install. -->
+    <Application Id="Foldline" Executable="foldline.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
         DisplayName="Foldline"
         Description="A notch at the top of the screen for media, calendar, timer, weather and more."
@@ -43,8 +47,8 @@
       </uap:VisualElements>
       <Extensions>
         <!-- Off until the user turns on Start with Windows; the settings window then calls StartupTask, not the Run key. -->
-        <desktop:Extension Category="windows.startupTask" Executable="notch.exe" EntryPoint="Windows.FullTrustApplication">
-          <desktop:StartupTask TaskId="NotchStartup" Enabled="false" DisplayName="Foldline" />
+        <desktop:Extension Category="windows.startupTask" Executable="foldline.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="FoldlineStartup" Enabled="false" DisplayName="Foldline" />
         </desktop:Extension>
       </Extensions>
     </Application>
@@ -56,6 +60,7 @@
     <uap7:Capability Name="globalMediaControl" />
     <uap3:Capability Name="userNotificationListener" />
     <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="unvirtualizedResources" />
     <DeviceCapability Name="location" />
   </Capabilities>
 </Package>

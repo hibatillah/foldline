@@ -36,9 +36,9 @@ done
 [ "$build" = 1 ] && cargo +stable-x86_64-pc-windows-msvc build --release
 
 mkdir -p run
-cp target/x86_64-pc-windows-msvc/release/notch.exe run/notch-perf.exe
+cp target/x86_64-pc-windows-msvc/release/foldline.exe run/foldline-perf.exe
 
 cargo +stable-x86_64-pc-windows-msvc run --release --quiet -p notch --example perf -- \
-    --exe "$(cygpath -w "$PWD/run/notch-perf.exe")" \
+    --exe "$(cygpath -w "$PWD/run/foldline-perf.exe")" \
     --log "$(cygpath -w "$PWD/run/perf.log")" \
     "${extra_arguments[@]}"

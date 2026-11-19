@@ -5,9 +5,9 @@ default-members = ["crates/notch"]
 exclude = ["vendor/salah"]
 
 [workspace.package]
-version = "0.5.0"
+version = "1.0.0"
 edition = "2024"
-license-file = "LICENSE"
+license = "GPL-3.0-or-later"
 publish = false
 rust-version = "1.88"
 

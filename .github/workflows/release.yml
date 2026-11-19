@@ -1,6 +1,6 @@
 name: Release
 
-# Runs only when a version tag such as v0.1.0 or v0.5.0-alpha.1 is pushed. It checks the code, builds it and publishes a GitHub release (a pre-release when the tag has a suffix).
+# Runs only when a version tag such as v0.1.0 or v1.0.0-alpha.1 is pushed. It checks the code, builds it and publishes a GitHub release (a pre-release when the tag has a suffix).
 on:
   push:
     tags: ["v*"]
@@ -21,7 +21,7 @@ jobs:
       - name: Check the tag matches the crate version
         shell: bash
         run: |
-          # A suffix after the version (v0.5.0-alpha.1) marks a pre-release; the crate version stays plain (0.5.0).
+          # A suffix after the version (v1.0.0-alpha.1) marks a pre-release; the crate version stays plain (1.0.0).
           # Every crate inherits its version from the workspace in Cargo.toml.
           tag_version="${GITHUB_REF_NAME%%-*}"
           version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
@@ -47,18 +47,18 @@ jobs:
       - name: Build
         shell: bash
         env:
-          # The settings window shows the whole tag version (0.5.0-alpha.1), not the plain crate version.
-          NOTCH_RELEASE_VERSION: ${{ github.ref_name }}
+          # The settings window shows the whole tag version (1.0.0-alpha.1), not the plain crate version.
+          FOLDLINE_RELEASE_VERSION: ${{ github.ref_name }}
         run: |
           # The program strips the leading v itself; export without it so the value matches the installer's.
-          export NOTCH_RELEASE_VERSION="${NOTCH_RELEASE_VERSION#v}"
+          export FOLDLINE_RELEASE_VERSION="${FOLDLINE_RELEASE_VERSION#v}"
           cargo build --release --workspace
 
       - name: Check the icons
         shell: bash
         run: |
-          # A tag with a suffix (v0.5.0-alpha.1) is a dev build: both programs must carry the indigo tile, the others the blue one.
-          name=$(grep -m1 '^name' crates/notch/Cargo.toml | cut -d'"' -f2)
+          # A tag with a suffix (v1.0.0-alpha.1) is a dev build: both programs must carry the indigo tile, the others the blue one.
+          name=$(grep -A3 '^\[\[bin\]\]' crates/notch/Cargo.toml | grep -m1 '^name' | cut -d'"' -f2)
           settings_name=$(grep -A3 '^\[\[bin\]\]' crates/settings/Cargo.toml | grep -m1 '^name' | cut -d'"' -f2)
           tile=tile-stable
           case "$GITHUB_REF_NAME" in *-*) tile=tile-dev ;; esac
@@ -69,10 +69,10 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          name=$(grep -m1 '^name' crates/notch/Cargo.toml | cut -d'"' -f2)
+          name=$(grep -A3 '^\[\[bin\]\]' crates/notch/Cargo.toml | grep -m1 '^name' | cut -d'"' -f2)
           settings_name=$(grep -A3 '^\[\[bin\]\]' crates/settings/Cargo.toml | grep -m1 '^name' | cut -d'"' -f2)
           release_directory="$PWD/target/x86_64-pc-windows-msvc/release"
-          # The installer shows the whole tag version, so a tester sees 0.5.0-alpha.1 and not 0.5.0.
+          # The installer shows the whole tag version, so a tester sees 1.0.0-alpha.1 and not 1.0.0.
           version="${GITHUB_REF_NAME#v}"
           installer="$name-$GITHUB_REF_NAME-windows-x64-setup"
           mkdir -p dist
@@ -83,7 +83,7 @@ jobs:
             "/DSourceExe=$(cygpath -w "$release_directory/$name.exe")" \
             "/DSettingsExeName=$settings_name.exe" \
             "/DSourceSettingsExe=$(cygpath -w "$release_directory/$settings_name.exe")" \
-            "/O$(cygpath -w "$PWD/dist")" "/F$installer" installer/notch.iss
+            "/O$(cygpath -w "$PWD/dist")" "/F$installer" installer/foldline.iss
           (cd dist && sha256sum "$installer.exe" > "$installer.exe.sha256")
           echo "INSTALLER=$installer.exe" >> "$GITHUB_ENV"
 
@@ -99,3 +99,60 @@ jobs:
           gh release create "$GITHUB_REF_NAME" $prerelease_flag \
             "dist/$INSTALLER" "dist/$INSTALLER.sha256" \
             --title "$GITHUB_REF_NAME" --notes "$notes"
+
+  # Sends the same code to the Microsoft Store as an update of the live listing. It is skipped for a pre-release tag and
+  # until the repository variable STORE_PRODUCT_ID exists (the first submission is made in Partner Center, not here).
+  # Create the environment "microsoft-store" with required reviewers to approve each submission.
+  store:
+    needs: release
+    if: ${{ !contains(github.ref_name, '-') && vars.STORE_PRODUCT_ID != '' }}
+    runs-on: windows-latest
+    environment: microsoft-store
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        shell: bash
+        run: |
+          rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal
+          rustup default stable-x86_64-pc-windows-msvc
+
+      - name: Build the MSIX
+        shell: bash
+        run: |
+          # Unsigned on purpose: the Microsoft Store signs the package. The script builds both programs and checks their icons.
+          bash scripts/build-msix.sh
+          echo "MSIX=$(ls dist/*-x64.msix)" >> "$GITHUB_ENV"
+
+      - name: Keep the MSIX as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: msix
+          path: dist/*-x64.msix
+          retention-days: 30
+
+      - name: Configure the Microsoft Store CLI
+        uses: microsoft/microsoft-store-apppublisher@v1.1
+
+      - name: Reconfigure the store credentials
+        shell: bash
+        env:
+          TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+          SELLER_ID: ${{ secrets.SELLER_ID }}
+          CLIENT_ID: ${{ secrets.AZURE_AD_APPLICATION_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AZURE_AD_APPLICATION_SECRET }}
+        run: |
+          msstore reconfigure --tenantId "$TENANT_ID" --sellerId "$SELLER_ID" --clientId "$CLIENT_ID" --clientSecret "$CLIENT_SECRET"
+
+      - name: Publish to the Microsoft Store
+        shell: bash
+        env:
+          PRODUCT_ID: ${{ vars.STORE_PRODUCT_ID }}
+          # Set the variable STORE_NO_COMMIT to true to upload the package as a draft and press Submit in Partner Center yourself.
+          NO_COMMIT: ${{ vars.STORE_NO_COMMIT }}
+        run: |
+          draft_flag=""
+          [ "$NO_COMMIT" = "true" ] && draft_flag="--noCommit"
+          msstore publish "$PWD" --inputFile "$MSIX" --appId "$PRODUCT_ID" $draft_flag
