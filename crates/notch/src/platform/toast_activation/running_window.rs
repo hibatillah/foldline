@@ -23,6 +23,7 @@ pub fn bring_forward(app_user_model_id: &str) -> Result<()> {
     // The callback stops the walk itself, which `EnumWindows` reports as an error, so the result is not used.
     let _ = unsafe { EnumWindows(Some(visit), LPARAM(&mut search as *mut Search as isize)) };
     let Some(window) = search.found else {
+        log::debug(&format!("notifications: no window of {stem} found"));
         return Err(windows::core::Error::from_hresult(super::not_found()));
     };
     log::debug(&format!("notifications: {app_user_model_id} already has a window, so it is brought forward"));
@@ -42,12 +43,11 @@ struct Search {
 unsafe extern "system" fn visit(window: HWND, parameter: LPARAM) -> BOOL {
     // SAFETY: `bring_forward` passes a pointer to a `Search` that outlives the enumeration.
     let search = unsafe { &mut *(parameter.0 as *mut Search) };
-    let is_main_window = unsafe {
-        IsWindowVisible(window).as_bool()
-            && GetWindowTextLengthW(window) > 0
-            && GetWindow(window, GW_OWNER).is_ok_and(|owner| owner.is_invalid())
-    };
-    if !is_main_window {
+    let is_visible = unsafe { IsWindowVisible(window) }.as_bool();
+    let title_length = unsafe { GetWindowTextLengthW(window) };
+    // `GetWindow` returns an error, not a null handle, for a window without an owner.
+    let has_owner = unsafe { GetWindow(window, GW_OWNER) }.is_ok();
+    if !is_main_window(is_visible, title_length, has_owner) {
         return true.into();
     }
     let mut process_id = 0;
@@ -57,6 +57,11 @@ unsafe extern "system" fn visit(window: HWND, parameter: LPARAM) -> BOOL {
         return false.into();
     }
     true.into()
+}
+
+/// A window the user works in: shown, titled and not owned by another window (a dialog or tool window is owned).
+fn is_main_window(is_visible: bool, title_length: i32, has_owner: bool) -> bool {
+    is_visible && title_length > 0 && !has_owner
 }
 
 /// The program name an unpackaged app's id ends with (`dev.warp.Warp` runs as `warp.exe`); a packaged app's id
@@ -86,6 +91,26 @@ mod tests {
     #[test]
     fn a_packaged_id_names_no_program() {
         assert_eq!(executable_stem("5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App"), None);
+    }
+
+    #[test]
+    fn a_visible_titled_window_without_an_owner_is_a_main_window() {
+        assert!(is_main_window(true, 7, false));
+    }
+
+    #[test]
+    fn an_owned_window_is_not_a_main_window() {
+        assert!(!is_main_window(true, 7, true));
+    }
+
+    #[test]
+    fn an_untitled_window_is_not_a_main_window() {
+        assert!(!is_main_window(true, 0, false));
+    }
+
+    #[test]
+    fn a_hidden_window_is_not_a_main_window() {
+        assert!(!is_main_window(false, 7, false));
     }
 
     #[test]

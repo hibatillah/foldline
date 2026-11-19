@@ -17,7 +17,11 @@ use windows::{
     core::{HSTRING, Result, h},
 };
 
-use super::{Lyrics, parse_synced_lyrics};
+use super::{
+    Lyrics, parse_synced_lyrics,
+    ranking::{Candidate, PlayerTrack, pick_best, runs_past_track},
+};
+use crate::log;
 
 const USER_AGENT: &str = concat!("Foldline/", env!("CARGO_PKG_VERSION"), " (Windows desktop app)");
 const RETRY_DELAYS: [Duration; 4] = [
@@ -26,11 +30,11 @@ const RETRY_DELAYS: [Duration; 4] = [
     Duration::from_millis(5000),
     Duration::from_millis(8000),
 ];
-const SEARCH_DURATION_TOLERANCE_SECONDS: f64 = 4.0;
 
 /// Ok(None) means no synced lyrics; Err means lookup failed.
 /// Race exact match and search so a slow request cannot block a successful result.
 pub fn fetch(artist: &str, title: &str, album: &str, duration_seconds: i64) -> Result<Option<Lyrics>> {
+    let track = PlayerTrack { title: title.to_owned(), album: album.to_owned(), duration_seconds };
     let client = HttpClient::new()?;
     client.DefaultRequestHeaders()?.UserAgent()?.TryParseAdd(&HSTRING::from(USER_AGENT))?;
 
@@ -55,26 +59,44 @@ pub fn fetch(artist: &str, title: &str, album: &str, duration_seconds: i64) -> R
     let is_settled = Arc::new(AtomicBool::new(false));
     let (sender, receiver) = mpsc::channel();
     let exact_sender = sender.clone();
-    let (exact_client, exact_settled) = (client.clone(), is_settled.clone());
+    let (exact_client, exact_settled, exact_track) = (client.clone(), is_settled.clone(), track.clone());
     thread::spawn(move || {
         let found = request(&exact_client, &exact_url, &exact_settled).map(|body| {
-            body.and_then(|body| JsonObject::Parse(&body).ok().and_then(|object| lyrics_from_object(&object)))
+            body.and_then(|body| {
+                let candidate = JsonObject::Parse(&body).ok().and_then(|object| candidate_from_object(&object))?;
+                (!runs_past_track(&candidate.lyrics, exact_track.duration_seconds))
+                    .then_some(Picked { source: "exact", candidate })
+            })
         });
         let _ = exact_sender.send(found);
     });
     let search_settled = is_settled.clone();
     thread::spawn(move || {
         let found = request(&client, &search_url, &search_settled)
-            .map(|body| body.and_then(|body| best_search_match(&body, duration_seconds)));
+            .map(|body| body.and_then(|body| best_search_match(&body, &track)));
         let _ = sender.send(found);
     });
 
     let result = first_found(receiver.iter().take(2));
     is_settled.store(true, Ordering::Relaxed);
-    result
+    result.map(|picked| {
+        picked.map(|Picked { source, candidate }| {
+            log::debug(&format!(
+                "lyrics: picked {source} entry id={} track={:?} album={:?} duration={}s for {:?} ({duration_seconds}s)",
+                candidate.id, candidate.track_name, candidate.album_name, candidate.duration_seconds, title,
+            ));
+            candidate.lyrics
+        })
+    })
 }
 
-fn first_found(results: impl Iterator<Item = Result<Option<Lyrics>>>) -> Result<Option<Lyrics>> {
+/// A lookup answer and the path that produced it.
+struct Picked {
+    source: &'static str,
+    candidate: Candidate,
+}
+
+fn first_found<T>(results: impl Iterator<Item = Result<Option<T>>>) -> Result<Option<T>> {
     let mut failure = None;
     for result in results {
         match result {
@@ -113,31 +135,29 @@ fn request(client: &HttpClient, url: &str, is_settled: &AtomicBool) -> Result<Op
     Err(last_error)
 }
 
-fn lyrics_from_object(object: &JsonObject) -> Option<Lyrics> {
+fn candidate_from_object(object: &JsonObject) -> Option<Candidate> {
     let synced = object.GetNamedString(h!("syncedLyrics")).ok()?.to_string();
     let lines = parse_synced_lyrics(&synced);
-    (!lines.is_empty()).then_some(Lyrics { lines })
+    if lines.is_empty() {
+        return None;
+    }
+    let text = |name: &HSTRING| object.GetNamedString(name).map(|value| value.to_string()).unwrap_or_default();
+    Some(Candidate {
+        id: object.GetNamedNumber(h!("id")).unwrap_or(0.0) as i64,
+        track_name: text(h!("trackName")),
+        album_name: text(h!("albumName")),
+        duration_seconds: object.GetNamedNumber(h!("duration")).unwrap_or(0.0),
+        lyrics: Lyrics { lines },
+    })
 }
 
-fn best_search_match(body: &HSTRING, duration_seconds: i64) -> Option<Lyrics> {
+fn best_search_match(body: &HSTRING, track: &PlayerTrack) -> Option<Picked> {
     let results = JsonArray::Parse(body).ok()?;
-    let mut best: Option<(f64, Lyrics)> = None;
-    for index in 0..results.Size().ok()? {
-        let Ok(object) = results.GetObjectAt(index) else { continue };
-        let Some(lyrics) = lyrics_from_object(&object) else { continue };
-        let difference = if duration_seconds > 0 {
-            (object.GetNamedNumber(h!("duration")).unwrap_or(0.0) - duration_seconds as f64).abs()
-        } else {
-            0.0
-        };
-        if difference > SEARCH_DURATION_TOLERANCE_SECONDS
-            || best.as_ref().is_some_and(|(closest, _)| *closest <= difference)
-        {
-            continue;
-        }
-        best = Some((difference, lyrics));
-    }
-    best.map(|(_, lyrics)| lyrics)
+    let candidates: Vec<Candidate> = (0..results.Size().ok()?)
+        .filter_map(|index| results.GetObjectAt(index).ok())
+        .filter_map(|object| candidate_from_object(&object))
+        .collect();
+    pick_best(candidates, track).map(|candidate| Picked { source: "search", candidate })
 }
 
 fn clean_title(title: &str) -> String {
@@ -200,9 +220,9 @@ mod tests {
 
     #[test]
     fn no_lyrics_anywhere_is_none_but_a_failure_without_a_find_is_an_error() {
-        assert!(matches!(first_found([Ok(None), Ok(None)].into_iter()), Ok(None)));
+        assert!(matches!(first_found::<Lyrics>([Ok(None), Ok(None)].into_iter()), Ok(None)));
         let failed = Err(windows::core::Error::from_hresult(windows::core::HRESULT(-1)));
-        assert!(first_found([Ok(None), failed].into_iter()).is_err());
+        assert!(first_found::<Lyrics>([Ok(None), failed].into_iter()).is_err());
     }
 
     #[test]

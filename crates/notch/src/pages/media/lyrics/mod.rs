@@ -1,8 +1,10 @@
 //! Time-synced lyrics: the data model and the parser for the `.lrc` text format.
 
 mod client;
+mod ranking;
 
 pub use client::fetch;
+pub use ranking::seconds_from_ticks;
 
 const TICKS_PER_SECOND: f64 = 10_000_000.0;
 

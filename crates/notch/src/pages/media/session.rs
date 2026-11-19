@@ -276,7 +276,7 @@ fn spawn_lyrics_lookup(shared: Arc<Shared>, track_key: String, artist: String, t
                 let (still_current, duration_seconds) = shared
                     .info
                     .lock()
-                    .map(|info| (info.track_key == track_key, info.duration_ticks / 10_000_000))
+                    .map(|info| (info.track_key == track_key, lyrics::seconds_from_ticks(info.duration_ticks)))
                     .unwrap_or((false, 0));
                 if !still_current {
                     return;
