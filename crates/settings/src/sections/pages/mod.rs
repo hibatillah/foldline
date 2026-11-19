@@ -5,14 +5,18 @@ mod list;
 mod order;
 mod preview;
 
+use std::rc::Rc;
+
 use gpui::{AnyElement, App, SharedString, div, prelude::*, px};
-use gpui_component::{ActiveTheme as _, v_flex};
+use gpui_component::{ActiveTheme as _, IconName, v_flex};
 use store::Settings;
 
+use super::about::widgets::{open_url_handler, pill};
 use crate::{
     i18n::tr,
     icons, info_box,
     layout::{Group, Item, Page, block_frame, section_title},
+    links::{REPOSITORY_URL, repository_label},
 };
 use order::{DISABLED_KEY, KNOWN_KEY, KeyHint, ORDER_KEY, current_order, disabled_pages, key_hints, parse_known};
 
@@ -78,6 +82,20 @@ fn list_section(cx: &App) -> AnyElement {
         .into_any_element()
 }
 
+/// "Want to add your own page?": a link to the repository, where a page can be added.
+fn contribute_group() -> Group {
+    let repository_button = |_window: &mut gpui::Window, cx: &mut App| {
+        pill("pages-repository", repository_label(), Some(IconName::GitHub), open_url_handler(REPOSITORY_URL), cx)
+    };
+    Group::titled(
+        tr!("pages.contribute_title"),
+        vec![
+            Item::new(tr!("pages.contribute_row"), Rc::new(repository_button))
+                .description(tr!("pages.contribute_note")),
+        ],
+    )
+}
+
 pub fn page() -> Page {
     Page::plain(
         tr!("pages.title"),
@@ -93,6 +111,7 @@ pub fn page() -> Page {
                 Item::custom(|_window, cx| list_section(cx)),
                 Item::custom(|_window, cx| info_box::info_box(icons::ABOUT, tr!("pages.off_hint"), cx)),
             ]),
+            contribute_group(),
         ],
     )
 }
@@ -108,8 +127,21 @@ mod tests {
     #[test]
     fn the_page_opens_with_the_preview_and_the_key_hint_comes_second() {
         let page = page();
-        assert_eq!(page.group_titles().first().copied(), Some("How it looks in the notch"));
-        assert_eq!(page.group_titles().len(), 1, "the hint and the list groups carry no title");
+        assert_eq!(page.group_titles().first().copied(), Some("How it looks in Foldline"));
+        assert_eq!(page.group_titles().len(), 2, "the hint and the list groups carry no title");
+    }
+
+    #[test]
+    fn the_page_ends_with_the_section_about_adding_your_own_page() {
+        assert_eq!(page().group_titles().last().copied(), Some("Want to add your own page?"));
+    }
+
+    #[test]
+    fn the_contribute_texts_exist_in_both_languages() {
+        use store::language::{Language, with_override};
+        let indonesian = with_override(Language::Indonesian, || tr!("pages.contribute_title"));
+        assert_eq!(indonesian, "Ingin menambahkan halaman Anda sendiri?");
+        assert!(tr!("pages.contribute_note").contains("pull request"));
     }
 
     #[test]

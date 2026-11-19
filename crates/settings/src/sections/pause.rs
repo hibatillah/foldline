@@ -1,20 +1,15 @@
-//! The Pause item of the General page: four lengths while the notch runs, a status and Resume while it is paused.
+//! The Pause item of the General page: a select of lengths while the notch runs, a status and Resume while it is paused.
 
 use std::rc::Rc;
 
-use gpui::{AnyElement, App, div, prelude::*};
-use gpui_component::h_flex;
+use gpui::{AnyElement, App};
 use store::{
     Settings,
     pause::{PAUSED_UNTIL_KEY, Pause, PauseChoice, clock_text, now_unix},
 };
-use windows::Win32::System::Time::{GetTimeZoneInformation, TIME_ZONE_INFORMATION};
 
-use super::about::widgets::{Handler, pill};
-use crate::{field, i18n::tr, layout::Item};
-
-/// `GetTimeZoneInformation` returns this while daylight saving time applies.
-const TIME_ZONE_ID_DAYLIGHT: u32 = 2;
+use super::countdown::{Countdown, Length, controls, local_utc_offset_seconds};
+use crate::{i18n::tr, layout::Item};
 
 fn choice_label(choice: PauseChoice) -> &'static str {
     match choice {
@@ -34,52 +29,31 @@ fn status_text(pause: Pause, utc_offset_seconds: i32) -> Option<String> {
     }
 }
 
-/// Seconds east of UTC from Windows' bias values, which are minutes west of UTC.
-fn utc_offset_from_bias(bias_minutes: i32, daylight_bias_minutes: i32, daylight_applies: bool) -> i32 {
-    let west_minutes = if daylight_applies { bias_minutes + daylight_bias_minutes } else { bias_minutes };
-    -west_minutes * 60
-}
-
-fn local_utc_offset_seconds() -> i32 {
-    let mut zone = TIME_ZONE_INFORMATION::default();
-    // SAFETY: `zone` is a valid, writable structure for the call.
-    let zone_id = unsafe { GetTimeZoneInformation(&mut zone) };
-    utc_offset_from_bias(zone.Bias, zone.DaylightBias, zone_id == TIME_ZONE_ID_DAYLIGHT)
-}
-
 fn stored_pause() -> Pause {
     Pause::parse(Settings::load().get_string(PAUSED_UNTIL_KEY), now_unix())
 }
 
-fn start_pause(choice: PauseChoice, cx: &mut App) {
-    field::write(PAUSED_UNTIL_KEY, &choice.pause_from(now_unix()).as_text(), cx);
-}
-
-fn resume(cx: &mut App) {
-    field::write(PAUSED_UNTIL_KEY, &Pause::Off.as_text(), cx);
-}
-
-fn controls(cx: &App) -> AnyElement {
-    let pause = stored_pause();
-    match status_text(pause, local_utc_offset_seconds()) {
-        None => h_flex()
-            .gap_2()
-            .children(PauseChoice::ALL.into_iter().enumerate().map(|(position, choice)| {
-                let start: Handler = Rc::new(move |_window, cx| start_pause(choice, cx));
-                pill(&format!("pause-choice-{position}"), choice_label(choice), None, Some(start), cx)
-            }))
-            .into_any_element(),
-        Some(status) => h_flex()
-            .gap_3()
-            .items_center()
-            .child(div().text_sm().child(status))
-            .child(pill("pause-resume", tr!("pause.resume"), None, Some(Rc::new(|_window, cx| resume(cx))), cx))
-            .into_any_element(),
-    }
+fn view(cx: &App) -> AnyElement {
+    controls(
+        Countdown {
+            id_prefix: "pause",
+            key: PAUSED_UNTIL_KEY,
+            lengths: PauseChoice::ALL
+                .into_iter()
+                .map(|choice| Length {
+                    label: choice_label(choice),
+                    stored_text: Rc::new(move || choice.pause_from(now_unix()).as_text()),
+                })
+                .collect(),
+            status: status_text(stored_pause(), local_utc_offset_seconds()),
+            end_label: tr!("pause.resume"),
+        },
+        cx,
+    )
 }
 
 pub fn item() -> Item {
-    Item::new(tr!("pause.title"), Rc::new(|_window, cx| controls(cx))).description(tr!("pause.note"))
+    Item::new(tr!("pause.title"), Rc::new(|_window, cx| view(cx))).description(tr!("pause.note"))
 }
 
 #[cfg(test)]
@@ -103,20 +77,13 @@ mod tests {
 
     #[test]
     fn a_click_writes_the_pause_as_one_key() {
-        let path = std::env::temp_dir().join(format!("notch-settings-pause-{}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-pause-{}.txt", std::process::id()));
         let _ = std::fs::remove_file(&path);
         let mut settings = Settings::at(Some(path.clone()));
         crate::sections::apply(&mut settings, PAUSED_UNTIL_KEY, &Pause::Manual.as_text());
         let text = std::fs::read_to_string(&path).expect("settings file written");
         let _ = std::fs::remove_file(&path);
         assert!(text.contains("notch.paused_until=manual"), "{text}");
-    }
-
-    #[test]
-    fn the_clock_offset_is_minutes_west_of_utc_turned_into_seconds_east() {
-        assert_eq!(utc_offset_from_bias(-420, 0, false), 7 * 3600);
-        assert_eq!(utc_offset_from_bias(300, -60, true), -4 * 3600);
-        assert_eq!(utc_offset_from_bias(300, -60, false), -5 * 3600);
     }
 
     #[test]

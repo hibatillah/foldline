@@ -1,4 +1,4 @@
-//! The sidebar: the app's mark and name, then the pages in labelled groups, sitting straight on the window frame.
+//! The sidebar: the app's mark and name, then the pages (the page settings under a label), sitting straight on the window frame.
 
 use crate::i18n::tr;
 use std::rc::Rc;
@@ -12,13 +12,15 @@ use crate::{layout::Page, palette};
 pub type SelectHandler = Rc<dyn Fn(usize, &mut App)>;
 
 const ITEM_HEIGHT: f32 = 36.0;
-const ITEM_RADIUS: f32 = 10.0;
+/// Between `text_sm` (12.7) and the base size (14.5).
+const ITEM_TEXT_SIZE: f32 = 14.0;
+const ITEM_RADIUS: f32 = 8.0;
 /// Between two items of a group.
 const ITEM_GAP: f32 = 1.0;
 const ICON_SIZE: f32 = 17.0;
 /// Space between an item's edge and its icon.
 const ITEM_PADDING: f32 = 10.0;
-const ICON_GAP: f32 = 11.0;
+const ICON_GAP: f32 = 9.0;
 /// Space above a group's label, and between the label and its first item.
 const GROUP_LABEL_ABOVE: f32 = 12.0;
 const GROUP_LABEL_BELOW: f32 = 5.0;
@@ -26,9 +28,9 @@ const GROUP_LABEL_BELOW: f32 = 5.0;
 const SIDEBAR_PADDING_TOP: f32 = 16.0;
 const SIDEBAR_PADDING_X: f32 = 10.0;
 const SIDEBAR_PADDING_BOTTOM: f32 = 12.0;
-/// The brand's inset from the gutter, and the space under it.
+/// The brand's inset from the gutter, and the space between the brand and the first item.
 const BRAND_PADDING_X: f32 = 8.0;
-const BRAND_PADDING_BOTTOM: f32 = 4.0;
+const BRAND_PADDING_BOTTOM: f32 = 36.0;
 
 /// The sidebar's groups, in the order they are shown.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,11 +46,11 @@ pub enum NavGroup {
 impl NavGroup {
     pub const ORDER: [NavGroup; 2] = [NavGroup::Notch, NavGroup::PageSettings];
 
-    pub fn label(self) -> &'static str {
+    /// The label above the group; the notch's own pages and the footer have none.
+    pub fn label(self) -> Option<&'static str> {
         match self {
-            NavGroup::Notch => "Foldline",
-            NavGroup::PageSettings => tr!("sidebar.page_settings"),
-            NavGroup::Footer => "",
+            NavGroup::PageSettings => Some(tr!("sidebar.page_settings")),
+            NavGroup::Notch | NavGroup::Footer => None,
         }
     }
 }
@@ -91,8 +93,6 @@ fn item(
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     cx: &App,
 ) -> AnyElement {
-    let foreground = cx.theme().foreground;
-    let color = if selected { foreground } else { foreground.opacity(0.78) };
     let fill = palette::wash(cx);
     h_flex()
         .id(gpui::ElementId::Name(id.into()))
@@ -102,10 +102,10 @@ fn item(
         .items_center()
         .rounded(px(ITEM_RADIUS))
         .cursor_pointer()
-        .text_base()
-        .text_color(color)
-        .when(selected, |row| row.bg(fill).font_weight(gpui::FontWeight::MEDIUM))
-        .when(!selected, |row| row.hover(move |style| style.bg(fill.opacity(0.6)).text_color(foreground)))
+        .text_size(px(ITEM_TEXT_SIZE))
+        .text_color(cx.theme().foreground)
+        .when(selected, |row| row.bg(fill))
+        .when(!selected, |row| row.hover(move |style| style.bg(fill.opacity(0.6))))
         .on_click(on_click)
         .child(icon.size(px(ICON_SIZE)).text_color(palette::accent(cx)))
         .child(label)
@@ -161,7 +161,7 @@ pub fn render(
     };
     let groups = grouped(entries).into_iter().map(|(group, indexes)| {
         v_flex()
-            .child(group_label(group.label(), cx))
+            .children(group.label().map(|label| group_label(label, cx)))
             .child(v_flex().gap(px(ITEM_GAP)).children(indexes.into_iter().map(nav_item)))
     });
     let footer = entries
@@ -224,9 +224,28 @@ mod tests {
     }
 
     #[test]
-    fn the_group_labels_are_notch_and_page_settings() {
-        assert_eq!(NavGroup::Notch.label(), "Foldline");
-        assert_eq!(NavGroup::PageSettings.label(), "Page settings");
+    fn the_brand_and_the_first_item_keep_a_gap_on_the_spacing_scale() {
+        const { assert!(BRAND_PADDING_BOTTOM >= 32.0 && BRAND_PADDING_BOTTOM <= 40.0) };
+    }
+
+    #[test]
+    fn an_item_stays_a_comfortable_click_target_and_holds_its_icon() {
+        const { assert!(ITEM_HEIGHT >= 32.0) };
+        const { assert!(ICON_SIZE + 8.0 <= ITEM_HEIGHT) };
+    }
+
+    #[test]
+    fn the_item_text_sits_between_the_small_text_and_the_base_size() {
+        const SMALL_TEXT: f32 = crate::UI_FONT_SIZE * 0.875;
+        const { assert!(ITEM_TEXT_SIZE > SMALL_TEXT && ITEM_TEXT_SIZE < crate::UI_FONT_SIZE) };
+        const { assert!(ITEM_TEXT_SIZE + 8.0 <= ITEM_HEIGHT) };
+    }
+
+    #[test]
+    fn only_the_page_settings_group_has_a_label() {
+        assert_eq!(NavGroup::Notch.label(), None);
+        assert_eq!(NavGroup::Footer.label(), None);
+        assert_eq!(NavGroup::PageSettings.label(), Some("Page settings"));
     }
 
     #[test]

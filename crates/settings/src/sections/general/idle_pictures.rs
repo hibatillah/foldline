@@ -9,7 +9,7 @@ use crate::{i18n::tr, illustration, layout::Item, picture::color};
 const PICTURE_HEIGHT: f32 = 76.0;
 const TASKBAR_HEIGHT: f32 = 18.0;
 const TRAY_ICON: f32 = 7.0;
-const TRAY_NOTCH_ICON: f32 = 9.0;
+const TRAY_FOLDLINE_ICON: f32 = 9.0;
 /// The outline that marks where the hidden pill would be.
 const HIDDEN_PILL_WIDTH: f32 = 62.0;
 const HIDDEN_PILL_HEIGHT: f32 = 20.0;
@@ -49,7 +49,7 @@ fn in_the_tray(cx: &App) -> AnyElement {
                 .pr(px(10.0))
                 .child(icon(TRAY_ICON, color(0x777777)))
                 .child(icon(TRAY_ICON, color(0x777777)))
-                .child(icon(TRAY_NOTCH_ICON, accent)),
+                .child(icon(TRAY_FOLDLINE_ICON, accent)),
         )
         .into_any_element()
 }

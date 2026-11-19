@@ -19,7 +19,7 @@ use crate::{
 const DEBUG_LOG_KEY: &str = "advanced.debug_log";
 const PATH_FIELD_WIDTH: f32 = 230.0;
 /// The name the save dialog offers for a new log file.
-const SUGGESTED_LOG_NAME: &str = "notch-debug.log";
+const SUGGESTED_LOG_NAME: &str = "foldline-debug.log";
 const SAMPLE_FONT: &str = "Consolas";
 const SAMPLE_TEXT_SIZE: f32 = 12.0;
 const SAMPLE_LINE_HEIGHT: f32 = 19.0;
@@ -45,7 +45,7 @@ fn browse_directory(stored: Option<&str>, data_folder: Option<PathBuf>, home: Op
 /// Asks Windows' save dialog for a log file and stores the path picked; a cancel stores nothing.
 fn browse(_window: &mut Window, cx: &mut App) {
     let stored = Settings::load().get_string(DEBUG_LOG_KEY).map(str::to_owned);
-    let data_folder = std::env::var_os("APPDATA").map(|folder| PathBuf::from(folder).join("notch"));
+    let data_folder = store::data_directory();
     let home = std::env::var_os("USERPROFILE").map(PathBuf::from);
     let directory = browse_directory(stored.as_deref(), data_folder, home);
     let picked = cx.prompt_for_new_path(&directory, Some(SUGGESTED_LOG_NAME));
@@ -65,7 +65,7 @@ fn log_file_control(window: &mut Window, cx: &mut App) -> AnyElement {
         .gap(px(8.0))
         .items_center()
         .child(field(window, cx))
-        .child(pill("browse-log", tr!("advanced.browse"), None, Some(handler), cx))
+        .child(pill("browse-log", tr!("advanced.browse"), None, handler, cx))
         .into_any_element()
 }
 
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn without_a_log_the_dialog_opens_in_the_data_folder_then_the_user_folder() {
-        let data = PathBuf::from(r"C:\Users\me\AppData\Roaming\notch");
+        let data = PathBuf::from(r"C:\Users\me\AppData\Roaming\Foldline");
         let home = PathBuf::from(r"C:\Users\me");
         assert_eq!(browse_directory(None, Some(data.clone()), Some(home.clone())), data);
         assert_eq!(browse_directory(Some("  "), None, Some(home.clone())), home);

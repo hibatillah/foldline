@@ -158,7 +158,7 @@ mod tests {
     use super::*;
 
     fn settings_with(name: &str, text: &str) -> Settings {
-        let path = std::env::temp_dir().join(format!("notch-settings-monitor-{name}-{}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-monitor-{name}-{}.txt", std::process::id()));
         std::fs::write(&path, text).unwrap();
         let settings = Settings::at(Some(path.clone()));
         let _ = std::fs::remove_file(&path);

@@ -10,29 +10,23 @@ use std::{path::Path, rc::Rc};
 use gpui::{AnyElement, App, Window, div, prelude::*, px};
 use gpui_component::{IconName, WindowExt as _, notification::Notification};
 
-use crate::layout::{Group, Item, Page};
+use crate::{
+    layout::{Group, Item, Page},
+    links::{RELEASES_URL, REPOSITORY_URL},
+};
 use paths::{DataPaths, Opening};
 use widgets::Handler;
-
-/// The release notes of this version. Empty until the site exists; while it is empty the button is inert.
-const WHATS_NEW_URL: &str = "";
 
 const STORE_PRODUCT_ID: &str = "9NGTV96SZDS7";
 
 /// What a row's button does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Action {
-    /// Open an address in the default browser; an empty one does nothing.
+    /// Open an address in the default browser.
     Link(&'static str),
     Licenses,
     SettingsFile,
     DataFolder,
-}
-
-impl Action {
-    fn is_inert(self) -> bool {
-        matches!(self, Action::Link(url) if url.is_empty())
-    }
 }
 
 /// One row: title and description at the left, a pill button at the right.
@@ -41,7 +35,8 @@ struct Row {
     description: &'static str,
     button: &'static str,
     action: Action,
-    external: bool,
+    /// Drawn before the button's text.
+    icon: Option<IconName>,
 }
 
 fn link_rows() -> Vec<Row> {
@@ -50,15 +45,22 @@ fn link_rows() -> Vec<Row> {
             title: tr!("about.whats_new"),
             description: tr!("about.whats_new_note"),
             button: tr!("about.open"),
-            action: Action::Link(WHATS_NEW_URL),
-            external: true,
+            action: Action::Link(RELEASES_URL),
+            icon: Some(IconName::ExternalLink),
+        },
+        Row {
+            title: tr!("about.source"),
+            description: tr!("about.source_note"),
+            button: tr!("about.github"),
+            action: Action::Link(REPOSITORY_URL),
+            icon: Some(IconName::GitHub),
         },
         Row {
             title: tr!("about.licenses"),
             description: tr!("about.licenses_note"),
             button: tr!("about.view"),
             action: Action::Licenses,
-            external: false,
+            icon: None,
         },
     ]
 }
@@ -70,14 +72,14 @@ fn file_rows() -> Vec<Row> {
             description: tr!("about.settings_file_note"),
             button: tr!("about.open"),
             action: Action::SettingsFile,
-            external: true,
+            icon: Some(IconName::ExternalLink),
         },
         Row {
             title: tr!("about.data_folder"),
             description: tr!("about.data_folder_note"),
             button: tr!("about.open"),
             action: Action::DataFolder,
-            external: true,
+            icon: Some(IconName::ExternalLink),
         },
     ]
 }
@@ -98,17 +100,13 @@ fn open_data(choose: ChooseOpening, window: &mut Window, cx: &mut App) {
     perform(opening, window, cx);
 }
 
-fn handler_for(action: Action) -> Option<Handler> {
-    if action.is_inert() {
-        return None;
-    }
-    let handler: Handler = match action {
-        Action::Link(url) => Rc::new(move |_window, cx| cx.open_url(url)),
+fn handler_for(action: Action) -> Handler {
+    match action {
+        Action::Link(url) => widgets::open_url_handler(url),
         Action::Licenses => Rc::new(licenses::open_licenses),
         Action::SettingsFile => Rc::new(|window, cx| open_data(paths::settings_opening, window, cx)),
         Action::DataFolder => Rc::new(|window, cx| open_data(paths::folder_opening, window, cx)),
-    };
-    Some(handler)
+    }
 }
 
 /// The Microsoft Store address of the app, or nothing while there is no product id.
@@ -125,10 +123,9 @@ fn open_store() -> Option<Handler> {
 fn items(rows: Vec<Row>) -> Vec<Item> {
     rows.into_iter()
         .map(|row| {
-            let Row { title, description, button, action, external } = row;
+            let Row { title, description, button, action, icon } = row;
             let control = move |_window: &mut Window, cx: &mut App| -> AnyElement {
-                let icon = external.then_some(IconName::ExternalLink);
-                widgets::pill(title, button, icon, handler_for(action), cx)
+                widgets::pill(title, button, icon.clone(), handler_for(action), cx)
             };
             Item::new(title, Rc::new(control)).description(description)
         })
@@ -154,8 +151,8 @@ mod tests {
     }
 
     #[test]
-    fn the_link_rows_are_whats_new_and_licenses() {
-        assert_eq!(titles(&link_rows()), ["What's new", "Licenses"]);
+    fn the_link_rows_are_whats_new_source_code_and_licenses() {
+        assert_eq!(titles(&link_rows()), ["What's new", "Source code", "Licenses"]);
     }
 
     #[test]
@@ -164,18 +161,15 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_whats_new_address_makes_its_button_inert() {
-        let whats_new = &link_rows()[0];
-        assert!(whats_new.action.is_inert());
-        assert!(handler_for(whats_new.action).is_none());
+    fn whats_new_opens_the_release_notes_and_the_source_button_opens_the_repository() {
+        let rows = link_rows();
+        assert_eq!(rows[0].action, Action::Link("https://fold.encure.id/releases"));
+        assert_eq!(rows[1].action, Action::Link("https://github.com/hibatillah/foldline"));
     }
 
     #[test]
-    fn the_other_rows_have_a_working_button() {
-        for row in link_rows().iter().skip(1).chain(file_rows().iter()) {
-            assert!(!row.action.is_inert(), "{}", row.title);
-            assert!(handler_for(row.action).is_some(), "{}", row.title);
-        }
+    fn the_source_button_carries_the_github_icon() {
+        assert!(matches!(link_rows()[1].icon, Some(IconName::GitHub)));
     }
 
     #[test]

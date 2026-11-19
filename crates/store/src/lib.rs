@@ -1,20 +1,26 @@
+#[macro_use]
+mod countdown;
+pub mod data_directory;
 pub mod language;
 pub mod pause;
 pub mod screens;
+pub mod snooze;
+
+pub use data_directory::{data_directory, migrate_legacy_data_directory};
 
 use std::{collections::BTreeMap, fs, io::ErrorKind, path::PathBuf};
 
-/// Small persistent key-value store shared by all pages, saved as `key=value` lines in `%APPDATA%\notch`.
+/// Small persistent key-value store shared by all pages, saved as `key=value` lines in `%APPDATA%\Foldline`.
 pub struct Settings {
     path: Option<PathBuf>,
     values: BTreeMap<String, String>,
 }
 
 impl Settings {
+    /// Reads `%APPDATA%\Foldline\settings.txt`, copying the folder of an earlier build first when needed.
     pub fn load() -> Self {
-        Self::at(
-            std::env::var_os("APPDATA").map(|directory| PathBuf::from(directory).join("notch").join("settings.txt")),
-        )
+        migrate_legacy_data_directory();
+        Self::at(data_directory().map(|directory| directory.join("settings.txt")))
     }
 
     pub fn at(path: Option<PathBuf>) -> Self {

@@ -196,13 +196,13 @@ mod tests {
     }
 
     fn temporary_settings(name: &str, text: &str) -> Settings {
-        let path = std::env::temp_dir().join(format!("notch-settings-{name}-{}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-{name}-{}.txt", std::process::id()));
         std::fs::write(&path, text).unwrap();
         Settings::at(Some(path))
     }
 
     fn settings_path(name: &str) -> Option<std::path::PathBuf> {
-        Some(std::env::temp_dir().join(format!("notch-settings-{name}-{}.txt", std::process::id())))
+        Some(std::env::temp_dir().join(format!("foldline-settings-{name}-{}.txt", std::process::id())))
     }
 
     #[test]

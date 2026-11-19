@@ -119,7 +119,7 @@ mod tests {
     use super::*;
 
     fn settings_with(name: &str, contents: &str) -> (Settings, std::path::PathBuf) {
-        let path = std::env::temp_dir().join(format!("notch-settings-behavior-{}-{name}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-behavior-{}-{name}.txt", std::process::id()));
         std::fs::write(&path, contents).unwrap();
         (Settings::at(Some(path.clone())), path)
     }

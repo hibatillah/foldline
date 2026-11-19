@@ -5,10 +5,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const FOLDER_NAME: &str = "notch";
 const SETTINGS_FILE_NAME: &str = "settings.txt";
 
-/// The notch's data folder and the settings file inside it, both under `%APPDATA%`.
+/// Foldline's data folder and the settings file inside it, both under `%APPDATA%`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataPaths {
     pub folder: PathBuf,
@@ -18,12 +17,13 @@ pub struct DataPaths {
 impl DataPaths {
     /// From the value of `%APPDATA%`; `None` when it is not set.
     pub fn from_app_data(app_data: Option<OsString>) -> Option<Self> {
-        let folder = PathBuf::from(app_data.filter(|value| !value.is_empty())?).join(FOLDER_NAME);
+        let folder = store::data_directory::data_directory_in(Path::new(&app_data?))?;
         let settings_file = folder.join(SETTINGS_FILE_NAME);
         Some(Self { folder, settings_file })
     }
 
     pub fn from_environment() -> Option<Self> {
+        store::migrate_legacy_data_directory();
         Self::from_app_data(std::env::var_os("APPDATA"))
     }
 }
@@ -64,9 +64,9 @@ mod tests {
     }
 
     #[test]
-    fn the_paths_sit_under_appdata_notch() {
+    fn the_paths_sit_under_appdata_foldline() {
         let paths = paths();
-        assert_eq!(paths.folder, Path::new("C:/Users/me/AppData/Roaming").join("notch"));
+        assert_eq!(paths.folder, Path::new("C:/Users/me/AppData/Roaming").join("Foldline"));
         assert_eq!(paths.settings_file, paths.folder.join("settings.txt"));
     }
 

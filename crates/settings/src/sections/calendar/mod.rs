@@ -58,7 +58,7 @@ fn address_item() -> Item {
             .gap(px(8.0))
             .items_center()
             .child(address(window, cx))
-            .child(pill("calendar-reset", tr!("calendar.reset"), None, Some(reset.clone()), cx))
+            .child(pill("calendar-reset", tr!("calendar.reset"), None, reset.clone(), cx))
             .into_any_element()
     });
     Item::new(tr!("calendar.address"), control)
@@ -106,7 +106,7 @@ mod tests {
     use crate::field::stored_whole_number;
 
     fn settings_with(text: &str, name: &str) -> Settings {
-        let path = std::env::temp_dir().join(format!("notch-settings-calendar-{name}-{}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-calendar-{name}-{}.txt", std::process::id()));
         std::fs::write(&path, text).expect("write settings");
         let settings = Settings::at(Some(path.clone()));
         let _ = std::fs::remove_file(&path);

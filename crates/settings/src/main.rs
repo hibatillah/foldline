@@ -12,6 +12,7 @@ mod icons;
 mod illustration;
 mod info_box;
 mod layout;
+mod links;
 mod location;
 mod notify;
 mod palette;

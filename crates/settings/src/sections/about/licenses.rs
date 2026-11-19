@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use gpui::{App, Window};
 use gpui_component::{WindowExt as _, notification::Notification};
 
-/// Installed beside `notch-settings.exe`.
+/// Installed beside `foldline-settings.exe`.
 const LICENSES_FILE: &str = "THIRD-PARTY-LICENSES.txt";
 /// How many folders above the program's own the licenses file is looked for (`run/` and `target/.../release` sit below the repository root).
 const LICENSES_SEARCH_LEVELS: usize = 6;

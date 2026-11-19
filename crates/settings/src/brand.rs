@@ -29,7 +29,7 @@ mod tests {
 
     #[test]
     fn a_stable_version_gets_the_stable_tile_and_a_pre_release_the_dev_tile() {
-        assert_eq!(tile_bytes("0.5.0"), TILE_STABLE);
-        assert_eq!(tile_bytes("0.5.0-alpha.2"), TILE_DEV);
+        assert_eq!(tile_bytes("1.0.0"), TILE_STABLE);
+        assert_eq!(tile_bytes("1.0.0-alpha.2"), TILE_DEV);
     }
 }

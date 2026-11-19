@@ -17,7 +17,7 @@ use crate::FONT_FAMILY;
 pub struct Palette {
     /// Behind everything, translucent; the sidebar sits on it and the content card is inset into it.
     pub frame: u32,
-    /// The frame in the `NOTCH_SETTINGS_SOLID=1` fallback: a neutral, fully opaque color.
+    /// The frame in the `FOLDLINE_SETTINGS_SOLID=1` fallback: a neutral, fully opaque color.
     pub frame_solid: u32,
     pub card: u32,
     pub card_border: u32,
@@ -95,11 +95,12 @@ impl Palette {
     }
 }
 
-/// Whether the frame lets the backdrop through. `NOTCH_SETTINGS_SOLID=1` turns it off for a system where blur
+/// Whether the frame lets the backdrop through. `FOLDLINE_SETTINGS_SOLID=1` turns it off for a system where blur
 /// misbehaves: the frame is then a neutral, fully opaque color.
 pub fn translucent() -> bool {
     static TRANSLUCENT: OnceLock<bool> = OnceLock::new();
-    *TRANSLUCENT.get_or_init(|| std::env::var("NOTCH_SETTINGS_SOLID").map(|value| value.trim() != "1").unwrap_or(true))
+    *TRANSLUCENT
+        .get_or_init(|| std::env::var("FOLDLINE_SETTINGS_SOLID").map(|value| value.trim() != "1").unwrap_or(true))
 }
 
 /// The window's backdrop: blurred (acrylic) behind the translucent frame, or opaque in the solid fallback.
@@ -296,6 +297,15 @@ mod tests {
             assert!(contrast(palette.muted, worst_frame(palette)) >= 3.0 || palette.card == Palette::DARK.card);
         }
         assert!(contrast(Palette::DARK.muted, bright_wallpaper_frame()) >= 3.0);
+    }
+
+    #[test]
+    fn the_sidebar_title_text_reads_on_the_selected_items_wash() {
+        // The wash is white at 8 % (dark) or black at 6 % (light); the dark one is held over a bright wallpaper, not pure white.
+        let dark = over(0xffffff14, bright_wallpaper_frame());
+        let light = over(0x0000000f, worst_frame(Palette::LIGHT));
+        assert!(contrast(Palette::DARK.title, dark) >= 4.5);
+        assert!(contrast(Palette::LIGHT.title, light) >= 4.5);
     }
 
     #[test]

@@ -84,7 +84,7 @@ mod tests {
     use super::*;
 
     fn settings_with(text: &str, name: &str) -> Settings {
-        let path = std::env::temp_dir().join(format!("notch-settings-timer-{name}-{}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-timer-{name}-{}.txt", std::process::id()));
         std::fs::write(&path, text).expect("write settings");
         let settings = Settings::at(Some(path.clone()));
         let _ = std::fs::remove_file(&path);

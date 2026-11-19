@@ -56,6 +56,15 @@ general.start_with_windows:
 general.start_with_windows_note:
   en: "Have Foldline ready when you sign in."
   id: "Foldline siap saat Anda masuk ke Windows."
+general.start_note_user:
+  en: "Turned off in Windows Settings > Apps > Startup"
+  id: "Dimatikan di Pengaturan Windows > Aplikasi > Startup"
+general.start_note_policy:
+  en: "Managed by your organization"
+  id: "Dikelola oleh organisasi Anda"
+general.start_note_classic:
+  en: "Classic startup entry; the packaged app may ignore it"
+  id: "Entri startup klasik; aplikasi terpaket mungkin mengabaikannya"
 general.hide_when_idle:
   en: "Hide when idle"
   id: "Sembunyikan saat diam"
@@ -446,9 +455,15 @@ about.data_folder_note:
 about.nothing_saved:
   en: "The notch has not saved anything yet."
   id: "Notch belum menyimpan apa pun."
-about.coming_soon:
-  en: "Coming soon"
-  id: "Segera hadir"
+about.source:
+  en: "Source code"
+  id: "Kode sumber"
+about.source_note:
+  en: "Foldline is open source under the GNU GPL version 3 or later"
+  id: "Foldline bersumber terbuka dengan lisensi GNU GPL versi 3 atau lebih baru"
+about.github:
+  en: "GitHub"
+  id: "GitHub"
 about.updates_from_store:
   en: "Updates come from the Microsoft Store"
   id: "Pembaruan datang dari Microsoft Store"
@@ -500,6 +515,39 @@ pause.until:
 pause.until_resumed:
   en: "Paused until you resume"
   id: "Dijeda sampai Anda lanjutkan"
+countdown.choose:
+  en: "Choose how long"
+  id: "Pilih durasi"
+snooze.group:
+  en: "Snooze notifications"
+  id: "Tunda notifikasi"
+snooze.title:
+  en: "Snooze notifications"
+  id: "Tunda notifikasi"
+snooze.note:
+  en: "Hides banner-style messages and page alerts (weather, timer, shalat, calendar) without hiding the notch. Icon-only indicators like volume and Caps Lock still show."
+  id: "Menyembunyikan pesan bergaya banner dan peringatan halaman (cuaca, timer, shalat, kalender) tanpa menyembunyikan notch. Indikator berupa ikon saja seperti volume dan Caps Lock tetap tampil."
+snooze.ten:
+  en: "10 min"
+  id: "10 mnt"
+snooze.thirty:
+  en: "30 min"
+  id: "30 mnt"
+snooze.hour:
+  en: "1 hour"
+  id: "1 jam"
+snooze.manual:
+  en: "Until I turn it off"
+  id: "Sampai saya matikan"
+snooze.turn_off:
+  en: "Turn off"
+  id: "Matikan"
+snooze.until:
+  en: "Snoozed until %{time}"
+  id: "Ditunda sampai %{time}"
+snooze.until_turned_off:
+  en: "Snoozed until you turn it off"
+  id: "Ditunda sampai Anda matikan"
 general.idle_picture_tray:
   en: "Foldline starts in the tray when you sign in."
   id: "Foldline berjalan di tray saat Anda masuk."
@@ -561,8 +609,8 @@ pages.desc_devices:
   en: "Battery for your Bluetooth and wireless devices."
   id: "Baterai perangkat Bluetooth dan nirkabel Anda."
 pages.group_preview:
-  en: "How it looks in the notch"
-  id: "Tampilannya di notch"
+  en: "How it looks in Foldline"
+  id: "Tampilannya di Foldline"
 pages.group_pages:
   en: "Pages"
   id: "Halaman"
@@ -590,6 +638,15 @@ pages.off_hint:
 pages.also_key_zero:
   en: "Also key 0"
   id: "Juga tombol 0"
+pages.contribute_title:
+  en: "Want to add your own page?"
+  id: "Ingin menambahkan halaman Anda sendiri?"
+pages.contribute_row:
+  en: "Foldline is open source"
+  id: "Foldline bersumber terbuka"
+pages.contribute_note:
+  en: "Check the repository, clone it, or open a pull request to add more pages."
+  id: "Lihat repositorinya, kloning, atau kirim pull request untuk menambahkan halaman lain."
 behavior.open_on_hover:
   en: "Open on hover"
   id: "Buka saat diarahkan"

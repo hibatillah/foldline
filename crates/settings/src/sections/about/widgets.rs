@@ -4,11 +4,11 @@ use crate::i18n::tr;
 use std::rc::Rc;
 
 use gpui::{AnyElement, App, ElementId, Window, div, img, prelude::*, px};
-use gpui_component::{ActiveTheme as _, Icon, IconName, h_flex, tooltip::Tooltip, v_flex};
+use gpui_component::{ActiveTheme as _, Icon, IconName, h_flex, v_flex};
 
 use crate::{brand, palette, version};
 
-/// What a button does when clicked; a button without one is inert.
+/// What a button does when clicked.
 pub type Handler = Rc<dyn Fn(&mut Window, &mut App)>;
 
 const TILE_SIZE: f32 = 54.0;
@@ -18,23 +18,20 @@ const BUTTON_PADDING_X: f32 = 12.0;
 const BUTTON_GAP: f32 = 7.0;
 const BUTTON_TEXT_SIZE: f32 = 13.0;
 const BUTTON_ICON_SIZE: f32 = 13.0;
-/// An inert button is dimmed this far, with "Coming soon" to its left.
-const INERT_OPACITY: f32 = 0.4;
-const COMING_SOON_SIZE: f32 = 13.5;
 const UPDATES_NOTE_SIZE: f32 = 13.5;
 const NAME_SIZE: f32 = 17.0;
 const VERSION_SIZE: f32 = 13.5;
 
-fn coming_soon() -> &'static str {
-    tr!("about.coming_soon")
+/// A handler that opens an address in the default browser.
+pub fn open_url_handler(url: &'static str) -> Handler {
+    Rc::new(move |_window, cx| cx.open_url(url))
 }
 
-/// A rounded button a step lighter than its block, with a thin border and an optional icon. Without a handler it is
-/// dimmed and "Coming soon" stands to its left.
-pub fn pill(id: &str, label: &'static str, icon: Option<IconName>, handler: Option<Handler>, cx: &App) -> AnyElement {
+/// A rounded button a step lighter than its block, with a thin border and an optional icon.
+pub fn pill(id: &str, label: &'static str, icon: Option<IconName>, handler: Handler, cx: &App) -> AnyElement {
     let theme = cx.theme();
     let hover_fill = palette::button_border(cx);
-    let button = h_flex()
+    h_flex()
         .id(ElementId::Name(format!("about-{id}").into()))
         .flex_none()
         .h(px(BUTTON_HEIGHT))
@@ -50,21 +47,11 @@ pub fn pill(id: &str, label: &'static str, icon: Option<IconName>, handler: Opti
         .text_color(theme.foreground)
         .whitespace_nowrap()
         .children(icon.map(|name| Icon::new(name).size(px(BUTTON_ICON_SIZE))))
-        .child(label);
-    match handler {
-        Some(handler) => button
-            .cursor_pointer()
-            .hover(move |style| style.bg(hover_fill))
-            .on_click(move |_event, window, cx| handler(window, cx))
-            .into_any_element(),
-        None => h_flex()
-            .flex_none()
-            .gap_3()
-            .items_center()
-            .child(div().text_size(px(COMING_SOON_SIZE)).text_color(palette::muted(cx)).child(coming_soon()))
-            .child(button.opacity(INERT_OPACITY).tooltip(|window, cx| Tooltip::new(coming_soon()).build(window, cx)))
-            .into_any_element(),
-    }
+        .child(label)
+        .cursor_pointer()
+        .hover(move |style| style.bg(hover_fill))
+        .on_click(move |_event, window, cx| handler(window, cx))
+        .into_any_element()
 }
 
 /// The app card: the tile, the name and version at the left, where updates come from at the right. The store link is
@@ -72,7 +59,7 @@ pub fn pill(id: &str, label: &'static str, icon: Option<IconName>, handler: Opti
 pub fn app_card(open_store: Option<Handler>, cx: &App) -> AnyElement {
     let theme = cx.theme();
     let store_link = open_store
-        .map(|handler| pill("open-store", tr!("about.open_in_store"), Some(IconName::ExternalLink), Some(handler), cx));
+        .map(|handler| pill("open-store", tr!("about.open_in_store"), Some(IconName::ExternalLink), handler, cx));
     let updates = h_flex()
         .flex_none()
         .gap_3()

@@ -12,11 +12,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let workspace_root = Path::new(&manifest_directory).join("../..");
     let version = release_version::current(&workspace_root);
     if let Some(version) = &version {
-        println!("cargo:rustc-env=NOTCH_RELEASE_VERSION={version}");
+        println!("cargo:rustc-env=FOLDLINE_RELEASE_VERSION={version}");
     }
     let version_text = version.clone().unwrap_or_else(|| env::var("CARGO_PKG_VERSION").unwrap_or_default());
     let version_info =
-        release_version::version_info_resource("Notch Settings", "Notch", &version_text, "notch-settings.exe");
+        release_version::version_info_resource("Foldline Settings", "Foldline", &version_text, "foldline-settings.exe");
     compile_icon_resource(
         "../../assets/branding",
         "1",

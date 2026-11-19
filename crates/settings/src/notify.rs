@@ -9,7 +9,7 @@ const WM_SETTINGS_CHANGED: u32 = WM_APP + 30;
 pub fn tell_notch_to_reload() {
     // SAFETY: plain Win32 lookups; a missing window is an Err and means no notch is running.
     unsafe {
-        if let Ok(notch_window) = FindWindowW(w!("NotchWindow"), None) {
+        if let Ok(notch_window) = FindWindowW(w!("FoldlineWindow"), None) {
             let _ = PostMessageW(Some(notch_window), WM_SETTINGS_CHANGED, Default::default(), Default::default());
         }
     }

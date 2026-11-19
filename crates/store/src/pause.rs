@@ -1,5 +1,8 @@
 //! The pause value the notch and the settings window share through one settings key.
 
+use crate::countdown::{ONE_HOUR_SECONDS, TEN_MINUTES_SECONDS, THIRTY_MINUTES_SECONDS};
+pub use crate::countdown::{clock_text, now_unix};
+
 /// Settings key holding `""` (not paused), `manual`, or the Unix second the pause ends.
 pub const PAUSED_UNTIL_KEY: &str = "notch.paused_until";
 
@@ -12,12 +15,9 @@ pub enum PauseChoice {
     UntilResumed,
 }
 
-/// The decoded value of [`PAUSED_UNTIL_KEY`].
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Pause {
-    Off,
-    Until(i64),
-    Manual,
+countdown_state! {
+    /// The decoded value of [`PAUSED_UNTIL_KEY`].
+    Pause
 }
 
 impl PauseChoice {
@@ -27,9 +27,9 @@ impl PauseChoice {
     /// `None` for `UntilResumed`.
     pub fn seconds(self) -> Option<i64> {
         match self {
-            PauseChoice::TenMinutes => Some(600),
-            PauseChoice::ThirtyMinutes => Some(1800),
-            PauseChoice::OneHour => Some(3600),
+            PauseChoice::TenMinutes => Some(TEN_MINUTES_SECONDS),
+            PauseChoice::ThirtyMinutes => Some(THIRTY_MINUTES_SECONDS),
+            PauseChoice::OneHour => Some(ONE_HOUR_SECONDS),
             PauseChoice::UntilResumed => None,
         }
     }
@@ -43,52 +43,9 @@ impl PauseChoice {
 }
 
 impl Pause {
-    /// Unknown text and a time not after `now_unix` read as `Off`.
-    pub fn parse(text: Option<&str>, now_unix: i64) -> Pause {
-        match text.map(str::trim) {
-            Some("manual") => Pause::Manual,
-            Some(value) => match value.parse::<i64>() {
-                Ok(end_unix) if end_unix > now_unix => Pause::Until(end_unix),
-                _ => Pause::Off,
-            },
-            None => Pause::Off,
-        }
-    }
-
-    pub fn as_text(self) -> String {
-        match self {
-            Pause::Off => String::new(),
-            Pause::Manual => "manual".to_owned(),
-            Pause::Until(end_unix) => end_unix.to_string(),
-        }
-    }
-
     pub fn is_paused(self) -> bool {
         self != Pause::Off
     }
-
-    /// Milliseconds until a timed pause ends, at least 1; `None` for `Off` and `Manual`.
-    pub fn remaining_milliseconds(self, now_unix: i64) -> Option<u32> {
-        match self {
-            Pause::Until(end_unix) => {
-                let milliseconds = (end_unix - now_unix).saturating_mul(1000).max(1);
-                Some(u32::try_from(milliseconds).unwrap_or(u32::MAX))
-            }
-            Pause::Off | Pause::Manual => None,
-        }
-    }
-}
-
-/// "14:30" for `unix` seen at `utc_offset_seconds` east of UTC.
-pub fn clock_text(unix: i64, utc_offset_seconds: i32) -> String {
-    let local_seconds = (unix + i64::from(utc_offset_seconds)).rem_euclid(86_400);
-    format!("{:02}:{:02}", local_seconds / 3600, local_seconds % 3600 / 60)
-}
-
-pub fn now_unix() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |elapsed| i64::try_from(elapsed.as_secs()).unwrap_or(i64::MAX))
 }
 
 #[cfg(test)]

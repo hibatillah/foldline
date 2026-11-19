@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn a_stored_value_outside_a_controls_range_is_shown_not_replaced_by_the_default() {
-        let path = std::env::temp_dir().join(format!("notch-settings-shown-{}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-shown-{}.txt", std::process::id()));
         std::fs::write(&path, "timer.short_break_minutes=180\ntimer.long_break_minutes=0\ntimer.focus_minutes=abc\n")
             .unwrap();
         let settings = Settings::at(Some(path.clone()));

@@ -2,11 +2,13 @@ mod about;
 mod advanced;
 mod behavior;
 mod calendar;
+mod countdown;
 mod general;
 mod language;
 mod pages;
 mod pause;
 mod shalat;
+mod snooze;
 mod stats;
 mod timer;
 mod weather;
@@ -105,7 +107,7 @@ mod tests {
 
     #[test]
     fn applying_several_keys_writes_each_of_them() {
-        let path = std::env::temp_dir().join(format!("notch-settings-apply-all-{}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-apply-all-{}.txt", std::process::id()));
         let _ = std::fs::remove_file(&path);
         let mut settings = Settings::at(Some(path.clone()));
         apply_all(&mut settings, &[("notch.first", "a".to_owned()), ("notch.second", "b".to_owned())]);
@@ -116,7 +118,7 @@ mod tests {
 
     #[test]
     fn applying_a_key_writes_it_to_the_file() {
-        let path = std::env::temp_dir().join(format!("notch-settings-apply-{}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-apply-{}.txt", std::process::id()));
         let _ = std::fs::remove_file(&path);
         let mut settings = Settings::at(Some(path.clone()));
         apply(&mut settings, "notch.example", "on");

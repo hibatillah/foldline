@@ -25,7 +25,7 @@ impl Drop for InstanceGuard {
 pub fn acquire() -> Option<InstanceGuard> {
     // SAFETY: plain Win32 calls; GetLastError is read right after CreateMutexW.
     unsafe {
-        let mutex = CreateMutexW(None, false, w!("Local\\NotchSettings")).ok()?;
+        let mutex = CreateMutexW(None, false, w!("Local\\FoldlineSettings")).ok()?;
         if GetLastError() == ERROR_ALREADY_EXISTS {
             let _ = CloseHandle(mutex);
             focus_existing_window();

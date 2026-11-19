@@ -268,7 +268,7 @@ mod tests {
 
     #[test]
     fn a_missing_or_unknown_stored_method_shows_auto() {
-        let path = std::env::temp_dir().join(format!("notch-settings-method-{}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-method-{}.txt", std::process::id()));
         std::fs::write(&path, "shalat.method=banana\n").unwrap();
         let unknown = Settings::at(Some(path.clone()));
         std::fs::write(&path, "shalat.method=karachi\n").unwrap();

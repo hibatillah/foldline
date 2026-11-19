@@ -1,4 +1,4 @@
-//! "How it looks in the notch": the open notch's header at the first, a middle and the last page, with one dot per
+//! "How it looks in Foldline": the open notch's header at the first, a middle and the last page, with one dot per
 //! page shown and the long dot on the page you are on.
 
 use gpui::{AnyElement, App, SharedString, div, prelude::*, px, rgba};

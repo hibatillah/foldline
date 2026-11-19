@@ -157,7 +157,7 @@ mod tests {
 
     fn settings_with(text: &str) -> Settings {
         let path = std::env::temp_dir().join(format!(
-            "notch-settings-stats-{}-{}.txt",
+            "foldline-settings-stats-{}-{}.txt",
             std::process::id(),
             text.bytes().fold(0u64, |sum, byte| sum.wrapping_mul(31).wrapping_add(u64::from(byte)))
         ));
@@ -250,7 +250,7 @@ mod tests {
 
     #[test]
     fn the_write_goes_to_the_file_as_one_key() {
-        let path = std::env::temp_dir().join(format!("notch-settings-stats-write-{}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-stats-write-{}.txt", std::process::id()));
         let _ = std::fs::remove_file(&path);
         let mut settings = Settings::at(Some(path.clone()));
         let gpus = names(&["RTX 4050", "Radeon 760M"]);

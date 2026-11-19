@@ -145,7 +145,7 @@ mod tests {
     use super::*;
 
     fn settings_at(name: &str) -> (Settings, std::path::PathBuf) {
-        let path = std::env::temp_dir().join(format!("notch-settings-location-{}-{name}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-location-{}-{name}.txt", std::process::id()));
         let _ = std::fs::remove_file(&path);
         (Settings::at(Some(path.clone())), path)
     }

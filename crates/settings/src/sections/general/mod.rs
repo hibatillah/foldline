@@ -1,10 +1,11 @@
-//! The General page: startup, pause, the city, notifications, the screen the notch sits on, language, and Windows' popups.
+//! The General page: startup, snooze, pause, the city, notifications, the screen the notch sits on, language, and Windows' popups.
 
 mod city_map;
 mod idle_pictures;
 mod monitor;
 mod notification_cards;
 mod screen;
+mod startup_switch;
 
 use std::rc::Rc;
 
@@ -15,7 +16,7 @@ use crate::i18n::tr;
 use crate::{
     field,
     layout::{Group, Item, Page},
-    location, startup,
+    location,
 };
 
 /// The city search and the map side by side.
@@ -39,10 +40,7 @@ fn city_row() -> Item {
 }
 
 pub fn page() -> Page {
-    let start_with_windows = field::switch("start-with-windows", startup::is_enabled, |enabled, cx| {
-        startup::set_enabled(enabled);
-        cx.refresh_windows();
-    });
+    let start_with_windows = startup_switch::control();
     Page::plain(
         tr!("general.title"),
         vec![
@@ -56,6 +54,7 @@ pub fn page() -> Page {
                     idle_pictures::item(),
                 ],
             ),
+            Group::titled(tr!("snooze.group"), vec![super::snooze::item()]),
             Group::titled(tr!("pause.group"), vec![super::pause::item()]),
             Group::titled(
                 tr!("general.group_location"),
@@ -101,9 +100,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_page_opens_with_startup_then_pause_and_keeps_language_above_the_windows_popups() {
+    fn the_page_opens_with_startup_snooze_then_pause_and_keeps_language_above_the_windows_popups() {
         let titles = page().group_titles();
-        assert_eq!(&titles[..2], ["Startup", "Pause"]);
+        assert_eq!(&titles[..3], ["Startup", "Snooze notifications", "Pause"]);
         assert_eq!(&titles[titles.len() - 2..], ["Language", "Windows popups"]);
     }
 }
