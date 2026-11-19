@@ -4,7 +4,7 @@ use crate::{
     activity::{Activity, SystemMessage},
     gfx::Point,
     log,
-    page::{Context, Page},
+    page::{Context, Page, TIMERS_PER_PAGE, TimerId},
 };
 
 const KNOWN_PAGES_SETTING: &str = "pages.known";
@@ -63,10 +63,42 @@ impl Notch {
         hook(self.activities[index].activity.as_mut(), &mut context)
     }
 
-    pub(super) fn with_page<R>(&mut self, index: usize, hook: impl FnOnce(&mut dyn Page, &mut Context) -> R) -> R {
+    /// Runs `hook` on a started page; a page that is off or not yet started hears nothing and the result is the default.
+    pub(super) fn with_page<R: Default>(
+        &mut self,
+        index: usize,
+        hook: impl FnOnce(&mut dyn Page, &mut Context) -> R,
+    ) -> R {
+        if !self.page_lifecycle.is_started(index) {
+            return R::default();
+        }
+        self.with_page_always(index, hook)
+    }
+
+    fn with_page_always<R>(&mut self, index: usize, hook: impl FnOnce(&mut dyn Page, &mut Context) -> R) -> R {
         let mut context =
             Context::new(self.window, index, &self.surface, &self.fonts, &mut self.pending, &mut self.settings);
         hook(self.pages[index].as_mut(), &mut context)
+    }
+
+    /// Starts a page that is on: its language, its work and its first enabled call, in that order.
+    pub(super) fn start_page(&mut self, index: usize) {
+        self.page_lifecycle.set_started(index, true);
+        // Pages are built before the window sets the language, so text they cached then is made again now.
+        self.with_page_always(index, |page, context| page.on_language_changed(context));
+        self.with_page_always(index, |page, context| page.on_start(context));
+        self.with_page_always(index, |page, context| page.on_enabled_changed(true, context));
+    }
+
+    /// Stops a page that was switched off: it lets go of what it holds, and every timer it owns is ended.
+    pub(super) fn stop_page(&mut self, index: usize) {
+        self.with_page_always(index, |page, context| {
+            page.on_enabled_changed(false, context);
+            for number in 0..TIMERS_PER_PAGE as u8 {
+                context.kill_timer(TimerId(number));
+            }
+        });
+        self.page_lifecycle.set_started(index, false);
     }
 
     /// Moves one page forward or back and loops from the last page to the first and the other way round.
@@ -191,8 +223,10 @@ impl Notch {
         change(&mut self.page_list);
         for (index, was_enabled) in was_enabled.into_iter().enumerate() {
             let is_enabled = self.page_list.is_enabled(index);
-            if is_enabled != was_enabled {
-                self.with_page(index, |page, context| page.on_enabled_changed(is_enabled, context));
+            if is_enabled && !was_enabled {
+                self.start_page(index);
+            } else if !is_enabled && was_enabled {
+                self.stop_page(index);
             }
         }
     }

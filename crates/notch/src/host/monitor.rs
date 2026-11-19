@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn the_notch_window_class_is_not_a_user_window() {
-        for class in ["NotchWindow", "NotchDropTarget", "Shell_TrayWnd", "Progman"] {
+        for class in ["FoldlineWindow", "NotchDropTarget", "Shell_TrayWnd", "Progman"] {
             assert!(!screen_mode::is_user_class(class), "{class}");
         }
         assert!(screen_mode::is_user_class("Chrome_WidgetWin_1"));

@@ -223,6 +223,24 @@ impl Page for MediaPage {
         self.apply_snapshot(context);
     }
 
+    /// Off holds nothing: the session subscription, the artwork, the lyrics and every timer are let go.
+    fn on_enabled_changed(&mut self, is_enabled: bool, context: &mut Context) {
+        if is_enabled {
+            return;
+        }
+        self.watcher = None;
+        self.info = MediaInfo::default();
+        self.artwork = ImageSlot::default();
+        self.app_icon = ImageSlot::default();
+        self.follower = LyricFollower::new();
+        self.theme_color = None;
+        self.title_lines.clear();
+        self.title_lines_source = (String::new(), String::new(), false);
+        self.lyric_wraps.clear();
+        self.lyric_wraps_source = 0;
+        context.request_repaint();
+    }
+
     fn on_open_changed(&mut self, is_open: bool, context: &mut Context) {
         self.is_notch_open = is_open;
         self.sync_wave_timer(context);

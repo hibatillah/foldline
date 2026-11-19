@@ -31,11 +31,13 @@ use keyboard::KeyboardState;
 pub(super) use monitor_state::MonitorState;
 use open_state::OpenState;
 use page_hotkeys::PageHotkeys;
+use page_lifecycle::PageLifecycle;
 use pages::activity_setting_key;
 use pause::PauseState;
 use presences::ShownPresences;
 use resting_row::RestingRow;
 use row_motion::RowMotion;
+use snooze::SnoozeState;
 
 mod animation;
 mod badge_pointer;
@@ -48,6 +50,7 @@ mod location;
 mod monitor_state;
 mod open_state;
 mod page_hotkeys;
+mod page_lifecycle;
 mod pages;
 mod paint;
 mod pause;
@@ -57,6 +60,7 @@ mod relocate;
 mod resting_row;
 mod row_motion;
 mod settings_reload;
+mod snooze;
 mod timers;
 mod units;
 
@@ -93,6 +97,8 @@ const WINDOW_REVEAL_TIMER_ID: usize = 10;
 const LOCATION_SETTLE_TIMER_ID: usize = 11;
 /// One-shot: ends a timed pause; killed on resume and never armed for a pause until resumed.
 const PAUSE_TIMER_ID: usize = 12;
+/// One-shot: ends a timed snooze; armed only while one runs.
+const SNOOZE_TIMER_ID: usize = 13;
 const LAST_PAGE_SETTING: &str = "navigation.page";
 const PAGE_ORDER_SETTING: &str = "navigation.order";
 const PAGES_OFF_SETTING: &str = "navigation.disabled";
@@ -136,6 +142,7 @@ pub(super) struct Notch {
     selected_page: Option<usize>,
     shown_page: Option<usize>,
     page_list: PageList,
+    page_lifecycle: PageLifecycle,
     navigable: Vec<usize>,
     track: Spring,
     page_swap: PageSwap,
@@ -149,6 +156,7 @@ pub(super) struct Notch {
     has_resting_content: bool,
     open: OpenState,
     pause: PauseState,
+    snooze: SnoozeState,
     badge_pointer: BadgePointer,
     frame_timer: FrameTimer,
     keyboard: KeyboardState,
@@ -195,6 +203,7 @@ impl Notch {
                 ActivitySlot { activity, is_enabled, is_started: false }
             })
             .collect();
+        let page_count = pages.len();
         let hiding = HidingState::read(&settings);
         let language = resolve_setting(&settings, system_language);
         Self {
@@ -216,6 +225,7 @@ impl Notch {
             selected_page: None,
             shown_page: None,
             page_list: PageList::new(0),
+            page_lifecycle: PageLifecycle::all_started(page_count),
             navigable: Vec::new(),
             track: navigation::page_transition(0.0),
             page_swap: PageSwap::default(),
@@ -228,6 +238,7 @@ impl Notch {
             has_resting_content: false,
             open: OpenState::default(),
             pause: PauseState::default(),
+            snooze: SnoozeState::default(),
             badge_pointer: BadgePointer::default(),
             frame_timer: FrameTimer::new(ticks_per_second, display::frame_interval_milliseconds()),
             keyboard: KeyboardState::default(),
@@ -242,12 +253,14 @@ impl Notch {
         if self.settings.get_string(PAUSED_UNTIL_KEY).is_some_and(|stored| !stored.is_empty()) {
             self.settings.set_string(PAUSED_UNTIL_KEY, "");
         }
+        // A snooze outlives a restart, since the notch stays visible; only a stale end time is cleared.
+        self.apply_stored_snooze(store::snooze::now_unix());
         for (index, page) in self.pages.iter().enumerate() {
             log::debug(&format!("page {index}: {}", page.id()));
         }
-        // Pages are built before the window sets the language, so text they cached then is made again now.
+        // No page is started until the list says it is on; a page that is off holds nothing.
         for index in 0..self.pages.len() {
-            self.with_page(index, |page, context| page.on_language_changed(context));
+            self.page_lifecycle.set_started(index, false);
         }
         self.selected_page = self
             .settings
@@ -263,9 +276,9 @@ impl Notch {
             self.settings.get_string(PAGES_OFF_SETTING),
         );
         for index in 0..self.pages.len() {
-            self.with_page(index, |page, context| page.on_start(context));
-            let is_enabled = self.page_list.is_enabled(index);
-            self.with_page(index, |page, context| page.on_enabled_changed(is_enabled, context));
+            if self.page_list.is_enabled(index) {
+                self.start_page(index);
+            }
         }
         for index in 0..self.activities.len() {
             if self.activities[index].is_enabled {

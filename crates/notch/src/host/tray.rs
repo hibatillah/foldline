@@ -18,7 +18,10 @@ use windows::{
     core::{HSTRING, PCSTR, PCWSTR, Result, w},
 };
 
-use store::pause::{Pause, PauseChoice, clock_text};
+use store::{
+    pause::{Pause, PauseChoice, clock_text},
+    snooze::{Snooze, SnoozeChoice},
+};
 
 use super::icon::Icon;
 use crate::i18n::tr;
@@ -31,6 +34,9 @@ const MENU_COMMAND_OPEN_SETTINGS: usize = 7;
 /// The four pause lengths take the commands from here, in the order of `PauseChoice::ALL`.
 const MENU_COMMAND_PAUSE_FIRST: usize = 20;
 const MENU_COMMAND_RESUME: usize = 24;
+/// The four snooze lengths take the commands from here, in the order of `SnoozeChoice::ALL`.
+const MENU_COMMAND_SNOOZE_FIRST: usize = 30;
+const MENU_COMMAND_TURN_OFF_SNOOZE: usize = 34;
 /// What `GetTimeZoneInformation` returns while daylight saving time applies.
 const TIME_ZONE_ID_DAYLIGHT: u32 = 2;
 
@@ -40,12 +46,16 @@ pub(super) enum MenuChoice {
     Quit,
     Pause(PauseChoice),
     Resume,
+    Snooze(SnoozeChoice),
+    TurnOffSnooze,
 }
 
 #[derive(Clone, Debug, Default)]
 pub(super) struct MenuState {
     /// `None` when not paused; else the greyed line, "Paused until 14:30" or "Paused".
     pub(super) paused_line: Option<String>,
+    /// `None` when not snoozed; else the greyed line, "Snoozed until 14:30" or "Snoozed".
+    pub(super) snoozed_line: Option<String>,
 }
 
 /// The choice a menu command stands for; `None` when the menu was dismissed or the command is unknown.
@@ -54,6 +64,11 @@ fn choice_for_command(command: usize) -> Option<MenuChoice> {
         MENU_COMMAND_OPEN_SETTINGS => Some(MenuChoice::OpenSettings),
         MENU_COMMAND_QUIT => Some(MenuChoice::Quit),
         MENU_COMMAND_RESUME => Some(MenuChoice::Resume),
+        MENU_COMMAND_TURN_OFF_SNOOZE => Some(MenuChoice::TurnOffSnooze),
+        MENU_COMMAND_SNOOZE_FIRST.. => command
+            .checked_sub(MENU_COMMAND_SNOOZE_FIRST)
+            .and_then(|position| SnoozeChoice::ALL.get(position))
+            .map(|&choice| MenuChoice::Snooze(choice)),
         _ => command
             .checked_sub(MENU_COMMAND_PAUSE_FIRST)
             .and_then(|position| PauseChoice::ALL.get(position))
@@ -81,6 +96,46 @@ pub(super) fn paused_line(pause: Pause) -> Option<String> {
             Some(tr!("tray.paused_until", time = clock_text(end_unix, local_utc_offset_seconds())).into_owned())
         }
     }
+}
+
+/// The greyed menu line for a snooze; `None` when not snoozed.
+pub(super) fn snoozed_line(snooze: Snooze) -> Option<String> {
+    match snooze {
+        Snooze::Off => None,
+        Snooze::Manual => Some(tr!("tray.snoozed").into_owned()),
+        Snooze::Until(end_unix) => {
+            Some(tr!("tray.snoozed_until", time = clock_text(end_unix, local_utc_offset_seconds())).into_owned())
+        }
+    }
+}
+
+fn snooze_choice_text(choice: SnoozeChoice) -> HSTRING {
+    let text = match choice {
+        SnoozeChoice::TenMinutes => tr!("tray.pause_10"),
+        SnoozeChoice::ThirtyMinutes => tr!("tray.pause_30"),
+        SnoozeChoice::OneHour => tr!("tray.pause_60"),
+        SnoozeChoice::UntilTurnedOff => tr!("tray.snooze_manual"),
+    };
+    HSTRING::from(text.as_ref())
+}
+
+/// Adds the "Snooze notifications" submenu, or the greyed status line and Turn off snooze while snoozed.
+fn append_snooze_items(menu: HMENU, state: &MenuState) {
+    if let Some(snoozed_line) = &state.snoozed_line {
+        let (line_text, turn_off_text) =
+            (HSTRING::from(snoozed_line.as_str()), HSTRING::from(tr!("tray.snooze_off").as_ref()));
+        let _ = unsafe { AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, &line_text) };
+        let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_TURN_OFF_SNOOZE, &turn_off_text) };
+        return;
+    }
+    let Ok(submenu) = (unsafe { CreatePopupMenu() }) else { return };
+    for (position, choice) in SnoozeChoice::ALL.into_iter().enumerate() {
+        let command = MENU_COMMAND_SNOOZE_FIRST + position;
+        let _ = unsafe { AppendMenuW(submenu, MF_STRING, command, &snooze_choice_text(choice)) };
+    }
+    let snooze_text = HSTRING::from(tr!("tray.snooze").as_ref());
+    // The parent menu owns the submenu and destroys it with itself.
+    let _ = unsafe { AppendMenuW(menu, MF_POPUP, submenu.0 as usize, &snooze_text) };
 }
 
 fn pause_choice_text(choice: PauseChoice) -> HSTRING {
@@ -173,6 +228,7 @@ pub(super) fn show_context_menu(window: HWND, state: &MenuState) -> Option<MenuC
     // Read each time the menu opens, so a language change shows in the next menu.
     let (settings_text, quit_text) =
         (HSTRING::from(tr!("tray.settings").as_ref()), HSTRING::from(tr!("tray.quit").as_ref()));
+    append_snooze_items(menu, state);
     append_pause_items(menu, state);
     let _ = unsafe { AppendMenuW(menu, MF_STRING, MENU_COMMAND_OPEN_SETTINGS, &settings_text) };
     let _ = unsafe { AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null()) };
@@ -207,6 +263,22 @@ mod tests {
     }
 
     #[test]
+    fn each_snooze_length_and_turning_it_off_has_its_own_command() {
+        assert_eq!(choice_for_command(30), Some(MenuChoice::Snooze(SnoozeChoice::TenMinutes)));
+        assert_eq!(choice_for_command(31), Some(MenuChoice::Snooze(SnoozeChoice::ThirtyMinutes)));
+        assert_eq!(choice_for_command(32), Some(MenuChoice::Snooze(SnoozeChoice::OneHour)));
+        assert_eq!(choice_for_command(33), Some(MenuChoice::Snooze(SnoozeChoice::UntilTurnedOff)));
+        assert_eq!(choice_for_command(34), Some(MenuChoice::TurnOffSnooze));
+    }
+
+    #[test]
+    fn only_an_active_snooze_has_a_menu_line() {
+        assert_eq!(snoozed_line(Snooze::Off), None);
+        assert!(snoozed_line(Snooze::Manual).is_some());
+        assert!(snoozed_line(Snooze::Until(1_600)).is_some());
+    }
+
+    #[test]
     fn the_utc_offset_follows_the_bias_and_daylight_time() {
         assert_eq!(utc_offset_seconds(-420, 0, false), 7 * 3600);
         assert_eq!(utc_offset_seconds(480, -60, false), -8 * 3600);
@@ -215,7 +287,7 @@ mod tests {
 
     #[test]
     fn a_dismissed_menu_and_retired_commands_choose_nothing() {
-        for command in [0, 2, 3, 4, 5, 6, 50, 100, 1000] {
+        for command in [0, 2, 3, 4, 5, 6, 25, 29, 35, 50, 100, 1000] {
             assert_eq!(choice_for_command(command), None, "command {command}");
         }
     }

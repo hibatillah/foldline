@@ -163,6 +163,10 @@ impl Activity for BluetoothActivity {
         self.flash.is_visible().then_some(Presence::Transient { width: self.width })
     }
 
+    fn is_notice(&self, _presence: Option<Presence>) -> bool {
+        self.flash.is_visible()
+    }
+
     fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         let Some(change) = &self.current else { return };
         let tint = if change.is_connected { ACCENT_BLUE } else { Color::gray(0.7) };

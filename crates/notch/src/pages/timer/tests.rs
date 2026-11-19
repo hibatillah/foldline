@@ -45,6 +45,17 @@ fn the_timer_badge_is_exactly_the_ring_a_gap_and_the_text() {
 }
 
 #[test]
+fn a_snooze_drops_the_finished_alert_but_not_the_running_badge() {
+    let fonts = crate::gfx::Fonts::new(1.0).unwrap();
+    let mut page = TimerPage::new();
+    page.timer.start_focus(now_ms());
+    page.refresh_compact(&fonts);
+    assert!(!page.is_notice(page.presence()), "the running badge");
+    page.alert = crate::activity::Flash::visible();
+    assert!(page.is_notice(page.presence()), "the finished alert");
+}
+
+#[test]
 fn an_idle_timer_shows_nothing_in_the_collapsed_pill() {
     assert_eq!(TimerPage::new().presence(), None);
 }

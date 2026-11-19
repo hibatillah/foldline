@@ -54,6 +54,10 @@ impl Activity for DeviceBatteryActivity {
         self.flash.is_visible().then_some(Presence::Transient { width: self.width })
     }
 
+    fn is_notice(&self, _presence: Option<Presence>) -> bool {
+        self.flash.is_visible()
+    }
+
     fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         let Some(warning) = &self.current else { return };
         let value = percent_text(warning);

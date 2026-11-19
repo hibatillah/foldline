@@ -40,7 +40,7 @@ use super::{
     settings::Settings,
     settings_launcher, shutdown, tray, volume_flyout,
 };
-use store::pause::Pause;
+use store::{pause::Pause, snooze::Snooze};
 
 use crate::{
     activity::{Activity, SystemMessage, WM_ACTIVITY_NOTIFY},
@@ -59,7 +59,7 @@ const WM_POWERBROADCAST: u32 = 0x0218;
 const WM_CLIPBOARDUPDATE: u32 = 0x031D;
 /// The `wparam` of `WM_POWERBROADCAST` when a power setting registered with `listen_to_power_setting` changed.
 const PBT_POWERSETTINGCHANGE: usize = 0x8013;
-/// Posted to the `NotchWindow` window by another program after it changed settings.txt.
+/// Posted to the `FoldlineWindow` window by another program after it changed settings.txt.
 pub const WM_SETTINGS_CHANGED: u32 = WM_APP + 30;
 
 /// Registered message id the shell broadcasts when Explorer restarts and the tray is rebuilt.
@@ -76,8 +76,9 @@ fn with_notch<R>(action: impl FnOnce(&mut Notch) -> R) -> Option<R> {
 }
 
 fn show_menu(window: HWND) {
-    let paused_line = with_notch(|notch| tray::paused_line(notch.pause())).flatten();
-    let state = tray::MenuState { paused_line };
+    let (paused_line, snoozed_line) =
+        with_notch(|notch| (tray::paused_line(notch.pause()), tray::snoozed_line(notch.snooze()))).unwrap_or_default();
+    let state = tray::MenuState { paused_line, snoozed_line };
     match tray::show_context_menu(window, &state) {
         Some(tray::MenuChoice::OpenSettings) => settings_launcher::open_settings_window(),
         // Destroying first takes the pill and the tray icon away at once; WM_DESTROY then ends the message loop.
@@ -93,6 +94,13 @@ fn show_menu(window: HWND) {
         }
         Some(tray::MenuChoice::Resume) => {
             with_notch(|notch| notch.set_pause(Pause::Off, store::pause::now_unix()));
+        }
+        Some(tray::MenuChoice::Snooze(choice)) => {
+            let now_unix = store::snooze::now_unix();
+            with_notch(|notch| notch.set_snooze(choice.snooze_from(now_unix), now_unix));
+        }
+        Some(tray::MenuChoice::TurnOffSnooze) => {
+            with_notch(|notch| notch.set_snooze(Snooze::Off, store::snooze::now_unix()));
         }
         None => {}
     }
@@ -325,7 +333,7 @@ fn register_window_class(scale: f32, instance: HINSTANCE) -> Result<(Icon, Icon)
         hCursor: unsafe { LoadCursorW(None, IDC_ARROW) }?,
         hIcon: large_icon.handle(),
         hIconSm: small_icon.handle(),
-        lpszClassName: w!("NotchWindow"),
+        lpszClassName: w!("FoldlineWindow"),
         ..Default::default()
     };
     unsafe { RegisterClassExW(&class) };
@@ -337,6 +345,10 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
     unsafe { RoInitialize(RO_INIT_MULTITHREADED) }?;
     shutdown::restore_popups_on_panic();
 
+    // Before any file read: the banner backup and the pages' files move with settings.txt.
+    if store::migrate_legacy_data_directory() {
+        crate::log::debug("copied the data folder from %APPDATA%\\notch to %APPDATA%\\Foldline");
+    }
     let settings = Settings::load();
     let monitor_mode = monitor::read_mode(&settings, Default::default());
     let chosen_id = monitor::read_chosen_id(&settings, None);
@@ -349,11 +361,11 @@ pub fn run(pages: Vec<Box<dyn Page>>, activities: Vec<Box<dyn Activity>>) -> Res
     let (width, height) = (start.width, start.height);
     let screen_position = POINT { x: start.left, y: start.top };
     // A previous instance is asked to close only after this one is visible, so a rebuild swaps without a gap.
-    let previous_window = unsafe { FindWindowW(w!("NotchWindow"), None) }.ok();
+    let previous_window = unsafe { FindWindowW(w!("FoldlineWindow"), None) }.ok();
     let window = unsafe {
         CreateWindowExW(
             WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
-            w!("NotchWindow"),
+            w!("FoldlineWindow"),
             w!("Foldline"),
             WS_POPUP,
             screen_position.x,

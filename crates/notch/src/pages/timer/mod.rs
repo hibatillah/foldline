@@ -217,6 +217,11 @@ impl Page for TimerPage {
         }
     }
 
+    /// The finished alert is a notice; the running timer's badge is not.
+    fn is_notice(&self, _presence: Option<Presence>) -> bool {
+        self.alert.is_visible()
+    }
+
     fn header_status_width(&self) -> Option<f32> {
         self.compact.as_ref().map(|_| RING_DIAMETER)
     }

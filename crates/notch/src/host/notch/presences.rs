@@ -21,6 +21,7 @@ pub(super) struct ShownPresences {
 impl Notch {
     pub(super) fn refresh_presences(&mut self) -> bool {
         self.dismiss_banners_for_priority();
+        self.drop_snoozed_notices();
         let mut transients = Vec::new();
         let mut badges = Vec::new();
         let mut banners = Vec::new();
@@ -44,7 +45,8 @@ impl Notch {
             .filter(|(index, _)| self.page_list.is_enabled(*index))
             .map(|(index, page)| (Source::Page(index), page.presence()));
         for (source, presence) in activity_presences.chain(page_presences) {
-            match presence {
+            // The one place a snoozed notice is held back; `drop_snoozed_notices` decided which.
+            match presence.filter(|_| !self.snooze.hides(source)) {
                 Some(Presence::Transient { width }) => transients.push((source, width)),
                 Some(Presence::Badge { width }) => badges.push((source, width)),
                 Some(Presence::Banner { width, height }) => banners.push((source, width, height)),

@@ -128,7 +128,7 @@ fn watch(stop: &Signal) {
 
 pub(super) fn is_another_notch_running(own_window: HWND) -> bool {
     let mut after = None;
-    while let Ok(window) = unsafe { FindWindowExW(None, after, w!("NotchWindow"), None) } {
+    while let Ok(window) = unsafe { FindWindowExW(None, after, w!("FoldlineWindow"), None) } {
         if window != own_window {
             return true;
         }

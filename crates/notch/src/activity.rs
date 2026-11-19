@@ -64,6 +64,12 @@ pub trait Activity {
     /// What this activity shows right now; `None` means nothing. Asked again after every event.
     fn presence(&self) -> Option<Presence>;
 
+    /// Whether `presence`, what `presence()` returned just now, is a notice a snooze drops (a banner, a message like
+    /// "Copied"); an icon-only indicator (a level, Caps Lock, the camera dot) answers false. Banners are notices by default.
+    fn is_notice(&self, presence: Option<Presence>) -> bool {
+        matches!(presence, Some(Presence::Banner { .. }))
+    }
+
     /// Draws into `area` (units, starting at zero), which is as wide as the width the presence asked for.
     fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32);
 

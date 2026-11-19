@@ -1,4 +1,5 @@
-//! Unpackaged apps cannot subscribe to notification events; watch the database directory instead.
+//! Windows tells the app about each new toast (`subscribe_to_arrivals`). When the process cannot subscribe, it watches
+//! the database directory instead.
 //! A new toast is found by asking for the ids above the highest seen, once at the first change and again when the
 //! directory is still; only when that finds nothing is the whole list read, which takes seconds and rewrites the
 //! database itself, so the changes it causes are waited out. The same thread removes toasts the banner dismissed.
@@ -10,19 +11,15 @@ use std::{
         atomic::{AtomicU8, Ordering},
     },
     thread,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use windows::{
-    ApplicationModel::AppInfo,
-    Foundation::Size,
-    Graphics::Imaging::{
-        BitmapAlphaMode, BitmapDecoder, BitmapPixelFormat, BitmapTransform, ColorManagementMode, ExifOrientationMode,
-    },
+    Foundation::TypedEventHandler,
     UI::Notifications::{
         KnownNotificationBindings,
         Management::{UserNotificationListener, UserNotificationListenerAccessStatus},
-        NotificationKinds, UserNotification,
+        NotificationKinds, UserNotification, UserNotificationChangedEventArgs, UserNotificationChangedKind,
     },
     Win32::{
         Foundation::{HANDLE, WAIT_OBJECT_0},
@@ -32,15 +29,16 @@ use windows::{
         },
         System::Threading::{CreateEventW, INFINITE, SetEvent, WaitForMultipleObjects, WaitForSingleObject},
     },
-    core::{HSTRING, PCWSTR, Result},
+    core::{HSTRING, PCWSTR, Ref, Result},
 };
 
+use super::package_logo;
 use super::{
     items::Item,
     logos::{LogoCache, MAX_ATTEMPTS},
     rounds::{Step, follow_ids, next_step, unseen_ids},
 };
-use crate::{gfx::ImageData, log, page::Notifier, platform::app_icon};
+use crate::{log, page::Notifier, platform::app_icon};
 
 /// Changes must stop for this long before a toast is looked for again, so one toast is one wake.
 const QUIET_TIME_MILLISECONDS: u32 = 150;
@@ -95,31 +93,6 @@ impl Shared {
     }
 }
 
-const LOGO_PIXELS: u32 = 64;
-
-fn read_logo(app_info: &AppInfo) -> Result<ImageData> {
-    let stream = app_info
-        .DisplayInfo()?
-        .GetLogo(Size { Width: LOGO_PIXELS as f32, Height: LOGO_PIXELS as f32 })?
-        .OpenReadAsync()?
-        .join()?;
-    let decoder = BitmapDecoder::CreateAsync(&stream)?.join()?;
-    let transform = BitmapTransform::new()?;
-    transform.SetScaledWidth(LOGO_PIXELS)?;
-    transform.SetScaledHeight(LOGO_PIXELS)?;
-    let pixels = decoder
-        .GetPixelDataTransformedAsync(
-            BitmapPixelFormat::Bgra8,
-            BitmapAlphaMode::Premultiplied,
-            &transform,
-            ExifOrientationMode::IgnoreExifOrientation,
-            ColorManagementMode::DoNotColorManage,
-        )?
-        .join()?
-        .DetachPixelData()?;
-    Ok(ImageData::new(LOGO_PIXELS, LOGO_PIXELS, pixels.to_vec()))
-}
-
 /// The list as Windows held it when the read began, and the items for the notifications not seen before.
 struct Reading {
     listed: HashSet<u32>,
@@ -139,10 +112,26 @@ fn build_item(notification: &UserNotification, logos: &mut LogoCache) -> Result<
     let app_id = app_info.AppUserModelId()?.to_string();
     let app = app_info.DisplayInfo()?.DisplayName()?.to_string();
     let mut was_looked_up = false;
+    let mut icon_source = "";
     let icon = logos.get(&app_id, Instant::now(), || {
         was_looked_up = true;
-        app_icon::load(&app_id).or_else(|| read_logo(&app_info).ok()).map(Arc::new)
+        let (image, source) = match app_icon::load(&app_id) {
+            Some(image) => (Some(image), "the shell"),
+            None => (
+                package_logo::read_logo(&app_info, &app_id)
+                    .inspect_err(|error| {
+                        log::debug(&format!("notifications: could not read the logo of {app_id}: {error}"))
+                    })
+                    .ok(),
+                "the app's logo",
+            ),
+        };
+        icon_source = source;
+        image.map(Arc::new)
     });
+    if was_looked_up && icon.is_some() {
+        log::debug(&format!("notifications: icon for {app_id} ({app}) came from {icon_source}"));
+    }
     if was_looked_up && icon.is_none() {
         let attempt = logos.failed_attempts(&app_id);
         if attempt == 1 || attempt == MAX_ATTEMPTS {
@@ -294,7 +283,67 @@ impl Worker<'_> {
     }
 }
 
-fn run(shared: &Shared, notifier: Notifier) -> Result<()> {
+/// The notification Windows numbered `id`; it can take a moment to be readable after the change event.
+fn notification_by_id(listener: &UserNotificationListener, id: u32) -> Option<UserNotification> {
+    const ATTEMPTS: u32 = 5;
+    for attempt in 1..=ATTEMPTS {
+        match listener.GetNotification(id) {
+            Ok(notification) => return Some(notification),
+            Err(error) if attempt == ATTEMPTS => {
+                log::debug(&format!("notifications: could not read notification {id}: {error}"));
+            }
+            Err(_) => thread::sleep(Duration::from_millis(100)),
+        }
+    }
+    None
+}
+
+/// Subscribes to the arrival event, which Windows raises for each toast as it arrives, so nothing is polled, no list is
+/// read and no folder is watched. It fails when the process may not receive the event (no package identity, on some builds).
+fn subscribe_to_arrivals(shared: &Arc<Shared>, notifier: Notifier, listener: &UserNotificationListener) -> Result<()> {
+    let logos = Arc::new(Mutex::new(LogoCache::new()));
+    let (handler_listener, handler_shared) = (listener.clone(), shared.clone());
+    listener.NotificationChanged(&TypedEventHandler::new(
+        move |_, arguments: Ref<UserNotificationChangedEventArgs>| {
+            let Some(arguments) = arguments.as_ref() else { return Ok(()) };
+            if arguments.ChangeKind()? != UserNotificationChangedKind::Added {
+                return Ok(());
+            }
+            let woke = Instant::now();
+            let Some(notification) = notification_by_id(&handler_listener, arguments.UserNotificationId()?) else {
+                return Ok(());
+            };
+            let item = logos.lock().ok().and_then(|mut logos| build_or_skip(&notification, &mut logos));
+            if let Some(item) = item {
+                log::debug(&format!("notifications: 1 new by event in {} ms", woke.elapsed().as_millis()));
+                deliver(&handler_shared, &notifier, vec![item]);
+            }
+            Ok(())
+        },
+    ))?;
+    log::debug("notifications: listening for change events");
+    Ok(())
+}
+
+/// Removes the toasts the banner dismissed; arrivals come from the event.
+fn serve_removals(shared: &Arc<Shared>, listener: &UserNotificationListener) -> ! {
+    let removal_event = HANDLE(shared.removal_event_address as *mut _);
+    loop {
+        if removal_event.is_invalid() {
+            thread::park();
+            continue;
+        }
+        unsafe { WaitForSingleObject(removal_event, INFINITE) };
+        for id in shared.take_removals() {
+            match listener.RemoveNotification(id) {
+                Ok(()) => log::debug(&format!("notifications: removed {id} from the Action Center")),
+                Err(error) => log::debug(&format!("could not remove notification {id}: {error}")),
+            }
+        }
+    }
+}
+
+fn run(shared: &Arc<Shared>, notifier: Notifier) -> Result<()> {
     let listener = UserNotificationListener::Current()?;
     let mut status = listener.GetAccessStatus()?;
     if status == UserNotificationListenerAccessStatus::Unspecified {
@@ -305,6 +354,10 @@ fn run(shared: &Shared, notifier: Notifier) -> Result<()> {
     notifier.notify();
     if access != Access::Allowed {
         return Ok(());
+    }
+    match subscribe_to_arrivals(shared, notifier, &listener) {
+        Ok(()) => serve_removals(shared, &listener),
+        Err(error) => log::debug(&format!("notifications: no arrival event ({error}), watching the folder instead")),
     }
 
     let directory = format!(r"{}\Microsoft\Windows\Notifications", std::env::var("LOCALAPPDATA").unwrap_or_default());

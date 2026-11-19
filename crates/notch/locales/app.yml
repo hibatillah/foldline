@@ -1,4 +1,19 @@
 _version: 2
+tray.snooze:
+  en: Snooze notifications
+  id: Tunda notifikasi
+tray.snooze_manual:
+  en: Until I turn it off
+  id: Sampai saya matikan
+tray.snooze_off:
+  en: Turn off snooze
+  id: Matikan tunda
+tray.snoozed_until:
+  en: Snoozed until %{time}
+  id: Ditunda sampai %{time}
+tray.snoozed:
+  en: Snoozed
+  id: Ditunda
 tray.settings:
   en: Settings
   id: Pengaturan

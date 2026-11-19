@@ -197,6 +197,13 @@ mod tests {
     }
 
     #[test]
+    fn a_snooze_keeps_the_caps_lock_change_showing() {
+        let mut activity = CapsLockActivity::new();
+        activity.flash = Flash::visible();
+        assert!(!activity.is_notice(activity.presence()));
+    }
+
+    #[test]
     fn caps_lock_ranks_right_after_the_wave() {
         assert_eq!(CapsLockActivity::new().header_status_rank(), 1);
         assert_eq!(CapsLockActivity::new().header_status_page(), None);

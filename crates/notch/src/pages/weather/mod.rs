@@ -140,6 +140,11 @@ impl Page for WeatherPage {
         self.alert.presence(self.now())
     }
 
+    /// The rain alert, as a banner and then as its countdown badge, is one notice.
+    fn is_notice(&self, presence: Option<Presence>) -> bool {
+        presence.is_some()
+    }
+
     fn draw_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         self.alert.draw(canvas, area, opacity, self.now());
     }

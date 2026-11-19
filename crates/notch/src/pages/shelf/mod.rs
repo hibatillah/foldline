@@ -96,8 +96,7 @@ pub struct ShelfPage {
 
 impl ShelfPage {
     pub fn new() -> Self {
-        let storage =
-            std::env::var_os("APPDATA").map(|directory| PathBuf::from(directory).join("notch").join("shelf.txt"));
+        let storage = store::data_directory().map(|directory| directory.join("shelf.txt"));
         Self {
             shelf: Shelf::default(),
             storage,
@@ -153,6 +152,10 @@ impl Page for ShelfPage {
 
     fn presence(&self) -> Option<Presence> {
         self.alert.is_visible().then_some(Presence::Transient { width: self.alert_width })
+    }
+
+    fn is_notice(&self, _presence: Option<Presence>) -> bool {
+        self.alert.is_visible()
     }
 
     fn draw_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {

@@ -109,7 +109,8 @@ pub trait Page {
     /// Draws the open content. `opacity` fades it in while the notch opens.
     fn draw_expanded(&self, canvas: &Canvas, frame: &Frame, opacity: f32);
 
-    /// Called once after the window exists: start background work and timers here.
+    /// Called when the page starts: at launch if it is on, and again each time the user switches it back on. Start
+    /// background work and timers here. A page that is off is never started, so it holds no thread, timer or listener.
     fn on_start(&mut self, _context: &mut Context) {}
 
     /// The notch opened or closed (by the pointer, a page or the pin); all pages receive it, including those not shown.
@@ -161,8 +162,9 @@ pub trait Page {
     /// receive it, so a page that is off never sees what the user copies.
     fn on_system_message(&mut self, _message: &SystemMessage, _context: &mut Context) {}
 
-    /// The user switched this page on or off in the settings window; also called once at start with the current state.
-    /// A page that holds personal data drops it when `is_enabled` is false.
+    /// The user switched this page on (right after `on_start`) or off. When `is_enabled` is false let go of everything the
+    /// page holds: threads, subscriptions, images and personal data. The host then ends the page's timers and stops
+    /// sending it events until it is switched on again.
     fn on_enabled_changed(&mut self, _is_enabled: bool, _context: &mut Context) {}
 
     /// Called after another program changed settings.txt and the host re-read it: re-read this page's keys here.
@@ -174,6 +176,13 @@ pub trait Page {
     /// Collapsed activity content, independent of page selection; re-evaluated after every event.
     fn presence(&self) -> Option<Presence> {
         None
+    }
+
+    /// Whether `presence`, what `presence()` returned just now, is a notice a snooze drops with the header status (an
+    /// alert, a reminder, a message); a lasting indicator (a running timer, the music wave) answers false. Banners are
+    /// notices by default.
+    fn is_notice(&self, presence: Option<Presence>) -> bool {
+        matches!(presence, Some(Presence::Banner { .. }))
     }
 
     /// Width in DIP of what the claimed pill draws at its left end; the host leaves `Frame::lead_gap` after it.

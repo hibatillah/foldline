@@ -12,7 +12,7 @@ fn log_path() -> Option<&'static PathBuf> {
     static LOG_PATH: OnceLock<Option<PathBuf>> = OnceLock::new();
     LOG_PATH
         .get_or_init(|| {
-            std::env::var_os("NOTCH_DEBUG").map(PathBuf::from).or_else(|| {
+            std::env::var_os("FOLDLINE_DEBUG").map(PathBuf::from).or_else(|| {
                 let settings = Settings::load();
                 settings
                     .get_string("advanced.debug_log")

@@ -50,6 +50,8 @@ pub struct MediaInfo {
     pub app_icon: Option<Arc<ImageData>>,
     pub lyrics: LyricsStatus,
     track_key: String,
+    /// The track whose lyrics were asked for; a track is asked for once it plays, never while it is only paused.
+    lyrics_requested_for: String,
     /// Track length in 100 ns ticks; zero when the source reports no timeline.
     pub duration_ticks: i64,
     position_ticks: i64,
@@ -57,6 +59,15 @@ pub struct MediaInfo {
 }
 
 impl MediaInfo {
+    /// The track key, artist, title and album to look up now: the current track, once it plays and was not asked for yet.
+    fn take_lyrics_request(&mut self) -> Option<(String, String, String, String)> {
+        if !self.is_playing || self.track_key.is_empty() || self.lyrics_requested_for == self.track_key {
+            return None;
+        }
+        self.lyrics_requested_for = self.track_key.clone();
+        Some((self.track_key.clone(), self.artist.clone(), self.title.clone(), self.album.clone()))
+    }
+
     pub fn position_ticks_now(&self) -> i64 {
         let elapsed = if self.is_playing { (now_ticks() - self.position_updated_at_ticks).max(0) } else { 0 };
         (self.position_ticks + elapsed).clamp(0, self.duration_ticks.max(0))
@@ -87,6 +98,7 @@ struct Shared {
 pub struct MediaWatcher {
     manager: GlobalSystemMediaTransportControlsSessionManager,
     shared: Arc<Shared>,
+    session_changed_token: i64,
 }
 
 impl MediaWatcher {
@@ -101,13 +113,13 @@ impl MediaWatcher {
 
         let session_changed_manager = manager.clone();
         let session_changed_shared = shared.clone();
-        manager.CurrentSessionChanged(&TypedEventHandler::new(move |_, _| {
+        let session_changed_token = manager.CurrentSessionChanged(&TypedEventHandler::new(move |_, _| {
             attach_current_session(&session_changed_manager, &session_changed_shared);
             Ok(())
         }))?;
 
         attach_current_session(&manager, &shared);
-        Ok(Self { manager, shared })
+        Ok(Self { manager, shared, session_changed_token })
     }
 
     pub fn snapshot(&self) -> MediaInfo {
@@ -129,6 +141,20 @@ impl MediaWatcher {
     pub fn skip_previous(&self) {
         if let Ok(session) = self.manager.GetCurrentSession() {
             let _ = session.TrySkipPreviousAsync();
+        }
+    }
+}
+
+/// Ends every subscription, so a page switched off leaves nothing listening to the media session.
+impl Drop for MediaWatcher {
+    fn drop(&mut self) {
+        let _ = self.manager.RemoveCurrentSessionChanged(self.session_changed_token);
+        if let Ok(mut subscription) = self.shared.subscription.lock()
+            && let Some(previous) = subscription.take()
+        {
+            let _ = previous.session.RemoveMediaPropertiesChanged(previous.properties_token);
+            let _ = previous.session.RemovePlaybackInfoChanged(previous.playback_token);
+            let _ = previous.session.RemoveTimelinePropertiesChanged(previous.timeline_token);
         }
     }
 }
@@ -212,20 +238,24 @@ fn refresh_properties(shared: &Arc<Shared>, session: &GlobalSystemMediaTransport
     let album = properties.AlbumTitle().map(|text| text.to_string()).unwrap_or_default();
     let artwork = artwork::read(&properties).ok().map(Arc::new);
     let track_key = format!("{artist}\u{1}{title}\u{1}{album}");
-    let is_new_track = update_info(shared, |info| {
+    update_info(shared, |info| {
         info.available = true;
         info.title = title.clone();
         info.artist = artist.clone();
         info.album = album.clone();
         info.artwork = artwork;
-        let is_new_track = info.track_key != track_key;
-        if is_new_track {
+        if info.track_key != track_key {
             info.track_key = track_key.clone();
             info.lyrics = LyricsStatus::Loading;
         }
-        is_new_track
     });
-    if is_new_track {
+    start_lyrics_lookup_if_playing(shared);
+}
+
+/// Starts the lookup for the current track once it plays; a paused or stopped session sends no request.
+fn start_lyrics_lookup_if_playing(shared: &Arc<Shared>) {
+    let request = update_info(shared, MediaInfo::take_lyrics_request);
+    if let Some((track_key, artist, title, album)) = request {
         spawn_lyrics_lookup(shared.clone(), track_key, artist, title, album);
     }
 }
@@ -233,7 +263,7 @@ fn refresh_properties(shared: &Arc<Shared>, session: &GlobalSystemMediaTransport
 /// Fetches synced lyrics off-thread and stores them only if the track has not changed meanwhile.
 fn spawn_lyrics_lookup(shared: Arc<Shared>, track_key: String, artist: String, title: String, album: String) {
     thread::spawn(move || {
-        let lookups_disabled = std::env::var("NOTCH_LYRICS").is_ok_and(|value| value.eq_ignore_ascii_case("off"));
+        let lookups_disabled = std::env::var("FOLDLINE_LYRICS").is_ok_and(|value| value.eq_ignore_ascii_case("off"));
         let cached = shared.lyrics_cache.lock().ok().and_then(|cache| cache.get(&track_key).cloned());
         let result = if let Some(cached) = cached {
             cached
@@ -302,6 +332,7 @@ fn refresh_playback(shared: &Arc<Shared>, session: &GlobalSystemMediaTransportCo
             info.position_updated_at_ticks = updated_at;
         }
     });
+    start_lyrics_lookup_if_playing(shared);
 }
 
 fn update_info<R: Default>(shared: &Arc<Shared>, change: impl FnOnce(&mut MediaInfo) -> R) -> R {
@@ -324,6 +355,42 @@ mod tests {
             position_updated_at_ticks: now_ticks(),
             ..MediaInfo::default()
         }
+    }
+
+    fn track(is_playing: bool) -> MediaInfo {
+        MediaInfo {
+            is_playing,
+            track_key: "artist|title|album".to_owned(),
+            artist: "artist".to_owned(),
+            title: "title".to_owned(),
+            album: "album".to_owned(),
+            ..MediaInfo::default()
+        }
+    }
+
+    #[test]
+    fn a_paused_track_asks_for_no_lyrics() {
+        assert!(track(false).take_lyrics_request().is_none());
+    }
+
+    #[test]
+    fn a_track_is_asked_for_once_it_plays_and_only_once() {
+        let mut info = track(true);
+        assert!(info.take_lyrics_request().is_some());
+        assert!(info.take_lyrics_request().is_none());
+    }
+
+    #[test]
+    fn a_new_track_is_asked_for_again_when_it_plays() {
+        let mut info = track(true);
+        info.take_lyrics_request();
+        info.track_key = "other".to_owned();
+        assert!(info.take_lyrics_request().is_some());
+    }
+
+    #[test]
+    fn a_session_with_no_track_asks_for_no_lyrics() {
+        assert!(MediaInfo { is_playing: true, ..MediaInfo::default() }.take_lyrics_request().is_none());
     }
 
     #[test]

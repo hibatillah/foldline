@@ -1,6 +1,6 @@
 use super::{
     ANIMATION_TIMER_ID, CLOSE_TIMER_ID, EXPAND_TIMER_ID, HOVER_WATCH_TIMER_ID, LOCATION_SETTLE_TIMER_ID, Notch,
-    PAUSE_TIMER_ID, RAISE_TIMER_ID, REVEAL_TIMER_ID, WINDOW_REVEAL_TIMER_ID,
+    PAUSE_TIMER_ID, RAISE_TIMER_ID, REVEAL_TIMER_ID, SNOOZE_TIMER_ID, WINDOW_REVEAL_TIMER_ID,
 };
 use windows::Win32::UI::WindowsAndMessaging::{KillTimer, SetTimer};
 
@@ -75,6 +75,7 @@ impl Notch {
             }
             LOCATION_SETTLE_TIMER_ID => self.location_settled(),
             PAUSE_TIMER_ID => self.pause_timer_fired(store::pause::now_unix()),
+            SNOOZE_TIMER_ID => self.snooze_timer_fired(store::snooze::now_unix()),
             WINDOW_REVEAL_TIMER_ID => {
                 let _ = unsafe { KillTimer(Some(self.window), WINDOW_REVEAL_TIMER_ID) };
                 self.finish_window_reveal();

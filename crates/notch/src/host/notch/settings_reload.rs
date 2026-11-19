@@ -14,6 +14,7 @@ impl Notch {
         // A hand-edited old key still migrates while the notch runs.
         visibility::migrate(&mut self.settings);
         self.apply_stored_pause(store::pause::now_unix());
+        self.apply_stored_snooze(store::snooze::now_unix());
         let was_suppressed = self.is_suppressed();
         self.hiding.reload(&self.settings);
         // While paused the popups belong to Windows; a resume sets them again from these keys.

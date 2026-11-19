@@ -38,6 +38,7 @@ mod resting_row;
 mod row_motion;
 mod screen_mode;
 mod settings_reload;
+mod snooze;
 mod unit_presences;
 mod units;
 
@@ -132,7 +133,7 @@ pub(super) struct SettingsFile(PathBuf);
 
 impl SettingsFile {
     pub(super) fn new(name: &str) -> Self {
-        let path = std::env::temp_dir().join(format!("notch-settings-{}-{name}.txt", std::process::id()));
+        let path = std::env::temp_dir().join(format!("foldline-settings-{}-{name}.txt", std::process::id()));
         fs::write(&path, "").unwrap();
         Self(path)
     }

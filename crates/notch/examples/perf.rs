@@ -92,7 +92,7 @@ impl RunningNotch {
     /// Like `start`, with `extra_settings` (whole `key=value` lines) appended to the isolated settings file.
     fn start_with_settings(executable: &Path, log: &Path, pages: Option<&str>, extra_settings: &str) -> Self {
         let profile = log.parent().expect("log directory").join("perf-default");
-        let settings = profile.join("notch");
+        let settings = store::data_directory::data_directory_in(&profile).expect("profile path");
         fs::create_dir_all(&settings).expect("create isolated test profile");
         let contents = format!("{ISOLATED_SETTINGS}{extra_settings}");
         fs::write(settings.join("settings.txt"), contents).expect("write isolated test settings");
@@ -103,9 +103,9 @@ impl RunningNotch {
         park_pointer();
         let _ = fs::remove_file(log);
         let mut command = Command::new(executable);
-        command.env("NOTCH_DEBUG", log);
+        command.env("FOLDLINE_DEBUG", log);
         if let Some(profile) = profile {
-            command.env("APPDATA", profile).env_remove("NOTCH_LYRICS");
+            command.env("APPDATA", profile).env_remove("FOLDLINE_LYRICS");
         }
         match pages {
             Some(pages) => command.env("NOTCH_PAGES", pages),
@@ -187,7 +187,7 @@ impl RunningNotch {
     }
 
     fn window(&self) -> windows::Win32::Foundation::HWND {
-        let window = unsafe { FindWindowW(w!("NotchWindow"), None) }.expect("test Notch window");
+        let window = unsafe { FindWindowW(w!("FoldlineWindow"), None) }.expect("test Notch window");
         let mut process_id = 0;
         unsafe { GetWindowThreadProcessId(window, Some(&mut process_id)) };
         assert_eq!(process_id, self.process.id(), "refuse to drive a window owned by another process");
@@ -251,7 +251,7 @@ fn lyrics_comparison(executable: &Path, log: &Path, center_x: i32) -> bool {
     for enabled in [false, true] {
         let state = if enabled { "on" } else { "off" };
         let profile = log.parent().expect("log directory").join(format!("perf-lyrics-{state}"));
-        let settings = profile.join("notch");
+        let settings = store::data_directory::data_directory_in(&profile).expect("profile path");
         fs::create_dir_all(&settings).expect("create isolated lyrics test profile");
         fs::write(
             settings.join("settings.txt"),
@@ -378,7 +378,7 @@ fn main() -> ExitCode {
         |flag: &str| arguments.iter().position(|argument| argument == flag).and_then(|index| arguments.get(index + 1));
     let (Some(executable), Some(log)) = (value_of("--exe"), value_of("--log")) else {
         eprintln!(
-            "usage: perf --exe <notch.exe> --log <log file> [--with-media] [--extended] [--lyrics-only] [--screen-mode]"
+            "usage: perf --exe <foldline.exe> --log <log file> [--with-media] [--extended] [--lyrics-only] [--screen-mode]"
         );
         return ExitCode::from(2);
     };

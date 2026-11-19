@@ -231,6 +231,11 @@ impl Page for ShalatPage {
         }
     }
 
+    /// The countdown before a prayer and the prayer-time message are both reminders.
+    fn is_notice(&self, _presence: Option<Presence>) -> bool {
+        self.alert.is_visible() || self.badge.is_some()
+    }
+
     fn draw_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         if self.alert.is_visible() {
             ui::draw_message(

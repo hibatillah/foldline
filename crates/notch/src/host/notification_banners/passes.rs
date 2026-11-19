@@ -1,6 +1,9 @@
 //! One pass over every app's banner value: turning banners off, or putting the saved values back.
 
-use std::{io, path::PathBuf};
+use std::{
+    io,
+    path::{Path, PathBuf},
+};
 
 use super::backup::{BANNER_OFF, Backup, plan_hiding, should_restore};
 use crate::{
@@ -9,7 +12,11 @@ use crate::{
 };
 
 fn backup_path() -> Option<PathBuf> {
-    std::env::var_os("APPDATA").map(|directory| PathBuf::from(directory).join("notch").join("notification-banners.txt"))
+    store::data_directory().map(|directory| backup_path_in(&directory))
+}
+
+fn backup_path_in(data_directory: &Path) -> PathBuf {
+    data_directory.join("notification-banners.txt")
 }
 
 fn read_backup() -> Backup {
@@ -21,7 +28,7 @@ fn read_backup() -> Backup {
 
 /// Written through a temporary file and a rename, so a crash mid-write never leaves half a backup.
 fn write_backup(backup: &Backup) -> io::Result<()> {
-    let path = backup_path().ok_or_else(|| io::Error::other("APPDATA is not set"))?;
+    let path = backup_path().ok_or_else(|| io::Error::other("the data folder is unknown (APPDATA is not set)"))?;
     if backup.originals.is_empty() {
         return match std::fs::remove_file(&path) {
             Err(error) if error.kind() != io::ErrorKind::NotFound => Err(error),
@@ -95,4 +102,19 @@ pub(super) fn restore_banners() {
         log::debug(&format!("could not update the notification banner backup: {error}"));
     }
     log::debug(&format!("notification banners: restored {restored} apps"));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_banner_backup_is_kept_in_the_foldline_data_folder() {
+        let data_directory = store::data_directory::data_directory_in(Path::new(r"C:\Users\someone\AppData\Roaming"))
+            .expect("data folder");
+        assert_eq!(
+            backup_path_in(&data_directory),
+            PathBuf::from(r"C:\Users\someone\AppData\Roaming\Foldline\notification-banners.txt")
+        );
+    }
 }

@@ -66,6 +66,11 @@ fn ring_color(percent: u32, is_on_battery: Option<bool>) -> Color {
     }
 }
 
+/// The bolt marks a known charging source; on battery or unknown the ring is empty inside.
+fn shows_charging_bolt(is_on_battery: Option<bool>) -> bool {
+    is_on_battery == Some(false)
+}
+
 fn ring_fraction(percent: u32) -> f32 {
     percent.min(100) as f32 / 100.0
 }
@@ -123,12 +128,21 @@ impl Activity for BatteryActivity {
             .map(|_| Presence::Companion { slot: Slot::Ring, width: RING_DIAMETER })
     }
 
+    /// The charging or low-battery message is a notice; the ring is not.
+    fn is_notice(&self, _presence: Option<Presence>) -> bool {
+        self.flash.is_visible()
+    }
+
     fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         if !self.flash.is_visible() {
             let Some(percent) = self.tracker.percent else { return };
             let center = Point::new(area.center_x(), area.center_y());
             let color = ring_color(percent, self.tracker.is_on_battery);
-            Ring { center, diameter: RING_DIAMETER }.draw(canvas, ring_fraction(percent), color, opacity);
+            let ring = Ring { center, diameter: RING_DIAMETER };
+            ring.draw(canvas, ring_fraction(percent), color, opacity);
+            if shows_charging_bolt(self.tracker.is_on_battery) {
+                ring.draw_bolt(canvas, SUCCESS_GREEN, opacity);
+            }
             return;
         }
         let (icon, tint) = match self.event {
@@ -191,6 +205,14 @@ mod tests {
     }
 
     #[test]
+    fn the_bolt_shows_in_the_ring_only_while_charging() {
+        assert!(shows_charging_bolt(Some(false)));
+        assert!(!shows_charging_bolt(Some(true)));
+        assert!(!shows_charging_bolt(None));
+        assert!(!shows_charging_bolt(on_battery(50).is_on_battery));
+    }
+
+    #[test]
     fn the_ring_arc_is_the_charge_fraction() {
         assert_eq!(ring_fraction(0), 0.0);
         assert_eq!(ring_fraction(50), 0.5);
@@ -221,6 +243,16 @@ mod tests {
         activity.flash = Flash::visible();
         activity.width = 120.0;
         assert_eq!(activity.presence(), Some(Presence::Transient { width: 120.0 }));
+    }
+
+    #[test]
+    fn a_snooze_drops_the_battery_message_but_not_the_ring() {
+        let mut activity = BatteryActivity::new();
+        activity.has_battery = true;
+        activity.tracker.percentage(64);
+        assert!(!activity.is_notice(activity.presence()), "the ring");
+        activity.flash = Flash::visible();
+        assert!(activity.is_notice(activity.presence()), "the message");
     }
 
     #[test]

@@ -39,6 +39,10 @@ impl Activity for ClipboardActivity {
         self.flash.is_visible().then_some(Presence::Transient { width: self.width })
     }
 
+    fn is_notice(&self, _presence: Option<Presence>) -> bool {
+        self.flash.is_visible()
+    }
+
     fn draw(&self, canvas: &Canvas, area: Rect, opacity: f32) {
         ui::draw_message(canvas, area, opacity, Icon::Copy, Color::WHITE, &tr!("clipboard.copied"), None);
     }

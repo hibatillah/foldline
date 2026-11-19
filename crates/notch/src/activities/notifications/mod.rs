@@ -5,6 +5,7 @@ mod card;
 mod items;
 mod listener;
 mod logos;
+mod package_logo;
 mod reply;
 mod rounds;
 

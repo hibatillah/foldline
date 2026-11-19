@@ -48,6 +48,7 @@ fn badge_rig() -> (Notch, usize, Rc<RefCell<Vec<PointerEvent>>>) {
     let mut notch = rig(SampleOptions::default());
     notch.pages.push(Box::new(BadgePage { heard: heard.clone() }));
     notch.page_list = PageList::new(notch.pages.len());
+    notch.page_lifecycle = super::super::page_lifecycle::PageLifecycle::all_started(notch.pages.len());
     settle(&mut notch);
     notch.open.is_open = true;
     let index = notch.pages.len() - 1;

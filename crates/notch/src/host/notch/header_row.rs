@@ -52,7 +52,7 @@ impl Notch {
     pub(super) fn refresh_header_marks(&mut self) {
         let mut entries: Vec<(u8, f32, Source)> = Vec::new();
         for (index, slot) in self.activities.iter().enumerate() {
-            if !slot.is_showing() {
+            if !slot.is_showing() || self.snooze.hides(Source::Activity(index)) {
                 continue;
             }
             if let Some(width) = slot.activity.header_status_width() {
@@ -60,7 +60,7 @@ impl Notch {
             }
         }
         for (index, page) in self.pages.iter().enumerate() {
-            if !self.page_list.is_enabled(index) {
+            if !self.page_list.is_enabled(index) || self.snooze.hides(Source::Page(index)) {
                 continue;
             }
             if let Some(width) = page.header_status_width() {

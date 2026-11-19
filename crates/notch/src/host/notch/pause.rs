@@ -10,7 +10,7 @@ use super::{
 use crate::host::{notification_banners, volume_flyout};
 
 /// The largest interval a Windows timer accepts; a longer pause re-arms for the rest when the timer fires early.
-const LONGEST_TIMER_MILLISECONDS: u32 = i32::MAX as u32;
+pub(super) const LONGEST_TIMER_MILLISECONDS: u32 = i32::MAX as u32;
 
 pub(super) struct PauseState {
     pause: Pause,

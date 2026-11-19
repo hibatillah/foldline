@@ -223,3 +223,68 @@ fn a_page_hears_once_when_switched_off_once_when_switched_on_and_never_when_its_
 
     assert_eq!(*calls.borrow(), vec![false, true]);
 }
+
+/// A page that records the hooks it hears, in order.
+struct LifecycleRecorder {
+    events: Rc<std::cell::RefCell<Vec<&'static str>>>,
+}
+
+impl Page for LifecycleRecorder {
+    fn id(&self) -> &'static str {
+        "weather"
+    }
+
+    fn priority(&self, _mode: crate::page::Mode) -> Option<crate::page::Priority> {
+        Some(crate::page::Priority::BACKGROUND)
+    }
+
+    fn sizes(&self) -> crate::page::PageSizes {
+        crate::page::PageSizes { resting_width: 100.0, expanded: crate::gfx::Size::new(100.0, 40.0) }
+    }
+
+    fn draw_resting(&self, _canvas: &Canvas, _frame: &crate::page::Frame, _opacity: f32) {}
+
+    fn draw_expanded(&self, _canvas: &Canvas, _frame: &crate::page::Frame, _opacity: f32) {}
+
+    fn on_start(&mut self, _context: &mut Context) {
+        self.events.borrow_mut().push("start");
+    }
+
+    fn on_enabled_changed(&mut self, is_enabled: bool, _context: &mut Context) {
+        self.events.borrow_mut().push(if is_enabled { "on" } else { "off" });
+    }
+
+    fn on_settings_changed(&mut self, _context: &mut Context) {
+        self.events.borrow_mut().push("settings");
+    }
+}
+
+#[test]
+fn a_page_switched_off_hears_nothing_and_starts_again_when_switched_on() {
+    let settings_file = SettingsFile::new("reload-lifecycle");
+    let events = Rc::new(std::cell::RefCell::new(Vec::new()));
+    let pages: Vec<Box<dyn Page>> = vec![
+        Box::new(LifecycleRecorder { events: events.clone() }),
+        Box::new(EnabledCounter { id: "stats", calls: Rc::default() }),
+    ];
+    let mut notch = custom_rig(pages, settings_file.load(), Vec::new());
+
+    fs::write(&settings_file.0, "navigation.disabled=weather\n").unwrap();
+    notch.reload_settings();
+    assert_eq!(events.borrow().last(), Some(&"off"));
+    let heard_while_switching_off = events.borrow().len();
+
+    notch.reload_settings();
+    assert_eq!(events.borrow().len(), heard_while_switching_off, "a page that is off hears no settings change");
+    assert!(!notch.page_lifecycle.is_started(0));
+
+    fs::write(&settings_file.0, "navigation.disabled=\n").unwrap();
+    notch.reload_settings();
+    let events = events.borrow();
+    assert_eq!(
+        events[events.len() - 3..],
+        ["start", "on", "settings"],
+        "a page switched on starts again, hears it is on, then hears the settings"
+    );
+    assert!(notch.page_lifecycle.is_started(0));
+}

@@ -96,8 +96,7 @@ pub struct CalendarPage {
 
 impl CalendarPage {
     pub fn new() -> Self {
-        let storage =
-            std::env::var_os("APPDATA").map(|directory| PathBuf::from(directory).join("notch").join("calendar.ics"));
+        let storage = store::data_directory().map(|directory| directory.join("calendar.ics"));
         Self {
             events: Vec::new(),
             link: None,
@@ -269,6 +268,10 @@ impl Page for CalendarPage {
 
     fn presence(&self) -> Option<Presence> {
         self.reminder.as_ref().map(|_| Presence::Badge { width: self.reminder_width })
+    }
+
+    fn is_notice(&self, _presence: Option<Presence>) -> bool {
+        self.reminder.is_some()
     }
 
     fn draw_presence(&self, canvas: &Canvas, area: Rect, opacity: f32) {

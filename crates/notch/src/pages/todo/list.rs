@@ -1,4 +1,4 @@
-//! The todo list and its file, `%APPDATA%\notch\todo.txt`, one markdown checkbox per line so it reads in any editor.
+//! The todo list and its file, `todo.txt` in the data folder, one markdown checkbox per line so it reads in any editor.
 //! The last removal (one task or a clear) is held in memory for undo; the file never holds removed tasks.
 
 use std::{fs, io::ErrorKind, path::PathBuf};
@@ -25,7 +25,7 @@ pub struct TodoList {
 
 impl TodoList {
     pub fn load() -> Self {
-        let path = std::env::var_os("APPDATA").map(|directory| PathBuf::from(directory).join("notch").join("todo.txt"));
+        let path = store::data_directory().map(|directory| directory.join("todo.txt"));
         Self::at(path)
     }
 

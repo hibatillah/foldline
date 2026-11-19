@@ -12,7 +12,7 @@ impl Icon {
     pub fn load(size: i32) -> Result<Self> {
         let instance = unsafe { GetModuleHandleW(None)? };
         let handle =
-            unsafe { LoadImageW(Some(instance.into()), w!("NOTCH_ICON"), IMAGE_ICON, size, size, LR_DEFAULTCOLOR)? };
+            unsafe { LoadImageW(Some(instance.into()), w!("FOLDLINE_ICON"), IMAGE_ICON, size, size, LR_DEFAULTCOLOR)? };
         Ok(Self(HICON(handle.0)))
     }
 

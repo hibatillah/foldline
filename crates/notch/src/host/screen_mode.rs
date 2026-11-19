@@ -39,7 +39,7 @@ pub(super) enum ScreenMode {
 }
 
 const IGNORED_CLASSES: [&str; 6] =
-    ["Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "NotchWindow", "NotchDropTarget"];
+    ["Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "FoldlineWindow", "NotchDropTarget"];
 
 /// Whether a window class is a user window: not the desktop, a taskbar or one of the notch's own windows.
 pub(super) fn is_user_class(class: &str) -> bool {
