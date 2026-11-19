@@ -14,7 +14,7 @@ scripts/perf.sh --screen-mode # also maximize and restore a test window it opens
 ```
 
 The script starts a copy of the notch with only the shelf page (`NOTCH_PAGES=shelf`), so the result does not depend
-on what you are listening to. It then starts two more copies: the shelf and devices pages opening on devices
+on what you are listening to. It then starts more copies: the shelf and devices pages opening on devices
 (`NOTCH_PAGES=shelf,devices`), the stats page alone (`NOTCH_PAGES=stats`), and the shelf and stats pages (`NOTCH_PAGES=shelf,stats`, opening on the shelf), pinned open by
 a click it sends to the header pin. It moves the mouse to open and close the notch, so leave the mouse alone while it
 runs. It also asks a running notch to close; start yours again with `scripts/reload.sh`.
@@ -58,7 +58,7 @@ The run prints `disturbed (<percent> %) by: <log line>; measuring again` for eac
 The last check is the important one. A common mistake is leaving a timer or animation running, which makes the
 notch use CPU forever; it shows up there as several percent of a core.
 
-The latest recorded baseline and its workload are summarized in [README.md](../../README.md#resource-use).
+The latest recorded baseline and its workload are in [performance baseline](../reference/performance-baseline.md).
 Run the check for your current machine. The limits are set
 in constants at the top of `crates/notch/examples/perf.rs`; they exist to catch regressions, so fix the cause rather than raising one.
 
@@ -78,9 +78,9 @@ set; the reported swipe peak is sampled at each end of a swipe, not a continuous
 
 ### When a check fails
 
-A single failed idle-CPU check can be noise: rerun on a quiet machine, see the variation table in
-[performance baseline](../reference/performance-baseline.md#run-to-run-variation-2026-11-06).
-`perf.rs` deletes `run/perf.log` when it ends, so read the log through a hand run with `NOTCH_DEBUG=<file>` instead.
+A single failed idle-CPU check can be noise: rerun on a quiet machine, see how to judge a change in
+[performance baseline](../reference/performance-baseline.md#reading-the-numbers).
+`perf.rs` deletes `run/perf.log` when it ends, so read the log through a hand run with `FOLDLINE_DEBUG=<file>` instead.
 The script stops the notch it started and leaves none running; start yours with `scripts/reload.sh`.
 
 ### The two files
@@ -91,7 +91,7 @@ The script stops the notch it started and leaves none running; start yours with 
   `crates/notch/examples/perf/scenarios.rs`. It is a Rust program (run with `cargo run --release -p notch --example perf`) that
   starts the notch, moves the pointer with `SetCursorPos`, and reads CPU time, handles and private memory from the
   process. A shell script cannot move the mouse or read those numbers, and an example is not part of the shipped
-  `notch.exe`. The limits are constants at the top of the file.
+  `foldline.exe`. The limits are constants at the top of the file.
 
 Every scenario starts the notch with its own settings file under `run/` (`notch.fullscreen=music`, so a full-screen
 window in front cannot hide the notch mid-check), and your `settings.txt` stays untouched. The check also writes a copy

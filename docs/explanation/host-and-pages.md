@@ -1,8 +1,8 @@
 # Host and pages
 
-> **Explanation.** Read when: you change or restructure the host, a page or an activity and want to know how they work inside `notch.exe` and why. Skip if: you want the overview of the programs, crates, files and services ([ARCHITECTURE.md](../../ARCHITECTURE.md)), a file's location ([source map](../reference/source-map.md)) or a step to follow (the how-to guides).
+> **Explanation.** Read when: you change or restructure the host, a page or an activity and want to know how they work inside `foldline.exe` and why. Skip if: you want the overview of the programs, crates, files and services ([ARCHITECTURE.md](../../ARCHITECTURE.md)), a file's location ([source map](../reference/source-map.md)) or a step to follow (the how-to guides).
 
-This document covers how the host, the pages and the activities work inside `notch.exe`. The notch is a small window pinned to the top of the screen. It shows one **page** at a time, either collapsed
+This document covers how the host, the pages and the activities work inside `foldline.exe`. The notch is a small window pinned to the top of the screen. It shows one **page** at a time, either collapsed
 (a slim pill) or open: opened by the pointer, which closes it again when it leaves, or pinned open by the pin in
 the header, which keeps it open until the user unpins it. While it is collapsed, **activities** (a volume change, a
 charger being plugged in, a notification) take over the pill for a moment or add a small badge to it. The code is split
@@ -45,7 +45,7 @@ The media page claims the collapsed pill only while a lyric line shows: its pill
 
 Every open page sits inside the same frame, drawn by `chrome.rs`: 10 px of padding, a 16 px header, a 10 px gap, then
 the page's content area, with 16 px of padding at the sides and 14 below. The content area is 86 px high unless the page asks for more (`DEFAULT_CONTENT_HEIGHT` and `MAX_CONTENT_HEIGHT` in `page.rs`; the shelf, calendar, clipboard and todo pages do); its width is the page's own. The
-header holds the page dots on the left, the time in the middle, and at the right the same group as the idle pill, as icons only, then the settings gear at the right edge (laid out by `host/pill_row.rs`). A page draws in
+header holds the page dots on the left, the time in the middle, and at the right the same group as the idle pill, as icons only, then the pin and the settings gear at the right edge (laid out by `host/pill_row.rs`). A page draws in
 `Frame::bounds`, which is the content area, and cannot draw into the header or the padding. The layout with its
 numbers is in [the layout reference](../reference/layout.md#the-notch-layout).
 
@@ -171,9 +171,9 @@ device-independent units starting at zero and do not multiply by a scale; widget
 
 Windows messages reach `window.rs`, which calls the notch. The notch routes pointer events to the page chosen for the
 open mode, and `host/notch/units.rs` converts each position to units from the top-left of that page's frame (or of the
-banner's or badge's area), the same space the page draws in. A right click reaches only a page that uses it for its own content (the shelf's files); the notch has no menu of its own. The tray icon has the items Pause Foldline (a submenu of four lengths, replaced by the status line and Resume Foldline while paused), Settings and Quit Foldline
+banner's or badge's area), the same space the page draws in. A right click reaches only a page that uses it for its own content (the shelf's files); the notch has no menu of its own. The tray icon has the items Snooze notifications (a submenu of four lengths, replaced by the status line and Turn off snooze while snoozed), Pause Foldline (a submenu of four lengths, replaced by the status line and Resume Foldline while paused), Settings and Quit Foldline
 (`host/tray.rs`), and the gear in the open header starts the settings window the way the tray's Settings item does (`host/settings_launcher.rs`). A page's timers (`Context::set_timer`) are Windows timers whose ids encode the page and the
-timer number, so each page has its own. The host's own timers are constants in `host/notch.rs` (the last, id 12, ends a timed pause: one-shot, set when a timed pause begins and killed when it ends).
+timer number, so each page has its own. The host's own timers are constants in `host/notch.rs` (id 12 ends a timed pause and id 13 a timed snooze: one-shot, set when the pause or snooze begins and killed when it ends).
 
 ### Activities
 
@@ -198,7 +198,7 @@ window for Windows power-setting and clipboard messages on their behalf (`Contex
 
 ### Status marks
 
-The same marks form the group at the right edge of the collapsed pill and the icons at the right of the open header: the media page's wave, an activity's Caps Lock arrow or muted speaker, the timer, the next event and the next prayer. A page or an activity answers `header_status_width` and `draw_header_status` (icon only), and the host lays them out lowest `header_status_rank` first, nearest the time (wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5), pages before activities within a rank. The battery ring and the camera and microphone dots follow them at the fixed right end and have no rank. `header_status_page` names the page a click on the icon opens (`host/notch/header_row.rs`).
+The same marks form the group at the right edge of the collapsed pill and the icons at the right of the open header: the media page's wave, an activity's Caps Lock arrow or muted speaker, the timer, the next event and the next prayer. A page or an activity answers `header_status_width` and `draw_header_status` (icon only), and the host lays them out lowest `header_status_rank` first, nearest the time (wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5, rain 6, browser downloads 7), pages before activities within a rank. The battery ring and the camera and microphone dots follow them at the fixed right end and have no rank. `header_status_page` names the page a click on the icon opens (`host/notch/header_row.rs`).
 
 ### The rows and their motion
 
@@ -210,7 +210,7 @@ All drawing and page code runs on the single UI thread. Work that waits runs on 
 thread with a `Notifier` that posts a message; the page or activity then reads the new state in `on_notify`:
 
 - the media page watches the Windows media session and looks up lyrics
-- the notifications activity looks for the new toast by its id when the notification folder changes (tens of milliseconds), and reads the whole list (seconds) only when that finds nothing
+- the notifications activity subscribes to Windows' `NotificationChanged` event and builds the card from the toast the event names; when the process may not subscribe (no package identity), a thread of its own watches the notification database folder, asks for the new toast by its id when it changes (tens of milliseconds) and reads the whole list (seconds) only when that finds nothing ([notification delivery](notification-delivery.md))
 - the shelf asks Explorer for file pictures and carries a file being dragged out (that needs a single-threaded
   apartment, which the UI thread is not); `drop_target.rs` has the thread that takes dragged files in
 - the device battery activity runs a WinRT `DeviceWatcher` that Windows pushes changes into

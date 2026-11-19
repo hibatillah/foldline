@@ -67,7 +67,7 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
 
 - **Clock:** at the left edge, 12 px from it, 14 pt Medium Geist (`clock.rs`).
 - **Group:** one run anchored to the right edge, left to right: the badges by `header_status_rank` (lowest first: music
-  wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5, rain 6), then the battery ring, then the dot column. The ring and
+  wave 0, Caps Lock 1, muted 2, timer 3, event 4, prayer 5, rain 6, browser downloads 7), then the battery ring, then the dot column. The ring and
   the dots are not ranked; they are always the right end. A new item joins between the clock and the items already
   there, so nothing right of it moves (`pill_row.rs`). The rank list is in [design-rules.md](design-rules.md#collapsed-pill).
 - **Badges:** timer, event and prayer draw an icon and text; the wave, muted and Caps Lock draw an icon only. With two or
@@ -153,9 +153,9 @@ The idle row, left to right (`idle_row` in `crates/notch/src/host/pill_row.rs`):
   Calendar, Shalat, Media). Muted, Caps Lock, the ring and the dots take the click and do nothing. A click that lands on
   an item never reaches the page below it.
 - **The gear** is drawn as a hexagon around a ring (`Icon::Gear`), `#8c8c94`, and shows only in the open notch, never in the idle
-  pill. It is not an activity and has no rank. A click on it starts the settings window (`notch-settings.exe`) through
+  pill. It is not an activity and has no rank. A click on it starts the settings window (`foldline-settings.exe`) through
   `host/settings_launcher.rs`, the launcher the tray's **Settings** item uses.
-- **The pin** is drawn with `Icon::Pin`, `#8c8c94` while unpinned and `#74c0fc` while pinned (`pin_color` in
+- **The pin** is drawn with `Icon::Pin`, `#8c8c94` while unpinned and white while pinned or under the pointer (`pin_color` in
   `host/notch/header_row.rs`). A click toggles it (`Notch::toggle_pin`, `host/notch/pin.rs`). A pinned notch stays open
   with the pointer away and is never hidden by the words below or by Hide when idle; only a screenshot overlay hides it.
 - **Hover:** the pointer over the pin or the gear turns its glyph white and draws nothing else, so the 24 px hit square stays
@@ -191,7 +191,7 @@ monitor (not of the virtual desktop), and its size and every pixel value follow 
   another monitor does not hide it (`host/screen_mode.rs`).
 - **One monitor:** a change of resolution or scale re-centers the notch.
 
-Limits are in [the README](../../README.md#limitations).
+Limits: a two-monitor check is still pending. The animation frame rate stays that of the main display. The focused screen follows changes of the window in front only: a window dragged to another screen without becoming the front window does not move the notch.
 
 **Where to change what:**
 
@@ -209,7 +209,7 @@ Limits are in [the README](../../README.md#limitations).
 | maximized, full-screen and screenshot-overlay detection | `crates/notch/src/host/screen_mode.rs` (the hooks), `crates/notch/src/host/screen_mode/classify.rs` (the rules) |
 | the tray menu | `crates/notch/src/host/tray.rs` (the items), `crates/notch/src/host/window.rs` (what they do) |
 | the settings window | `crates/settings/src/sections/` (one file per section), `crates/settings/src/field.rs` (toggles and text fields); [add a setting](../how-to/add-a-setting.md) |
-| start with Windows | `crates/settings/src/startup.rs` (the window's switch), `installer/notch.iss` (the installer's choice) |
+| start with Windows | `crates/settings/src/startup/` (the window's switch), `installer/foldline.iss` (the installer's choice) |
 | a page's content and size | that page's folder in `crates/notch/src/pages/` |
 | register a page | `crates/notch/src/pages/mod.rs` |
 | register an activity | `crates/notch/src/activities/mod.rs` |

@@ -128,7 +128,7 @@ What each part does:
   During navigation, each visible page keeps its requested width in `frame.bounds` and `frame.expanded.width`.
   The notch clips the visible portion; do not stretch your content to the neighbouring page's width. Pointer events
   use the same shifted frame as drawing, including while the user rests between pages.
-- `on_start` runs once. Read settings and start timers or background work here.
+- `on_start` runs when the page starts: at launch if the page is on, and each time the user switches it back on (`on_language_changed` runs just before it, and `on_enabled_changed(true)` just after). A page that is off is never started and receives no events. Read settings and start timers or background work here.
 - `on_settings_changed` runs after another program (the settings window) changed `settings.txt` and the notch re-read
   it. Read your keys again here; fall back to the current value, not the default, so a missing or unreadable line
   changes nothing. Never write settings from it.
@@ -144,7 +144,7 @@ What each part does:
 - A page that uses right-click answers `uses_right_click` for those points and then gets `PointerEvent::SecondaryReleased`; the shelf does this for its files. A right-click elsewhere does nothing.
   Positions are units in the same space as its own `frame.bounds`, from the page's top-left.
 - A page with a scrolling area answers `claims_scroll` for the points where the vertical wheel or a touchpad swipe scrolls it and then gets `PointerEvent::Scrolled { notches }` (positive moves toward later content, one wheel notch is 1.0); the calendar's event list does this. Elsewhere the wheel still switches pages, and a horizontal swipe always does.
-- A page that must not hold anything while it is off (the clipboard page) answers `on_enabled_changed`, which runs at start and whenever the settings window switches the page. A page that wants a Windows message (the clipboard) calls `context.listen_to_clipboard()` in `on_start` and reads it in `on_system_message`; only a page that is on gets it. `context.request_close()` closes the notch, except while the user has pinned it open: then the request does nothing.
+- A page lets go of everything it holds in `on_enabled_changed(false)` (threads, subscriptions, images, personal data); the host ends its timers. The call runs when the settings window switches the page, and `on_enabled_changed(true)` follows `on_start`. A page that wants a Windows message (the clipboard) calls `context.listen_to_clipboard()` in `on_start` and reads it in `on_system_message`; only a page that is on gets it. `context.request_close()` closes the notch, except while the user has pinned it open: then the request does nothing.
 - A page that takes typing (the todo page's add field) calls `context.take_keyboard()` from a click, never on hover,
   and gets `on_key` with a `KeyInput` until it calls `context.release_keyboard()`. The notch stays open meanwhile. When
   the user clicks another window first, the page gets `on_keyboard_lost` and stops editing. `ui::TextField` handles
@@ -185,5 +185,5 @@ exists.
 
 - Look up a hook, a drawing call or a convention: [page API](../reference/page-api.md).
 - Give the page settings: [add a setting](../how-to/add-a-setting.md).
-- A page that shows something in the collapsed pill: [activity presence](../reference/activities.md).
+- A page that shows something in the collapsed pill: [activity presence](../reference/activities.md). Answer `is_notice(presence)` true while that presence is an alert, a reminder or a message, so a snooze drops it ([page API](../reference/page-api.md)).
 - Remove it, or switch it off: [switch off or remove](../how-to/switch-off-or-remove.md).

@@ -5,13 +5,13 @@
 ```
 Cargo.toml               the workspace: members, shared version, profiles, the salah patch
 crates/
-  notch/                 the pill, notch.exe
+  notch/                 the pill, foldline.exe
     build.rs             embeds the icon
     examples/            perf.rs (the performance check) and tray_spike.rs
     src/
       page.rs         the whole contract for a page: the Page trait, Context, Frame, events (`page/timer_keys.rs`: the timer id math)
       activity.rs     the whole contract for an activity: the Activity trait, Presence, SystemMessage, Flash
-      log.rs          optional debug log (set NOTCH_DEBUG to a file path)
+      log.rs          optional debug log (set FOLDLINE_DEBUG to a file path)
       i18n.rs         the `tr!` text lookup; the texts are in `crates/notch/locales/app.yml` (the settings window has its own `crates/settings/locales/app.yml`)
       host/           the notch itself: window, animation, opening and closing, the pin, tray, the launcher of the settings window. Knows no page.
       gfx/            drawing toolkit: Canvas and its unit space (`Canvas::in_units` in `canvas.rs`), fonts (a device set for the host and a unit set, `Fonts::unit`, in `fonts.rs`), the window's bitmap (`surface.rs`; `Surface::resize` changes its size and keeps the render target and uploaded images), colors, image pixels (`image_data.rs`) and their uploaded brushes (`image_brush.rs`), springs, geometry, text clamping, the bounded cache of measured text (`text_cache.rs`), SVG path data read into a `Path` (`svg_path.rs`), the whole-pixel square for cached shapes (`pixel_square.rs`, `Canvas::pixel_square`)
@@ -20,7 +20,7 @@ crates/
       ui/             reusable widgets: IconButton (with its hover wash, `draw_hover_wash`), PillButton, Ring, TextField (the todo page's add field), icons (`icons/`: the shapes in `paths.rs`; the gear and the pin included; the Lucide weather icons as SVG path data in `weather.rs`), line icons from SVG path data in several colors (`svg_icon.rs`), the dashed outline, the shared list scroll offset (`scroll.rs`), the one hovered thing on a page (`hover.rs`), the HUD layouts, the shared colors (`palette.rs`) and text styles (`type_styles.rs`), a banner's Dismiss and Open buttons (`banner_buttons.rs`, labels passed in), the input types `PointerEvent` and `KeyInput` (`input.rs`, re-exported by `page`)
       activities/     the registry (mod.rs) and one file or folder per activity: volume, brightness, battery, Bluetooth,
                       microphone, camera, clipboard, Caps Lock, notifications (`notifications/`: the card, the item and
-                      its heading, the listener thread and its rounds of asking by id, `logos.rs` the icon cache that retries failures), browser downloads (`downloads/`: the tracker of partial files and the size text, both pure; `watcher.rs` the `ReadDirectoryChangesW` thread; the card)
+                      its heading, the listener thread and its rounds of asking by id, `logos.rs` the icon cache that retries failures, `package_logo.rs` the logo file a package's manifest declares), browser downloads (`downloads/`: the tracker of partial files and the size text, both pure; `watcher.rs` the `ReadDirectoryChangesW` thread; the card)
       pages/
         mod.rs        the registry: the only place pages are listed
         media/        media player: session, controls, lyrics, artwork, app icon, the lyric glow
@@ -34,20 +34,20 @@ crates/
         weather/      weather: the MET Norway request (fetch.rs), the forecast (forecast.rs), the sky icons (symbol.rs maps a sky to its Lucide icon, picture.rs tints and draws it), the message states and their width (message.rs), the page's drawing and the Today/Week pill (draw.rs), the rain alert (alert.rs: the banner, badge.rs: the countdown badge), the weather.com addresses (link.rs) the clickable cells (click.rs), fetch and rain-alert scheduling (refresh.rs), pointer input (input.rs) and the snapshot samples (sample.rs)
         todo/         todo list: the list, its todo.txt file and the undo of the last removal (list.rs), which rows show and where (layout.rs), presses: add, clear, undo, copy, delete, tick (actions.rs), the green check after a copy (copy_check.rs), drawing (draw.rs), the snapshot scenarios (sample.rs), the page tests (tests.rs), the page
   places/                the city list and the shared `location.*` keys, used by the notch and the settings window
-  store/                 the settings file code shared by the notch and the settings window (per-key atomic writes) `language.rs`, the language both programs read, `screens.rs`, the connected screens and the identifier of a chosen one, and `pause.rs`, the `notch.paused_until` value (its parse, text, end time and clock text) that the notch, the tray and the settings window share
-  settings/              the settings window, a separate GPUI executable named notch-settings.exe (needs the MSVC host
+  store/                 the settings file code shared by the notch and the settings window (per-key atomic writes) `language.rs`, the language both programs read, `screens.rs`, the connected screens and the identifier of a chosen one, and `pause.rs`, the `notch.paused_until` value (its parse, text, end time and clock text) that the notch, the tray and the settings window share, `snooze.rs`, the same for `notch.snoozed_until`, `data_directory.rs`, `%APPDATA%\Foldline` and the one-time copy from `%APPDATA%\notch`, and `countdown.rs`, the code both share
+  settings/              the settings window, a separate GPUI executable named foldline-settings.exe (needs the MSVC host
                          toolchain); src/sections/ holds one file per section (shalat/ one file per card group, about/ the
-                         About page: app card, links, licenses file, data paths; pause.rs the Pause item of General, language.rs its Language item, advanced.rs the Advanced page (the Troubleshooting section, the debug log), behavior.rs the Behavior page; pages/ the Pages page; calendar/ the Calendar page; stats/ the System stats page; timer/ the Timer page (steppers and the round picture); weather/ the Weather page (the Rain alert switch); general/ the General page (monitor cards, screen.rs the chosen-screen picker, city_map.rs); sections/mod.rs lists them and writes
+                         About page: app card, links, licenses file, data paths; pause.rs and snooze.rs the Pause and Snooze items of General (countdown.rs their shared view), language.rs its Language item, advanced.rs the Advanced page (the Troubleshooting section, the debug log), behavior.rs the Behavior page; pages/ the Pages page; calendar/ the Calendar page; stats/ the System stats page; timer/ the Timer page (steppers and the round picture); weather/ the Weather page (the Rain alert switch); general/ the General page (monitor cards, screen.rs the chosen-screen picker, city_map.rs, startup_switch.rs the Start with Windows switch); sections/mod.rs lists them and writes
                          every key through `apply`); main.rs the window (the translucent sidebar and the flush solid content pane,
                          in the system's light or dark theme), field.rs the switch and the text and number fields bound
                          to a key and their save rules, switch.rs the 42 by 25 switch they draw, notify.rs posts WM_SETTINGS_CHANGED to the notch,
-                         single_instance.rs allows one window and focuses the open one, startup.rs the Run registry
-                         value behind Start with Windows, palette.rs the colors (dark and light, with contrast tests), sidebar.rs the groups and icons, header.rs the breadcrumb header and window
+                         single_instance.rs allows one window and focuses the open one, startup/ the Run registry
+                         value or MSIX startup task behind Start with Windows (`registry.rs`, `packaged.rs`, `presentation.rs`), palette.rs the colors (dark and light, with contrast tests), sidebar.rs the groups and icons, links.rs the addresses the window opens (repository, release notes), brand.rs the build's tile logo, version.rs the displayed version, i18n.rs the `tr!` lookup, stepper.rs and chips.rs the minute controls, tag.rs the small tags after a row title, info_box.rs the hint box, illustration.rs the drawn desktop pictures, header.rs the breadcrumb header and window
                          buttons, icons.rs the bundled SVG icons (assets/icons) and their asset source, layout.rs the page
                          description, bordered sections and rows, location.rs the city search, card.rs and picture.rs the
                          picture cards
 vendor/salah/     the prayer-time crate with one crash fix (see docs/reference/dependencies-and-licenses.md)
-installer/        the Inno Setup script the release workflow builds the installer from
+installer/        foldline.iss, the Inno Setup script the release workflow builds the installer from; msix/, the manifest template and logos of the Store package (see docs/how-to/build-and-test-the-msix.md)
 assets/fonts/     Geist, the bundled font, and its license
 ```
 
@@ -76,9 +76,11 @@ assets/fonts/     Geist, the bundled font, and its license
 | `activity_layout.rs` | which transient activities show and where each one starts (pure functions) |
 | `claimed_row.rs` | the collapsed pill while a page claims it: lead, dots, content, group (pure) |
 | `settings.rs` | re-exports `Settings` from the `store` crate, the persistent key-value store pages and activities share |
-| `tray.rs` | the tray icon and its menu: Pause Foldline (a submenu, or the status line and Resume Foldline while paused), Settings, Quit Foldline; the notch has no menu of its own |
-| `settings_launcher.rs` | starts `notch-settings.exe` from the folder of the running `notch.exe`, without waiting; the gear in the header and the tray's Settings item both call it |
+| `tray.rs` | the tray icon and its menu: Snooze notifications (a submenu, or the status line and Turn off snooze while snoozed), Pause Foldline (a submenu, or the status line and Resume Foldline while paused), Settings, Quit Foldline; the notch has no menu of its own |
+| `settings_launcher.rs` | starts `foldline-settings.exe` from the folder of the running `foldline.exe`, without waiting; the gear in the header and the tray's Settings item both call it |
 | `display.rs` | display scale and refresh rate |
+| `icon.rs` | loads the embedded `FOLDLINE_ICON` at the current display scale for the window and the tray |
+| `shutdown.rs` | ends the notch within a bounded time on quit and on a panic, and puts back what it changed in Windows (the volume flyout, the banners) |
 | `monitor.rs` | the monitors (`list`), the foreground window's monitor, the `notch.monitor` word, `notch.monitor_id` and the start placement; the identifier itself comes from `store::screens` (Windows calls) |
 | `monitor/choose.rs` | which monitor the notch sits on (`target_monitor`) and the window's position and size there (`placement`) (pure) |
 | `location_tracker.rs` | keeps the saved city where the device is (`location.track`): a worker thread that reads Windows' position once, the answer's message, and what an answer changes (pure `update_for`); `location_tracker/network.rs` registers a callback on network interface changes while tracking is on |
@@ -97,12 +99,16 @@ owns a small struct for it, defined beside its logic and held by `Notch` (`sprin
 | `input.rs` | pointer, wheel and touchpad scroll, a page's right click and drag-and-drop input | |
 | `timers.rs` | what each timer does when it fires | |
 | `pages.rs` | page and activity lifecycle, choosing and moving between pages | |
+| `page_lifecycle.rs` | which pages are started: a page that is off is never started | `PageLifecycle` |
+| `page_hotkeys.rs` | the digit keys that jump to a page while the open notch is under the pointer | |
+| `badge_pointer.rs` | the pointer over a page's collapsed badge, and what a press on it does | |
 | `layout.rs` | page frames, the pages a swap draws, starting a swap, refreshing sizes and which page shows | |
 | `presences.rs` | collecting what activities and pages show in the collapsed pill: transients, the banner, badges, the ring and the dots | `ShownPresences` |
 | `open_state.rs` | opening and closing (the open state), the delays, the hover watch | `OpenState` |
 | `pin.rs` | the pin: pinning opens and holds the notch (no hover watch, a raise over a maximized or full-screen window), unpinning starts the usual close | |
 | `hiding.rs` | what shows over a maximized or full-screen window, suppression, hide when idle | `HidingState` |
 | `pause.rs` | pausing the notch: the stored `notch.paused_until`, the end timer, giving Windows' popups back and hiding them again | `PauseState` |
+| `snooze.rs` | snoozing notifications: the stored `notch.snoozed_until`, the end timer, and the one gate that drops notices (`Activity::is_notice`, `Page::is_notice`) from the pill and the header until each ends | `SnoozeState` |
 | `animation.rs` | the springs, the frame the springs describe, the animation timer | `Springs`, `FrameTimer` |
 | `keyboard.rs` | typing: who owns the keyboard, text keys, pasted text, the keyboard lost to another window | `KeyboardState` |
 | `settings_reload.rs` | applying a changed settings file after `WM_SETTINGS_CHANGED` | |
@@ -114,7 +120,7 @@ owns a small struct for it, defined beside its logic and held by `Notch` (`sprin
 | `paint.rs` | drawing the pill, the header, the banner, the badges and the shadow | |
 | `relocate.rs` | moving the notch to the monitor `notch.monitor` picks: when a move waits, the one-message scale change (`Surface::resize`, new fonts, rebuilt cached text), the window move | |
 | `monitor_state.rs` | what the notch knows about its monitor: the mode, the current monitor, the last placement, a move that waits, and the seam that lets tests inject monitors | `MonitorState` |
-| `tests/` | behavior tests (`hiding_rules.rs`, `screen_mode.rs`, `relocate.rs`, `settings_reload.rs`, `page_navigation.rs`, `page_states.rs`, `clipboard_states.rs`, `resting_row.rs`, `row_motion.rs`, `header_row.rs`, `header_hover.rs`, `pin.rs`, `pause.rs`) and the pictures (`images.rs`) on an off-screen `Notch` built in `tests/mod.rs` | |
+| `tests/` | behavior tests (`hiding_rules.rs`, `screen_mode.rs`, `relocate.rs`, `settings_reload.rs`, `page_navigation.rs`, `page_states.rs`, `clipboard_states.rs`, `resting_row.rs`, `row_motion.rs`, `header_row.rs`, `header_hover.rs`, `pin.rs`, `pause.rs`, `snooze.rs`) and the pictures (`images.rs`) on an off-screen `Notch` built in `tests/mod.rs` | |
 
 ## How a module is laid out
 

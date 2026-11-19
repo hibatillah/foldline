@@ -2,7 +2,7 @@
 
 > **How-to.** Read when: you are adding a key or a control in the settings window. Skip if: you only need a key's meaning; see [settings keys](../reference/settings-keys.md).
 
-A setting is one key in `%APPDATA%\notch\settings.txt` that the notch reads and the settings window writes; the notch has no controls of its own. The
+A setting is one key in `%APPDATA%\Foldline\settings.txt` that the notch reads and the settings window writes; the notch has no controls of its own. The
 keys, defaults and the window's sections are listed in [settings keys](../reference/settings-keys.md); this page covers the code.
 
 1. **Pick the key and the default.** Start the key with `notch.`, `activity.<id>` or the page id. Write booleans as `on`

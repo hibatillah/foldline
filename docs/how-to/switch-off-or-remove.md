@@ -7,7 +7,7 @@
 Without any setting, every registered page is on. To use only some of them, list their ids, separated by commas:
 
 - **Environment variable:** `NOTCH_PAGES=shelf,media`
-- **Settings file:** a line `pages=shelf,media` in `%APPDATA%\notch\settings.txt`
+- **Settings file:** a line `pages=shelf,media` in `%APPDATA%\Foldline\settings.txt`
 
 The environment variable wins when both are set. Page ids are the values returned by each page's `id()`; the built-in
 ones are `media`, `shelf`, `calendar`, `timer`, `todo`, `shalat`, `stats`, `weather`, `devices` and `clipboard`. `shalat`, `stats`, `weather`, `devices` and `clipboard` are opt-in: they start switched off until you add them in the settings window's Pages section (`navigation.disabled`).
@@ -19,7 +19,7 @@ Example, to run without the media page:
 
 ```
 set NOTCH_PAGES=shelf
-notch.exe
+foldline.exe
 ```
 
 To change which pages are *compiled in*, edit `crates/notch/src/pages/mod.rs`; see [add a page](add-a-page.md).
@@ -27,12 +27,12 @@ To change which pages are *compiled in*, edit `crates/notch/src/pages/mod.rs`; s
 ## Switch an activity off
 
 Volume, brightness, charger and battery, Bluetooth, microphone, camera, copied and Caps Lock are always enabled.
-Old `activity.<id>=off` entries for these activities are ignored. Only **Notifications** and **Device battery** have a toggle (in the settings window), on by default. Their choices are remembered as `activity.notifications` and `activity.device_battery`; when off at startup, the listener is not started.
+Old `activity.<id>=off` entries for these activities are ignored. Only **Notifications**, **Device battery** and **Browser downloads** have a toggle (in the settings window), on by default. Their choices are remembered as `activity.notifications`, `activity.device_battery` and `activity.downloads`; when off at startup, the listener is not started.
 
 ### How an optional activity switches off
 
-**Notifications** and **Device battery** are the optional built-in activities. Switch them on or off in the settings window.
-The choice is stored as `activity.notifications=off` or `on` (and `activity.device_battery` the same way) in `%APPDATA%\notch\settings.txt`, defaulting to on.
+**Notifications**, **Device battery** and **Browser downloads** are the optional built-in activities. Switch them on or off in the settings window.
+The choice is stored as `activity.notifications=off` or `on` (and `activity.device_battery` and `activity.downloads` the same way) in `%APPDATA%\Foldline\settings.txt`, defaulting to on.
 An optional activity that is off at start is never started; switching it off while running hides it but retains its
 listeners until exit. The same happens when another program changes `activity.<id>` in the file and posts
 `WM_SETTINGS_CHANGED`: switched on, the activity starts if it never had; switched off, it is hidden. Required activities

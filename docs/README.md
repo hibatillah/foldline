@@ -16,8 +16,8 @@ New to the project? Start with [ONBOARDING.md](../ONBOARDING.md) at the reposito
 | [Hide Windows' own popups](how-to/hide-windows-popups.md) | Windows' volume or brightness box or notification banners show next to the notch |
 | [Test and snapshot](how-to/test-and-snapshot.md) | writing a test, rendering page pictures, the manual checklist |
 | [Run the performance check](how-to/run-the-perf-check.md) | after host, animation, timer or drawing changes, and before a release |
-| [Work with branches](how-to/work-with-branches.md) | starting a change, opening or merging a pull request, or before you push |
 | [Cut a release](how-to/cut-a-release.md) | publishing a version, the installer, license list, how users update |
+| [Build and test the MSIX](how-to/build-and-test-the-msix.md) | building the Store package, installing it locally, checking where a packaged copy keeps its data |
 
 ## Reference: look something up
 
@@ -26,7 +26,7 @@ New to the project? Start with [ONBOARDING.md](../ONBOARDING.md) at the reposito
 | [Page API](reference/page-api.md) | where a hook or drawing call is defined, and rules the signatures do not show |
 | [Activities](reference/activities.md) | what `Presence` can show, and what each built-in activity watches |
 | [Settings keys](reference/settings-keys.md) | a key, its default, an environment variable, where a tunable lives |
-| [Settings window](reference/settings-window.md) | what each section of `notch-settings.exe` sets |
+| [Settings window](reference/settings-window.md) | what each section of `foldline-settings.exe` sets |
 | [Source map](reference/source-map.md) | where a file lives and which module may use which |
 | [Layout](reference/layout.md) | padding, header and the open and collapsed shapes |
 | [Design rules](reference/design-rules.md) | order, gaps, colors and fonts of what the user sees, and the reason for each |
@@ -41,3 +41,5 @@ New to the project? Start with [ONBOARDING.md](../ONBOARDING.md) at the reposito
 | [Host and pages](explanation/host-and-pages.md) | restructuring, or learning how the host, pages and activities work inside the notch |
 | [Drawing model](explanation/drawing-model.md) | changing how something is drawn, adding a widget, or asking why the notch uses no UI framework |
 | [Performance budget](explanation/performance-budget.md) | changing timers, animation or drawing |
+| [MSIX packaging](explanation/msix-packaging.md) | changing the MSIX manifest or version rule, or asking why the package declares what it does |
+| [Notification delivery](explanation/notification-delivery.md) | changing the notification listener, or explaining why the installer version shows notifications later than the Store version |

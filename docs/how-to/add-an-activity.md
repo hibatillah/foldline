@@ -17,7 +17,7 @@ Make `crates/notch/src/activities/<name>.rs` (or a folder when it has several pa
 
 ### 2. Implement `Activity`
 
-Four methods are required; the rest are hooks. `crates/notch/src/activities/brightness.rs` is a complete small activity: it
+Three methods are required (`id`, `presence`, `draw`); the rest are hooks. `crates/notch/src/activities/brightness.rs` is a complete small activity: it
 listens to one Windows power setting and flashes a level bar when it changes.
 
 | Method | Job |
@@ -26,6 +26,7 @@ listens to one Windows power setting and flashes a level bar when it changes.
 | `is_optional()` | false by default: required activities are always enabled; return true to expose a saved settings toggle |
 | `is_priority()` | false by default: true shows the transient level (not a badge) over a window that hides the notch (any `notch.maximized` or `notch.fullscreen` word, Hide when idle), only while `notch.hide_windows_volume_popup` is on; volume and brightness answer true |
 | `presence()` | what to show right now |
+| `is_notice(presence)` | whether `presence`, what `presence()` just returned (the host asks it once per refresh), is a notice a snooze (`notch.snoozed_until`) drops: a message or a banner. Default: true for a `Banner`, false otherwise. A message answers true while it shows (battery, Bluetooth, device battery, "Copied"); an icon-only indicator keeps false, even its own short message (volume, brightness, Caps Lock, camera, microphone). The host drops a notice in one place and dismisses a dropped banner through `dismiss_banner()` |
 | `draw()` | draw into the area the host gives, in device-independent units from zero on a canvas whose `scale()` is 1; a companion's `draw` also serves the open header (see below) |
 | `header_status_width()`, `draw_header_status()`, `header_status_rank()` | optional: a small mark kept at the right edge of the header, icon only, while something lasts (muted speakers, Caps Lock on); `None` for no mark. The rank orders the group in the pill and the header |
 | `header_status_page()` | optional: the id of the page a click on the header mark opens; `None` (the default) opens nothing, as for muted and Caps Lock |
@@ -82,7 +83,8 @@ The notch must use no CPU while nothing happens, so an activity never polls. Pic
 | a Windows event log channel | `EvtSubscribe` with a callback, which runs on a system thread and calls the `Notifier`; see `camera.rs` |
 | one key | a low-level keyboard hook on a thread of its own that wakes the activity for that key only, then read the state from Windows; see `caps_lock.rs` |
 | a Windows device watcher | a WinRT `DeviceWatcher` on a thread of its own, which Windows pushes property changes into; it calls the `Notifier`; see `device_battery/` |
-| a folder changing | `FindFirstChangeNotificationW` and a blocking wait on a thread of its own; see `notifications/listener.rs` |
+| a Windows event a WinRT API raises | subscribe to it and call the `Notifier` from the handler; see `notifications/listener.rs` (`NotificationChanged`) |
+| a folder changing | `FindFirstChangeNotificationW` and a blocking wait on a thread of its own; see `notifications/listener.rs` (the fallback when the event cannot be subscribed) |
 | a folder's file names changing | `ReadDirectoryChangesW` on a thread of its own, which calls the `Notifier`; see `downloads/watcher.rs` |
 
 ### 4. Register it

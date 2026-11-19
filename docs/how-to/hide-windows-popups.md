@@ -22,8 +22,7 @@ Both switches are under **Settings > General > Windows popups** and are on by de
   does not exist until the first volume or brightness change after Explorer starts. Until then the hook listens to
   Explorer's shows; after Explorer restarts the notch looks for the new window. The hook is only a finder and a backstop
   that empties the region again if it was lost.
-- Hiding the window after Explorer showed it (the earlier approach) left one or two frames of the box on screen, mostly
-  with quick key presses: the box was already drawn when the hide arrived.
+- The region is emptied before Explorer draws, so no frame of the box shows, even with quick key presses.
 - A test with the real keys on build 26300, with the region emptied, showed no box at all for volume and brightness.
 - The region is put back when the notch exits, when the switch is turned off and at the end of a Windows session. A newer
   notch that replaces a running one keeps the flyout concealed. A notch ended by force (Task Manager) cannot put it
@@ -45,7 +44,7 @@ app, while the notch runs:
   same value **Show notification banners** in Windows Settings > System > Notifications writes. `Enabled` and
   `ShowInActionCenter` are never touched, so notifications stay in the notification center.
 - Before changing anything it saves each app's previous value (or that it had none) in
-  `%APPDATA%\notch\notification-banners.txt`. An app whose banner was already off is left out and never changed.
+  `%APPDATA%\Foldline\notification-banners.txt` (when that folder is missing at start, a legacy `%APPDATA%\notch` is copied into it first). An app whose banner was already off is left out and never changed.
 - A thread waits on `RegNotifyChangeKeyValue` for that key. An app gets its key when it shows its first notification,
   and the notch turns its banner off then; that first banner may still show.
 - The saved values go back when the switch is turned off, when the notch quits, when Windows signs out or shuts down,

@@ -2,7 +2,7 @@
 
 > **Explanation.** Read when: you change how something is drawn, add a widget, or want to know why the notch uses no UI framework. Skip if: you are writing a page; see [add a page](../how-to/add-a-page.md) and the [page API](../reference/page-api.md).
 
-`notch.exe` draws every frame itself with Direct2D and DirectWrite through the `windows` crate. Pages, activities and
+`foldline.exe` draws every frame itself with Direct2D and DirectWrite through the `windows` crate. Pages, activities and
 widgets draw in device-independent units, and only the host converts those units to device pixels. This document gives
 the reasons for that structure; where each file lives is in the [source map](../reference/source-map.md).
 
@@ -25,8 +25,8 @@ always-on-top GPUI pop-up window with a row of hoverable squares, in a release b
 
 This was a single run on one machine (Windows 11 build 10.0.26300). The two CPU readings disagree, so they are
 inconclusive and no conclusion about CPU is drawn from them. The memory reading alone decides the question: a window
-of about 83 MB is above the 50 MB budget with nothing in it. The conclusion is limited to `notch.exe`. The settings
-window (`notch-settings.exe`) is built with GPUI because it is a separate process that runs only while open and is
+of about 83 MB is above the 50 MB budget with nothing in it. The conclusion is limited to `foldline.exe`. The settings
+window (`foldline-settings.exe`) is built with GPUI because it is a separate process that runs only while open and is
 outside the budget ([performance baseline](../reference/performance-baseline.md#settings-window)). A later GPUI
 version or a second measurement could give a different number; the spike did not test that.
 

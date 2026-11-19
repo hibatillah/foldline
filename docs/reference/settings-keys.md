@@ -4,15 +4,17 @@
 
 ## Settings file
 
-`%APPDATA%\notch\settings.txt` is a plain text file with one `key=value` per line. The notch and the settings window
-write it one key at a time through a temporary file, so keys another program wrote are kept.
+`%APPDATA%\Foldline\settings.txt` is a plain text file with one `key=value` per line. The notch and the settings window
+write it one key at a time through a temporary file, so keys another program wrote are kept. The keys keep their `notch.`
+prefix. `store::migrate_legacy_data_directory` copies a `%APPDATA%\notch` folder to
+`%APPDATA%\Foldline` once, when `Foldline` does not exist yet, and leaves the old folder as it is.
 
-Settings are edited in the settings window (`notch-settings.exe`), which the gear in the open header and the tray's **Settings** item open; the notch has no settings panel of its own.
+Settings are edited in the settings window (`foldline-settings.exe`), which the gear in the open header and the tray's **Settings** item open; the notch has no settings panel of its own.
 
-The todo page keeps its list in `%APPDATA%\notch\todo.txt`, one task per line as a markdown checkbox (`- [ ] task`,
+The todo page keeps its list in `%APPDATA%\Foldline\todo.txt`, one task per line as a markdown checkbox (`- [ ] task`,
 `- [x] done`). Any other line loads as an open task, so the file can be edited by hand while the notch is closed.
 
-After a write, the settings window posts `WM_SETTINGS_CHANGED` (`WM_APP + 30`) to the window of class `NotchWindow`. The
+After a write, the settings window posts `WM_SETTINGS_CHANGED` (`WM_APP + 30`) to the window of class `FoldlineWindow`. The
 notch then re-reads the file and applies the `notch.*` keys, `navigation.order`, `navigation.disabled`,
 `activity.notifications`, `activity.device_battery`, `media.lyrics`, `timer.*_minutes`, `calendar.*` and `notifications.show_text` keys without a
 restart, keeping the page that is open. A missing or unreadable value keeps the current one. A hand edit is read at the
@@ -28,12 +30,12 @@ next start, or at once if something posts that message.
 | `navigation.order`, `navigation.disabled` | page ids, comma-separated | the order of the pages and the ones switched off; the settings window's Pages section writes them |
 | `notifications.show_text` | `on`, `off` | show what a notification says in its banner (off is private mode). Switch the banner itself off with `activity.notifications` |
 | `calendar.ics_url` | a web address | the calendar address; the settings window sets it. It is a secret: anyone with it can read the calendar |
-| `advanced.debug_log` | a file path | the file the notch appends its timestamped log to; empty means no log. Read once at start, and `NOTCH_DEBUG` overrides it |
+| `advanced.debug_log` | a file path | the file the notch appends its timestamped log to; empty means no log. Read once at start, and `FOLDLINE_DEBUG` overrides it |
 | `notch.monitor` | `main`, `focused`, `chosen` | which monitor the notch sits on: the primary one (`main`, the default), the one with the window in front (`focused`) or the one named by `notch.monitor_id` (`chosen`; with no id, or an id that is not connected, the notch sits on the primary one and returns when that screen is back). A missing key keeps the current choice and an unknown word reads as `main`. Applies without a restart; the settings window labels it **Show the notch on**. See [the layout](layout.md#where-the-notch-sits-on-several-monitors) |
 | `notch.monitor_id` | text | the chosen screen's identifier: its device interface path (`\\?\DISPLAY#...`), or the GDI name (`\\.\DISPLAY2`) when Windows gives no path. Read at start and on reload; never rewritten by the notch. Written by the settings window (`store::screens`) |
 | `calendar.view` | `month`, `week` | the calendar page's left column: the whole month (default) or the current week; the week page is the default 86 px high and its list scrolls. The settings window's Calendar section writes it |
 | `calendar.refresh_minutes` | minutes | how often the calendar is downloaded again (default 15) |
-| `location.city`, `location.lat`, `location.lon`, `location.country` | text, degrees, degrees, a two-letter country code | the one place the prayer times and the weather are for, chosen with the location search in the settings window's General section. Older versions saved these as `shalat.city`, `shalat.lat`, `shalat.lon` and `shalat.country`; those are read until the shared keys are saved. |
+| `location.city`, `location.lat`, `location.lon`, `location.country` | text, degrees, degrees, a two-letter country code | the one place the prayer times and the weather are for, chosen with the location search in the settings window's General section. `shalat.city`, `shalat.lat`, `shalat.lon` and `shalat.country` are read until the shared keys are saved. |
 | `shalat.method` | `auto`, `singapore` (Kemenag), `mwl`, `northamerica`, `karachi`, `ummalqura`, `egyptian` | the calculation method; `auto` (default) picks one from `shalat.country` |
 | `shalat.hanafi` | `on`, `off` | off by default (Shafi'i, Maliki and Hanbali Asr); on uses the Hanafi Asr |
 | `shalat.offset_fajr`, `_sunrise`, `_dhuhr`, `_asr`, `_maghrib`, `_isha` | minutes, -30 to 30 | added to that time (default 0) |
@@ -48,7 +50,8 @@ next start, or at once if something posts that message.
 | `general.language` | `auto`, `en`, `id` | `auto` by default: the language of the notch and the settings window. `auto` is Indonesian when the first Windows preferred UI language starts with `id`, English otherwise; an unknown word reads as `auto`. The texts are in `crates/notch/locales/app.yml` and `crates/settings/locales/app.yml`. The **Language** cards on the settings window's General page set it (the key keeps its `general.` name) |
 | `notch.hide_when_idle` | `on`, `off` | off by default: hide the notch over regular windows until you point at the top of the screen; only playing music, a short message or a banner shows it, a lasting badge or dot (Caps Lock, a countdown, the camera or microphone dot) does not; the muted speaker does not either; a mute or volume message does while `notch.hide_windows_volume_popup` is on ([priority activities](#what-the-notch-shows-over-another-window)) |
 | `notch.hide_windows_volume_popup` | `on`, `off` | on by default: keep the volume and brightness flyout Windows shows above the taskbar from drawing, while the notch runs (`host/volume_flyout.rs`). Applies without a restart; the flyout returns when the notch exits or the switch goes off, and after a forced end at the next start of the notch. While it is on, a volume or brightness change and a mute or unmute message show over every `notch.maximized` and `notch.fullscreen` word, `hidden` included. See [hide Windows' own popups](../how-to/hide-windows-popups.md) |
-| `notch.hide_windows_notifications` | `on`, `off` | on by default: turn off Windows' notification banner for every app while the notch runs, by writing `ShowBanner=0` per app and saving the previous values in `%APPDATA%\notch\notification-banners.txt` (`host/notification_banners.rs`). Notifications stay in the notification center, so the notch still shows them. Applies without a restart; the values go back when it is switched off, when the notch quits, and at the next start after a crash. See [hide Windows' own popups](../how-to/hide-windows-popups.md) |
+| `notch.hide_windows_notifications` | `on`, `off` | on by default: turn off Windows' notification banner for every app while the notch runs, by writing `ShowBanner=0` per app and saving the previous values in `%APPDATA%\Foldline\notification-banners.txt` (`host/notification_banners.rs`). Notifications stay in the notification center, so the notch still shows them. Applies without a restart; the values go back when it is switched off, when the notch quits, and at the next start after a crash. See [hide Windows' own popups](../how-to/hide-windows-popups.md) |
+| `notch.snoozed_until` | empty, `manual`, Unix seconds | empty (not snoozed) by default: while snoozed the notch stays visible and usable but hides banner-style messages and page alerts (weather, timer, shalat, calendar); icon-only indicators (volume, brightness, Caps Lock, camera, microphone) keep showing. `manual` lasts until the user turns it off; a number is the Unix second a timed snooze ends. The settings window (**Snooze notifications** on General, above Pause), the tray (**Snooze notifications**, then **Turn off snooze**) and the notch itself (when a timed snooze ends) write it; any other text, or a time not after now, reads as not snoozed and the notch clears it. A snooze survives a restart. A message or alert that comes while snoozed is dropped, not shown later, and Windows' own banners still follow `notch.hide_windows_notifications`. Which presences count is each activity's and page's `is_notice` (`host/notch/snooze.rs`). Independent of `notch.paused_until`. Applies without a restart. Shared code: `store::snooze` |
 | `notch.paused_until` | empty, `manual`, Unix seconds | empty (not paused) by default: while paused the notch is hidden completely and Windows' own volume flyout and notification banners return. `manual` lasts until Resume; a number is the Unix second a timed pause ends. The settings window (**Pause Foldline** on General), the tray (**Pause Foldline**, then **Resume Foldline**) and the notch itself (when a timed pause ends) write it. The notch clears it at every start, so a quit or a crash never leaves it paused; any other text, or a time not after now, reads as not paused and is cleared. Applies without a restart. See [what a pause hides](#pausing-the-notch) |
 | `notch.maximized`, `notch.fullscreen` | `hidden`, `activities`, `lyrics`, `music` | what the notch shows over a maximized window (default `lyrics`) and over a full-screen app (default `hidden`); the words are in [the next table](#what-the-notch-shows-over-another-window). A missing or unknown word uses the default |
 | `notch.hover_maximized`, `notch.hover_fullscreen` | `on`, `off` | on by default: pointing at the top edge opens the notch over a maximized window and over a full-screen app (the settings window labels them **Open by pointing**; the key names keep the older word). Off stops the pointer from opening it there; a pinned notch stays open whatever they say; short messages still follow `notch.maximized` and `notch.fullscreen`, and dragging files onto the shelf still opens it. Neither key applies over a screenshot overlay (Win+Shift+S, Snipping Tool, Game Bar): the notch is hidden there and the pointer never opens it |
@@ -113,9 +116,9 @@ tray item. The notch reads them only when the new key is missing, at start and o
 | Variable | Effect |
 | --- | --- |
 | `NOTCH_PAGES` | comma-separated page ids to switch on (see above) |
-| `NOTCH_LYRICS=off` | never look up lyrics, so nothing about your music leaves the computer |
-| `NOTCH_SETTINGS_SOLID=1` | the settings window draws its frame opaque instead of translucent and blurred |
-| `NOTCH_DEBUG=<file>` | append a timestamped log of what the notch is doing to this file; overrides `advanced.debug_log` |
+| `FOLDLINE_LYRICS=off` | never look up lyrics, so nothing about your music leaves the computer |
+| `FOLDLINE_SETTINGS_SOLID=1` | the settings window draws its frame opaque instead of translucent and blurred |
+| `FOLDLINE_DEBUG=<file>` | append a timestamped log of what the notch is doing to this file; overrides `advanced.debug_log` |
 ## In the code
 
 Things a developer tunes by editing source:
@@ -132,7 +135,17 @@ Things a developer tunes by editing source:
 
 ## Start with Windows
 
-The stable installer starts the notch at sign-in unless that is unticked in its options; a pre-release installer has no such option and writes no entry. The tray menu's **Start with
-Windows** item and the settings window's General section show whether it does, and switch it: each adds or removes a
-`Notch` value under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` that points at the copy of `notch.exe` that is
-running. The settings window points it at the `notch.exe` beside `notch-settings.exe`.
+The stable installer starts the notch at sign-in unless that is unticked in its options; a pre-release installer has no such option and writes no entry. The settings window's General section
+shows whether it does, and switches it (the tray menu has no such item): it adds or removes a
+`Foldline` value under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` that points at the copy of `foldline.exe` that is
+running. The settings window points it at the `foldline.exe` beside `foldline-settings.exe`. A `Notch` value written by an
+earlier build still counts as on, and the switch removes it when it changes.
+
+A packaged (MSIX) build does not use the `Run` key: Windows does not read a package's `HKCU` `Run` entries at sign-in, so the startup task is the only way (the manifest turns registry write virtualization off, so other `HKCU` writes reach the real registry; see [MSIX packaging](../explanation/msix-packaging.md#virtualization)). The settings window
+detects package identity at run time (`GetCurrentPackageFullName`; `APPMODEL_ERROR_NO_PACKAGE` means unpackaged) and then
+reads and switches the manifest's startup task `FoldlineStartup` (`StartupTask.GetAsync`, `RequestEnableAsync`, `Disable`) on a
+background thread instead. When Windows reports `DisabledByUser` the switch shows off and locked with "Turned off in
+Windows Settings > Apps > Startup"; `DisabledByPolicy` shows off and `EnabledByPolicy` shows on, both locked with "Managed by
+your organization". If the settings program has no package identity but sits beside an `AppxManifest.xml`, it keeps the `Run`
+key behaviour and shows "Classic startup entry; the packaged app may ignore it". Whether `foldline-settings.exe`, started by
+`foldline.exe`, inherits the identity is not verified without a packaged install.

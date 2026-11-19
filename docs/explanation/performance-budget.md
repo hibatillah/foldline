@@ -4,7 +4,7 @@
 
 ## The budget
 
-`notch.exe` uses 0 % CPU while idle and stays under 50 MB of memory. A tray app that is always running earns its place only if it costs nothing when nothing happens. The settings window (`notch-settings.exe`) is a separate process, has a higher footprint while open, and is outside the budget.
+`foldline.exe` uses 0 % CPU while idle and stays under 50 MB of memory. A tray app that is always running earns its place only if it costs nothing when nothing happens. The settings window (`foldline-settings.exe`) is a separate process, has a higher footprint while open, and is outside the budget.
 
 `scripts/perf.sh` enforces tighter limits than the budget (30 MB after start, 0.1 % idle CPU, 400 ms CPU per open and close); see [run the performance check](../how-to/run-the-perf-check.md) for the limits and [the baseline](../reference/performance-baseline.md) for the latest numbers.
 

@@ -3,7 +3,7 @@
 > **Reference.** Read when: you draw or change anything the user sees, or must decide where something goes, how far
 > apart, in which color or font. Skip if: the change has no visual effect.
 
-The "Notch Design" canvas (artifact `6c345878-8861-46d2-bcfd-d3b82723bf1b`, page "board") shows these rules; the canvas
+The "Foldline Design" canvas (artifact `6c345878-8861-46d2-bcfd-d3b82723bf1b`, page "board") shows these rules; the canvas
 leads and the code follows. Sizes are in device-independent pixels; shapes and padding are in [layout.md](layout.md). A
 new visual decision is added here with its reason, in the same change.
 
@@ -17,7 +17,7 @@ the marks of what is going on, then the battery ring, then the camera and microp
   has to say, so it is set larger than a mark.
 - **The group is right-anchored and its order is fixed, left to right:** music wave, Caps Lock, muted, timer, event, prayer,
   battery ring, dots. The pill and the open header use one order, `header_status_rank`: wave 0, Caps Lock 1, muted 2,
-  timer 3, event 4, prayer 5, rain 6, with the lowest rank nearest the clock. The ring and the dots are not ranked; they stay at
+  timer 3, event 4, prayer 5, rain 6, browser downloads 7, with the lowest rank nearest the clock. The ring and the dots are not ranked; they stay at
   the right end. A fixed order puts each mark where the eye looks for it every time.
 - **A new item appears between the clock and the ring, and nothing right of it moves.** The right end stays still, so the
   marks the user has already read do not shift.
@@ -51,7 +51,10 @@ the marks of what is going on, then the battery ring, then the camera and microp
 - **Muted and Caps Lock are icon-only group items** while their state is on, in the pill and in the open header. Their
   message (icon and text) still takes over the pill when it fires; the icon returns when the message ends.
 - **Battery ring:** 14 px, laptop only. The arc is the charge. A PC shows nothing in its place, because a ring that never
-  changes says nothing; there is no weather icon, prayer or day ring, and no other stand-in.
+  changes says nothing; there is no weather icon, prayer or day ring, and no other stand-in. While the battery charges,
+  a solid green bolt (`Icon::Bolt`, `SUCCESS_GREEN`, the ring's opacity) sits in the middle of the ring, half its diameter
+  tall (`Ring::draw_bolt`). On battery, or while the source is unknown, the ring is empty inside. The collapsed ring and
+  the open header's ring are the same activity drawing.
 - **Camera and microphone** are 6 px dots in one column, camera on top, microphone below, 3 px apart. A dot alone keeps its
   row, since both dots share a shape and position carries half the meaning. The microphone alone is the exception: a 5 px
   dot in a 15 px column (2 px padding above and below, no gap, the 6 px camera slot kept empty above it), 0.5 px left of
@@ -146,7 +149,7 @@ The picture of the redesigned window leads where it differs from earlier text. T
 - **A translucent neutral sidebar and one solid, flush content pane (shadcn's "sidebar" variant).** The sidebar is one flat neutral color
   over a blurred backdrop (`WindowBackgroundAppearance::Blurred`, Windows acrylic), so the desktop shows through frosted;
   there is no tint, gradient or glow. Dark theme: `#101010` at
-  64 %. Light theme: white at 35 %. `NOTCH_SETTINGS_SOLID=1` makes it opaque and neutral (`#141414` dark, `#eeeeee`
+  64 %. Light theme: white at 35 %. `FOLDLINE_SETTINGS_SOLID=1` makes it opaque and neutral (`#141414` dark, `#eeeeee`
   light). The content is the only solid surface: a pane that fills the window to the top, right and bottom edges with no padding, margin or rounded corner, and a 1 px hairline in the card border color between it and the sidebar. Dark theme (the v7 board's surfaces): card `#1b1b1d`, card border `#2a2a2e`, header `#1e1e21`, a section's block
   `#2a2a2d` (its border is the card border, so it reads as a plain lighter block), inputs `#1d1d1f` with a `#3a3a3e`
   border (darker than the block), buttons `#38383b` with a `#444448` border (lighter than the block), row divider
@@ -164,14 +167,13 @@ The picture of the redesigned window leads where it differs from earlier text. T
   the card and 3:1 as an icon on a block; as an icon on the frame it is held at 2:1 (over a bright wallpaper in the dark
   theme, over a mid-grey desktop in the light theme).
 - **The sidebar** is 216 px wide with 16 px of padding above, 10 px at the sides and 12 px below. It opens with the brand (the tile 16 px from the window top and 18 px from the left edge; the squared tile logo, 28 px, then "Foldline" in `text_lg`
-  semibold and the version in `text_xs`, muted, 8 px apart, with 4 px below), then two labelled groups (`text_sm`, muted, 12 px above the label and 5 px below): "Foldline" (General, Pages, Behavior, Advanced) and
-  "Page settings" (Calendar, Timer, Shalat, System stats, Weather), with **About** at the bottom, without a label. The empty sidebar (the strips between and below the items, at their sides, and the group labels) moves the window like the header; the items never do. Items are 36 px
-  high and 1 px apart, `text_base` text 11 px from a 17 px blue icon; the selected one has a rounded (10 px), faint white fill and a medium-weight label. The tile is blue in a
+  semibold and the version in `text_xs`, muted, 8 px apart, with 36 px below it before the first item), then the group "Foldline" (General, Pages, Behavior, Advanced) with no label and the labelled group "Page settings" (`text_sm`, muted, 12 px above the label and 5 px below: Calendar, Timer, Shalat, System stats, Weather), with **About** at the bottom, without a label. The empty sidebar (the strips between and below the items, at their sides, and the group labels) moves the window like the header; the items never do. Items are 36 px
+  high and 1 px apart, 14 px text 9 px from a 17 px blue icon, 10 px of side padding, all in the foreground color; the selected one differs only by a rounded (8 px), faint fill: its text keeps the same color and weight. The tile is blue in a
   stable build and indigo in a pre-release build, in both themes. The icons are General the hex nut (the same drawing as
   the notch's gear), Pages Lucide "layers", Behavior "puzzle", Calendar "calendar-days", Timer "timer", Shalat "moon-star" (the shalat
   icon in the notch too), System stats "chart-column", Weather "cloud-drizzle", Advanced "wrench" and About "info". They
   are SVG files in `crates/settings/assets/icons`, served by `crates/settings/src/icons.rs`; the Lucide ISC notice is in
-  `THIRD-PARTY-LICENSES.txt`.
+  `THIRD-PARTY-LICENSES.txt`. The numbers are constants in `crates/settings/src/sidebar.rs`.
 - **The pane's header** is 44 px with its own fill, a little lighter than the pane, over a divider. It reads
   "Settings › <Page>" (`text_base`, 22 px from the pane's edge, 10 px around the chevron; Settings muted, the page in the accent blue and medium weight) with the window buttons (minimize, maximize, close) at
   the right end, and it is the drag area together with the brand strip. The window draws it itself and not the component
@@ -185,7 +187,7 @@ The picture of the redesigned window leads where it differs from earlier text. T
   (`#1d2438` to `#12151f`, 9 px radius, a faint white border) and never as images, with a 12 px muted caption under
   each when they come as a strip. A picture that is also a choice is an option card; the others are not clickable.
 - **Tags and hints.** A small rounded tag after a row title states a fact about the row: "After restart" in muted gray
-  (only where it is true: the debug log and the distance from the top), "Also key 0" in the accent. A hint that applies
+  (only where it is true: the debug log), "Also key 0" in the accent. A hint that applies
   to a whole list sits under it in a blue-bordered box with a blue icon (the digit keys and switching a page off on
   Pages).
 - **A section opens with a heading row** (`text_sm`, muted, inset 4 px): its title at the left, with a small blue icon
@@ -197,7 +199,7 @@ The picture of the redesigned window leads where it differs from earlier text. T
   weight (`text_base`) in the full foreground.
 - **Rows** are at least 50 px high with 9 px by 14 px padding: the title and a muted description (17 px lines) at the
   left, 12 px from the control at the right. A switch is 42 x 25 (the window's own `switch.rs`). A button
-  is rounded (30 px high, 8 px radius, 13 px medium text), a step lighter than the block with a thin border; one that does nothing yet (What's new, the only one) is dimmed to 40 %, with "Coming soon" to its left. A field is 8 px round, darker than the block, and its border turns to the accent while it has focus.
+  is rounded (30 px high, 8 px radius, 13 px medium text), a step lighter than the block with a thin border; every button does something, so none is dimmed or marked "Coming soon". A select (a dropdown button: the Snooze and Pause lengths) is an outline button 190 px wide with a chevron that opens a popup menu. A field is 8 px round, darker than the block, and its border turns to the accent while it has focus.
 - **The font is Geist**, set through the component library's `theme.font_family`, so every control uses it.
 - **One scale knob.** The window follows the Windows display scale (GPUI sizes are logical pixels times the monitor's scale factor). On top of that, `theme.font_size` (`UI_FONT_SIZE` in `main.rs`, 14.5 instead of the library's 16, set in `palette::apply`) is the window's rem size, so every rem-based size shrinks together: `text_*` (`text_xs` is about 10.9 px, `text_sm` 12.7 px, `text_base` 14.5 px, `text_lg` 16.3 px), `px_*`, `gap_*` and the library's controls. Sizes written in `px(..)` (sidebar, header, brand) do not follow it.
 - **Option cards** are for picking among pictures (the calculation methods, the Asr choice, what the notch shows over a
@@ -420,6 +422,7 @@ The bar stays at the bottom of the page in both heights.
   all's place; that place stays empty while the list is, so a second press on Clear all never lands on Undo. It puts the
   removed tasks back where they were. Only the last removal can be undone: a new removal replaces it; the removed tasks
   stay out of `todo.txt` unless undone, and the undo is not saved.
+- In the add field (`ui/text_field.rs`), Ctrl+Backspace removes the spaces before the caret and the word before them, and Ctrl+Delete the spaces after it and the word after them.
 - The page is 508 px wide and 28 + 8 + the rows high (3 tasks 144 px, five or more rows 220 px), at least 86 px.
 - Empty: the same 508 px width as a list, 86 px high, with the title and Add on top and "All clear" centered below;
   pressing Add shows the input as the only row.
@@ -449,7 +452,7 @@ The bar stays at the bottom of the page in both heights.
   and "Last updated 13:40 · retrying on its own". No location: a `#4dabf7` pin, "Choose a city" and "Pick a location in
   Settings to see the weather". Both hug their content: the page is as wide as the row plus the notch's padding, never
   below the notch's minimum width (the timer page's). The design draws them in a 392 px notch; that is not a rule.
-- The rain alert starts 30 minutes before rain: a 340 px banner (the width of a download card, a little narrower than a notification card; a blue 30 px tile with the white icon of the coming weather, "Rain in 30 min" with "Weather" after it in grey, two lines of text) for 9 s, held while the pointer is on it, with Dismiss and Open under the text. The banner is the only moment the alert takes the pill; after it the alert stays as a blue badge in the group (the 14 px icon of the coming weather, 4 px, "Rain in 25 min"; "25m" when several badges share the pill) and as that icon in the open header, rank 6 (after the prayer), until the rain starts, so the clock and the battery ring stay in view. A press on the badge in the collapsed pill opens the notch on the weather page. Dismiss removes the badge too. Open opens the notch on the weather page (no browser); a click on the header icon does the same. Only data clicked on the weather page opens weather.com: an hour of the Today view opens `https://weather.com/weather/hourbyhour/l/<lat>,<lon>` and a day of the Week view opens `.../tenday/l/<lat>,<lon>` (coordinates trimmed to 4 decimals, numbers only; the site has no address for one hour or day, so the view lists them). The data still comes from MET Norway.
+- The rain alert starts 30 minutes before rain: a 340 px banner (the width of a download card, a little narrower than a notification card; a blue 30 px tile with the white icon of the coming weather, "Rain in 30 min" with "Weather" after it in grey, two lines of text) for 9 s, held while the pointer is on it, with Dismiss and Open under the text. The banner is the only moment the alert takes the pill; after it the alert stays as a blue badge in the group (the 14 px icon of the coming weather, 4 px, "Rain in 25 min"; "25m" when several badges share the pill) and as that icon in the open header, rank 6 (after the prayer), until the rain starts, so the clock and the battery ring stay in view. A press on the badge in the collapsed pill opens the notch on the weather page. Dismiss removes the badge too. Open opens the notch on the weather page (no browser); a click on the header icon does the same. Only data clicked on the weather page opens weather.com: an hour of the Today view opens `https://weather.com/weather/hourbyhour/l/<lat>,<lon>` and a day of the Week view opens `.../tenday/l/<lat>,<lon>` (coordinates trimmed to 4 decimals, numbers only; the site has no address for one hour or day, so the view lists them). The data still comes from MET Norway: the page asks for the forecast of the shared place (coordinates to three decimals) when it starts and every 30 minutes, every 10 minutes while offline, and only while it is switched on.
 - Each hour (Today) and each day (Week) is a button: a click opens the same table for that hour's or that day's date, and the cell under the pointer takes a faint white tint (`#ffffff` at 7 %), as the Today/Week pill takes its lighter fill. The notch sets no pointer cursor anywhere, so none is set here. The Today/Week pill is unchanged.
 
 ## Color and type
@@ -466,9 +469,9 @@ The bar stays at the bottom of the page in both heights.
 
 ## Opening settings
 
-- The gear in the open header and the tray's **Settings** item open the settings window (`notch-settings.exe`); settings
-  are edited only there, and the notch has no settings panel and no right-click menu. **Pause Foldline**, **Settings**
-  and **Quit Foldline** are in the tray menu. A page that uses right-click for its own content (a file on the shelf) keeps it.
+- The gear in the open header and the tray's **Settings** item open the settings window (`foldline-settings.exe`); settings
+  are edited only there, and the notch has no settings panel and no right-click menu. **Snooze notifications**, **Pause Foldline**,
+  **Settings** and **Quit Foldline** are in the tray menu. A page that uses right-click for its own content (a file on the shelf) keeps it.
 
 ## Open
 
