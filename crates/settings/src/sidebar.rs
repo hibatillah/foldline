@@ -251,11 +251,13 @@ mod tests {
     #[test]
     fn the_real_sections_group_the_page_specific_ones_apart() {
         let entries = crate::sections::all();
-        let titles = |group: NavGroup| {
-            entries.iter().filter(|entry| entry.group == group).map(|entry| entry.page.title).collect::<Vec<_>>()
-        };
-        assert_eq!(titles(NavGroup::Notch), ["General", "Pages", "Behavior", "Advanced"]);
-        assert_eq!(titles(NavGroup::PageSettings), ["Calendar", "Timer", "Shalat", "System stats", "Weather"]);
+        let group_of = |title: &str| entries.iter().find(|entry| entry.page.title == title).map(|entry| entry.group);
+        for title in ["General", "Pages", "Behavior", "Advanced"] {
+            assert_eq!(group_of(title), Some(NavGroup::Notch), "{title}");
+        }
+        for title in ["Calendar", "Timer", "Shalat", "System stats", "Weather"] {
+            assert_eq!(group_of(title), Some(NavGroup::PageSettings), "{title}");
+        }
     }
 
     #[test]

@@ -10,7 +10,9 @@ use super::order::{
     switch_page,
 };
 use crate::{
-    field, icons,
+    field,
+    i18n::tr,
+    icons,
     sections::apply,
     tag::{Tone, tag},
 };
@@ -48,37 +50,38 @@ impl Render for DragPreview {
     }
 }
 
-pub fn page_description(id: &str) -> Option<&'static str> {
-    match id {
-        "media" => Some(crate::i18n::tr!("pages.desc_media")),
-        "shelf" => Some(crate::i18n::tr!("pages.desc_shelf")),
-        "calendar" => Some(crate::i18n::tr!("pages.desc_calendar")),
-        "timer" => Some(crate::i18n::tr!("pages.desc_timer")),
-        "todo" => Some(crate::i18n::tr!("pages.desc_todo")),
-        "shalat" => Some(crate::i18n::tr!("pages.desc_shalat")),
-        "stats" => Some(crate::i18n::tr!("pages.desc_stats")),
-        "weather" => Some(crate::i18n::tr!("pages.desc_weather")),
-        "devices" => Some(crate::i18n::tr!("pages.desc_devices")),
-        "clipboard" => Some(crate::i18n::tr!("pages.desc_clipboard")),
-        _ => None,
-    }
+/// What the list knows about one page of the notch.
+struct PageRow {
+    id: &'static str,
+    icon: &'static str,
+    description: fn() -> &'static str,
 }
 
-/// The icon of each page the notch has; an unknown one gets the Pages icon.
+/// One row per page id; a page the notch has that is missing here is listed without a description and with the Pages icon.
+const PAGE_ROWS: &[PageRow] = &[
+    PageRow { id: "media", icon: icons::PLAY, description: || tr!("pages.desc_media") },
+    PageRow { id: "shelf", icon: icons::INBOX, description: || tr!("pages.desc_shelf") },
+    PageRow { id: "calendar", icon: icons::CALENDAR, description: || tr!("pages.desc_calendar") },
+    PageRow { id: "timer", icon: icons::TIMER, description: || tr!("pages.desc_timer") },
+    PageRow { id: "todo", icon: icons::TODO, description: || tr!("pages.desc_todo") },
+    PageRow { id: "shalat", icon: icons::SHALAT, description: || tr!("pages.desc_shalat") },
+    PageRow { id: "stats", icon: icons::STATS, description: || tr!("pages.desc_stats") },
+    PageRow { id: "weather", icon: icons::WEATHER, description: || tr!("pages.desc_weather") },
+    PageRow { id: "devices", icon: icons::BLUETOOTH, description: || tr!("pages.desc_devices") },
+    PageRow { id: "clipboard", icon: icons::CLIPBOARD, description: || tr!("pages.desc_clipboard") },
+];
+
+fn page_row_of(id: &str) -> Option<&'static PageRow> {
+    PAGE_ROWS.iter().find(|row| row.id == id)
+}
+
+pub fn page_description(id: &str) -> Option<&'static str> {
+    page_row_of(id).map(|row| (row.description)())
+}
+
+/// The icon of a page; one that has no row gets the Pages icon.
 pub fn page_icon(id: &str) -> &'static str {
-    match id {
-        "media" => icons::PLAY,
-        "shelf" => icons::INBOX,
-        "calendar" => icons::CALENDAR,
-        "timer" => icons::TIMER,
-        "todo" => icons::TODO,
-        "shalat" => icons::SHALAT,
-        "stats" => icons::STATS,
-        "weather" => icons::WEATHER,
-        "devices" => icons::BLUETOOTH,
-        "clipboard" => icons::CLIPBOARD,
-        _ => icons::PAGES,
-    }
+    page_row_of(id).map_or(icons::PAGES, |row| row.icon)
 }
 
 /// Two columns of dots, the usual sign that a row can be dragged.
@@ -131,10 +134,7 @@ fn page_row(index: usize, id: &str, label: SharedString, enabled: bool, hint: Ke
         .gap(px(8.0))
         .items_center()
         .child(div().text_base().font_weight(gpui::FontWeight::MEDIUM).child(label.clone()))
-        .children(
-            matches!(hint, KeyHint::DigitAndZero(_))
-                .then(|| tag(crate::i18n::tr!("pages.also_key_zero"), Tone::Accent, cx)),
-        );
+        .children(matches!(hint, KeyHint::DigitAndZero(_)).then(|| tag(tr!("pages.also_key_zero"), Tone::Accent, cx)));
     let text = v_flex().flex_1().min_w_0().child(title).children(page_description(id).map(|description| {
         div()
             .text_sm()
@@ -214,15 +214,42 @@ mod tests {
     }
 
     #[test]
-    fn every_page_of_the_notch_has_a_description_and_its_own_icon() {
-        let ids = ["media", "shelf", "calendar", "timer", "todo", "shalat", "stats", "weather", "devices", "clipboard"];
-        let mut icons: Vec<&str> = ids.iter().map(|id| page_icon(id)).collect();
-        for id in ids {
-            assert!(page_description(id).is_some(), "{id} has no description");
+    fn every_page_of_the_notch_has_a_row_with_a_description() {
+        for id in ["media", "shelf", "calendar", "timer", "todo", "shalat", "stats", "weather", "devices", "clipboard"]
+        {
+            assert!(page_description(id).is_some_and(|text| !text.is_empty()), "{id} has no description");
         }
-        icons.sort_unstable();
-        icons.dedup();
-        assert_eq!(icons.len(), ids.len());
+    }
+
+    #[test]
+    fn no_two_rows_share_an_id_or_an_icon() {
+        let mut ids: Vec<&str> = PAGE_ROWS.iter().map(|row| row.id).collect();
+        let mut row_icons: Vec<&str> = PAGE_ROWS.iter().map(|row| row.icon).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        row_icons.sort_unstable();
+        row_icons.dedup();
+        assert_eq!(ids.len(), PAGE_ROWS.len());
+        assert_eq!(row_icons.len(), PAGE_ROWS.len());
+    }
+
+    #[test]
+    fn a_row_reads_its_description_in_the_current_language() {
+        use store::language::{Language, with_override};
+        let english = page_description("todo").expect("todo description");
+        let indonesian = with_override(Language::Indonesian, || page_description("todo")).expect("todo description");
+        assert_ne!(english, indonesian);
+    }
+
+    #[test]
+    fn a_page_without_a_row_has_no_description_and_the_pages_icon() {
+        assert_eq!(page_description("someday"), None);
         assert_eq!(page_icon("someday"), icons::PAGES);
+    }
+
+    #[test]
+    fn a_row_gives_its_page_the_icon_it_names() {
+        assert_eq!(page_icon("clipboard"), icons::CLIPBOARD);
+        assert_eq!(page_icon("devices"), icons::BLUETOOTH);
     }
 }

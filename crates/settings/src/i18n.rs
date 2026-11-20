@@ -1,4 +1,4 @@
-//! Looks a text up in the language of `store::language::current()`; the texts are in `locales/app.yml`.
+//! Looks a text up in the language of `store::language::current()`; the texts are in `locales/app.yml` and in the split files under `locales/pages/`.
 
 use gpui::App;
 use store::language::{LANGUAGE_KEY, LanguageChoice};
@@ -31,10 +31,29 @@ pub fn apply_language(choice: LanguageChoice, cx: &mut App) {
     cx.refresh_windows();
 }
 
-/// The key line and its `en` and `id` lines in a locale file; a checkout with CRLF line endings reads the same as LF.
+/// Every `*.yml` under `directory`, in any depth: `app.yml` and the split files in `pages/`.
 #[cfg(test)]
-fn locale_entry(file: &std::path::Path, key: &str) -> Option<String> {
-    entry_in(&std::fs::read_to_string(file).ok()?, key)
+pub(crate) fn locale_files(directory: &std::path::Path) -> Vec<std::path::PathBuf> {
+    fn collect(directory: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
+        for entry in std::fs::read_dir(directory).into_iter().flatten().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                collect(&path, files);
+            } else if path.extension().is_some_and(|extension| extension == "yml") {
+                files.push(path);
+            }
+        }
+    }
+    let mut files = Vec::new();
+    collect(directory, &mut files);
+    files.sort();
+    files
+}
+
+/// The key line and its `en` and `id` lines in the first locale file under `locales` that defines the key; a checkout with CRLF line endings reads the same as LF.
+#[cfg(test)]
+fn locale_entry(locales: &std::path::Path, key: &str) -> Option<String> {
+    locale_files(locales).iter().find_map(|file| entry_in(&std::fs::read_to_string(file).ok()?, key))
 }
 
 #[cfg(test)]
@@ -42,15 +61,18 @@ fn entry_in(text: &str, key: &str) -> Option<String> {
     let header = format!("{key}:");
     let mut lines = text.lines();
     lines.find(|line| *line == header)?;
-    Some(std::iter::once(header.as_str()).chain(lines.take(2)).collect::<Vec<_>>().join("\n"))
+    Some(std::iter::once(header.as_str()).chain(lines.take(2)).collect::<Vec<_>>().join(
+        "
+",
+    ))
 }
 
-/// Whether a picture's word reads the same here as in the notch, in both languages.
+/// Whether a picture's word reads the same here as in the notch, in both languages; either program may keep the key in `app.yml` or in a split file.
 #[cfg(test)]
 pub(crate) fn same_in_the_notch(key: &str) -> bool {
     let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    let own = locale_entry(&manifest.join("locales/app.yml"), key);
-    own.is_some() && own == locale_entry(&manifest.join("../notch/locales/app.yml"), key)
+    let own = locale_entry(&manifest.join("locales"), key);
+    own.is_some() && own == locale_entry(&manifest.join("../notch/locales"), key)
 }
 
 #[cfg(test)]
@@ -120,13 +142,32 @@ mod tests {
         keys
     }
 
-    fn keys_in_the_file() -> Vec<String> {
-        let text =
-            std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("locales").join("app.yml")).unwrap();
-        text.lines()
-            .filter(|line| !line.starts_with([' ', '_', '#']) && line.ends_with(':'))
-            .map(|line| line.trim_end_matches(':').to_owned())
-            .collect()
+    fn all_locale_files() -> Vec<PathBuf> {
+        super::locale_files(&Path::new(env!("CARGO_MANIFEST_DIR")).join("locales"))
+    }
+
+    /// One `(file, key, body)` per top-level key of every locale file; `body` holds the lines under the key.
+    fn key_blocks() -> Vec<(PathBuf, String, String)> {
+        let mut blocks: Vec<(PathBuf, String, String)> = Vec::new();
+        for file in all_locale_files() {
+            let text = std::fs::read_to_string(&file).unwrap();
+            let first_block = blocks.len();
+            for line in text.lines() {
+                if !line.starts_with([' ', '_', '#']) && line.ends_with(':') {
+                    blocks.push((file.clone(), line.trim_end_matches(':').to_owned(), String::new()));
+                } else if blocks.len() > first_block
+                    && let Some(block) = blocks.last_mut()
+                {
+                    block.2.push_str(line);
+                    block.2.push('\n');
+                }
+            }
+        }
+        blocks
+    }
+
+    fn keys_in_the_files() -> Vec<String> {
+        key_blocks().into_iter().map(|(_, key, _)| key).collect()
     }
 
     #[test]
@@ -140,30 +181,96 @@ mod tests {
     }
 
     #[test]
-    fn no_key_in_the_file_is_unused() {
+    fn no_key_in_the_files_is_unused() {
         let used = keys_used_in_the_source();
-        for key in keys_in_the_file() {
+        for key in keys_in_the_files() {
             let by_prefix = DYNAMIC_KEY_PREFIXES.iter().any(|prefix| key.starts_with(prefix));
-            assert!(by_prefix || used.contains(&key), "{key} is in app.yml but no tr! uses it");
+            assert!(by_prefix || used.contains(&key), "{key} is in a locale file but no tr! uses it");
         }
     }
 
     #[test]
-    fn every_key_in_the_file_has_an_english_and_an_indonesian_line() {
-        let text =
-            std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("locales").join("app.yml")).unwrap();
-        let mut blocks: Vec<(String, String)> = Vec::new();
-        for line in text.lines() {
-            if !line.starts_with([' ', '_', '#']) && line.ends_with(':') {
-                blocks.push((line.trim_end_matches(':').to_owned(), String::new()));
-            } else if let Some(block) = blocks.last_mut() {
-                block.1.push_str(line);
-                block.1.push('\n');
+    fn every_key_in_the_files_has_an_english_and_an_indonesian_line() {
+        for (file, key, body) in key_blocks() {
+            let name = file.display();
+            assert!(
+                body.contains(
+                    "
+  en:"
+                ) || body.starts_with("  en:"),
+                "{key} in {name} has no en line"
+            );
+            assert!(
+                body.contains(
+                    "
+  id:"
+                ) || body.starts_with("  id:"),
+                "{key} in {name} has no id line"
+            );
+        }
+    }
+
+    #[test]
+    fn a_key_is_defined_in_one_locale_file_only() {
+        let mut seen: std::collections::HashMap<String, PathBuf> = std::collections::HashMap::new();
+        for (file, key, _) in key_blocks() {
+            if let Some(first) = seen.insert(key.clone(), file.clone()) {
+                panic!("{key} is in both {} and {}", first.display(), file.display());
             }
         }
-        for (key, body) in blocks {
-            assert!(body.contains("\n  en:") || body.starts_with("  en:"), "{key} has no en line");
-            assert!(body.contains("\n  id:") || body.starts_with("  id:"), "{key} has no id line");
+    }
+
+    #[test]
+    fn every_locale_file_starts_with_the_version_line() {
+        for file in all_locale_files() {
+            let text = std::fs::read_to_string(&file).unwrap();
+            assert_eq!(text.lines().next(), Some("_version: 2"), "{} needs `_version: 2` first", file.display());
         }
+    }
+
+    #[test]
+    fn a_shared_key_is_found_in_a_split_file_of_either_program() {
+        let directory = std::env::temp_dir().join(format!("foldline-settings-locales-{}", std::process::id()));
+        let split = directory.join("pages");
+        std::fs::create_dir_all(&split).unwrap();
+        std::fs::write(
+            directory.join("app.yml"),
+            "_version: 2
+a:
+  en: \"A\"
+  id: \"B\"
+",
+        )
+        .unwrap();
+        std::fs::write(
+            split.join("b.yml"),
+            "_version: 2
+b:
+  en: \"C\"
+  id: \"D\"
+",
+        )
+        .unwrap();
+        let in_app = super::locale_entry(&directory, "a");
+        let in_split = super::locale_entry(&directory, "b");
+        let missing = super::locale_entry(&directory, "c");
+        let _ = std::fs::remove_dir_all(&directory);
+        assert_eq!(
+            in_app.as_deref(),
+            Some(
+                "a:
+  en: \"A\"
+  id: \"B\""
+            )
+        );
+        assert_eq!(
+            in_split.as_deref(),
+            Some(
+                "b:
+  en: \"C\"
+  id: \"D\""
+            )
+        );
+        assert_eq!(missing, None);
     }
 }

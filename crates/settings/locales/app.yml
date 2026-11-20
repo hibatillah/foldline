@@ -17,9 +17,6 @@ shalat.title:
 stats.title:
   en: System stats
   id: Statistik sistem
-weather.title:
-  en: Weather
-  id: Cuaca
 advanced.title:
   en: Advanced
   id: Lanjutan
@@ -287,12 +284,6 @@ stats.group_disks:
 stats.group_gpus:
   en: "Graphics cards"
   id: "Kartu grafis"
-weather.rain_alert:
-  en: "Rain alert"
-  id: "Peringatan hujan"
-weather.rain_alert_note:
-  en: "Get a message in the pill 30 minutes before the next rain."
-  id: "Dapatkan pesan di pill 30 menit sebelum hujan berikutnya."
 advanced.debug_log:
   en: "Debug log file"
   id: "File log debug"
@@ -755,33 +746,6 @@ stats.disk_removable:
 stats.disk_other:
   en: "Disk"
   id: "Disk"
-weather.group_alerts:
-  en: "Alerts"
-  id: "Peringatan"
-weather.group_alerts_note:
-  en: "The city comes from General"
-  id: "Kota diambil dari Umum"
-weather.alert_sent:
-  en: "Message sent"
-  id: "Pesan terkirim"
-weather.axis_now:
-  en: "Now"
-  id: "Kini"
-weather.axis_half_hour:
-  en: "+30 min"
-  id: "+30 mnt"
-weather.axis_hour:
-  en: "+60 min"
-  id: "+60 mnt"
-weather.alert_pill:
-  en: "Rain in %{minutes} min"
-  id: "Hujan %{minutes} mnt lagi"
-weather.alert_caption_bars:
-  en: "Foldline sends the message 30 minutes before rain starts."
-  id: "Foldline mengirim pesan 30 menit sebelum hujan mulai."
-weather.alert_caption_pill:
-  en: "What you see in the pill."
-  id: "Yang tampil di pill."
 shalat.group_method_note:
   en: "Uses the location set in General."
   id: "Memakai lokasi yang diatur di Umum."

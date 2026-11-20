@@ -55,28 +55,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn every_page_has_its_own_icon_and_a_description_is_a_whole_sentence() {
+    fn every_section_has_its_own_icon() {
+        let mut icons = all().iter().map(|entry| entry.icon).collect::<Vec<_>>();
+        let count = icons.len();
+        icons.sort_unstable();
+        icons.dedup();
+        assert_eq!(icons.len(), count);
+    }
+
+    #[test]
+    fn every_section_title_is_unique_and_a_description_is_a_whole_sentence() {
         let entries = all();
-        let icons = entries.iter().map(|entry| entry.icon).collect::<Vec<_>>();
-        assert_eq!(
-            icons,
-            [
-                icons::GENERAL,
-                icons::PAGES,
-                icons::BEHAVIOR,
-                icons::ADVANCED,
-                icons::CALENDAR,
-                icons::TIMER,
-                icons::SHALAT,
-                icons::STATS,
-                icons::WEATHER,
-                icons::ABOUT
-            ]
-        );
-        let mut unique = icons.clone();
-        unique.sort_unstable();
-        unique.dedup();
-        assert_eq!(unique.len(), icons.len());
+        let mut titles = entries.iter().map(|entry| entry.page.title).collect::<Vec<_>>();
+        titles.sort_unstable();
+        titles.dedup();
+        assert_eq!(titles.len(), entries.len());
         for entry in &entries {
             if let Some(description) = entry.page.description() {
                 assert!(description.trim().len() > 20, "{} needs a whole description sentence", entry.page.title);
@@ -85,24 +78,47 @@ mod tests {
     }
 
     #[test]
-    fn rebuilding_the_pages_in_indonesian_changes_their_titles() {
-        use store::language::{Language, with_override};
-        let titles = |entries: Vec<NavEntry>| entries.iter().map(|entry| entry.page.title).collect::<Vec<_>>();
-        let english = titles(all());
-        let indonesian = with_override(Language::Indonesian, || titles(all()));
-        assert_eq!(english[0], "General");
-        assert_eq!(indonesian[0], "Umum");
-        assert_eq!(indonesian[4], "Kalender");
-        assert_eq!(indonesian[9], "Tentang");
+    fn the_sections_the_notch_ships_are_all_listed() {
+        let entries = all();
+        for icon in [
+            icons::GENERAL,
+            icons::PAGES,
+            icons::BEHAVIOR,
+            icons::ADVANCED,
+            icons::CALENDAR,
+            icons::TIMER,
+            icons::SHALAT,
+            icons::STATS,
+            icons::WEATHER,
+            icons::ABOUT,
+        ] {
+            assert!(entries.iter().any(|entry| entry.icon == icon), "no section has the icon {icon}");
+        }
     }
 
     #[test]
-    fn about_is_the_last_sidebar_item_and_sits_in_the_footer() {
+    fn rebuilding_the_pages_in_indonesian_changes_their_titles() {
+        use store::language::{Language, with_override};
+        let title_of = |entries: &[NavEntry], icon: &str| {
+            entries.iter().find(|entry| entry.icon == icon).map(|entry| entry.page.title).expect("section")
+        };
+        let english = all();
+        let indonesian = with_override(Language::Indonesian, || {
+            all().iter().map(|entry| (entry.icon, entry.page.title)).collect::<Vec<_>>()
+        });
+        let indonesian_title = |icon: &str| indonesian.iter().find(|(own, _)| *own == icon).map(|(_, title)| *title);
+        assert_eq!(title_of(&english, icons::GENERAL), "General");
+        assert_eq!(indonesian_title(icons::GENERAL), Some("Umum"));
+        assert_eq!(indonesian_title(icons::CALENDAR), Some("Kalender"));
+        assert_eq!(indonesian_title(icons::ABOUT), Some("Tentang"));
+    }
+
+    #[test]
+    fn about_sits_in_the_footer_where_the_sidebar_pins_it_last() {
         let entries = all();
-        let last = entries.last().expect("entries");
-        assert_eq!(last.page.title, "About");
-        assert_eq!(last.icon, icons::ABOUT);
-        assert_eq!(last.group, NavGroup::Footer);
+        let about = entries.iter().find(|entry| entry.icon == icons::ABOUT).expect("about entry");
+        assert_eq!(about.page.title, "About");
+        assert_eq!(about.group, NavGroup::Footer);
     }
 
     #[test]

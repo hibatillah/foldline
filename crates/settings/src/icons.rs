@@ -5,68 +5,60 @@ use gpui::{AssetSource, Result, SharedString};
 use gpui_component_assets::Assets;
 use std::borrow::Cow;
 
-/// The notch's own settings icon: a pointy-top hexagon around a ring, drawn like `Icon::Gear` in the notch.
-pub const GENERAL: &str = "icons/hex-nut.svg";
-/// Lucide "layers".
-pub const PAGES: &str = "icons/layers.svg";
-/// Lucide "puzzle".
-pub const BEHAVIOR: &str = "icons/puzzle.svg";
-/// Lucide "calendar-days".
-pub const CALENDAR: &str = "icons/calendar-days.svg";
-/// Lucide "moon-star".
-pub const SHALAT: &str = "icons/moon-star.svg";
-/// Lucide "chart-column".
-pub const STATS: &str = "icons/chart-column.svg";
-/// Lucide "wrench".
-pub const ADVANCED: &str = "icons/wrench.svg";
-/// Lucide "cloud-drizzle".
-pub const WEATHER: &str = "icons/cloud-drizzle.svg";
-/// Lucide "info".
-pub const ABOUT: &str = "icons/info.svg";
+/// Declares this window's own icons, one line each: `NAME = "file-stem"` serves `assets/icons/<file-stem>.svg` at
+/// `icons/<file-stem>.svg`. A doc comment above the line says what the icon is.
+macro_rules! own_icons {
+    ($($(#[$doc:meta])* $name:ident = $stem:literal),+ $(,)?) => {
+        $($(#[$doc])* pub const $name: &str = concat!("icons/", $stem, ".svg");)+
 
-/// Lucide "play", the media page.
-pub const PLAY: &str = "icons/play.svg";
+        const OWN_ICONS: &[(&str, &str)] =
+            &[$(($name, include_str!(concat!("../assets/icons/", $stem, ".svg")))),+];
+    };
+}
+
+own_icons! {
+    /// The notch's own settings icon: a pointy-top hexagon around a ring, drawn like `Icon::Gear` in the notch.
+    GENERAL = "hex-nut",
+    /// Lucide "layers".
+    PAGES = "layers",
+    /// Lucide "puzzle".
+    BEHAVIOR = "puzzle",
+    /// Lucide "calendar-days".
+    CALENDAR = "calendar-days",
+    /// Lucide "moon-star".
+    SHALAT = "moon-star",
+    /// Lucide "chart-column".
+    STATS = "chart-column",
+    /// Lucide "wrench".
+    ADVANCED = "wrench",
+    /// Lucide "cloud-drizzle".
+    WEATHER = "cloud-drizzle",
+    /// Lucide "info".
+    ABOUT = "info",
+    /// Lucide "play", the media page.
+    PLAY = "play",
+    /// Lucide "timer".
+    TIMER = "timer",
+    /// Lucide "square-check", the todo page.
+    TODO = "square-check",
+    /// Lucide "bluetooth", the connected devices page.
+    BLUETOOTH = "bluetooth",
+    /// Lucide "clipboard".
+    CLIPBOARD = "clipboard",
+    /// Lucide "keyboard", the hint about the number keys.
+    KEYBOARD = "keyboard",
+    /// Lucide "mouse-pointer-2", the pointer in the pictures.
+    POINTER = "mouse-pointer-2",
+    /// Lucide "volume-2", the volume message in the Behavior pictures.
+    VOLUME = "volume-2",
+    /// Lucide "triangle-alert", the icon of a warning box.
+    WARNING = "triangle-alert",
+}
+
 /// Lucide "inbox", the file shelf; the component library's bundle serves it.
 pub const INBOX: &str = "icons/inbox.svg";
-/// Lucide "timer".
-pub const TIMER: &str = "icons/timer.svg";
-/// Lucide "square-check", the todo page.
-pub const TODO: &str = "icons/square-check.svg";
-/// Lucide "bluetooth", the connected devices page.
-pub const BLUETOOTH: &str = "icons/bluetooth.svg";
-/// Lucide "clipboard".
-pub const CLIPBOARD: &str = "icons/clipboard.svg";
-/// Lucide "keyboard", the hint about the number keys.
-pub const KEYBOARD: &str = "icons/keyboard.svg";
-/// Lucide "mouse-pointer-2", the pointer in the pictures.
-pub const POINTER: &str = "icons/mouse-pointer-2.svg";
-/// Lucide "volume-2", the volume message in the Behavior pictures.
-pub const VOLUME: &str = "icons/volume-2.svg";
-/// Lucide "triangle-alert", the icon of a warning box.
-pub const WARNING: &str = "icons/triangle-alert.svg";
 /// Lucide "file"; the component library's bundle serves it.
 pub const FILE: &str = "icons/file.svg";
-
-const OWN_ICONS: [(&str, &str); 18] = [
-    (GENERAL, include_str!("../assets/icons/hex-nut.svg")),
-    (PAGES, include_str!("../assets/icons/layers.svg")),
-    (BEHAVIOR, include_str!("../assets/icons/puzzle.svg")),
-    (CALENDAR, include_str!("../assets/icons/calendar-days.svg")),
-    (SHALAT, include_str!("../assets/icons/moon-star.svg")),
-    (STATS, include_str!("../assets/icons/chart-column.svg")),
-    (ADVANCED, include_str!("../assets/icons/wrench.svg")),
-    (WEATHER, include_str!("../assets/icons/cloud-drizzle.svg")),
-    (ABOUT, include_str!("../assets/icons/info.svg")),
-    (PLAY, include_str!("../assets/icons/play.svg")),
-    (TIMER, include_str!("../assets/icons/timer.svg")),
-    (TODO, include_str!("../assets/icons/square-check.svg")),
-    (BLUETOOTH, include_str!("../assets/icons/bluetooth.svg")),
-    (CLIPBOARD, include_str!("../assets/icons/clipboard.svg")),
-    (KEYBOARD, include_str!("../assets/icons/keyboard.svg")),
-    (POINTER, include_str!("../assets/icons/mouse-pointer-2.svg")),
-    (VOLUME, include_str!("../assets/icons/volume-2.svg")),
-    (WARNING, include_str!("../assets/icons/triangle-alert.svg")),
-];
 
 /// Serves this window's icons first and the component library's bundle for everything else.
 pub struct WindowAssets;
@@ -102,6 +94,20 @@ mod tests {
             let svg = String::from_utf8(bytes.into_owned()).expect("utf-8");
             assert!(svg.contains("viewBox=\"0 0 24 24\"") && svg.contains("currentColor"), "{path}");
         }
+    }
+
+    #[test]
+    fn every_svg_file_in_the_assets_folder_is_declared_once() {
+        let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/icons");
+        let mut files: Vec<String> = std::fs::read_dir(folder)
+            .expect("assets/icons")
+            .flatten()
+            .map(|entry| format!("icons/{}", entry.file_name().to_string_lossy()))
+            .collect();
+        let mut declared: Vec<String> = OWN_ICONS.iter().map(|(path, _)| (*path).to_owned()).collect();
+        files.sort();
+        declared.sort();
+        assert_eq!(files, declared);
     }
 
     #[test]

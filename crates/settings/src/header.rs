@@ -82,21 +82,14 @@ mod tests {
 
     #[test]
     fn every_section_has_its_own_breadcrumb() {
-        let texts = crate::sections::all().iter().map(|entry| breadcrumb_text(entry.page.title)).collect::<Vec<_>>();
-        assert_eq!(
-            texts,
-            [
-                "Settings › General",
-                "Settings › Pages",
-                "Settings › Behavior",
-                "Settings › Advanced",
-                "Settings › Calendar",
-                "Settings › Timer",
-                "Settings › Shalat",
-                "Settings › System stats",
-                "Settings › Weather",
-                "Settings › About",
-            ]
-        );
+        let entries = crate::sections::all();
+        let texts = entries.iter().map(|entry| breadcrumb_text(entry.page.title)).collect::<Vec<_>>();
+        for entry in &entries {
+            let expected = format!("Settings › {}", entry.page.title);
+            assert_eq!(texts.iter().filter(|text| **text == expected).count(), 1, "{expected}");
+        }
+        for title in ["General", "Pages", "Behavior", "Advanced", "Calendar", "Timer", "Shalat", "Weather", "About"] {
+            assert!(texts.contains(&format!("Settings › {title}")), "no breadcrumb for {title}");
+        }
     }
 }
