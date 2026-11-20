@@ -23,10 +23,12 @@ keys, defaults and the window's sections are listed in [settings keys](../refere
    - A setting that takes effect only when the notch starts again gets `.tag(tr!("advanced.after_restart"))`.
    - A picture that explains a setting goes in its own `Item::picture_row` under the row, drawn with `illustration.rs`.
    - Every item gets a description of one to three short lines that says what the setting does.
-   - Write the label and description through `tr!("<section>.<key>")` and add the English and Indonesian text to `crates/settings/locales/app.yml`, as `general.track_location` does.
-   - A new section: create `sections/<name>.rs` with a `page() -> Page` function (`Page::plain(title, groups)`; the page opens with its first section)
-     and add it to `sections::all` in `sections/mod.rs` as a `NavEntry` with its sidebar group (`NavGroup::Notch` or
-     `NavGroup::PageSettings`) and icon.
+   - Write the label and description through `tr!("<section>.<key>")`. For a control on an existing section, add the English and Indonesian text beside the section's other texts, as `general.track_location` does in `crates/settings/locales/app.yml`. For a section of your own, use `crates/settings/locales/pages/<id>.yml` (first line `_version: 2`) with `<id>.title`, `<id>.group_<name>`, `<id>.<setting>` and `<id>.<setting>_note`. A key lives in one locale file only.
+   - A new section needs three registrations, and `scripts/new-content.sh settings <id>` makes them ([add your own content](add-your-content.md)):
+     - the folder `sections/<id>/mod.rs` with a `page() -> Page` function (`Page::plain(title, groups)`; the page opens with its first section) and `mod <id>;` in `sections/mod.rs`;
+     - one `NavEntry::new(NavGroup::PageSettings, icons::<ICON>, <id>::page())` in `sections::all` (`NavGroup::Notch` for a section that is not a page's);
+     - one `own_icons!` line in `icons.rs` and its `assets/icons/<stem>.svg`.
+   - A new page also gets a `PageRow` in `sections/pages/list.rs` and a `pages.desc_<id>` text, so the Pages section lists it with a description and an icon.
    - Every write goes through `sections::apply`, which saves the key and posts `WM_SETTINGS_CHANGED` to the notch.
 4. **Document it** in the same change: the key in the `docs/reference/settings-keys.md` table, the control in its window table, and
    the user-facing default in the `README.md` table.

@@ -43,10 +43,11 @@ Commands without `-p` or `--workspace` cover only the notch. [Build, run and deb
 ## How the code is organized
 
 - `crates/notch/src/host/` is the notch itself: the window, opening and closing, the pin, animation, input, the tray and the launcher of the settings window. It names no page.
-- `pages/` holds one folder per page and `activities/` one file per pill message. Each is one line in a registry, so adding or removing one touches no other file.
+- `pages/` holds one folder per page and `activities/` one file per pill message. Each is one line in a registry; a page also gets one row in the settings Pages list and one icon line, which `scripts/new-content.sh` adds.
 - `gfx/` is the Direct2D and DirectWrite toolkit, `ui/` the widgets on top of it, and `platform/` small Windows actions.
 - Pages, activities and widgets draw in device-independent units. Only `host/notch/units.rs` converts to device pixels ([drawing model](docs/explanation/drawing-model.md)).
 - Dependencies point one way. Pages never use each other, and nothing below the host knows a particular page.
+- To add a page, an activity or a page's settings of your own, follow [add your own content](docs/how-to/add-your-content.md): a scaffold script, then a check that the pull request touches only your files.
 
 The layout rules are in [source map](docs/reference/source-map.md), the reasons in [host and pages](docs/explanation/host-and-pages.md), and the overview in [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -75,4 +76,4 @@ scripts/perf.sh          # after host, animation, timer or drawing changes
 
 ## Working with Claude Code
 
-[AGENTS.md](AGENTS.md) and `.claude/rules/` carry the project rules for the agent, and CodeGraph gives it the code index. Six subagents in `.claude/agents/` each own one area: `notch-host`, `notch-pages`, `notch-render`, `settings-gpui`, `perf-auditor` (read-only) and `docs-writer`. The agent commits only when asked, and always with `/group-commit`. `/release` prepares a release locally and asks before it pushes ([cut a release](docs/how-to/cut-a-release.md)).
+[AGENTS.md](AGENTS.md) and `.claude/rules/` carry the project rules for the agent, and CodeGraph gives it the code index. Six subagents in `.claude/agents/` each own one area: `notch-host`, `notch-pages`, `notch-render`, `settings-gpui`, `perf-auditor` (read-only) and `docs-writer`. A seventh, `add-content`, builds a contributor's own page, activity or page settings from a description. The agent commits only when asked, and always with `/group-commit`. `/release` prepares a release locally and asks before it pushes ([cut a release](docs/how-to/cut-a-release.md)).

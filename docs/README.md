@@ -9,6 +9,7 @@ New to the project? Start with [ONBOARDING.md](../ONBOARDING.md) at the reposito
 | Read | When |
 | --- | --- |
 | [Build, run and debug](how-to/build-run-and-debug.md) | building, running a change, or finding why a page does not show |
+| [Add your own content](how-to/add-your-content.md) | adding one page, activity or page settings of your own in a pull request that touches only your files |
 | [Add a page](how-to/add-a-page.md) | writing a page, with one working example |
 | [Add an activity](how-to/add-an-activity.md) | something should show in the collapsed pill |
 | [Add a setting](how-to/add-a-setting.md) | a new key, or a control in the settings window |

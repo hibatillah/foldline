@@ -7,6 +7,17 @@ Foldline is open source under the GNU General Public License, version 3 or later
 - A change is ready when `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` pass, run as `cargo +stable-x86_64-pc-windows-msvc` (add `--workspace` when `crates/settings/`, `crates/store/` or `crates/places/` changed).
 - The name and logo are not part of the code license: [TRADEMARK.md](TRADEMARK.md).
 
+## Add your own content
+
+A page (what shows when the notch is open), an activity (what shows in the collapsed pill) and a page's settings each live in their own folder, so you can add yours without touching the rest of the app. Give your agent this prompt, or run `/add-content` in Claude Code:
+
+```
+Add a <page | activity | page with settings> to Foldline that <what it should do>.
+Follow AGENTS.md, section "Contribute your own content".
+```
+
+The agent scaffolds your files (`scripts/new-content.sh`), fills them in, tests them and writes the check report (`scripts/check-content-paths.sh --id <id>`) that goes into your pull request description. Keep the pull request to your own content: it lists anything outside it, and anything outside needs its own pull request. The by-hand steps are in [add your content](docs/how-to/add-your-content.md). Bug fixes and changes to other parts of Foldline are welcome through the normal flow below.
+
 ## Pull requests
 
 - Title: `type(scope): summary`. Description: short bullets on what changed and why.

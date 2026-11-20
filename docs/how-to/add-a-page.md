@@ -8,12 +8,14 @@ Each page sets its own open size in `PageSizes::expanded`. Most pages use `DEFAU
 device-independent pixels); the notch adds 50 for the header and padding (136 total). A page may ask for more, up to
 `MAX_CONTENT_HEIGHT` (220), and the notch grows to fit; taller requests are capped there.
 
+To start from files that compile, run `scripts/new-content.sh page <id>`: it creates the folder, the locale files and the registry lines of steps 1 and 3, and [add your own content](add-your-content.md) covers the whole flow for a pull request.
+
 ## Steps
 
 ### 1. Create the folder
 
 Make `crates/notch/src/pages/<name>/mod.rs`. A page may be one file or many; keep everything it needs inside its folder. A page
-can use `page`, `activity`, `gfx`, `ui` and `platform`, but never another page.
+can use `page`, `activity`, `gfx`, `ui` and `platform`, but never another page (the test `a_page_imports_no_other_page` checks it).
 
 ### 2. Implement `Page`
 
@@ -135,7 +137,7 @@ What each part does:
 - `on_language_changed` runs once when `general.language` changed (after `on_settings_changed`), and again after the notch moves to a monitor of another scale. Rebuild text you cached from
   `tr!` (a label, a count, a measured width) and request a repaint. `name()` returns a `String` read in the current
   language through `tr!("page.<id>")`; look texts up with `crate::i18n::tr!` when you create or rebuild them, never in
-  `draw_*`, and add the English and Indonesian text to `crates/notch/locales/app.yml`.
+  `draw_*`, and add the English and Indonesian text to `crates/notch/locales/pages/<id>.yml` (it starts with `_version: 2`; `app.yml` keeps the texts that already exist).
 - `on_timer` runs when a timer from `context.set_timer` fires. Request a repaint when something visible changed.
 - `on_pointer` receives pointer events while your page is the open one, including while it is still fading in after a switch; a page fading out gets none.
   The collapsed pill sends none to pages: a page whose `presence()` is a banner or a badge gets the pointer over it in
@@ -170,6 +172,10 @@ The order matters only for ties: when two pages have the same priority, the earl
 the media page are both `NORMAL`, so the media page wins while music plays and the greeting shows the rest of the
 time.
 
+Also add a `PageRow` for the page to `crates/settings/src/sections/pages/list.rs` (its icon and its `pages.desc_<id>` text in `crates/settings/locales/pages/<id>.yml`); a page without a row is listed in the Pages section with no description and the Pages icon.
+
+`SampleOptions` and `sample_of()` in the same file are optional and only for snapshot scenarios: a page without a sample is left out of the host test rigs (`samples()`), so a page you add changes no test you did not write.
+
 ### 4. Run it
 
 `scripts/reload.sh` builds and starts it. To see your page on its own, hide the others:
@@ -178,8 +184,7 @@ time.
 set NOTCH_PAGES=shelf,greeting
 ```
 
-Nothing else in the project needs to change: the host, the drawing code and the other pages do not know your page
-exists.
+Nothing else needs to change: the host, the drawing code and the other pages do not know your page exists.
 
 ## Next
 

@@ -89,4 +89,6 @@ The notch must use no CPU while nothing happens, so an activity never polls. Pic
 
 ### 4. Register it
 
-Add the module and an entry to `all()` in `crates/notch/src/activities/mod.rs`. Registration order breaks ties between badges of equal `header_status_rank`.
+Add `mod <name>;` and one line to the end of `all()` in `crates/notch/src/activities/mod.rs`. Registration order breaks ties between badges of equal `header_status_rank`. `scripts/new-content.sh activity <id>` creates a compiling file and both lines ([add your own content](add-your-content.md)).
+
+Texts go through `tr!`. Put an activity's own texts in `crates/notch/locales/activities/<id>.yml` (first line `_version: 2`, an `en` and an `id` line per key); the file is optional, and the texts that already exist stay in `app.yml`. The tests `an_activity_imports_no_other_activity` and `an_activity_imports_no_page` keep the activity separate; only `privacy` is a shared helper.

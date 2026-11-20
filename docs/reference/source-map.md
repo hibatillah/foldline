@@ -12,7 +12,8 @@ crates/
       page.rs         the whole contract for a page: the Page trait, Context, Frame, events (`page/timer_keys.rs`: the timer id math)
       activity.rs     the whole contract for an activity: the Activity trait, Presence, SystemMessage, Flash
       log.rs          optional debug log (set FOLDLINE_DEBUG to a file path)
-      i18n.rs         the `tr!` text lookup; the texts are in `crates/notch/locales/app.yml` (the settings window has its own `crates/settings/locales/app.yml`)
+      i18n.rs         the `tr!` text lookup; the texts are in `crates/notch/locales/app.yml` and in the split files `locales/pages/<id>.yml` and `locales/activities/<id>.yml`, one per page or activity (the settings window has its own `crates/settings/locales/app.yml` and `locales/pages/<id>.yml`); every file starts with `_version: 2`
+      source_scan.rs  test-only: reads the sources to find which page or activity imports another (`a_page_imports_no_other_page` and the activity tests)
       host/           the notch itself: window, animation, opening and closing, the pin, tray, the launcher of the settings window. Knows no page.
       gfx/            drawing toolkit: Canvas and its unit space (`Canvas::in_units` in `canvas.rs`), fonts (a device set for the host and a unit set, `Fonts::unit`, in `fonts.rs`), the window's bitmap (`surface.rs`; `Surface::resize` changes its size and keeps the render target and uploaded images), colors, image pixels (`image_data.rs`) and their uploaded brushes (`image_brush.rs`), springs, geometry, text clamping, the bounded cache of measured text (`text_cache.rs`), SVG path data read into a `Path` (`svg_path.rs`), the whole-pixel square for cached shapes (`pixel_square.rs`, `Canvas::pixel_square`)
       platform/       small Windows actions for pages and activities: an app's icon, a shell bitmap's pixels (`bitmap.rs`), a window's class and its executable (`window_info.rs`), open a file, read and write the clipboard (`clipboard.rs`), paste into the window in front (`paste.rs`), drag a file
@@ -22,7 +23,7 @@ crates/
                       microphone, camera, clipboard, Caps Lock, notifications (`notifications/`: the card, the item and
                       its heading, the listener thread and its rounds of asking by id, `logos.rs` the icon cache that retries failures, `package_logo.rs` the logo file a package's manifest declares), browser downloads (`downloads/`: the tracker of partial files and the size text, both pure; `watcher.rs` the `ReadDirectoryChangesW` thread; the card)
       pages/
-        mod.rs        the registry: the only place pages are listed
+        mod.rs        the registry: the only place pages are listed (`all()`, and the test-only `samples()` for pages that have snapshot samples)
         media/        media player: session, controls, lyrics (`lyrics/`: the `.lrc` parser, `client.rs` the LRCLIB requests, `ranking.rs` which search entry is used and the track length rounding), artwork, app icon, the lyric glow
         shelf/        file shelf: the list of files (items.rs, with the thumbnail rule and tag colors), the drawn documents (document.rs), the empty row (empty.rs), the places (layout.rs), drawing (draw.rs), pointer input (input.rs), the example files for snapshots (sample.rs), drag in and out
         calendar/     calendar: dates, the iCal reader, the month grid and the day's agenda, the download, the month grid's text (`labels.rs`), when the page wakes and fetches (`wake.rs`), pointer input (`input.rs`), the collapsed badge (`badge.rs`)
@@ -43,10 +44,11 @@ crates/
                          to a key and their save rules, switch.rs the 42 by 25 switch they draw, notify.rs posts WM_SETTINGS_CHANGED to the notch,
                          single_instance.rs allows one window and focuses the open one, startup/ the Run registry
                          value or MSIX startup task behind Start with Windows (`registry.rs`, `packaged.rs`, `presentation.rs`), palette.rs the colors (dark and light, with contrast tests), sidebar.rs the groups and icons, links.rs the addresses the window opens (repository, release notes), brand.rs the build's tile logo, version.rs the displayed version, i18n.rs the `tr!` lookup, stepper.rs and chips.rs the minute controls, tag.rs the small tags after a row title, info_box.rs the hint box, illustration.rs the drawn desktop pictures, header.rs the breadcrumb header and window
-                         buttons, icons.rs the bundled SVG icons (assets/icons) and their asset source, layout.rs the page
+                         buttons, icons.rs the bundled SVG icons (assets/icons, declared one line each in `own_icons!`) and their asset source, locales/ the texts (app.yml and `pages/<id>.yml`, one file per page: its section's texts and `pages.desc_<id>`), layout.rs the page
                          description, bordered sections and rows, location.rs the city search, card.rs and picture.rs the
                          picture cards
 vendor/salah/     the prayer-time crate with one crash fix (see docs/reference/dependencies-and-licenses.md)
+scripts/          the content scaffold, beside the build and release scripts: new-content.sh (`page|activity|settings <id>`: compiling skeletons from `templates/` and the registry lines), check-content-paths.sh (lists what a branch changed outside your content area) and templates/ (the page, activity and settings skeletons, their locale files and the placeholder icon); see docs/how-to/add-your-content.md
 installer/        foldline.iss, the Inno Setup script the release workflow builds the installer from; msix/, the manifest template and logos of the Store package (see docs/how-to/build-and-test-the-msix.md)
 assets/fonts/     Geist, the bundled font, and its license
 ```

@@ -6,9 +6,20 @@ Foldline puts a slim black pill at the top of your Windows screen. Point at it a
 
 It is written in Rust and draws straight to the screen with Direct2D: no UI framework, no web view. It idles at 0 % CPU and stays under 50 MB of memory. Foldline is free and open source, with no account and no paid tier.
 
-[![Get it from Microsoft Store](assets/images/get-it-from-microsoft-store.svg)](https://apps.microsoft.com/detail/9NGTV96SZDS7)
+<a href="https://apps.microsoft.com/detail/9NGTV96SZDS7"><img src="https://shieldcn.dev/badge/Get%20it%20on-Microsoft%20Store-fff.svg?font=geist&logo=ri%3ABsMicrosoft&logoColor=3b82f6" alt="Get it on Microsoft Store" height="28"></a>
 
 ![The open notch on the media page with the track, the controls and synced lyrics](assets/images/notch-media.png)
+
+## Make it yours
+
+Add a page, an activity or the settings of a page without touching the rest of the app. Each lives in its own folder, a scaffold sets it up, an agent can build it from a description, and a script proves your pull request changes only your own files. Give your agent this prompt, or run `/add-content` in Claude Code:
+
+```
+Add a <page | activity | page with settings> to Foldline that <what it should do>.
+Follow AGENTS.md, section "Contribute your own content".
+```
+
+The steps by hand are in [add your own content](docs/how-to/add-your-content.md), and [CONTRIBUTING.md](CONTRIBUTING.md) holds the agreement.
 
 ## Install
 
@@ -87,7 +98,7 @@ None of it leaves your computer except as listed above.
 
 ## Contributing
 
-Contributions are welcome through pull requests on [github.com/hibatillah/foldline](https://github.com/hibatillah/foldline). Read [CONTRIBUTING.md](CONTRIBUTING.md) first, because it holds the contributor agreement. [ONBOARDING.md](ONBOARDING.md) covers the build, the structure and the rules the code follows, and [docs/README.md](docs/README.md) indexes the documentation. The name and logo are not part of the code license ([TRADEMARK.md](TRADEMARK.md)).
+Contributions are welcome through pull requests on [github.com/hibatillah/foldline](https://github.com/hibatillah/foldline). Read [CONTRIBUTING.md](CONTRIBUTING.md) first, because it holds the contributor agreement. To add your own page, activity or page settings, see [add your own content](docs/how-to/add-your-content.md). [ONBOARDING.md](ONBOARDING.md) covers the build, the structure and the rules the code follows, and [docs/README.md](docs/README.md) indexes the documentation. The name and logo are not part of the code license ([TRADEMARK.md](TRADEMARK.md)).
 
 ## Acknowledgements
 
