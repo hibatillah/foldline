@@ -14,6 +14,7 @@ mod weather;
 use crate::page::Page;
 
 pub fn all() -> Vec<Box<dyn Page>> {
+    // Add a new page as the last line below (`Box::new(<name>::<Name>Page::new())`); an earlier line wins a priority tie.
     vec![
         Box::new(media::MediaPage::new()),
         Box::new(shelf::ShelfPage::new()),
@@ -56,35 +57,47 @@ pub struct SampleOptions {
     pub clipboard: u8,
 }
 
+/// The registered pages that have a sample, in registration order. A page without one is left out on purpose: the host
+/// tests build their rigs from this list, and a page a contributor adds must not change tests it did not write.
 #[cfg(test)]
 pub fn samples(fonts: &crate::gfx::Fonts, directory: &std::path::Path, options: SampleOptions) -> Vec<Box<dyn Page>> {
-    vec![
-        Box::new(match options.media {
+    all().iter().filter_map(|page| sample_of(page.id(), fonts, directory, options)).collect()
+}
+
+#[cfg(test)]
+fn sample_of(
+    page_id: &str,
+    fonts: &crate::gfx::Fonts,
+    directory: &std::path::Path,
+    options: SampleOptions,
+) -> Option<Box<dyn Page>> {
+    Some(match page_id {
+        "media" => Box::new(match options.media {
             Some(lyrics_on) => media::MediaPage::sample(fonts, lyrics_on),
             None => media::MediaPage::sample_idle(fonts),
         }),
-        Box::new(shelf::ShelfPage::sample(
+        "shelf" => Box::new(shelf::ShelfPage::sample(
             directory,
             fonts,
             [6, 0, 7, 12][usize::from(options.shelf).min(3)],
             options.file_drag,
         )),
-        Box::new(match (options.calendar, options.calendar_week) {
+        "calendar" => Box::new(match (options.calendar, options.calendar_week) {
             (true, false) => calendar::CalendarPage::sample(fonts),
             (true, true) => calendar::CalendarPage::sample_week(fonts),
             (false, _) => calendar::CalendarPage::new(),
         }),
-        Box::new(if options.timer { timer::TimerPage::sample(fonts) } else { timer::TimerPage::new() }),
-        Box::new(todo::TodoPage::sample(options.todo)),
-        Box::new(match options.shalat_mark {
+        "timer" => Box::new(if options.timer { timer::TimerPage::sample(fonts) } else { timer::TimerPage::new() }),
+        "todo" => Box::new(todo::TodoPage::sample(options.todo)),
+        "shalat" => Box::new(match options.shalat_mark {
             1 => shalat::ShalatPage::sample_badge(fonts),
             2 => shalat::ShalatPage::sample_alert(fonts),
             3 => shalat::ShalatPage::sample_soon(),
             4 => shalat::ShalatPage::sample_after_isha(),
             _ => shalat::ShalatPage::sample(),
         }),
-        Box::new(stats::StatsPage::sample()),
-        Box::new(match options.weather {
+        "stats" => Box::new(stats::StatsPage::sample()),
+        "weather" => Box::new(match options.weather {
             1 => weather::WeatherPage::sample(true),
             2 => weather::WeatherPage::sample_offline(fonts),
             4 => weather::WeatherPage::sample_no_location(fonts),
@@ -96,13 +109,38 @@ pub fn samples(fonts: &crate::gfx::Fonts, directory: &std::path::Path, options: 
             8 => weather::WeatherPage::sample_alert(fonts, "rainshowers_day"),
             _ => weather::WeatherPage::sample(false),
         }),
-        Box::new(devices::DevicesPage::sample(options.devices)),
-        Box::new(clipboard::ClipboardPage::sample(options.clipboard)),
-    ]
+        "devices" => Box::new(devices::DevicesPage::sample(options.devices)),
+        "clipboard" => Box::new(clipboard::ClipboardPage::sample(options.clipboard)),
+        _ => return None,
+    })
 }
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
+    use crate::source_scan::imports_between_units;
+
+    #[test]
+    fn a_page_imports_no_other_page() {
+        let pages = Path::new(env!("CARGO_MANIFEST_DIR")).join("src").join("pages");
+        let offenders = imports_between_units(&pages, "pages", &[]);
+        assert!(offenders.is_empty(), "a page may not import another page: {offenders:#?}");
+    }
+
+    #[test]
+    fn samples_keep_the_registration_order_of_the_pages_that_have_one() {
+        let fonts = crate::gfx::Fonts::new(1.0).unwrap();
+        let directory = std::env::temp_dir().join("foldline-samples-order");
+        let sampled: Vec<&str> =
+            super::samples(&fonts, &directory, super::SampleOptions::default()).iter().map(|page| page.id()).collect();
+        let registered: Vec<&str> = super::all().iter().map(|page| page.id()).collect();
+        let mut remaining = registered.iter();
+        let keeps_order = sampled.iter().all(|id| remaining.any(|registered_id| registered_id == id));
+        assert!(keeps_order, "samples {sampled:?} are not in the order of all() {registered:?}");
+        assert!(!sampled.is_empty());
+    }
+
     #[test]
     fn header_ranks_run_wave_caps_muted_timer_event_prayer() {
         let ranks: std::collections::HashMap<&str, u8> =

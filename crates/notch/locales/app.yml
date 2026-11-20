@@ -50,9 +50,6 @@ page.calendar:
 page.clipboard:
   en: Clipboard
   id: Clipboard
-page.devices:
-  en: Connected devices
-  id: Perangkat terhubung
 page.media:
   en: Media
   id: Media
@@ -290,12 +287,6 @@ stats.threads:
 stats.memory_pair:
   en: "%{used} of %{total} GB"
   id: "%{used} dari %{total} GB"
-devices.off:
-  en: "Off"
-  id: "Mati"
-devices.on:
-  en: "On"
-  id: "Aktif"
 clipboard.pasted:
   en: "Pasted"
   id: "Ditempel"
@@ -590,18 +581,6 @@ media.nothing_detail:
 media.unknown_title:
   en: "Unknown title"
   id: "Judul tidak diketahui"
-devices.none_title:
-  en: "No wireless devices"
-  id: "Tidak ada perangkat nirkabel"
-devices.none_detail:
-  en: "Connect any device to see its battery"
-  id: "Sambungkan perangkat untuk melihat baterainya"
-devices.bluetooth_off_title:
-  en: "Bluetooth is off"
-  id: "Bluetooth mati"
-devices.bluetooth_off_detail:
-  en: "Turn it on in Windows to see battery levels"
-  id: "Nyalakan di Windows untuk melihat level baterai"
 stats.memory:
   en: "Memory"
   id: "Memori"

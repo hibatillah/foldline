@@ -11,6 +11,8 @@ mod log;
 mod page;
 mod pages;
 mod platform;
+#[cfg(test)]
+mod source_scan;
 mod ui;
 
 fn main() {

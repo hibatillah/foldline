@@ -51,6 +51,7 @@ pub fn sample_volume(volume: f32, is_muted: bool) -> Box<dyn Activity> {
 }
 
 pub fn all() -> Vec<Box<dyn Activity>> {
+    // Add a new activity as the last line below (`Box::new(<name>::<Name>Activity::new())`); order breaks ties of equal `header_status_rank`.
     vec![
         Box::new(volume::VolumeActivity::new()),
         Box::new(brightness::BrightnessActivity::new()),
@@ -64,4 +65,30 @@ pub fn all() -> Vec<Box<dyn Activity>> {
         Box::new(notifications::NotificationsActivity::new()),
         Box::new(downloads::DownloadsActivity::new()),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use crate::source_scan::{imports_between_units, imports_of_modules};
+
+    fn activities_directory() -> std::path::PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("src").join("activities")
+    }
+
+    /// Modules that hold code two activities share and are not activities themselves (not in `all()`).
+    const SHARED_HELPERS: &[&str] = &["privacy"];
+
+    #[test]
+    fn an_activity_imports_no_other_activity() {
+        let offenders = imports_between_units(&activities_directory(), "activities", SHARED_HELPERS);
+        assert!(offenders.is_empty(), "an activity may not import another activity: {offenders:#?}");
+    }
+
+    #[test]
+    fn an_activity_imports_no_page() {
+        let offenders = imports_of_modules(&activities_directory(), &["pages"]);
+        assert!(offenders.is_empty(), "an activity may not import a page: {offenders:#?}");
+    }
 }

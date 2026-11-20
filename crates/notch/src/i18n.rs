@@ -1,4 +1,4 @@
-//! Looks a text up in the language of `store::language::current()`; the texts are in `locales/app.yml`.
+//! Looks a text up in the language of `store::language::current()`; the texts are in `locales/app.yml` and in the split files under `locales/pages/` and `locales/activities/`.
 
 /// `tr!("todo.clear_all")` or `tr!("shelf.files_added", n = 3)`; the result is a `Cow<'static, str>`.
 macro_rules! tr {
@@ -55,13 +55,47 @@ mod tests {
         keys
     }
 
-    fn keys_in_the_file() -> Vec<String> {
-        let text =
-            std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("locales").join("app.yml")).unwrap();
-        text.lines()
-            .filter(|line| !line.starts_with([' ', '_', '#']) && line.ends_with(':'))
-            .map(|line| line.trim_end_matches(':').to_owned())
-            .collect()
+    /// Every `*.yml` under `locales/`, in any depth: `app.yml` and the split files in `pages/` and `activities/`.
+    fn locale_files(directory: &Path, files: &mut Vec<PathBuf>) {
+        for entry in std::fs::read_dir(directory).unwrap().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                locale_files(&path, files);
+            } else if path.extension().is_some_and(|extension| extension == "yml") {
+                files.push(path);
+            }
+        }
+        files.sort();
+    }
+
+    fn all_locale_files() -> Vec<PathBuf> {
+        let mut files = Vec::new();
+        locale_files(&Path::new(env!("CARGO_MANIFEST_DIR")).join("locales"), &mut files);
+        files
+    }
+
+    /// One `(file, key, body)` per top-level key of every locale file; `body` holds the lines under the key.
+    fn key_blocks() -> Vec<(PathBuf, String, String)> {
+        let mut blocks: Vec<(PathBuf, String, String)> = Vec::new();
+        for file in all_locale_files() {
+            let text = std::fs::read_to_string(&file).unwrap();
+            let first_block = blocks.len();
+            for line in text.lines() {
+                if !line.starts_with([' ', '_', '#']) && line.ends_with(':') {
+                    blocks.push((file.clone(), line.trim_end_matches(':').to_owned(), String::new()));
+                } else if blocks.len() > first_block
+                    && let Some(block) = blocks.last_mut()
+                {
+                    block.2.push_str(line);
+                    block.2.push('\n');
+                }
+            }
+        }
+        blocks
+    }
+
+    fn keys_in_the_files() -> Vec<String> {
+        key_blocks().into_iter().map(|(_, key, _)| key).collect()
     }
 
     #[test]
@@ -77,28 +111,36 @@ mod tests {
     #[test]
     fn no_key_in_the_file_is_unused() {
         let used = keys_used_in_the_source();
-        for key in keys_in_the_file() {
+        for key in keys_in_the_files() {
             let by_prefix = DYNAMIC_KEY_PREFIXES.iter().any(|prefix| key.starts_with(prefix));
-            assert!(by_prefix || used.contains(&key), "{key} is in app.yml but no tr! uses it");
+            assert!(by_prefix || used.contains(&key), "{key} is in a locale file but no tr! uses it");
         }
     }
 
     #[test]
-    fn every_key_in_the_file_has_an_english_and_an_indonesian_line() {
-        let text =
-            std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("locales").join("app.yml")).unwrap();
-        let mut blocks: Vec<(String, String)> = Vec::new();
-        for line in text.lines() {
-            if !line.starts_with([' ', '_', '#']) && line.ends_with(':') {
-                blocks.push((line.trim_end_matches(':').to_owned(), String::new()));
-            } else if let Some(block) = blocks.last_mut() {
-                block.1.push_str(line);
-                block.1.push('\n');
+    fn every_key_in_the_files_has_an_english_and_an_indonesian_line() {
+        for (file, key, body) in key_blocks() {
+            let name = file.display();
+            assert!(body.contains("\n  en:") || body.starts_with("  en:"), "{key} in {name} has no en line");
+            assert!(body.contains("\n  id:") || body.starts_with("  id:"), "{key} in {name} has no id line");
+        }
+    }
+
+    #[test]
+    fn a_key_is_defined_in_one_locale_file_only() {
+        let mut seen: std::collections::HashMap<String, PathBuf> = std::collections::HashMap::new();
+        for (file, key, _) in key_blocks() {
+            if let Some(first) = seen.insert(key.clone(), file.clone()) {
+                panic!("{key} is in both {} and {}", first.display(), file.display());
             }
         }
-        for (key, body) in blocks {
-            assert!(body.contains("\n  en:") || body.starts_with("  en:"), "{key} has no en line");
-            assert!(body.contains("\n  id:") || body.starts_with("  id:"), "{key} has no id line");
+    }
+
+    #[test]
+    fn every_locale_file_starts_with_the_version_line() {
+        for file in all_locale_files() {
+            let text = std::fs::read_to_string(&file).unwrap();
+            assert_eq!(text.lines().next(), Some("_version: 2"), "{} needs `_version: 2` first", file.display());
         }
     }
 }
