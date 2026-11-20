@@ -1,0 +1,12 @@
+{{id}}.title:
+  en: {{Title}}
+  id: {{Title}}
+{{id}}.group_main:
+  en: Main
+  id: Utama
+{{id}}.example:
+  en: Example setting
+  id: Pengaturan contoh
+{{id}}.example_note:
+  en: TODO one to three short lines that say what the setting does.
+  id: TODO satu sampai tiga baris singkat yang menjelaskan fungsi pengaturan.

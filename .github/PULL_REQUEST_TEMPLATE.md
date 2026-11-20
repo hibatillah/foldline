@@ -2,6 +2,10 @@
 
 -
 
+## Content pull request (a page, an activity or page settings of your own)
+
+Paste the output of `scripts/check-content-paths.sh --id <id>` here. Anything under "Outside the content area" needs its own pull request, or a reason.
+
 ## Checks
 
 - [ ] `cargo +stable-x86_64-pc-windows-msvc fmt --check`, `clippy --all-targets -- -D warnings` and `test` pass
