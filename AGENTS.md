@@ -61,12 +61,17 @@ A task across areas goes in this order: `notch-render`, then `notch-host` and `n
 
 The agent files, `.claude/rules/` and this file belong to the main session, and `docs-writer` does not edit them. After editing an agent file, run `claude plugin validate .claude/agents`: one unescaped `'` in a description (write `''` inside a single-quoted one) stops that agent from loading.
 
+## Contribute your own content
+
+A pull request that adds one page, one activity or the settings of a page stays inside the contributor's own files. Use the `add-content` agent (`/add-content <description>` in Claude Code), or follow `docs/how-to/add-your-content.md` by hand. `scripts/new-content.sh page|activity|settings <id>` scaffolds the folders and the one-line registrations, and `scripts/check-content-paths.sh --id <id>` lists anything outside the content area for the pull request description. For this route the agent replaces the area-agent chain above. A change to the host, the drawing code, the `Page` or `Activity` trait or another page is not a content pull request and goes through the area agents. When someone asks you to add a page, an activity or a page's settings, take this route.
+
 ## Docs
 
 `docs/README.md` indexes every document by type. Open the one that matches the work before you start:
 
 | Work | Read |
 | --- | --- |
+| adding your own page, activity or page settings for a pull request | `docs/how-to/add-your-content.md` |
 | a page, or a hook or rule of the `Page` trait | `docs/how-to/add-a-page.md`, `docs/reference/page-api.md` |
 | an activity | `docs/how-to/add-an-activity.md`, `docs/reference/activities.md` |
 | a setting, a key, a control in the settings window | `docs/how-to/add-a-setting.md`, `docs/reference/settings-keys.md`, `docs/reference/settings-window.md` |

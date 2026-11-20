@@ -17,8 +17,8 @@ Read `docs/how-to/add-a-page.md` before writing a page, `docs/how-to/add-an-acti
 
 ## Pages
 
-- A page lives in `crates/notch/src/pages/<name>/` and is listed only in `crates/notch/src/pages/mod.rs`; adding or removing one touches no
-  other file. The pages are media, shelf, calendar, timer, todo, shalat, stats, weather, devices and clipboard.
+- A page lives in `crates/notch/src/pages/<name>/` and is registered by one line in `crates/notch/src/pages/mod.rs`; the only other shared edits are its
+  row in `crates/settings/src/sections/pages/list.rs` and its icon line in `icons.rs`, which `scripts/new-content.sh` makes. The pages are media, shelf, calendar, timer, todo, shalat, stats, weather, devices and clipboard.
 - A page depends on `page`, `activity` (for `Presence` and `Flash`), `gfx`, `ui`, `platform` and the `places` crate, plus
   `host::Settings` for its own keys; it uses nothing else of `host`.
 - `host`, `gfx`, `ui`, `page` and `activity` stay ignorant of any particular page or activity. The one known exception is
