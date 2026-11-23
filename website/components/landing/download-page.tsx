@@ -12,14 +12,29 @@ type Messages = typeof en;
 
 const REPOSITORY = "https://github.com/hibatillah/foldline";
 
-const BODY_STYLE = {
-	margin: "0 0 12px",
-	fontSize: "16px",
-	lineHeight: 1.65,
-	color: "var(--muted-foreground)",
-} as const;
+/** The body text of the page: muted, with room between lines. */
+const BODY = "m-0 mb-3 text-base leading-[1.65] text-muted-foreground";
 
-const HEADING_STYLE = { margin: "0 0 12px", fontWeight: 600, fontSize: "20px" } as const;
+/** The heading of a section below the steps. */
+const HEADING = "mt-12 mb-2 text-xl font-semibold";
+
+const EMPHASIS_PATTERN = /(\*\*[^*]+\*\*)/g;
+
+/** Text where **words** stand out: the exact labels a visitor will see on the warning screens. */
+function Emphasized({ text }: { text: string }) {
+	return text.split(EMPHASIS_PATTERN).map((part) =>
+		part.startsWith("**") ? (
+			<strong
+				key={part}
+				className="rounded bg-[color-mix(in_oklch,var(--primary)_12%,transparent)] px-[5px] py-px font-semibold text-foreground"
+			>
+				{part.slice(2, -2)}
+			</strong>
+		) : (
+			part
+		),
+	);
+}
 
 /** The page every Download button opens: it starts the download and explains the warnings that follow. */
 export function DownloadPage() {
@@ -29,80 +44,56 @@ export function DownloadPage() {
 	return (
 		<PageShell>
 			<AutoDownload />
-			<article style={{ maxWidth: "720px" }}>
-				<h1 className="h1" style={{ margin: "0 0 8px", fontWeight: 600 }}>
+			<article className="max-w-[720px]">
+				<h1 className="text-[clamp(30px,3vw,40px)] leading-[1.18] m-[0_0_8px] font-semibold">
 					{content.title}
 				</h1>
-				<p style={{ margin: "0 0 24px", fontSize: "17px", lineHeight: 1.6 }}>{content.subtitle}</p>
-				<div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "16px" }}>
+				<p className="m-[0_0_24px] text-[17px] leading-[1.6]">{content.subtitle}</p>
+				<div className="flex flex-wrap items-center gap-[16px]">
 					<CtaLink href="/api/download" size="lg" variant="primary">
 						<WindowsIcon />
 						{content.again}
 					</CtaLink>
-					<span style={{ fontSize: "14px", color: "var(--muted-foreground)" }}>{content.meta}</span>
+					<span className="text-[14px] text-muted-foreground">{content.meta}</span>
 				</div>
 
-				<h2 style={{ ...HEADING_STYLE, margin: "48px 0 8px" }}>{content.stepsTitle}</h2>
-				<p style={BODY_STYLE}>{content.stepsIntro}</p>
-				<ol
-					style={{
-						listStyle: "none",
-						margin: "16px 0 0",
-						padding: 0,
-						display: "grid",
-						gap: "20px",
-					}}
-				>
+				<h2 className={HEADING}>{content.stepsTitle}</h2>
+				<p className={BODY}>{content.stepsIntro}</p>
+				<ol className="[list-style:none] m-[16px_0_0] p-0 grid gap-[20px]">
 					{content.steps.map((step, index) => (
-						<li key={step.h} style={{ display: "flex", gap: "16px" }}>
+						<li key={step.h} className="flex gap-[16px]">
 							<span
 								aria-hidden="true"
-								style={{
-									flex: "none",
-									width: "28px",
-									height: "28px",
-									borderRadius: "50%",
-									display: "grid",
-									placeItems: "center",
-									fontSize: "14px",
-									fontWeight: 600,
-									background: "var(--primary)",
-									color: "var(--primary-foreground)",
-								}}
+								className="flex-none w-[28px] h-[28px] rounded-full grid place-items-center text-[14px] font-semibold bg-primary text-primary-foreground"
 							>
 								{index + 1}
 							</span>
 							<div>
-								<h3 style={{ margin: "2px 0 6px", fontSize: "16px", fontWeight: 600 }}>{step.h}</h3>
-								<p style={{ ...BODY_STYLE, margin: 0 }}>{step.p}</p>
+								<h3 className="m-[2px_0_6px] text-[16px] font-semibold">{step.h}</h3>
+								<p className={`${BODY} mb-0`}>
+									<Emphasized text={step.p} />
+								</p>
 							</div>
 						</li>
 					))}
 				</ol>
 
-				<h2 style={{ ...HEADING_STYLE, margin: "48px 0 8px" }}>{content.whyTitle}</h2>
-				<p style={BODY_STYLE}>{content.why}</p>
+				<h2 className={HEADING}>{content.whyTitle}</h2>
+				<p className={BODY}>{content.why}</p>
 
-				<h2 style={{ ...HEADING_STYLE, margin: "48px 0 8px" }}>{content.safeTitle}</h2>
+				<h2 className={HEADING}>{content.safeTitle}</h2>
 				{content.safe.map((paragraph) => (
-					<p key={paragraph} style={BODY_STYLE}>
+					<p key={paragraph} className={BODY}>
 						{paragraph}
 					</p>
 				))}
-				<div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "20px" }}>
+				<div className="flex flex-wrap gap-[12px] mt-[20px]">
 					<CtaLink href={REPOSITORY} size="lg" variant="outline">
 						{content.source}
 					</CtaLink>
 					<Link
 						href="/privacy"
-						style={{
-							display: "inline-flex",
-							alignItems: "center",
-							height: "44px",
-							padding: "0 4px",
-							fontSize: "15px",
-							color: "var(--primary)",
-						}}
+						className="inline-flex items-center h-[44px] p-[0_4px] text-[15px] text-primary"
 					>
 						{content.privacy}
 					</Link>

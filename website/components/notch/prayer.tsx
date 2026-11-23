@@ -2,28 +2,20 @@ import { OpenNotch } from "./open-notch";
 
 export function PrayerNotch() {
 	return (
-		<OpenNotch width={523} activePage={5}>
-			<div style={{ height: "86px", display: "flex", alignItems: "center", gap: "16px" }}>
-				<div
-					style={{
-						width: "124px",
-						flex: "none",
-						display: "flex",
-						flexDirection: "column",
-						gap: "1px",
-					}}
-				>
-					<span style={{ fontSize: "11px", color: "#9a9aa6" }}>Next</span>
-					<span style={{ fontSize: "26px", fontWeight: "500", lineHeight: "30px" }}>Asr</span>
-					<span style={{ fontSize: "12px", color: "#63e6be" }}>in 24 min</span>
-					<span style={{ fontSize: "10px", color: "#6e6e7a", marginTop: "2px" }}>Pekanbaru</span>
+		<OpenNotch notch="prayer" activePage={5}>
+			<div className="h-[86px] flex items-center gap-[16px]">
+				<div className="w-[124px] flex-none flex flex-col gap-[1px]">
+					<span className="text-[11px] text-[#9a9aa6]">Next</span>
+					<span className="text-[26px] font-medium leading-[30px]">Asr</span>
+					<span className="text-[12px] text-[#63e6be]">in 24 min</span>
+					<span className="text-[10px] text-[#6e6e7a] mt-[2px]">Pekanbaru</span>
 				</div>
 				<svg
 					aria-hidden="true"
 					viewBox="0 0 351 86"
 					width="351"
 					height="86"
-					style={{ display: "block", fontFamily: "Geist, sans-serif" }}
+					className="block [font-family:Geist,_sans-serif]"
 				>
 					<defs>
 						<linearGradient id="fl-arc" x1="0" x2="0" y1="0" y2="1">

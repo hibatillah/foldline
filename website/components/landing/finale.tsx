@@ -6,99 +6,36 @@ export function Finale() {
 	const t = useTranslations();
 
 	return (
-		<section className="wrap" style={{ paddingTop: "clamp(120px, 13vw, 180px)" }}>
-			<div
-				style={{
-					position: "relative",
-					overflow: "hidden",
-					borderRadius: "20px",
-					background: "linear-gradient(160deg, #4aa3ff 0%, #2f7cf2 45%, #1c5fe0 100%)",
-					padding: "clamp(64px, 7vw, 96px) 24px",
-					textAlign: "center",
-					display: "flex",
-					flexDirection: "column",
-					alignItems: "center",
-					gap: "28px",
-				}}
-			>
+		<section className="mx-auto box-border max-w-[1280px] pt-[clamp(120px,_13vw,_180px)] px-[clamp(16px,5vw,80px)]">
+			<div className="relative overflow-hidden rounded-[20px] [background:url(/textures/blue-dither-wide.png)_center_/_cover_no-repeat,_#1c5fe0] p-[clamp(64px,_7vw,_96px)_24px] text-center flex flex-col items-center gap-[28px]">
 				<div
 					aria-hidden="true"
-					style={{
-						position: "absolute",
-						inset: "0",
-						background:
-							"linear-gradient(135deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0.1) 100%)",
-						pointerEvents: "none",
-					}}
+					className="absolute inset-0 [background:linear-gradient(180deg,_rgba(3,10,40,0.35)_0%,_rgba(3,10,40,0.2)_100%)] pointer-events-none"
 				/>
 				<div
 					aria-hidden="true"
-					style={{
-						position: "absolute",
-						left: "50%",
-						top: "0",
-						transform: "translateX(-50%)",
-						width: "150px",
-						height: "33px",
-						background: "#000",
-						borderRadius: "0 0 12px 12px",
-					}}
+					className="absolute left-[50%] top-0 [transform:translateX(-50%)] w-[150px] h-[33px] bg-[#000] rounded-[0_0_12px_12px]"
 				>
 					<span
 						aria-hidden="true"
-						style={{
-							position: "absolute",
-							left: "-6px",
-							top: "0",
-							width: "6px",
-							height: "6px",
-							background: "radial-gradient(circle 6px at 0 100%, transparent 98%, #000 100%)",
-						}}
+						className="absolute left-[-6px] top-0 w-[6px] h-[6px] [background:radial-gradient(circle_6px_at_0_100%,_transparent_98%,_#000_100%)]"
 					/>
 					<span
 						aria-hidden="true"
-						style={{
-							position: "absolute",
-							right: "-6px",
-							top: "0",
-							width: "6px",
-							height: "6px",
-							background: "radial-gradient(circle 6px at 100% 100%, transparent 98%, #000 100%)",
-						}}
+						className="absolute right-[-6px] top-0 w-[6px] h-[6px] [background:radial-gradient(circle_6px_at_100%_100%,_transparent_98%,_#000_100%)]"
 					/>
 				</div>
-				<h2
-					className="h2"
-					style={{
-						position: "relative",
-						margin: "0",
-						fontWeight: "500",
-						letterSpacing: "-0.025em",
-						color: "#fff",
-					}}
-				>
+				<h2 className="text-[clamp(26px,2.4vw,32px)] leading-[1.22] relative m-0 font-medium tracking-[-0.025em] text-[#fff]">
 					{t("final.a")}
 					<br />
-					<span style={{ color: "rgba(255,255,255,0.72)" }}>{t("final.b")}</span>
+					<span className="text-[rgba(255,255,255,0.72)]">{t("final.b")}</span>
 				</h2>
-				<div
-					style={{
-						position: "relative",
-						display: "flex",
-						flexWrap: "wrap",
-						justifyContent: "center",
-						gap: "12px",
-					}}
-				>
+				<div className="relative flex flex-wrap justify-center gap-[12px]">
 					<CtaLink href="/download" size="lg" variant="light">
 						<WindowsIcon />
 						{t("hero.cta")}
 					</CtaLink>
-					<CtaLink
-						href="https://github.com/hibatillah/foldline/releases"
-						size="lg"
-						variant="lightOutline"
-					>
+					<CtaLink href="/releases" size="lg" variant="lightOutline">
 						{t("final.notes")}
 					</CtaLink>
 				</div>

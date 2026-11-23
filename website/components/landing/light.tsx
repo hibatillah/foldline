@@ -9,71 +9,39 @@ export function Light() {
 	const lightPerf = t.raw("light.perf") as Messages["light"]["perf"];
 
 	return (
-		<section className="wrap feature">
-			<div className="fhead">
-				<p className="label" style={{ margin: "0" }}>
-					<span style={{ color: "var(--muted-foreground)" }}>05</span>
+		<section className="mx-auto box-border max-w-[1280px] px-[clamp(16px,5vw,80px)] pt-[clamp(120px,13vw,200px)] max-[640px]:pt-24">
+			<div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-12 gap-y-6 mb-[72px] max-[900px]:grid-cols-[minmax(0,1fr)] max-[640px]:mb-10 max-[640px]:gap-4">
+				<p className="text-[clamp(24px,2.2vw,30px)] font-medium tracking-[-0.02em] m-0">
+					<span className="text-muted-foreground">05</span>
 					{"\u00a0\u00a0"}
 					{t("light.label")}
 				</p>
 				<div>
-					<h2
-						className="h2"
-						style={{
-							margin: "0",
-							fontWeight: "500",
-							letterSpacing: "-0.025em",
-							textWrap: "balance",
-						}}
-					>
+					<h2 className="text-[clamp(26px,2.4vw,32px)] leading-[1.22] m-0 font-medium tracking-[-0.025em] text-balance">
 						{t("light.a")}
 						<br />
-						<span style={{ color: "var(--muted-foreground)" }}>{t("light.b")}</span>
+						<span className="text-muted-foreground">{t("light.b")}</span>
 					</h2>
-					<p className="body" style={{ margin: "36px 0 0" }}>
+					<p className="max-w-[620px] text-[clamp(17px,1.5vw,21px)] leading-[1.55] text-muted-foreground mt-9 max-[640px]:mt-5">
 						{t("light.p")}
 					</p>
 				</div>
 			</div>
-			<div className="duo">
+			<div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-12 max-[900px]:grid-cols-[minmax(0,1fr)]">
 				<div>
-					<p
-						style={{
-							margin: "0 0 14px",
-							fontSize: "15px",
-							fontWeight: "500",
-							display: "flex",
-							alignItems: "center",
-							gap: "8px",
-						}}
-					>
-						<span
-							style={{
-								width: "8px",
-								height: "8px",
-								borderRadius: "2px",
-								background: "var(--primary)",
-							}}
-						/>
+					<p className="m-[0_0_14px] text-[15px] font-medium flex items-center gap-[8px]">
+						<span className="w-[8px] h-[8px] rounded-[2px] bg-primary" />
 						{t("light.privTitle")}
 					</p>
-					<table
-						className="priv"
-						style={{ width: "100%", borderCollapse: "collapse", fontSize: "15px" }}
-					>
+					<table className="w-full [border-collapse:collapse] text-[15px] max-[640px]:[&_td]:block max-[640px]:[&_td]:pt-0! max-[640px]:[&_td]:pr-0! max-[640px]:[&_td]:pb-3.5! max-[640px]:[&_td]:pl-[25px]! max-[640px]:[&_td]:text-left! max-[640px]:[&_th]:block max-[640px]:[&_th]:px-0! max-[640px]:[&_th]:pt-3.5! max-[640px]:[&_th]:pb-1!">
 						<tbody>
 							{lightPriv.map((pv) => (
-								<tr style={{ borderTop: "1px solid var(--border)" }} key={pv.a}>
+								<tr className="[border-top:1px_solid_var(--border)]" key={pv.a}>
 									<th
 										scope="row"
-										style={{
-											textAlign: "left",
-											fontWeight: "400",
-											padding: "16px 16px 16px 0",
-											color: "var(--muted-foreground)",
-										}}
+										className="text-left font-normal p-[16px_16px_16px_0] text-muted-foreground"
 									>
-										<span style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
+										<span className="inline-flex items-center gap-[10px]">
 											<svg
 												aria-hidden="true"
 												width="15"
@@ -91,87 +59,38 @@ export function Light() {
 											{pv.a}
 										</span>
 									</th>
-									<td style={{ textAlign: "right", padding: "16px 0" }}>{pv.b}</td>
+									<td className="text-right p-[16px_0]">{pv.b}</td>
 								</tr>
 							))}
 						</tbody>
 					</table>
-					<p
-						style={{
-							margin: "0",
-							paddingTop: "14px",
-							borderTop: "1px solid var(--border)",
-							fontSize: "13px",
-							lineHeight: "1.5",
-							color: "var(--muted-foreground)",
-						}}
-					>
+					<p className="m-0 pt-[14px] [border-top:1px_solid_var(--border)] text-[13px] leading-[1.5] text-muted-foreground">
 						{t("light.privNote")}
 					</p>
 				</div>
 				<div>
-					<p
-						style={{
-							margin: "0 0 14px",
-							fontSize: "15px",
-							fontWeight: "500",
-							display: "flex",
-							alignItems: "center",
-							gap: "8px",
-						}}
-					>
-						<span
-							style={{
-								width: "8px",
-								height: "8px",
-								borderRadius: "2px",
-								background: "var(--primary)",
-							}}
-						/>
+					<p className="m-[0_0_14px] text-[15px] font-medium flex items-center gap-[8px]">
+						<span className="w-[8px] h-[8px] rounded-[2px] bg-primary" />
 						{t("light.perfTitle")}
 					</p>
-					<table style={{ width: "100%", borderCollapse: "collapse", fontSize: "15px" }}>
+					<table className="w-full [border-collapse:collapse] text-[15px]">
 						<tbody>
 							{lightPerf.map((pf) => (
-								<tr style={{ borderTop: "1px solid var(--border)" }} key={pf.a}>
+								<tr className="[border-top:1px_solid_var(--border)]" key={pf.a}>
 									<th
 										scope="row"
-										style={{
-											textAlign: "left",
-											fontWeight: "400",
-											padding: "16px 0",
-											color: "var(--muted-foreground)",
-										}}
+										className="text-left font-normal p-[16px_0] text-muted-foreground"
 									>
 										{pf.a}
 									</th>
-									<td
-										style={{
-											textAlign: "right",
-											padding: "16px 0",
-											fontSize: "20px",
-											fontWeight: "500",
-											letterSpacing: "-0.01em",
-											fontVariantNumeric: "tabular-nums",
-											color: "var(--primary)",
-										}}
-									>
+									<td className="text-right p-[16px_0] text-[16px] font-medium tracking-[-0.01em] tabular-nums text-primary">
 										{pf.b}
 									</td>
 								</tr>
 							))}
 						</tbody>
 					</table>
-					<p
-						style={{
-							margin: "0",
-							paddingTop: "14px",
-							borderTop: "1px solid var(--border)",
-							fontSize: "13px",
-							lineHeight: "1.5",
-							color: "var(--muted-foreground)",
-						}}
-					>
+					<p className="m-0 pt-[14px] [border-top:1px_solid_var(--border)] text-[13px] leading-[1.5] text-muted-foreground">
 						{t("light.note")}
 					</p>
 				</div>

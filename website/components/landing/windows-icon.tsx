@@ -1,8 +1,12 @@
-/** The Windows logo: four panes, drawn in the text color. */
+/** The Windows 11 logo: four flat squares, no skew. */
+export const windowsLogoPath =
+	"M3 3h8.5v8.5H3V3Zm9.5 0H21v8.5h-8.5V3ZM3 12.5h8.5V21H3v-8.5Zm9.5 0H21V21h-8.5v-8.5Z";
+
+/** The Windows logo, drawn in the text color. */
 export function WindowsIcon() {
 	return (
 		<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-			<path d="M3 5.4 10.2 4.4v6.9H3V5.4Zm8.1-1.1L21 3v8.3h-9.9V4.3ZM3 12.7h7.2v6.9L3 18.6v-5.9Zm8.1 0H21V21l-9.9-1.4v-6.9Z" />
+			<path d={windowsLogoPath} />
 		</svg>
 	);
 }

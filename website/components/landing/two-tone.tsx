@@ -4,20 +4,17 @@ import type { ReactNode } from "react";
 export function TwoTone({
 	first,
 	second,
-	className = "h2",
+	className = "text-[clamp(26px,2.4vw,32px)] leading-[1.22]",
 }: {
 	first: ReactNode;
 	second: ReactNode;
 	className?: string;
 }) {
 	return (
-		<h2
-			className={className}
-			style={{ margin: 0, fontWeight: 500, letterSpacing: "-0.025em", textWrap: "balance" }}
-		>
+		<h2 className={`${className} m-0 font-medium tracking-[-0.025em] text-balance`}>
 			{first}
 			<br />
-			<span style={{ color: "var(--muted-foreground)" }}>{second}</span>
+			<span className="text-muted-foreground">{second}</span>
 		</h2>
 	);
 }

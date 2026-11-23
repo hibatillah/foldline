@@ -1,107 +1,19 @@
 export function TodoList() {
 	return (
-		<div
-			style={{
-				width: "100%",
-				maxWidth: "240px",
-				display: "flex",
-				flexDirection: "column",
-				gap: "6px",
-			}}
-		>
-			<div
-				style={{
-					height: "32px",
-					borderRadius: "10px",
-					background: "#ffffff",
-					boxShadow: "0 0 0 1px #e4e4e7",
-					display: "flex",
-					alignItems: "center",
-					gap: "10px",
-					padding: "0 10px",
-					fontSize: "13px",
-					color: "#18181b",
-					whiteSpace: "nowrap",
-					overflow: "hidden",
-				}}
-			>
-				<span
-					style={{
-						width: "12px",
-						height: "12px",
-						flex: "none",
-						borderRadius: "50%",
-						border: "1.5px solid #a1a1aa",
-					}}
-				/>
+		<div className="w-full max-w-[240px] flex flex-col gap-[6px]">
+			<div className="h-[32px] rounded-[10px] bg-[#ffffff] [box-shadow:0_0_0_1px_#e4e4e7] flex items-center gap-[10px] p-[0_10px] text-[13px] text-[#18181b] whitespace-nowrap overflow-hidden">
+				<span className="w-[12px] h-[12px] flex-none rounded-full [border:1.5px_solid_#a1a1aa]" />
 				Write release notes
 			</div>
-			<div
-				style={{
-					height: "32px",
-					borderRadius: "10px",
-					background: "#ffffff",
-					boxShadow: "0 0 0 1px #e4e4e7",
-					display: "flex",
-					alignItems: "center",
-					gap: "10px",
-					padding: "0 10px",
-					fontSize: "13px",
-					color: "#18181b",
-					whiteSpace: "nowrap",
-					overflow: "hidden",
-				}}
-			>
-				<span
-					style={{
-						width: "12px",
-						height: "12px",
-						flex: "none",
-						borderRadius: "50%",
-						border: "1.5px solid #a1a1aa",
-					}}
-				/>
+			<div className="h-[32px] rounded-[10px] bg-[#ffffff] [box-shadow:0_0_0_1px_#e4e4e7] flex items-center gap-[10px] p-[0_10px] text-[13px] text-[#18181b] whitespace-nowrap overflow-hidden">
+				<span className="w-[12px] h-[12px] flex-none rounded-full [border:1.5px_solid_#a1a1aa]" />
 				Reply to the review
 			</div>
-			<div
-				style={{
-					height: "32px",
-					borderRadius: "10px",
-					background: "#ffffff",
-					boxShadow: "0 0 0 1px #e4e4e7",
-					display: "flex",
-					alignItems: "center",
-					gap: "10px",
-					padding: "0 10px",
-					fontSize: "13px",
-					color: "#18181b",
-					whiteSpace: "nowrap",
-					overflow: "hidden",
-				}}
-			>
-				<span
-					style={{
-						width: "12px",
-						height: "12px",
-						flex: "none",
-						borderRadius: "50%",
-						border: "1.5px solid #a1a1aa",
-					}}
-				/>
+			<div className="h-[32px] rounded-[10px] bg-[#ffffff] [box-shadow:0_0_0_1px_#e4e4e7] flex items-center gap-[10px] p-[0_10px] text-[13px] text-[#18181b] whitespace-nowrap overflow-hidden">
+				<span className="w-[12px] h-[12px] flex-none rounded-full [border:1.5px_solid_#a1a1aa]" />
 				Order a charger
 			</div>
-			<div
-				style={{
-					height: "32px",
-					display: "flex",
-					alignItems: "center",
-					gap: "10px",
-					padding: "0 10px",
-					fontSize: "13px",
-					color: "#a1a1aa",
-					textDecoration: "line-through",
-				}}
-			>
+			<div className="h-[32px] flex items-center gap-[10px] p-[0_10px] text-[13px] text-[#a1a1aa] [text-decoration:line-through]">
 				<svg
 					aria-hidden="true"
 					width="14"

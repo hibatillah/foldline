@@ -19,7 +19,7 @@ export function Waves({ seed, color = "37,99,235" }: { seed: number; color?: str
 			aria-hidden="true"
 			viewBox="0 0 1300 420"
 			preserveAspectRatio="xMidYMid slice"
-			style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+			className="absolute inset-0 w-full h-full"
 		>
 			{paths.map((path) => (
 				<path key={path.d} d={path.d} fill="none" stroke={path.stroke} strokeWidth="1.1" />

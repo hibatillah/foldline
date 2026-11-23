@@ -1,111 +1,59 @@
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { ExternalLink } from "./external-link";
-import { ExternalArrow } from "./external-arrow";
-import { LanguageSwitch } from "./language-switch";
-import { CtaLink } from "./cta-link";
 
+import { Link } from "@/i18n/navigation";
+
+import { CtaLink } from "./cta-link";
+import { GithubIcon } from "./github-icon";
+import { LanguageSwitch } from "./language-switch";
+import { StickyHeader } from "./sticky-header";
+
+/** The header of every page; its section links lead to the landing page from any other page. */
 export function SiteNav() {
 	const t = useTranslations();
 
 	return (
-		<header
-			style={{
-				position: "sticky",
-				top: "12px",
-				zIndex: "20",
-				padding: "12px clamp(16px, 3vw, 40px) 0",
-			}}
-		>
+		<StickyHeader>
 			<nav
 				aria-label={t("navAria")}
-				style={{
-					maxWidth: "1240px",
-					margin: "0 auto",
-					boxSizing: "border-box",
-					padding: "0 12px 0 20px",
-					borderRadius: "16px",
-					background: "rgba(255,255,255,0.72)",
-					backdropFilter: "saturate(180%) blur(16px)",
-					WebkitBackdropFilter: "saturate(180%) blur(16px)",
-					boxShadow:
-						"0 0 0 1px color-mix(in oklch, var(--foreground) 8%, transparent), 0 12px 32px -18px rgba(15,23,42,0.28)",
-					height: "60px",
-					display: "grid",
-					gridTemplateColumns: "1fr auto 1fr",
-					alignItems: "center",
-					gap: "24px",
-				}}
+				className="mx-auto box-border grid h-[60px] max-w-[1280px] grid-cols-[1fr_auto_1fr] items-center gap-6 rounded-2xl bg-white/0 px-[clamp(16px,5vw,80px)] backdrop-blur-0 backdrop-saturate-[1.8] [box-shadow:0_0_0_1px_transparent,0_12px_32px_-18px_transparent] transition-[max-width,translate,padding,background-color,box-shadow,backdrop-filter] duration-250 group-data-[stuck=true]:max-w-[1240px] group-data-[stuck=true]:translate-y-[14px] group-data-[stuck=true]:bg-[rgba(255,255,255,0.72)] group-data-[stuck=true]:pr-3 group-data-[stuck=true]:pl-5 group-data-[stuck=true]:backdrop-blur-[32px] group-data-[stuck=true]:[box-shadow:0_0_0_1px_color-mix(in_oklch,var(--foreground)_8%,transparent),0_12px_32px_-18px_rgba(15,23,42,0.28)] motion-reduce:transition-none"
 			>
-				<a
-					href="#top"
-					style={{
-						display: "flex",
-						alignItems: "center",
-						gap: "10px",
-						textDecoration: "none",
-						fontWeight: "600",
-						fontSize: "18px",
-						letterSpacing: "-0.01em",
-					}}
+				<Link
+					href="/"
+					className="flex items-center gap-[10px] no-underline font-semibold text-[18px] tracking-[-0.01em]"
 				>
-					<Image
-						src="/logo.svg"
-						alt=""
-						width={26}
-						height={26}
-						style={{ display: "block", borderRadius: "7px" }}
-					/>
+					<Image src="/logo.svg" alt="" width={26} height={26} className="block rounded-[7px]" />
 					Foldline
-				</a>
-				<div className="navlinks" style={{ gap: "30px", fontSize: "15px" }}>
-					<a href="#features" style={{ textDecoration: "none" }}>
+				</Link>
+				<div className="flex max-[1000px]:hidden gap-[30px] text-[15px]">
+					<Link href="/#features" className="no-underline">
 						{t("nav.features")}
-					</a>
-					<a href="#install" style={{ textDecoration: "none", color: "var(--muted-foreground)" }}>
-						{t("nav.install")}
-					</a>
-					<a href="#faq" style={{ textDecoration: "none", color: "var(--muted-foreground)" }}>
+					</Link>
+					<Link href="/#faq" className="no-underline text-muted-foreground">
 						{t("nav.faq")}
-					</a>
-					<ExternalLink
-						href="https://fold.hibatillah.com/releases"
-						style={{
-							textDecoration: "none",
-							color: "var(--muted-foreground)",
-							display: "inline-flex",
-							alignItems: "center",
-							gap: "6px",
-						}}
-					>
+					</Link>
+					<Link href="/releases" className="no-underline text-muted-foreground">
 						{t("nav.releases")}
-						<ExternalArrow />
-					</ExternalLink>
+					</Link>
 				</div>
-				<div
-					style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "16px" }}
-				>
+				<div className="flex items-center justify-end gap-[16px]">
 					<LanguageSwitch />
-					<ExternalLink
-						className="gh"
-						href="https://github.com/hibatillah/foldline"
-						style={{
-							textDecoration: "none",
-							fontSize: "15px",
-							fontWeight: "500",
-							display: "inline-flex",
-							alignItems: "center",
-							gap: "6px",
-						}}
-					>
-						GitHub
-						<ExternalArrow />
-					</ExternalLink>
-					<CtaLink href="/download" size="sm" variant="primary">
-						{t("nav.cta")}
-					</CtaLink>
+					<div className="flex items-center gap-[8px]">
+						<CtaLink
+							className="max-[640px]:hidden"
+							href="https://github.com/hibatillah/foldline"
+							size="sm"
+							variant="muted"
+						>
+							<GithubIcon />
+							GitHub
+						</CtaLink>
+						<CtaLink href="/download" size="sm" variant="primary">
+							{t("nav.cta")}
+						</CtaLink>
+					</div>
 				</div>
 			</nav>
-		</header>
+		</StickyHeader>
 	);
 }

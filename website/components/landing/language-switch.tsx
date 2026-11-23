@@ -4,12 +4,10 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { Link, usePathname } from "@/i18n/navigation";
 
-const CHOSEN = {
-	background: "var(--card)",
-	color: "var(--foreground)",
-	boxShadow: "0 1px 2px rgba(15,23,42,0.12)",
-};
-const IDLE = { background: "transparent", color: "var(--muted-foreground)", boxShadow: "none" };
+const LINK =
+	"flex min-h-[26px] items-center rounded-md px-[9px] text-xs font-medium no-underline max-[640px]:px-[7px]";
+const CHOSEN = "bg-card text-foreground [box-shadow:0_1px_2px_rgba(15,23,42,0.12)]";
+const IDLE = "bg-transparent text-muted-foreground shadow-none";
 
 /** Two links that swap the page between English and Indonesian. */
 export function LanguageSwitch() {
@@ -20,16 +18,7 @@ export function LanguageSwitch() {
 	return (
 		<fieldset
 			aria-label={t("langLabel")}
-			className="lang"
-			style={{
-				display: "flex",
-				padding: 2,
-				margin: 0,
-				minWidth: 0,
-				border: 0,
-				borderRadius: 8,
-				background: "var(--muted)",
-			}}
+			className="m-0 flex min-w-0 rounded-lg border-0 bg-muted p-0.5"
 		>
 			{(["en", "id"] as const).map((locale) => (
 				<Link
@@ -39,7 +28,9 @@ export function LanguageSwitch() {
 					scroll={false}
 					hrefLang={locale}
 					aria-current={activeLocale === locale ? "true" : undefined}
-					style={activeLocale === locale ? CHOSEN : IDLE}
+					// A named slot keeps the page's hover color off the chosen language.
+					data-slot="language"
+					className={`${LINK} ${activeLocale === locale ? CHOSEN : IDLE}`}
 				>
 					{locale.toUpperCase()}
 				</Link>

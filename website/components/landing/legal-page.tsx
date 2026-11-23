@@ -1,7 +1,6 @@
 import { useTranslations } from "next-intl";
 
 import type en from "@/messages/en.json";
-import { Link } from "@/i18n/navigation";
 
 import { PageShell } from "./page-shell";
 
@@ -17,13 +16,7 @@ function RichText({ text }: { text: string }) {
 		const link = LINK_PARTS.exec(part);
 		if (!link) return part;
 		return (
-			<a
-				key={part}
-				href={link[2]}
-				target="_blank"
-				rel="noreferrer"
-				style={{ color: "var(--primary)" }}
-			>
+			<a key={part} href={link[2]} target="_blank" rel="noreferrer" className="text-primary">
 				{link[1]}
 			</a>
 		);
@@ -37,54 +30,31 @@ export function LegalPage({ document }: { document: "privacy" | "terms" }) {
 
 	return (
 		<PageShell>
-			<article style={{ maxWidth: "720px" }}>
-				<Link
-					href="/"
-					style={{
-						fontSize: "14px",
-						color: "var(--muted-foreground)",
-						textDecoration: "none",
-					}}
-				>
-					{t("legalHome")}
-				</Link>
-				<h1 className="h1" style={{ margin: "16px 0 8px", fontWeight: "600" }}>
+			<article className="max-w-[720px] mx-auto">
+				<h1 className="text-[clamp(30px,3vw,40px)] leading-[1.18] m-[0_0_8px] font-semibold">
 					{content.title}
 				</h1>
-				<p style={{ margin: "0 0 24px", fontSize: "14px", color: "var(--muted-foreground)" }}>
+				<p className="m-[0_0_24px] text-[14px] text-muted-foreground">
 					{t("legalUpdated")}: {t("legalUpdatedOn")}
 				</p>
-				<p style={{ margin: "0 0 40px", fontSize: "17px", lineHeight: "1.6" }}>{content.intro}</p>
+				<p className="m-[0_0_40px] text-[17px] leading-[1.6]">{content.intro}</p>
 				{content.sections.map((section, index) => (
-					<section key={section.h} style={{ marginBottom: "36px" }}>
-						<h2 className="h3" style={{ margin: "0 0 12px", fontWeight: "600", fontSize: "20px" }}>
+					<section key={section.h} className="mb-[36px]">
+						<h2 className="leading-[1.25] m-[0_0_12px] font-semibold text-[20px]">
 							{index + 1}. {section.h}
 						</h2>
 						{section.p.map((paragraph) => (
 							<p
 								key={paragraph}
-								style={{
-									margin: "0 0 12px",
-									fontSize: "16px",
-									lineHeight: "1.65",
-									color: "var(--muted-foreground)",
-								}}
+								className="m-[0_0_12px] text-[16px] leading-[1.65] text-muted-foreground"
 							>
 								<RichText text={paragraph} />
 							</p>
 						))}
 						{"ul" in section && section.ul && (
-							<ul
-								style={{
-									margin: "0 0 12px",
-									paddingLeft: "22px",
-									fontSize: "16px",
-									lineHeight: "1.65",
-									color: "var(--muted-foreground)",
-								}}
-							>
+							<ul className="m-[0_0_12px] pl-[22px] [list-style:disc] text-[16px] leading-[1.65] text-muted-foreground">
 								{section.ul.map((item) => (
-									<li key={item} style={{ marginBottom: "6px" }}>
+									<li key={item} className="mb-[6px]">
 										<RichText text={item} />
 									</li>
 								))}

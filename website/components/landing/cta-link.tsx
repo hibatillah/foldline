@@ -16,7 +16,10 @@ const VARIANT = {
 	light: "relative bg-white! text-[#0b1a33]! hover:bg-white/90!",
 	outline:
 		"border-[color-mix(in_oklch,var(--foreground)_14%,transparent)]! bg-white! text-foreground! hover:bg-muted!",
-	lightOutline: "relative border-white/45! bg-white/10! text-white! hover:bg-white/20!",
+	muted:
+		"bg-[color-mix(in_oklch,var(--foreground)_9%,transparent)]! text-foreground! hover:bg-[color-mix(in_oklch,var(--foreground)_14%,transparent)]!",
+	lightOutline:
+		"relative border-white! bg-transparent! text-white! hover:bg-white/15! dark:bg-transparent! dark:hover:bg-white/15!",
 } as const;
 
 /** A call-to-action link drawn as the site Button. */
@@ -24,11 +27,13 @@ export function CtaLink({
 	href,
 	size,
 	variant,
+	className: extraClassName,
 	children,
 }: {
 	href: string;
 	size: keyof typeof SIZE;
 	variant: keyof typeof VARIANT;
+	className?: string;
 	children: ReactNode;
 }) {
 	const className = cn(
@@ -36,6 +41,7 @@ export function CtaLink({
 		SIZE[size],
 		VARIANT[variant],
 		"no-underline",
+		extraClassName,
 	);
 	// The download route leaves the site for GitHub, so it is tracked like an outside link.
 	if (href.startsWith("http") || href.startsWith("/api/")) {
