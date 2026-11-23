@@ -26,6 +26,15 @@
   #define AppDisplayName "Foldline"
 #endif
 
+; The signed sparse package (scripts/build-sparse-package.sh, then signed) is shipped and registered only when it exists,
+; and only by a stable build: dev builds install side by side, and one registration serves every copy of the program.
+#ifndef SparsePackage
+  #define SparsePackage SourcePath + "sparse\foldline-sparse.msix"
+#endif
+#if !Defined(IsDevBuild) && FileExists(SparsePackage)
+  #define WithSparsePackage
+#endif
+
 ; Keep this ID stable so upgrades find the existing stable installation.
 #define AppGuid "{B4D1E7A2-5C3F-4F68-9A0E-2D7C61B8E4F3}"
 
@@ -68,6 +77,9 @@ Source: "{#SourceSettingsExe}"; DestDir: "{app}"; DestName: "{#SettingsExeName}"
 Source: "..\THIRD-PARTY-LICENSES.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 Source: "..\assets\fonts\Geist-LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
+#ifdef WithSparsePackage
+Source: "{#SparsePackage}"; DestDir: "{app}"; DestName: "foldline-sparse.msix"; Flags: ignoreversion
+#endif
 
 [Icons]
 Name: "{autoprograms}\{#AppDisplayName}"; Filename: "{app}\{#ExeName}"; IconFilename: "{app}\{#ExeName}"; IconIndex: 0
@@ -130,3 +142,42 @@ begin
   Exec('powershell.exe', '-NoProfile -NonInteractive -Command "' + Script + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Sleep(500);
 end;
+
+#ifdef WithSparsePackage
+[Code]
+const
+  { Identity Name in installer/sparse/AppxManifest.xml. }
+  SparsePackageName = 'Foldline.Desktop';
+
+function PowerShellQuoted(Text: String): String;
+begin
+  Result := Text;
+  StringChangeEx(Result, '''', '''''', True);
+  Result := '''' + Result + '''';
+end;
+
+procedure RunPowerShell(Command, Action: String);
+var
+  ResultCode: Integer;
+begin
+  if not Exec('powershell.exe', '-NoProfile -NonInteractive -Command "' + Command + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    Log('could not ' + Action + ': powershell did not start')
+  else if ResultCode <> 0 then
+    Log('could not ' + Action + ': powershell exit code ' + IntToStr(ResultCode));
+end;
+
+{ Gives foldline.exe a package identity so Windows tells it about each new notification. A failure only logs: the program
+  then runs without identity and watches the notifications folder instead. }
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    RunPowerShell('Add-AppxPackage -Path ' + PowerShellQuoted(ExpandConstant('{app}\foldline-sparse.msix')) +
+      ' -ExternalLocation ' + PowerShellQuoted(ExpandConstant('{app}')) + ' -ForceUpdateFromAnyVersion', 'register the sparse package');
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usUninstall then
+    RunPowerShell('Get-AppxPackage -Name ' + PowerShellQuoted(SparsePackageName) + ' | Remove-AppxPackage', 'remove the sparse package');
+end;
+#endif

@@ -15,5 +15,5 @@ Paste the output of `scripts/check-content-paths.sh --id <id>` here. Anything un
 
 - [ ] I have read the [contributor agreement](../CONTRIBUTING.md#contributor-agreement) and accept it. I license this
       contribution under the GNU GPL version 3 or later, and I allow the maintainer to distribute it free of charge,
-      including through the Microsoft Store. The maintainer distributes Foldline free of charge and takes no profit from
+      through any channel. The maintainer distributes Foldline free of charge and takes no profit from
       my contribution.

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sparse package: gives the installed foldline.exe a package identity so Windows raises NotificationChanged for it.
+  scripts/build-sparse-package.sh replaces {{VERSION}} and packs it; the package must then be signed by a certificate whose
+  subject equals Publisher exactly. crates/notch/build.rs copies Name, Publisher and the Application Id into the <msix>
+  element of foldline.exe, so change Publisher here only, then rebuild foldline.exe and repack.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:uap7="http://schemas.microsoft.com/appx/manifest/uap/windows10/7"
+  xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap3 uap7 uap10 rescap">
+
+  <Identity
+    Name="Foldline.Desktop"
+    Publisher="CN=Foldline"
+    Version="{{VERSION}}"
+    ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>Foldline</DisplayName>
+    <PublisherDisplayName>Foldline</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+
+  <Applications>
+    <!-- No Start menu entry: the installer's shortcut starts the same program. foldline-settings.exe gets no identity. -->
+    <Application Id="Foldline" Executable="foldline.exe" uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="win32App">
+      <uap:VisualElements
+        DisplayName="Foldline"
+        Description="A notch at the top of the screen for media, calendar, timer, weather and more."
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png"
+        AppListEntry="none" />
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <uap3:Capability Name="userNotificationListener" />
+    <uap7:Capability Name="globalMediaControl" />
+    <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="unvirtualizedResources" />
+    <DeviceCapability Name="location" />
+  </Capabilities>
+</Package>
