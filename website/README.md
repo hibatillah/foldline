@@ -30,11 +30,20 @@ Add a component with `bunx shadcn@latest add <name>`.
 
 The accent is Foldline blue (`#2563eb` light, `#4c9aff` dark, from `docs/reference/design-rules.md`) over the shadcn preset's neutrals, in Geist. The page is light only (`forcedTheme="light"`); the design has no dark version.
 
-The approved design (desktop 1440 px and mobile 390 px boards, the scripts that made them and the copy) is in `.superpowers/design/landing-v24/`. The notch drawings are components in `components/notch/`, the light elements and sections in `components/landing/`, and the layout rules in `app/[locale]/landing.css`.
+The approved design (desktop 1440 px and mobile 390 px boards, the scripts that made them and the copy) is in `.superpowers/design/landing-v24/`. The notch drawings are components in `components/notch/`, the light elements and sections in `components/landing/`, and every style is a Tailwind class in the component that uses it. `app/globals.css` is the only CSS file: it holds the Tailwind imports and the shadcn color tokens. A value computed at run time (none today) would be the one reason for an inline `style`.
 
 ## Languages
 
 next-intl serves English at `/` and Indonesian at `/id`, both built statically (`i18n/routing.ts`, `proxy.ts`). The copy lives in `messages/en.json` and `messages/id.json`. To add a key, add it to both files, then run `bun test`: it fails when the two files differ or when a message holds an unmeasured number such as "50 MB".
+
+## SEO
+
+- `lib/site.ts` holds the public address (`https://fold.hibatillah.com`) and the author; change the address there if the domain moves.
+- `lib/seo.ts` (`pageMetadata`) gives each page its title, description, self-canonical, `hreflang` alternates (with `x-default`), Open Graph and Twitter tags. The download page is `noindex` and left out of the sitemap.
+- `app/[locale]/opengraph-image.tsx` and `twitter-image.tsx` draw the share image from the hero copy through `lib/og-image.tsx` (`next/og`, Tailwind `tw` classes), one per language.
+- `lib/structured-data.ts` writes the home page JSON-LD: website, software application, author and the FAQ.
+- `app/robots.ts` and `app/sitemap.ts` are generated; `public/llms.txt` is a hand-written summary for AI assistants. Keep its facts in step with the home page.
+- Icons: `app/favicon.ico`, `app/icon.png` and `app/apple-icon.png` come from `assets/branding/tile-stable.*`.
 
 ## Deploy
 

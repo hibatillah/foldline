@@ -29,7 +29,7 @@ function FeatureSection({
 	items: FeatureItem[];
 }) {
 	return (
-		<section className="wrap feature">
+		<section className="mx-auto box-border max-w-[1280px] px-[clamp(16px,5vw,80px)] pt-[clamp(120px,13vw,200px)] max-[640px]:pt-24">
 			<FeatureHead section={section} number={number} />
 			<FeatureGrid section={section} items={items} />
 		</section>
@@ -50,6 +50,7 @@ export function SectionOpen() {
 					notch: "media",
 					zoom: 1.3,
 					seed: 2,
+					texture: "henrikLight",
 				},
 				{ key: "keys", span: 1, kind: "card", visual: <NumberKeys /> },
 				{ key: "pin", span: 1, kind: "card", visual: <PinStates /> },
@@ -61,6 +62,7 @@ export function SectionOpen() {
 					notch: "calendar",
 					zoom: 1.3,
 					seed: 8,
+					texture: "henrikDark",
 				},
 			]}
 		/>
@@ -81,6 +83,7 @@ export function SectionNotice() {
 					notch: "notification",
 					zoom: 1.2,
 					seed: 3,
+					texture: "universtock",
 				},
 				{
 					key: "download",
@@ -90,6 +93,7 @@ export function SectionNotice() {
 					notch: "download",
 					zoom: 1.3,
 					seed: 9,
+					texture: "henrikLight",
 				},
 				{ key: "volume", span: 1, kind: "card", visual: <VolumeSliders />, zoom: 1.05 },
 				{ key: "rings", span: 1, kind: "card", visual: <BatteryRings />, zoom: 1.05 },
@@ -114,6 +118,7 @@ export function SectionPlan() {
 					notch: "weather",
 					zoom: 1.5,
 					seed: 4,
+					texture: "universtock",
 				},
 				{
 					key: "prayer",
@@ -123,6 +128,7 @@ export function SectionPlan() {
 					notch: "prayer",
 					zoom: 1.45,
 					seed: 10,
+					texture: "henrikLight",
 				},
 				{ key: "timer", span: 1, kind: "card", visual: <FocusTimer />, zoom: 0.82 },
 			]}
@@ -144,6 +150,7 @@ export function SectionKeep() {
 					notch: "shelf",
 					zoom: 1.2,
 					seed: 5,
+					texture: "universtock",
 				},
 				{ key: "devices", span: 1, kind: "card", visual: <DevicesGrid />, zoom: 1 },
 				{ key: "stats", span: 1, kind: "card", visual: <StatsGrid />, zoom: 0.82 },
@@ -155,6 +162,7 @@ export function SectionKeep() {
 					notch: "clipboard",
 					zoom: 1.35,
 					seed: 11,
+					texture: "henrikDark",
 				},
 			]}
 		/>

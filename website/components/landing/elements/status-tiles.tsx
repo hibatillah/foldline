@@ -4,29 +4,8 @@ export function StatusTiles() {
 	const t = useTranslations();
 
 	return (
-		<div
-			style={{
-				width: "100%",
-				maxWidth: "420px",
-				display: "grid",
-				gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-				gap: "10px",
-			}}
-		>
-			<div
-				style={{
-					height: "56px",
-					borderRadius: "12px",
-					background: "#ffffff",
-					boxShadow: "0 0 0 1px #e4e4e7",
-					display: "flex",
-					alignItems: "center",
-					gap: "12px",
-					padding: "0 16px",
-					fontSize: "14px",
-					color: "#18181b",
-				}}
-			>
+		<div className="w-full max-w-[420px] grid grid-cols-[repeat(2,_minmax(0,_1fr))] gap-[10px]">
+			<div className="h-[56px] rounded-[12px] bg-[#ffffff] [box-shadow:0_0_0_1px_#e4e4e7] flex items-center gap-[12px] p-[0_16px] text-[14px] text-[#18181b]">
 				<svg
 					aria-hidden="true"
 					width="18"
@@ -42,20 +21,7 @@ export function StatusTiles() {
 				</svg>
 				<span>Caps Lock</span>
 			</div>
-			<div
-				style={{
-					height: "56px",
-					borderRadius: "12px",
-					background: "#ffffff",
-					boxShadow: "0 0 0 1px #e4e4e7",
-					display: "flex",
-					alignItems: "center",
-					gap: "12px",
-					padding: "0 16px",
-					fontSize: "14px",
-					color: "#18181b",
-				}}
-			>
+			<div className="h-[56px] rounded-[12px] bg-[#ffffff] [box-shadow:0_0_0_1px_#e4e4e7] flex items-center gap-[12px] p-[0_16px] text-[14px] text-[#18181b]">
 				<svg
 					aria-hidden="true"
 					width="18"
@@ -70,54 +36,12 @@ export function StatusTiles() {
 				</svg>
 				<span>{t("word.muted")}</span>
 			</div>
-			<div
-				style={{
-					height: "56px",
-					borderRadius: "12px",
-					background: "#ffffff",
-					boxShadow: "0 0 0 1px #e4e4e7",
-					display: "flex",
-					alignItems: "center",
-					gap: "12px",
-					padding: "0 16px",
-					fontSize: "14px",
-					color: "#18181b",
-				}}
-			>
-				<span
-					style={{
-						width: "10px",
-						height: "10px",
-						borderRadius: "50%",
-						background: "#2f9e44",
-						margin: "0 4px",
-					}}
-				/>
+			<div className="h-[56px] rounded-[12px] bg-[#ffffff] [box-shadow:0_0_0_1px_#e4e4e7] flex items-center gap-[12px] p-[0_16px] text-[14px] text-[#18181b]">
+				<span className="w-[10px] h-[10px] rounded-full bg-[#2f9e44] m-[0_4px]" />
 				<span>{t("word.camera")}</span>
 			</div>
-			<div
-				style={{
-					height: "56px",
-					borderRadius: "12px",
-					background: "#ffffff",
-					boxShadow: "0 0 0 1px #e4e4e7",
-					display: "flex",
-					alignItems: "center",
-					gap: "12px",
-					padding: "0 16px",
-					fontSize: "14px",
-					color: "#18181b",
-				}}
-			>
-				<span
-					style={{
-						width: "10px",
-						height: "10px",
-						borderRadius: "50%",
-						background: "#f08c00",
-						margin: "0 4px",
-					}}
-				/>
+			<div className="h-[56px] rounded-[12px] bg-[#ffffff] [box-shadow:0_0_0_1px_#e4e4e7] flex items-center gap-[12px] p-[0_16px] text-[14px] text-[#18181b]">
+				<span className="w-[10px] h-[10px] rounded-full bg-[#f08c00] m-[0_4px]" />
 				<span>{t("word.microphone")}</span>
 			</div>
 		</div>

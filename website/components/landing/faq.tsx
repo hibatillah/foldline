@@ -8,32 +8,24 @@ export function Faq() {
 	const faq = t.raw("faq") as Messages["faq"];
 
 	return (
-		<section id="faq" className="wrap" style={{ paddingTop: "clamp(64px, 7vw, 96px)" }}>
-			<div style={{ marginBottom: "40px" }}>
-				<h2
-					className="h2"
-					style={{ margin: "0", fontWeight: "500", letterSpacing: "-0.025em", textWrap: "balance" }}
-				>
+		<section
+			id="faq"
+			className="mx-auto box-border max-w-[1280px] pt-[clamp(64px,_7vw,_96px)] px-[clamp(16px,5vw,80px)]"
+		>
+			<div className="mb-[40px]">
+				<h2 className="text-[clamp(26px,2.4vw,32px)] leading-[1.22] m-0 font-medium tracking-[-0.025em] text-balance">
 					{t("faqTitle.a")}
 					<br />
-					<span style={{ color: "var(--muted-foreground)" }}>{t("faqTitle.b")}</span>
+					<span className="text-muted-foreground">{t("faqTitle.b")}</span>
 				</h2>
 			</div>
-			<div className="faq">
+			<div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-12 gap-y-0 max-[640px]:grid-cols-[minmax(0,1fr)]">
 				{faq.map((q) => (
-					<details style={{ borderTop: "1px solid var(--border)", padding: "20px 0" }} key={q.q}>
-						<summary
-							style={{
-								display: "flex",
-								justifyContent: "space-between",
-								gap: "16px",
-								fontSize: "17px",
-								fontWeight: "500",
-							}}
-						>
+					<details className="group border-t border-border py-5" key={q.q}>
+						<summary className="flex cursor-pointer list-none justify-between gap-4 text-[17px] font-medium [&::-webkit-details-marker]:hidden">
 							{q.q}
 							<svg
-								className="plus"
+								className="mt-[3px] flex-none transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-open:rotate-45 motion-reduce:transition-none"
 								aria-hidden="true"
 								width="18"
 								height="18"
@@ -42,20 +34,11 @@ export function Faq() {
 								stroke="currentColor"
 								strokeWidth="2"
 								strokeLinecap="round"
-								style={{ flex: "none", marginTop: "3px" }}
 							>
 								<path d="M12 5v14M5 12h14" />
 							</svg>
 						</summary>
-						<p
-							style={{
-								margin: "12px 0 0",
-								fontSize: "16px",
-								lineHeight: "1.6",
-								color: "var(--muted-foreground)",
-								maxWidth: "60ch",
-							}}
-						>
+						<p className="m-[12px_0_0] text-[16px] leading-[1.6] text-muted-foreground max-w-[60ch]">
 							{q.a}
 						</p>
 					</details>

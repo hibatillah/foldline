@@ -3,16 +3,14 @@
 	"langLabel": "Bahasa",
 	"nav": {
 		"features": "Fitur",
-		"install": "Pasang",
 		"faq": "FAQ",
 		"releases": "Rilis",
 		"cta": "Unduh"
 	},
 	"hero": {
-		"a": "Kenalan dengan Foldline",
-		"b": "Notch kecil yang bisa dikembangkan, untuk bagian atas layar Windows. Ditulis dengan Rust.",
+		"a": "Meet Foldline",
+		"b": "A tiny, extensible notch for the top of your Windows screen. Written in Rust.",
 		"cta": "Unduh untuk Windows",
-		"meta": "Versi 0.6.0 · Windows 10 dan 11 · Gratis dan open source",
 		"side1": "Arahkan ke pil.",
 		"side2": "Ia terbuka ke halaman yang kamu butuhkan dan menutup saat kursor menjauh.",
 		"own": "Tambah kontenmu sendiri"
@@ -21,7 +19,6 @@
 		"a": "Dibuat agar tidak mengganggu",
 		"b": "CPU 0 % dan memori 23,8 MB saat diam",
 		"link": "Baca hasil pengukuran performa",
-		"quote": "Diukur pada 22 November 2026: memori 23,8 MB dan CPU 0 % saat diam, serta 116 ms CPU untuk setiap buka dan tutup.",
 		"source": "scripts/perf.sh · build rilis · Windows 11, Ryzen 5 8645HS"
 	},
 	"all": {
@@ -123,6 +120,7 @@
 		"a": "Tambahkan halamanmu sendiri",
 		"b": "di foldernya sendiri",
 		"p": "Foldline open source dengan lisensi GPL-3.0. Halaman, aktivitas, atau pengaturan halaman ada di foldernya sendiri, jadi pull request hanya menyentuh file milikmu.",
+		"guide": "Panduan kontribusi",
 		"steps": [
 			{
 				"t": "Siapkan",
@@ -139,22 +137,6 @@
 		]
 	},
 	"install": {
-		"a": "Terpasang dalam satu menit",
-		"b": "dari rilis GitHub",
-		"steps": [
-			{
-				"n": "1",
-				"t": "Unduh installer dari rilis terbaru."
-			},
-			{
-				"n": "2",
-				"t": "Windows menampilkan Windows protected your PC. Pilih More info, lalu Run anyway."
-			},
-			{
-				"n": "3",
-				"t": "Arahkan kursor ke pil di atas layar."
-			}
-		],
 		"latest": "Terbaru",
 		"installer": "Installer · pintasan Start menu, bisa menyala bersama Windows",
 		"portable": "Portabel · jalan tanpa dipasang",
@@ -184,10 +166,6 @@
 		{
 			"q": "Bisa dipakai dengan beberapa monitor?",
 			"a": "Ia ada di atas satu layar: layar utama, layar yang aktif, atau layar yang kamu pilih di Settings."
-		},
-		{
-			"q": "Kenapa notifikasi datang sedikit terlambat?",
-			"a": "Versi installer membaca database notifikasi Windows, yang biasanya menambah sekitar sepertiga detik."
 		}
 	],
 	"final": {
@@ -205,12 +183,8 @@
 					"href": "#features"
 				},
 				{
-					"label": "Pasang",
-					"href": "#install"
-				},
-				{
 					"label": "Rilis",
-					"href": "https://fold.hibatillah.com/releases"
+					"href": "/releases"
 				}
 			]
 		},
@@ -253,7 +227,6 @@
 			]
 		}
 	],
-	"legal": "Terinspirasi Dynamic Island dari Apple. Tidak berafiliasi dengan Apple.",
 	"word": {
 		"idle": "Diam",
 		"charging": "Mengisi",
@@ -386,8 +359,8 @@
 		"p": "Setiap halaman terbuka di atas layar sesuai urutan yang kamu atur. Media, rak, kalender, timer, dan daftar tugas aktif sejak awal; sisanya menunggu di Settings."
 	},
 	"meta": {
-		"title": "Foldline: notch mungil untuk Windows",
-		"description": "Notch kecil yang bisa dikembangkan, untuk bagian atas layar Windows. Ditulis dengan Rust."
+		"title": "Foldline: notch Dynamic Island untuk Windows",
+		"description": "Dynamic Island gratis dan open source untuk Windows 10 dan 11. Musik, notifikasi, kalender, dan lainnya di notch mungil di atas layar. Ditulis dengan Rust."
 	},
 	"privacy": {
 		"title": "Kebijakan Privasi",
@@ -604,11 +577,100 @@
 	},
 	"legalUpdated": "Terakhir diperbarui",
 	"legalUpdatedOn": "23 November 2026",
-	"legalHome": "Kembali ke Foldline",
+	"releases": {
+		"title": "Rilis",
+		"intro": "Apa yang berubah di setiap versi Foldline, dengan bahasa sederhana. Daftar lengkap perubahan tiap rilis ada di GitHub.",
+		"latest": "Rilis terbaru",
+		"released": "Dirilis",
+		"download": "Unduh untuk Windows",
+		"size": "Ukuran",
+		"checksum": "SHA-256",
+		"github": "Semua rilis di GitHub",
+		"changelog": "Daftar perubahan lengkap di GitHub",
+		"signing": "Installer belum ditandatangani, jadi Windows meminta kamu mengonfirmasinya.",
+		"signingLink": "Lihat langkahnya",
+		"entries": [
+			{
+				"lead": "Rilis pertama dengan nama Foldline: gratis, open source di bawah GPL, dan tanpa akun sama sekali.",
+				"groups": [
+					{
+						"h": "Baru",
+						"items": [
+							{
+								"t": "Cek pembaruan",
+								"d": "Halaman About di Settings punya kartu pembaruan. Klik tombolnya dan Foldline menanyakan rilis terbaru ke GitHub. Ia tidak pernah mengecek sendiri."
+							},
+							{
+								"t": "Tunda notifikasi",
+								"d": "Menu tray bisa menyembunyikan banner notifikasi dan peringatan halaman selama 10 menit, 30 menit, satu jam, atau sampai kamu mematikannya."
+							},
+							{
+								"t": "Mulai bersama Windows",
+								"d": "Installer menawarkan untuk menjalankan Foldline saat Windows menyala. Pilihan ini aktif secara bawaan."
+							},
+							{
+								"t": "Ikon notifikasi",
+								"d": "Kartu notifikasi menampilkan ikon aplikasi yang mengirimnya."
+							},
+							{
+								"t": "Tambah kontenmu sendiri",
+								"d": "Halaman, aktivitas, atau pengaturan halaman kini ada di foldernya sendiri. Satu skrip menyiapkannya dan memeriksa bahwa pull request hanya menyentuh file milikmu."
+							}
+						]
+					},
+					{
+						"h": "Berubah",
+						"items": [
+							{
+								"t": "Nama dan lisensi baru",
+								"d": "Aplikasi ini kini bernama Foldline dan berlisensi GPL-3.0-or-later. Akun, sign-in, dan halaman terkunci sudah hilang: semua halaman dan aktivitas gratis."
+							},
+							{
+								"t": "Pengaturan pindah",
+								"d": "Foldline kini menyimpan filenya di %APPDATA%\\Foldline dan menyalin pengaturanmu dari folder lama satu kali, saat pertama dijalankan."
+							},
+							{
+								"t": "Hanya GitHub",
+								"d": "Rilis hanya diterbitkan di GitHub. Foldline tidak ada di Microsoft Store."
+							}
+						]
+					},
+					{
+						"h": "Diperbaiki",
+						"items": [
+							{
+								"t": "Lirik untuk lagu yang benar",
+								"d": "Foldline mengurutkan hasil lirik berdasarkan durasi, judul, dan album, lalu melewati lirik yang waktunya untuk rekaman yang lebih panjang."
+							},
+							{
+								"t": "Buka dari notifikasi",
+								"d": "Jika aplikasinya sudah berjalan, jendelanya kini maju ke depan, bukan Foldline menjalankan salinan kedua."
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"notFound": {
+		"code": "404",
+		"a": "Halaman tidak ditemukan",
+		"b": "Halaman itu sudah terlipat. Tautannya mungkin lama, atau alamatnya salah ketik.",
+		"home": "Kembali ke Foldline"
+	},
+	"error": {
+		"code": "Galat",
+		"a": "Terjadi kesalahan",
+		"b": "Halaman mengalami galat yang tidak terduga. Coba lagi, atau kembali ke beranda.",
+		"retry": "Coba lagi",
+		"home": "Kembali ke Foldline"
+	},
 	"feedback": {
 		"title": "Laporkan bug",
 		"text": "Ceritakan apa yang salah. Laporan masuk ke pengelola, yang membaca setiap laporan.",
 		"message": "Apa yang terjadi?",
+		"messagePlaceholder": "Ceritakan apa yang kamu lakukan, apa yang kamu harapkan, dan apa yang terjadi.",
+		"contactPlaceholder": "nama@contoh.com atau @akun",
 		"contact": "Email atau akun, bila Anda ingin dibalas (opsional)",
 		"send": "Kirim",
 		"thanks": "Terima kasih. Laporan Anda sudah terkirim.",
@@ -626,11 +688,11 @@
 		"steps": [
 			{
 				"h": "Simpan file-nya",
-				"p": "Chrome dan Edge bisa menyebut file ini jarang diunduh atau berbahaya. Buka daftar unduhan, buka menu file tersebut, lalu pilih Keep (Simpan). Edge mungkin bertanya sekali lagi: pilih Keep anyway."
+				"p": "Chrome dan Edge bisa menyebut file ini jarang diunduh atau berbahaya. Buka daftar unduhan, buka menu file tersebut, lalu pilih **Keep** (Simpan). Edge mungkin bertanya sekali lagi: pilih **Keep anyway**."
 			},
 			{
 				"h": "Buka installer",
-				"p": "Jalankan file yang Anda unduh. Windows bisa menampilkan jendela biru bertuliskan Windows protected your PC (Microsoft Defender SmartScreen). Klik More info, lalu Run anyway."
+				"p": "Jalankan file yang Anda unduh. Windows bisa menampilkan jendela biru bertuliskan **Windows protected your PC** (**Microsoft Defender SmartScreen**). Klik **More info**, lalu **Run anyway**."
 			},
 			{
 				"h": "Pasang",

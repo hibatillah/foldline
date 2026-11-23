@@ -6,56 +6,21 @@ export function Proof() {
 
 	return (
 		<>
-			<div className="wrap" style={{ marginTop: "clamp(80px, 9vw, 120px)" }}>
-				<hr className="rule" />
+			<div className="mx-auto box-border max-w-[1280px] px-[clamp(16px,5vw,80px)] mt-[clamp(80px,_9vw,_120px)]">
+				<hr className="m-0 border-0 border-t border-border" />
 			</div>
-			<section
-				className="wrap duo"
-				style={{ padding: "clamp(64px, 7vw, 96px) clamp(16px, 5vw, 80px)" }}
-			>
-				<div
-					style={{
-						display: "flex",
-						flexDirection: "column",
-						gap: "40px",
-						alignItems: "flex-start",
-					}}
-				>
-					<h2
-						className="h2"
-						style={{
-							margin: "0",
-							fontWeight: "500",
-							letterSpacing: "-0.025em",
-							textWrap: "balance",
-						}}
-					>
-						{t("proof.a")}
-						<br />
-						<span style={{ color: "var(--muted-foreground)" }}>{t("proof.b")}</span>
-					</h2>
+			<section className="mx-auto box-border max-w-[1280px] p-[clamp(32px,_3.5vw,_48px)_clamp(16px,_5vw,_80px)] flex flex-col gap-[32px] items-start">
+				<h2 className="text-[clamp(26px,2.4vw,32px)] leading-[1.22] m-0 font-medium tracking-[-0.025em] text-balance">
+					{t("proof.a")}
+					<br />
+					<span className="text-muted-foreground">{t("proof.b")}</span>
+				</h2>
+				<div className="flex flex-wrap items-center gap-y-[12px] gap-x-[24px]">
 					<ExternalLink
 						href="https://github.com/hibatillah/foldline/blob/master/docs/reference/performance-baseline.md"
-						style={{
-							display: "flex",
-							alignItems: "center",
-							gap: "14px",
-							textDecoration: "none",
-							fontSize: "15px",
-							fontWeight: "500",
-						}}
+						className="flex items-center gap-[14px] no-underline text-[15px] font-medium"
 					>
-						<span
-							style={{
-								width: "40px",
-								height: "40px",
-								borderRadius: "50%",
-								background: "var(--muted)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-							}}
-						>
+						<span className="w-[40px] h-[40px] rounded-full bg-muted flex items-center justify-center">
 							<svg
 								aria-hidden="true"
 								width="16"
@@ -66,30 +31,16 @@ export function Proof() {
 								strokeWidth="2"
 								strokeLinecap="round"
 							>
-								<path d="M5 12h14M13 6l6 6-6 6" />
+								<path d="M7 17 17 7M8 7h9v9" />
 							</svg>
 						</span>
 						{t("proof.link")}
 					</ExternalLink>
+					<span className="text-[14px] text-muted-foreground">{t("proof.source")}</span>
 				</div>
-				<figure style={{ margin: "0", display: "flex", flexDirection: "column", gap: "28px" }}>
-					<p
-						style={{
-							margin: "0",
-							fontSize: "clamp(20px, 1.8vw, 24px)",
-							lineHeight: "1.45",
-							letterSpacing: "-0.01em",
-						}}
-					>
-						{t("proof.quote")}
-					</p>
-					<figcaption style={{ fontSize: "14px", color: "var(--muted-foreground)" }}>
-						{t("proof.source")}
-					</figcaption>
-				</figure>
 			</section>
-			<div className="wrap">
-				<hr className="rule" />
+			<div className="mx-auto box-border max-w-[1280px] px-[clamp(16px,5vw,80px)]">
+				<hr className="m-0 border-0 border-t border-border" />
 			</div>
 		</>
 	);

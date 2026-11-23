@@ -6,7 +6,7 @@ import { TrackedLink } from "./tracked-link";
 
 /** Picks the analytics event that matches where a link goes. */
 function eventFor(href: string): { event: SiteEvent; properties?: Record<string, string> } | null {
-	if (href.startsWith("/api/download"))
+	if (href.startsWith("/api/download") || href.endsWith("-setup.exe"))
 		return { event: "download_clicked", properties: { channel: "github" } };
 	if (href.includes("performance-baseline")) return { event: "docs_clicked" };
 	if (href.includes("github.com")) return { event: "github_clicked" };

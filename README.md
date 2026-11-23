@@ -52,7 +52,7 @@ Activities are what the collapsed pill shows while something happens. They cover
 
 ## Performance
 
-Measured on 2026-11-22 on Windows 11 with a Ryzen 5 8645HS, as a release build with the shelf page open:
+The same numbers are on the [website](https://fold.hibatillah.com). Measured on 2026-11-22 on Windows 11 with a Ryzen 5 8645HS, as a release build with the shelf page open:
 
 | Measurement | Result |
 | --- | ---: |
@@ -73,27 +73,9 @@ It is one run on one PC, and it did not cover music playback or live lyrics. The
 
 ## Privacy
 
-Nothing in the app contacts a Foldline server: no account, no sign-in, no analytics and no automatic update check. Everything stays on your machine except:
+Nothing in the app contacts a Foldline server: no account, no sign-in, no analytics and no automatic update check. Settings, the todo list and the shelf stay in `%APPDATA%Foldline`. Data leaves your PC only when a feature needs it: the update check you click, lyric lookups, an iCal link you set, and the weather of a place you pick. The clipboard page, when switched on, keeps your last seven copies in memory only.
 
-- **Update check:** only when you click **Check for updates** on the settings window's About page, GitHub receives a request for the latest release, with Foldline's name and version in the User-Agent and nothing else about you or your settings. The notch itself never does this.
-- **Lyrics:** when a track starts, [LRCLIB](https://lrclib.net) receives the artist, title, album and length. Set `FOLDLINE_LYRICS=off` to stop lookups.
-- **Calendar:** if you set an iCal link, Foldline downloads that file every 15 minutes.
-- **Weather:** only with the Weather page on, [MET Norway](https://api.met.no) receives the coordinates of your chosen place, at start and every half hour.
-
-The clipboard page, when switched on, keeps the last seven copies in memory only. The "Copied" activity never reads what was copied. Settings, the todo list and the shelf are in `%APPDATA%\Foldline`.
-
-Locally, Foldline reads:
-
-- what is playing, from the Windows media controls
-- the text and app of Windows notifications
-- the names, never the contents, of files in your Downloads folder
-- the paths of the files on your shelf
-- which window is in front, only to tell whether it is maximized or full screen
-- the Caps Lock key, and nothing else is kept
-- system readings for the stats page
-- your location, which is a city you pick or the nearest city to the position Windows reports while **Track location** is on
-
-None of it leaves your computer except as listed above.
+The full policy, with what is sent to whom and how often, is on the website: [Privacy Policy](https://fold.hibatillah.com/privacy). The terms are at [Terms of Service](https://fold.hibatillah.com/terms).
 
 ## Contributing
 

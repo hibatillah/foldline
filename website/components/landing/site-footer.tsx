@@ -8,85 +8,36 @@ import { ExternalArrow } from "./external-arrow";
 
 type Messages = typeof en;
 
+/** A footer link: muted, with its arrow beside the label. */
+const LINK = "inline-flex items-center gap-1.5 text-muted-foreground no-underline";
+
 export function SiteFooter() {
 	const t = useTranslations();
 	const foot = t.raw("foot") as Messages["foot"];
 
 	return (
-		<footer style={{ position: "relative", overflow: "hidden", marginTop: "96px" }}>
+		<footer className="relative overflow-hidden mt-[96px]">
 			<div
 				aria-hidden="true"
-				className="wordmark"
-				style={{
-					position: "absolute",
-					left: "50%",
-					bottom: "-0.2em",
-					transform: "translateX(-50%)",
-				}}
+				className="select-none whitespace-nowrap text-[clamp(120px,21vw,300px)] font-semibold leading-[0.8] tracking-[-0.06em] text-[oklch(0.935_0.012_250)] max-[640px]:text-[25vw] absolute left-[50%] bottom-[-0.2em] [transform:translateX(-50%)]"
 			>
 				Foldline
 			</div>
-			<div
-				className="wrap"
-				style={{
-					position: "relative",
-					paddingTop: "24px",
-					paddingBottom: "clamp(56px, 6vw, 88px)",
-				}}
-			>
-				<div
-					className="foot"
-					style={{
-						display: "grid",
-						gridTemplateColumns: "minmax(0, 2fr) repeat(3, minmax(0, 1fr))",
-						gap: "32px",
-						paddingBottom: "48px",
-					}}
-				>
-					<div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-						<span
-							style={{
-								display: "flex",
-								alignItems: "center",
-								gap: "10px",
-								fontWeight: "600",
-								fontSize: "16px",
-							}}
-						>
-							<Image
-								src="/logo.svg"
-								alt=""
-								width={22}
-								height={22}
-								style={{ borderRadius: "6px" }}
-							/>
+			<div className="mx-auto box-border max-w-[1280px] relative pt-[24px] pb-[clamp(110px,12.5vw,195px)] px-[clamp(16px,5vw,80px)] max-[640px]:pb-[28vw]">
+				<div className="grid grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-8 pb-7 max-[640px]:grid-cols-[repeat(2,minmax(0,1fr))] max-[640px]:gap-x-4 max-[640px]:gap-y-8 max-[640px]:[&>div:first-child]:col-span-2">
+					<div className="flex flex-col gap-[10px]">
+						<span className="flex items-center gap-[10px] font-semibold text-[16px]">
+							<Image src="/logo.svg" alt="" width={22} height={22} className="rounded-[6px]" />
 							Foldline
 						</span>
-						<span
-							style={{
-								fontSize: "14px",
-								lineHeight: "1.55",
-								color: "var(--muted-foreground)",
-								maxWidth: "260px",
-							}}
-						>
+						<span className="text-[14px] leading-[1.55] text-muted-foreground max-w-[260px]">
 							{t("footTag")}
 						</span>
 					</div>
 					{foot.map((fc) => (
-						<div
-							style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "14px" }}
-							key={fc.h}
-						>
-							<span style={{ fontWeight: "500" }}>{fc.h}</span>
+						<div className="flex flex-col gap-[10px] text-[14px]" key={fc.h}>
+							<span className="font-medium">{fc.h}</span>
 							{fc.links.map((link) => {
-								const style = {
-									textDecoration: "none",
-									color: "var(--muted-foreground)",
-									display: "inline-flex",
-									alignItems: "center",
-									gap: "6px",
-								};
 								if (link.href === "dialog:feedback") {
 									return <FeedbackDialog label={link.label} key={link.label} />;
 								}
@@ -95,7 +46,7 @@ export function SiteFooter() {
 									return (
 										<Link
 											href={link.href.startsWith("#") ? `/${link.href}` : link.href}
-											style={style}
+											className={LINK}
 											key={link.label}
 										>
 											{link.label}
@@ -103,7 +54,7 @@ export function SiteFooter() {
 									);
 								}
 								return (
-									<ExternalLink href={link.href} style={style} key={link.label}>
+									<ExternalLink href={link.href} className={LINK} key={link.label}>
 										{link.label}
 										<ExternalArrow />
 									</ExternalLink>
@@ -112,19 +63,8 @@ export function SiteFooter() {
 						</div>
 					))}
 				</div>
-				<div
-					style={{
-						display: "flex",
-						flexWrap: "wrap",
-						justifyContent: "space-between",
-						gap: "12px",
-						paddingTop: "20px",
-						fontSize: "13px",
-						color: "var(--muted-foreground)",
-					}}
-				>
-					<span>{"© 2026 hibatillah · GPL-3.0-or-later"}</span>
-					<span>{t("legal")}</span>
+				<div className="pt-[4px] text-[13px] text-muted-foreground">
+					<span>{"© 2026 Hibatillah · GPL-3.0-or-later"}</span>
 				</div>
 			</div>
 		</footer>

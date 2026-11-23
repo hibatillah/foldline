@@ -1,0 +1,52 @@
+# Foldline
+
+> Foldline is a free, open source Dynamic Island for Windows 10 and 11: a small black pill at the top of the screen that opens into pages such as media controls with synced lyrics, a calendar and system stats. It is written in Rust, has no accounts or paid tier, and contacts no Foldline server.
+
+Foldline is licensed GPL-3.0-or-later. The name and logo are not under the code license.
+
+## Facts
+
+- Price: free, with no paid tier, in-app purchase or advertising.
+- Platform: Windows 10 and 11, 64-bit. Windows only.
+- Latest version: 0.6.0, released 23 November 2026. Installer size 5.76 MB.
+- Pages: media, shelf, calendar, focus timer, todo, prayer times, weather, system stats, clipboard, device batteries.
+- Activities in the collapsed pill: volume and brightness, battery, Bluetooth devices, microphone and camera in use, Caps Lock, Windows notifications, browser downloads.
+- Extensible: a contributor can add a page, an activity or a page's settings in its own folder and send a pull request.
+- Installer: not code-signed yet, so Windows SmartScreen shows "Windows protected your PC". Choose More info, then Run anyway. Releases are published on GitHub only; Foldline is not on the Microsoft Store.
+
+## Performance
+
+Measured on 22 November 2026 on Windows 11 with a Ryzen 5 8645HS, as a release build with the shelf page open (one run on one PC):
+
+- Memory at start: 23.8 MB.
+- CPU while idle: 0 %.
+- CPU per open and close: 116 ms.
+- Memory growth over 10 open and close cycles: 0.3 MB.
+
+Music playback and live lyrics were not measured.
+
+## Privacy
+
+The app has no account, no sign-in and no analytics. Settings, the todo list and the shelf stay in `%APPDATA%\Foldline`. Data leaves the PC only when a feature needs it:
+
+- Check for updates: GitHub, only when you click the button on the About page.
+- Synced lyrics: track details to LRCLIB.
+- Calendar: your iCal link, every 15 minutes.
+- Weather: your chosen place to MET Norway, only while the Weather page is on.
+
+The website counts visits with PostHog in cookieless mode, stores nothing on your device and has no cookie banner.
+
+## Pages
+
+- [Home](https://fold.hibatillah.com/): overview, features and FAQ.
+- [Home in Indonesian](https://fold.hibatillah.com/id): the same page in Bahasa Indonesia.
+- [Releases](https://fold.hibatillah.com/releases): what changed in each version, in plain words.
+- [Privacy Policy](https://fold.hibatillah.com/privacy): what the website and the app collect.
+- [Terms of Service](https://fold.hibatillah.com/terms): license, trademark and warranty terms.
+
+## Source and downloads
+
+- [Latest installer](https://fold.hibatillah.com/api/download): redirects to the newest Windows installer on GitHub.
+- [Source code](https://github.com/hibatillah/foldline): the full code, under GPL-3.0-or-later.
+- [All releases on GitHub](https://github.com/hibatillah/foldline/releases): every release and its full change list.
+- [Contributing](https://github.com/hibatillah/foldline/blob/master/CONTRIBUTING.md): the contributor agreement and how to add your own content.

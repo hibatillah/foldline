@@ -3,7 +3,7 @@
 import { Dialog } from "@base-ui/react/dialog";
 import posthog from "posthog-js";
 import { useTranslations } from "next-intl";
-import { useState, type CSSProperties, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import { ExternalLink } from "./external-link";
 
@@ -13,17 +13,9 @@ const ISSUES_URL = "https://github.com/hibatillah/foldline/issues";
 type Status = "idle" | "sending" | "sent" | "failed";
 type SurveyDefinition = { id: string; questionIds: string[] };
 
-const FIELD_STYLE: CSSProperties = {
-	width: "100%",
-	boxSizing: "border-box",
-	padding: "10px 12px",
-	borderRadius: 8,
-	border: "1px solid color-mix(in oklch, var(--foreground) 14%, transparent)",
-	background: "var(--background)",
-	color: "var(--foreground)",
-	font: "inherit",
-	fontSize: 14,
-};
+/** The look shared by the fields and the close button. */
+const FIELD =
+	"box-border w-full rounded-lg border border-[color-mix(in_oklch,var(--foreground)_14%,transparent)] bg-background px-3 py-2.5 text-sm text-foreground [font:inherit]";
 
 /** The text of one form field, or an empty string for a missing one. */
 function fieldText(form: FormData, name: string) {
@@ -72,102 +64,61 @@ export function FeedbackDialog({ label }: { label: string }) {
 
 	return (
 		<Dialog.Root onOpenChange={() => setStatus("idle")}>
-			<Dialog.Trigger
-				style={{
-					padding: 0,
-					border: 0,
-					background: "none",
-					font: "inherit",
-					color: "var(--muted-foreground)",
-					cursor: "pointer",
-					textAlign: "left",
-				}}
-			>
+			<Dialog.Trigger className="cursor-pointer border-0 bg-transparent p-0 text-left text-muted-foreground [font:inherit]">
 				{label}
 			</Dialog.Trigger>
 			<Dialog.Portal>
-				<Dialog.Backdrop
-					style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(15,23,42,0.4)" }}
-				/>
-				<Dialog.Popup
-					style={{
-						position: "fixed",
-						zIndex: 51,
-						top: "50%",
-						left: "50%",
-						transform: "translate(-50%, -50%)",
-						width: "min(440px, calc(100vw - 32px))",
-						boxSizing: "border-box",
-						padding: 24,
-						borderRadius: 16,
-						background: "var(--card)",
-						color: "var(--foreground)",
-						fontFamily: "var(--font-sans)",
-						boxShadow: "0 24px 64px -16px rgba(15,23,42,0.45)",
-					}}
-				>
-					<Dialog.Title style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+				<Dialog.Backdrop className="fixed inset-0 z-[50] bg-[rgba(15,23,42,0.4)]" />
+				<Dialog.Popup className="fixed z-[51] top-[50%] left-[50%] [transform:translate(-50%,_-50%)] w-[min(440px,_calc(100vw_-_32px))] box-border p-[24px] rounded-[16px] bg-card text-foreground font-sans [box-shadow:0_24px_64px_-16px_rgba(15,23,42,0.45)]">
+					<Dialog.Title className="m-0 text-[18px] font-semibold">
 						{t("feedback.title")}
 					</Dialog.Title>
-					<Dialog.Description
-						style={{ margin: "8px 0 16px", fontSize: 14, color: "var(--muted-foreground)" }}
-					>
+					<Dialog.Description className="m-[8px_0_16px] text-[14px] text-muted-foreground">
 						{t("feedback.text")}
 					</Dialog.Description>
 					{status === "sent" ? (
 						<>
-							<p style={{ fontSize: 14, margin: "0 0 16px" }}>{t("feedback.thanks")}</p>
-							<Dialog.Close style={{ ...FIELD_STYLE, width: "auto", cursor: "pointer" }}>
+							<p className="text-[14px] m-[0_0_16px]">{t("feedback.thanks")}</p>
+							<Dialog.Close className={`${FIELD} w-auto! cursor-pointer`}>
 								{t("feedback.close")}
 							</Dialog.Close>
 						</>
 					) : (
-						<form onSubmit={send} style={{ display: "grid", gap: 12 }}>
-							<label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 500 }}>
+						<form onSubmit={send} className="grid gap-[12px]">
+							<label className="grid gap-[6px] text-[13px] font-medium">
 								{t("feedback.message")}
 								<textarea
 									name="message"
+									placeholder={t("feedback.messagePlaceholder")}
 									required
 									maxLength={2000}
 									rows={5}
-									style={{ ...FIELD_STYLE, resize: "vertical" }}
+									className={`${FIELD} resize-y`}
 								/>
 							</label>
-							<label style={{ display: "grid", gap: 6, fontSize: 13, fontWeight: 500 }}>
+							<label className="grid gap-[6px] text-[13px] font-medium">
 								{t("feedback.contact")}
-								<input name="contact" maxLength={200} autoComplete="email" style={FIELD_STYLE} />
+								<input
+									name="contact"
+									placeholder={t("feedback.contactPlaceholder")}
+									maxLength={200}
+									autoComplete="email"
+									className={FIELD}
+								/>
 							</label>
 							{status === "failed" && (
-								<p role="alert" style={{ margin: 0, fontSize: 13, color: "var(--destructive)" }}>
+								<p role="alert" className="m-0 text-[13px] text-destructive">
 									{t("feedback.failed")}
 								</p>
 							)}
-							<div
-								style={{
-									display: "flex",
-									flexWrap: "wrap",
-									alignItems: "center",
-									justifyContent: "space-between",
-									gap: 12,
-								}}
-							>
-								<ExternalLink href={ISSUES_URL} style={{ fontSize: 13, color: "var(--primary)" }}>
+							<div className="flex flex-wrap items-center justify-between gap-[12px]">
+								<ExternalLink href={ISSUES_URL} className="text-[13px] text-primary">
 									{t("feedback.issue")}
 								</ExternalLink>
 								<button
 									type="submit"
 									disabled={status === "sending"}
-									style={{
-										height: 36,
-										padding: "0 16px",
-										border: 0,
-										borderRadius: 8,
-										background: "var(--primary)",
-										color: "var(--primary-foreground)",
-										fontSize: 14,
-										fontWeight: 500,
-										cursor: "pointer",
-									}}
+									className="h-[36px] p-[0_16px] [border:0] rounded-[8px] bg-primary text-primary-foreground text-[14px] font-medium cursor-pointer"
 								>
 									{t("feedback.send")}
 								</button>

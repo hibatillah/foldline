@@ -45,50 +45,34 @@ export function PagesGrid() {
 	const t = useTranslations();
 
 	return (
-		<section className="wrap feature">
-			<div className="fhead">
+		<section className="mx-auto box-border max-w-[1280px] px-[clamp(16px,5vw,80px)] pt-[clamp(120px,13vw,200px)] max-[640px]:pt-24">
+			<div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-12 gap-y-6 mb-[72px] max-[900px]:grid-cols-[minmax(0,1fr)] max-[640px]:mb-10 max-[640px]:gap-4">
 				<div>
 					<TwoTone first={t("gridHead.a")} second={t("gridHead.b")} />
 				</div>
 				<div>
-					<p className="body" style={{ margin: 0 }}>
+					<p className="max-w-[620px] text-[clamp(17px,1.5vw,21px)] leading-[1.55] text-muted-foreground m-0 max-[640px]:mt-5">
 						{t("gridHead.p")}
 					</p>
 				</div>
 			</div>
-			<div className="brackets">
+			<div className="grid grid-cols-[repeat(5,minmax(0,1fr))] gap-[18px] max-[1000px]:grid-cols-[repeat(3,minmax(0,1fr))] max-[640px]:grid-cols-[repeat(2,minmax(0,1fr))] max-[640px]:gap-3">
 				{PAGES.map(([key, Icon], index) => (
-					<div key={key} className="bracket">
-						<div
-							style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
-						>
-							<span
-								style={{
-									width: 44,
-									height: 44,
-									borderRadius: 11,
-									background: "color-mix(in oklch, var(--primary) 10%, transparent)",
-									color: "oklch(0.42 0.19 263)",
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-								}}
-							>
+					<div
+						key={key}
+						className="box-border flex aspect-square flex-col justify-between rounded-[14px] bg-card p-5 [box-shadow:0_0_0_1px_var(--border)] transition-shadow duration-200 hover:[box-shadow:0_0_0_1px_color-mix(in_oklch,var(--primary)_45%,transparent)] max-[640px]:p-4"
+					>
+						<div className="flex justify-between items-start">
+							<span className="w-[44px] h-[44px] rounded-[11px] bg-[color:color-mix(in_oklch,_var(--primary)_10%,_transparent)] text-[color:oklch(0.42_0.19_263)] flex items-center justify-center">
 								<Icon aria-hidden="true" size={22} strokeWidth={2} />
 							</span>
-							<span
-								style={{
-									fontFamily: "var(--font-mono)",
-									fontSize: 13,
-									color: "var(--muted-foreground)",
-								}}
-							>
+							<span className="font-mono text-[13px] text-muted-foreground">
 								{String(index + 1).padStart(2, "0")}
 							</span>
 						</div>
-						<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-							<span style={{ fontSize: 16, fontWeight: 500 }}>{t(`grid.${key}`)}</span>
-							<span style={{ fontSize: 13, lineHeight: 1.45, color: "var(--muted-foreground)" }}>
+						<div className="flex flex-col gap-[4px]">
+							<span className="text-[16px] font-medium">{t(`grid.${key}`)}</span>
+							<span className="text-[13px] leading-[1.45] text-muted-foreground">
 								{t(`gridSub.${key}`)}
 							</span>
 						</div>

@@ -3,7 +3,6 @@
 	"langLabel": "Language",
 	"nav": {
 		"features": "Features",
-		"install": "Install",
 		"faq": "FAQ",
 		"releases": "Releases",
 		"cta": "Download"
@@ -12,7 +11,6 @@
 		"a": "Meet Foldline",
 		"b": "A tiny, extensible notch for the top of your Windows screen. Written in Rust.",
 		"cta": "Download for Windows",
-		"meta": "Version 0.6.0 · Windows 10 and 11 · Free and open source",
 		"side1": "Point at the pill.",
 		"side2": "It opens into the page you need and closes when you move away.",
 		"own": "Add your own content"
@@ -21,7 +19,6 @@
 		"a": "Built to stay out of the way",
 		"b": "0 % CPU and 23.8 MB of memory while idle",
 		"link": "Read the performance baseline",
-		"quote": "Measured on 22 November 2026: 23.8 MB of memory and 0 % CPU while idle, and 116 ms of CPU for each open and close.",
 		"source": "scripts/perf.sh · release build · Windows 11, Ryzen 5 8645HS"
 	},
 	"all": {
@@ -123,6 +120,7 @@
 		"a": "Add a page of your own",
 		"b": "in its own folder",
 		"p": "Foldline is open source under GPL-3.0. A page, an activity or a page's settings live in their own folder, so a pull request touches only your files.",
+		"guide": "Contributing guide",
 		"steps": [
 			{
 				"t": "Scaffold",
@@ -139,22 +137,6 @@
 		]
 	},
 	"install": {
-		"a": "Install in a minute",
-		"b": "from GitHub releases",
-		"steps": [
-			{
-				"n": "1",
-				"t": "Download the installer from the latest release."
-			},
-			{
-				"n": "2",
-				"t": "Windows shows Windows protected your PC. Choose More info, then Run anyway."
-			},
-			{
-				"n": "3",
-				"t": "Point at the pill at the top of your screen."
-			}
-		],
 		"latest": "Latest",
 		"installer": "Installer · Start menu shortcut, can start with Windows",
 		"portable": "Portable · runs without installing",
@@ -184,10 +166,6 @@
 		{
 			"q": "Does it work with several monitors?",
 			"a": "It sits at the top of one screen: the main one, the focused one, or one you choose in Settings."
-		},
-		{
-			"q": "Why do notifications arrive a little late?",
-			"a": "The installer version reads the Windows notification database, which usually adds about a third of a second."
 		}
 	],
 	"final": {
@@ -205,12 +183,8 @@
 					"href": "#features"
 				},
 				{
-					"label": "Install",
-					"href": "#install"
-				},
-				{
 					"label": "Releases",
-					"href": "https://fold.hibatillah.com/releases"
+					"href": "/releases"
 				}
 			]
 		},
@@ -253,7 +227,6 @@
 			]
 		}
 	],
-	"legal": "Inspired by Apple's Dynamic Island. Not affiliated with Apple.",
 	"word": {
 		"idle": "Idle",
 		"charging": "Charging",
@@ -386,8 +359,8 @@
 		"p": "Every page opens at the top of your screen in the order you set. Media, shelf, calendar, timer and todo come on by default; the rest wait in Settings."
 	},
 	"meta": {
-		"title": "Foldline: a tiny notch for Windows",
-		"description": "A tiny, extensible notch for the top of your Windows screen. Written in Rust."
+		"title": "Foldline: a Dynamic Island notch for Windows",
+		"description": "Free, open source Dynamic Island for Windows 10 and 11. Media, notifications, calendar and more in a tiny notch at the top of your screen. Written in Rust."
 	},
 	"privacy": {
 		"title": "Privacy Policy",
@@ -604,11 +577,100 @@
 	},
 	"legalUpdated": "Last updated",
 	"legalUpdatedOn": "23 November 2026",
-	"legalHome": "Back to Foldline",
+	"releases": {
+		"title": "Releases",
+		"intro": "What changed in each version of Foldline, in plain words. The full list of changes for every release is on GitHub.",
+		"latest": "Latest release",
+		"released": "Released",
+		"download": "Download for Windows",
+		"size": "Size",
+		"checksum": "SHA-256",
+		"github": "All releases on GitHub",
+		"changelog": "Full change list on GitHub",
+		"signing": "The installer is not code-signed yet, so Windows asks you to confirm it.",
+		"signingLink": "See the steps",
+		"entries": [
+			{
+				"lead": "The first release under the Foldline name: free, open source under the GPL, and with no accounts at all.",
+				"groups": [
+					{
+						"h": "New",
+						"items": [
+							{
+								"t": "Check for updates",
+								"d": "The About page in Settings has an update card. Click its button and Foldline asks GitHub for the newest release. It never checks by itself."
+							},
+							{
+								"t": "Snooze notifications",
+								"d": "The tray menu can hide notification banners and page alerts for 10 minutes, 30 minutes, an hour, or until you switch it off."
+							},
+							{
+								"t": "Start with Windows",
+								"d": "The installer offers to start Foldline when Windows starts. It is on by default."
+							},
+							{
+								"t": "Notification icons",
+								"d": "A notification card shows the icon of the app that sent it."
+							},
+							{
+								"t": "Add your own content",
+								"d": "A page, an activity or a page's settings now lives in its own folder. A script sets it up and checks that a pull request touches only your files."
+							}
+						]
+					},
+					{
+						"h": "Changed",
+						"items": [
+							{
+								"t": "A new name and licence",
+								"d": "The app is now called Foldline and is licensed GPL-3.0-or-later. Accounts, sign-in and locked pages are gone: every page and activity is free."
+							},
+							{
+								"t": "Settings moved",
+								"d": "Foldline now keeps its files in %APPDATA%\\Foldline and copies your settings over from the old folder once, the first time it starts."
+							},
+							{
+								"t": "GitHub only",
+								"d": "Releases are published on GitHub only. Foldline is not on the Microsoft Store."
+							}
+						]
+					},
+					{
+						"h": "Fixed",
+						"items": [
+							{
+								"t": "Lyrics for the right song",
+								"d": "Foldline ranks the lyric results by length, title and album, and skips lyrics timed for a longer recording."
+							},
+							{
+								"t": "Open on a notification",
+								"d": "If the app is already running, its window now comes to the front instead of Foldline starting a second copy."
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"notFound": {
+		"code": "404",
+		"a": "Page not found",
+		"b": "That page folded away. The link may be old, or the address mistyped.",
+		"home": "Back to Foldline"
+	},
+	"error": {
+		"code": "Error",
+		"a": "Something went wrong",
+		"b": "The page hit an unexpected error. Try again, or go back to the home page.",
+		"retry": "Try again",
+		"home": "Back to Foldline"
+	},
 	"feedback": {
 		"title": "Report a bug",
 		"text": "Tell us what went wrong. It goes to the maintainer, who reads every report.",
 		"message": "What happened?",
+		"messagePlaceholder": "Tell us what you did, what you expected and what happened instead.",
+		"contactPlaceholder": "name@example.com or @handle",
 		"contact": "Email or handle, if you want a reply (optional)",
 		"send": "Send",
 		"thanks": "Thank you. Your report was sent.",
@@ -626,11 +688,11 @@
 		"steps": [
 			{
 				"h": "Keep the file",
-				"p": "Chrome and Edge may say the file is not commonly downloaded or could be harmful. Open the downloads list, open the menu of the file and choose Keep. Edge may ask once more: choose Keep anyway."
+				"p": "Chrome and Edge may say the file is not commonly downloaded or could be harmful. Open the downloads list, open the menu of the file and choose **Keep**. Edge may ask once more: choose **Keep anyway**."
 			},
 			{
 				"h": "Open the installer",
-				"p": "Run the file you downloaded. Windows may show a blue window that says Windows protected your PC (Microsoft Defender SmartScreen). Click More info, then Run anyway."
+				"p": "Run the file you downloaded. Windows may show a blue window that says **Windows protected your PC** (**Microsoft Defender SmartScreen**). Click **More info**, then **Run anyway**."
 			},
 			{
 				"h": "Install",

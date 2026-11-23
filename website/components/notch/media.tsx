@@ -1,74 +1,64 @@
+import Image from "next/image";
+
 import { OpenNotch, MediaStatus } from "./open-notch";
+
+/** A lyric line: one centered line that never wraps. */
+const LYRIC = "truncate text-center";
+
+/** The album cover shown as the track artwork. */
+function Artwork() {
+	return (
+		<Image
+			src="/artwork/stuck-with-u.jpg"
+			alt=""
+			width={86}
+			height={86}
+			unoptimized
+			className="block rounded-[12px]"
+		/>
+	);
+}
+
+/** The streaming app mark that sits on the artwork corner, as in the app. */
+function SourceBadge() {
+	return (
+		<span className="absolute right-[-1px] bottom-[-1px] flex size-6 items-center justify-center rounded-[7px] bg-[#0c0c0c] [box-shadow:0_0_0_3px_#000]">
+			<Image
+				src="/artwork/spotify.png"
+				alt=""
+				width={20}
+				height={20}
+				unoptimized
+				className="block size-5"
+			/>
+		</span>
+	);
+}
 
 export function MediaNotch() {
 	return (
 		<OpenNotch
-			width={614}
+			notch="media"
 			activePage={0}
-			background="linear-gradient(180deg, #000 0%, #04121a 35%, #174b57 100%)"
+			background="bg-[linear-gradient(180deg,#000_0%,#0e0e0f_35%,#2d2d2f_100%)]"
 			status={<MediaStatus />}
 		>
-			<div style={{ height: "86px", display: "flex", gap: "20px", alignItems: "center" }}>
-				<div
-					style={{
-						position: "relative",
-						flex: "none",
-						width: "86px",
-						height: "86px",
-						borderRadius: "12px",
-						background:
-							"radial-gradient(ellipse 30% 55% at 50% 0%, #cfe4e8 0%, rgba(80,120,130,0.55) 45%, rgba(10,24,28,0) 100%), linear-gradient(180deg, #0b1a1d, #14292d)",
-					}}
-				>
-					<span
-						style={{
-							position: "absolute",
-							left: "38%",
-							bottom: "20%",
-							width: "22%",
-							height: "34%",
-							borderRadius: "40% 40% 30% 30%",
-							background: "#d8c9c0",
-							opacity: "0.8",
-						}}
-					/>
-					<span
-						style={{
-							position: "absolute",
-							right: "-1px",
-							bottom: "-1px",
-							width: "19px",
-							height: "19px",
-							borderRadius: "5px",
-							background: "#0c0c0c",
-							boxShadow: "0 0 0 3px #000",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-						}}
-					>
-						<span
-							style={{ width: "11px", height: "11px", borderRadius: "50%", background: "#e6e6eb" }}
-						/>
-					</span>
+			<div className="h-[86px] flex gap-[20px] items-center">
+				<div className="relative flex-none w-[86px] h-[86px]">
+					<Artwork />
+					<SourceBadge />
 				</div>
-				<div
-					style={{
-						flex: "none",
-						width: "170px",
-						display: "flex",
-						flexDirection: "column",
-						gap: "2px",
-					}}
-				>
-					<div style={{ fontSize: "14px", fontWeight: "500" }}>Late Bloom</div>
-					<div style={{ fontSize: "12px", color: "#9a9aa6" }}>Sora Lane</div>
-					<div style={{ display: "flex", gap: "14px", alignItems: "center", marginTop: "12px" }}>
+				<div className="flex-none w-[180px] flex flex-col gap-[2px]">
+					<div className="text-[14px] font-medium leading-[1.25]">
+						Stuck with U (with Justin Bieber)
+					</div>
+					<div className="text-[12px] text-[#9a9aa6]">Ariana Grande</div>
+					<div className="flex gap-[14px] items-center mt-[8px]">
 						<svg aria-hidden="true" fill="#fff" width="16" height="16" viewBox="0 0 24 24">
 							<path d="M6 5h2v14H6zM20 5v14L9 12z" />
 						</svg>
 						<svg aria-hidden="true" fill="#fff" width="16" height="16" viewBox="0 0 24 24">
-							<path d="M7 4h4v16H7zM13 4h4v16h-4z" />
+							<path d="M7 4.5v15L19 12z" />
 						</svg>
 						<svg aria-hidden="true" fill="#fff" width="16" height="16" viewBox="0 0 24 24">
 							<path d="M16 5h2v14h-2zM4 5v14l11-7z" />
@@ -82,51 +72,19 @@ export function MediaNotch() {
 							stroke="#30d158"
 							strokeWidth="2"
 							strokeLinecap="round"
+							strokeLinejoin="round"
 						>
-							<path d="M4 6h10M4 12h16M4 18h12" />
+							<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+							<path d="M8 8h8M8 12h5" />
 						</svg>
 					</div>
 				</div>
-				<div
-					style={{
-						flex: "1",
-						minWidth: "0",
-						display: "flex",
-						flexDirection: "column",
-						gap: "10px",
-					}}
-				>
-					<span
-						style={{
-							fontSize: "13px",
-							color: "rgba(255,255,255,0.2)",
-							whiteSpace: "nowrap",
-							overflow: "hidden",
-							textOverflow: "ellipsis",
-						}}
-					>
+				<div className="flex-1 min-w-0 flex flex-col gap-[10px]">
+					<span className={`${LYRIC} text-[13px] text-[rgba(255,255,255,0.2)]`}>
 						Count the lights along the road
 					</span>
-					<span
-						style={{
-							fontSize: "17px",
-							fontWeight: "500",
-							whiteSpace: "nowrap",
-							overflow: "hidden",
-							textOverflow: "ellipsis",
-						}}
-					>
-						We were never far from home
-					</span>
-					<span
-						style={{
-							fontSize: "13px",
-							color: "rgba(255,255,255,0.2)",
-							whiteSpace: "nowrap",
-							overflow: "hidden",
-							textOverflow: "ellipsis",
-						}}
-					>
+					<span className={`${LYRIC} text-[17px] font-medium`}>We were never far from home</span>
+					<span className={`${LYRIC} text-[13px] text-[rgba(255,255,255,0.2)]`}>
 						Leave the window open tonight
 					</span>
 				</div>

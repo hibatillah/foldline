@@ -85,15 +85,12 @@ export function BatteryRingIcon() {
 
 export function WaveBars() {
 	return (
-		<span
-			aria-hidden="true"
-			style={{ display: "flex", alignItems: "center", gap: "2px", width: "18px", height: "12px" }}
-		>
-			<span style={{ width: "2px", height: "5px", borderRadius: "1px", background: "#fff" }} />
-			<span style={{ width: "2px", height: "10px", borderRadius: "1px", background: "#fff" }} />
-			<span style={{ width: "2px", height: "12px", borderRadius: "1px", background: "#fff" }} />
-			<span style={{ width: "2px", height: "8px", borderRadius: "1px", background: "#fff" }} />
-			<span style={{ width: "2px", height: "4px", borderRadius: "1px", background: "#fff" }} />
+		<span aria-hidden="true" className="flex items-center gap-[2px] w-[18px] h-[12px]">
+			<span className="w-[2px] h-[5px] rounded-[1px] bg-[#fff]" />
+			<span className="w-[2px] h-[10px] rounded-[1px] bg-[#fff]" />
+			<span className="w-[2px] h-[12px] rounded-[1px] bg-[#fff]" />
+			<span className="w-[2px] h-[8px] rounded-[1px] bg-[#fff]" />
+			<span className="w-[2px] h-[4px] rounded-[1px] bg-[#fff]" />
 		</span>
 	);
 }
