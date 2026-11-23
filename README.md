@@ -6,8 +6,6 @@ Foldline puts a slim black pill at the top of your Windows screen. Point at it a
 
 It is written in Rust and draws straight to the screen with Direct2D: no UI framework, no web view. It idles at 0 % CPU and stays under 50 MB of memory. Foldline is free and open source, with no account and no paid tier.
 
-<a href="https://apps.microsoft.com/detail/9NGTV96SZDS7"><img src="https://shieldcn.dev/badge/Get%20it%20on-Microsoft%20Store-fff.svg?font=geist&logo=ri%3ABsMicrosoft&logoColor=3b82f6" alt="Get it on Microsoft Store" height="28"></a>
-
 ![The open notch on the media page with the track, the controls and synced lyrics](assets/images/notch-media.png)
 
 ## Make it yours
@@ -25,8 +23,8 @@ The steps by hand are in [add your own content](docs/how-to/add-your-content.md)
 
 Requirements: Windows 10 or 11, 64-bit (tested on Windows 11). The media page needs a player that appears in the Windows media controls.
 
-- **Microsoft Store:** [Foldline on the Microsoft Store](https://apps.microsoft.com/detail/9NGTV96SZDS7). Updates come through the Store.
-- **Installer:** run `foldline-v<version>-windows-x64-setup.exe` from the GitHub releases. It is not code-signed, so Windows may show a SmartScreen warning. A stable installer offers **Start Foldline when Windows starts** (on by default). To update, run a newer installer, and it asks before replacing the installed copy. A pre-release (`1.1.0-beta.1`) installs beside every other copy and never replaces one. The rules are in [cut a release](docs/how-to/cut-a-release.md#updating).
+- **GitHub releases only:** each release holds the installer and the exe. Foldline is not on the Microsoft Store ([why](docs/explanation/microsoft-store-attempt.md)).
+- **Installer:** run `foldline-v<version>-windows-x64-setup.exe` from the GitHub releases. It is not code-signed, so Windows shows "Windows protected your PC" (SmartScreen): choose **More info**, then **Run anyway**. A stable installer offers **Start Foldline when Windows starts** (on by default). To update, click **Check for updates** on the settings window's About page (it compares your version with the latest release and, when one is newer, **Download** opens the release page), or run a newer installer, and it asks before replacing the installed copy. A pre-release (`1.1.0-beta.1`) installs beside every other copy and never replaces one. The rules are in [cut a release](docs/how-to/cut-a-release.md#updating).
 
 ## What it includes
 
@@ -54,14 +52,14 @@ Activities are what the collapsed pill shows while something happens. They cover
 
 ## Performance
 
-Measured on 2026-11-19 on Windows 11 with a Ryzen 5 8645HS, as a release build with the shelf page open:
+Measured on 2026-11-22 on Windows 11 with a Ryzen 5 8645HS, as a release build with the shelf page open:
 
 | Measurement | Result |
 | --- | ---: |
-| Memory at start | 23.9 MB |
+| Memory at start | 23.8 MB |
 | CPU while idle | 0 % |
-| CPU per open and close | 159 ms |
-| Memory growth over 10 open and close cycles | 2.8 MB |
+| CPU per open and close | 116 ms |
+| Memory growth over 10 open and close cycles | 0.3 MB |
 
 It is one run on one PC, and it did not cover music playback or live lyrics. The full numbers, limits and how to repeat them are in [performance baseline](docs/reference/performance-baseline.md).
 
@@ -69,14 +67,15 @@ It is one run on one PC, and it did not cover music playback or live lyrics. The
 
 - Windows only, at the top of one screen (main, focused or chosen). Multi-monitor behavior is in [layout](docs/reference/layout.md#where-the-notch-sits-on-several-monitors).
 - Microphone and camera show that an app has the device open, not that it is recording.
-- **Notification delay in the installer version.** The `-setup.exe` version shows a notification later than Windows does, because Windows doesn't tell it about new ones, so it reads Windows' notification database instead. That usually adds about a third of a second. The first one after start-up takes a few seconds, and some take much longer. The Microsoft Store version doesn't have this delay. It shows a notification about a third of a second after Windows' own banner. Pick the Store version when timing matters ([why](docs/explanation/notification-delivery.md)).
+- **Notification delay in the installer version.** The `-setup.exe` version shows a notification later than Windows does, because Windows doesn't tell it about new ones, so it reads Windows' notification database instead. That usually adds about a third of a second. The first one after start-up takes a few seconds, and some take much longer. A packaged (MSIX) build doesn't have this delay, but no release is packaged, so the installer version is the only build and the delay applies to every release ([why](docs/explanation/notification-delivery.md)).
 - The calendar reads an iCal address, not a Google sign-in. Treat the address like a password.
 - Prayer times are within a few minutes of published tables. Check them against your local authority before relying on them.
 
 ## Privacy
 
-Nothing in the app contacts a Foldline server: no account, no sign-in, no analytics and no update check. Everything stays on your machine except:
+Nothing in the app contacts a Foldline server: no account, no sign-in, no analytics and no automatic update check. Everything stays on your machine except:
 
+- **Update check:** only when you click **Check for updates** on the settings window's About page, GitHub receives a request for the latest release, with Foldline's name and version in the User-Agent and nothing else about you or your settings. The notch itself never does this.
 - **Lyrics:** when a track starts, [LRCLIB](https://lrclib.net) receives the artist, title, album and length. Set `FOLDLINE_LYRICS=off` to stop lookups.
 - **Calendar:** if you set an iCal link, Foldline downloads that file every 15 minutes.
 - **Weather:** only with the Weather page on, [MET Norway](https://api.met.no) receives the coordinates of your chosen place, at start and every half hour.

@@ -30,8 +30,8 @@ Opening a pull request, or pushing a commit to one, means you accept this agreem
 
 1. **Your right to contribute.** The contribution is your own work, or you have the right to submit it under these terms. It contains no material under a license that the GNU GPL version 3 or later does not allow.
 2. **License.** You license the contribution under the GNU General Public License, version 3 or later, like the rest of the project. You keep the copyright.
-3. **Distribution by the maintainer.** You give the maintainer a worldwide, perpetual, irrevocable, royalty-free, non-exclusive license to copy, modify and distribute the contribution, in source and binary form, as part of Foldline, through any channel. This includes the Microsoft Store, free of charge. The maintainer may sublicense the contribution to Microsoft only as far as the Store needs to distribute Foldline for the maintainer. None of this takes away a right the GNU GPL gives to everyone who receives the source.
-4. **Free of charge.** The maintainer distributes Foldline free of charge, in the Microsoft Store and everywhere else, and takes no profit from your contribution: no price, no paid tiers, no in-app purchases and no advertising.
+3. **Distribution by the maintainer.** You give the maintainer a worldwide, perpetual, irrevocable, royalty-free, non-exclusive license to copy, modify and distribute the contribution, in source and binary form, as part of Foldline, through any channel. None of this takes away a right the GNU GPL gives to everyone who receives the source.
+4. **Free of charge.** The maintainer distributes Foldline free of charge, everywhere, and takes no profit from your contribution: no price, no paid tiers, no in-app purchases and no advertising.
 5. **No warranty.** The contribution is provided as it is, as the GNU GPL describes.
 
 If you can't agree to this, open an issue instead of a pull request.

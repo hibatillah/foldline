@@ -13,6 +13,6 @@ The name **Foldline**, the Foldline logo, the tile and the other marks in `asset
   - the texts in `crates/*/locales` and the images in `assets/branding/`
   - any store listing, website or message that offers it
 - **You may say, truthfully,** that your software is based on Foldline or built from its source, and link to this repository, as long as that doesn't suggest the maintainer made, approved or supports it.
-- The builds the maintainer publishes, which are the Microsoft Store listing of Foldline and the releases of this repository, are the official Foldline.
+- The builds the maintainer publishes, which are the releases of this repository, are the official Foldline.
 
 Questions about using the name: open an issue in this repository.

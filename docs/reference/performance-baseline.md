@@ -7,8 +7,8 @@ Raw measurement archives are not kept under `docs/`.
 
 ## Test setup
 
-- Date: 2026-11-19, Asia/Jakarta.
-- Command: `scripts/perf.sh`. The recorded run is a complete `scripts/perf.sh --no-build` run on the release build of the working tree; every gate passed.
+- Date: 2026-11-22, Asia/Jakarta.
+- Command: `scripts/perf.sh`. The recorded run is a complete `scripts/perf.sh` run that built the release first; every gate passed.
 - Windows 11 Home build 26300.9974; AMD Ryzen 5 8645HS, 6 cores / 12 logical processors; 15.3 GiB usable RAM.
 - Rust 1.99.0, MSVC x64 target, the repository's size-optimized release profile.
 - CPU is process CPU time divided by wall time, expressed as a percentage of one core.
@@ -19,41 +19,34 @@ Raw measurement archives are not kept under `docs/`.
 
 ### Shelf page only
 
-After start the notch held 23.9 MiB private working set and 1028 handles.
+After start the notch held 23.8 MiB private working set and 977 handles.
 
 | Measurement | Result | Limit |
 | --- | ---: | ---: |
-| Initial private working set | 23.9 MiB | 30 MiB |
+| Initial private working set | 23.8 MiB | 30 MiB |
 | Collapsed idle CPU | 0% | 0.1% |
-| CPU time per open/close cycle | 159 ms | 400 ms |
-| RAM growth over 10 cycles | 2.8 MiB | 3 MiB |
-| Handle growth over 10 cycles | -10 | 20 |
+| CPU time per open/close cycle | 116 ms | 400 ms |
+| RAM growth over 10 cycles | 0.3 MiB | 3 MiB |
+| Handle growth over 10 cycles | -7 | 20 |
 | Open events | 20/20 | exactly 20 |
 | Idle CPU after cycles | 0% | 0.1% |
-
-One idle sample was taken again because a notification card disturbed it; the second sample is the one recorded (the script's rule, see [run the performance check](../how-to/run-the-perf-check.md)).
 
 ### Other scenarios
 
 | Scenario | Measurement | Result | Limit |
 | --- | --- | ---: | ---: |
-| Devices page (`shelf,devices`, 5 cycles) | CPU time per open/close cycle | 178 ms | 400 ms |
-| | Idle CPU after cycles | 0.078% | 0.1% |
-| | Handle growth | -7 | 20 |
+| Devices page (`shelf,devices`, 5 cycles) | CPU time per open/close cycle | 169 ms | 400 ms |
+| | Idle CPU after cycles | 0% | 0.1% |
+| | Handle growth | -6 | 20 |
 | Stats page only (open 3 s, then closed) | Idle CPU after closing | 0% | 0.1% |
-| | Handle growth | -9 | 20 |
+| | Handle growth | 0 | 20 |
 | Pinned (`shelf,stats`, pinned open on the shelf, pointer away) | Idle CPU | 0% | 0.1% |
-| | Handle growth | -8 | 20 |
+| | Handle growth | 0 | 20 |
 | | Stays open with the pointer away | yes | required |
 
 ### Not run
 
 `--with-media`, `--extended`, `--lyrics-only` and `--screen-mode` were not run. This baseline did not measure music playback, live lyrics, the notch held open by the pointer, swiping, release snap, or a maximized window. Lock/unlock recovery is checked by hand; see [test and snapshot](../how-to/test-and-snapshot.md).
-
-### Not established
-
-- Handle growth on the stats scenario read 159 (limit 20) in the first run of this build, and -9 in the second run, the one recorded above. The stats code closes its PDH query on release, so a one-time cost of the first PDH or DXGI use is a likely cause, but this is not confirmed.
-- Confirming it needs a stats run with several open/close cycles or a handle-type breakdown.
 
 ## Reading the numbers
 

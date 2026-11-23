@@ -2,7 +2,7 @@
 
 > **How-to.** Read when: you publish a version, regenerate the license list, or explain how users update. Skip if: you only build locally; see [build, run and debug](build-run-and-debug.md).
 
-The Microsoft Store package is built separately: see [build and test the MSIX](build-and-test-the-msix.md).
+A release is the GitHub release: the installer and the exe, both unsigned, so Windows shows "Windows protected your PC" (SmartScreen) until the user chooses **More info**, then **Run anyway**. Foldline is not on the Microsoft Store ([why](../explanation/microsoft-store-attempt.md)); the MSIX is not released, see [build and test the MSIX](build-and-test-the-msix.md).
 
 Two GitHub Actions workflows exist. `release.yml` does the release. `ci.yml` only checks pull requests into `master`; nothing runs on a push to `master`, so run the checks yourself before
 you tag a commit that did not come through a pull request.
@@ -57,35 +57,6 @@ build under the wrong number. It then produces a release named after the tag wit
 
 `<name>` is the `[[bin]]` name in `crates/notch/Cargo.toml` (`foldline`), so renaming the executable renames the installer with no workflow change.
 
-## Publish to the Microsoft Store
-
-The `store` job of `release.yml` runs after the release job for a plain version tag (no suffix) and sends the same code to
-the Store as an update of the live listing. It builds the MSIX with `scripts/build-msix.sh`, keeps it for 30 days as the
-workflow artifact `msix`, then runs `msstore reconfigure` and `msstore publish` from the Microsoft Store Developer CLI. The
-release page carries the installer only. The job is skipped for a pre-release tag and while the repository variable
-`STORE_PRODUCT_ID` does not exist.
-
-The CLI only updates an app that is already live, and only a free one, so set it up once after the first publication:
-
-1. Make the first submission in Partner Center (the CLI cannot create the app or its first publication).
-2. Associate a Microsoft Entra tenant with the Partner Center account, register an application in Microsoft Entra ID,
-   and add it in Partner Center (Account settings, User management, **Microsoft Entra applications**) with the Manager role.
-3. In the repository settings (Settings, Secrets and variables, Actions) add these secrets, found as follows:
-
-   | Name | Where it comes from |
-   | --- | --- |
-   | `AZURE_AD_TENANT_ID` | entra.microsoft.com, Identity, Overview, **Tenant ID** |
-   | `AZURE_AD_APPLICATION_CLIENT_ID` | Entra, Identity, Applications, App registrations, your app, **Application (client) ID** |
-   | `AZURE_AD_APPLICATION_SECRET` | the same app, Certificates & secrets, new client secret; its value is shown once |
-   | `SELLER_ID` | Partner Center, Account settings, the publisher (seller) ID |
-
-   Add the variable `STORE_PRODUCT_ID` (the Store product ID of the listing, shown in Partner Center). Set the variable
-   `STORE_NO_COMMIT` to `true` to upload a draft and press Submit in Partner Center yourself.
-4. Create the environment `microsoft-store` and require a reviewer, so each submission waits for an approval.
-
-Store users receive an update through the Store; someone who installed with the installer runs the newer installer. The
-job has not run against a live listing yet. The Store version is `major.minor.patch` plus `.0` ([version rule](../explanation/msix-packaging.md#version-rule)).
-
 ## Third-party licenses
 
 `THIRD-PARTY-LICENSES.txt` holds the license texts copied from the sources of every crate linked into the two
@@ -96,7 +67,7 @@ text. Crates whose sources contain no license file are listed at the end of the 
 
 ## Updating
 
-A user updates by downloading the newer `-setup.exe` and running it. What happens depends on the version in the
+A user updates with the **Check for updates** button on the settings window's About page, which compares the running version with the latest GitHub release and, when one is newer, opens the release page ([About](../reference/settings-window.md#about)), then downloads the newer `-setup.exe` and runs it. Nothing downloads or installs for the user. What happens depends on the version in the
 installer; `installer/foldline.iss` decides it from `AppVersion`: a version with a `-` suffix (`alpha`, `beta`, `rc`) is a
 dev build, any other is stable.
 
@@ -109,14 +80,14 @@ dev build, any other is stable.
 | "Start Foldline when Windows starts" task and `Run` entry | offered | none |
 
 After a replacement the installer closes the running notch, replaces it in place and starts it again. Several dev builds
-can be installed side by side. Nothing in the notch checks for new versions or uses the network for it.
+can be installed side by side. The notch (`foldline.exe`) never checks for new versions; only a click on the About button does.
 
 Never change the stable `AppId` (`AppGuid` in `installer/foldline.iss`), or the installer stops recognising earlier stable
 installs.
 
 Copies share state:
 
-- All copies read and write `%APPDATA%\Foldline\settings.txt`, and so does the Store version.
+- All copies read and write `%APPDATA%\Foldline\settings.txt`, (the MSIX copy too, if you built one).
 - The settings window is single-instance across copies.
 - The settings window's **Start with Windows** switch (General page) writes the `Foldline` value of the `Run` key (`crates/settings/src/startup/`; an MSIX build switches its `FoldlineStartup` startup task instead), the same value the stable copy's installer task writes
   (`installer/foldline.iss`). A dev copy writes one only when the user switches the toggle. A `Notch` value from an earlier build still counts as on and is removed when the switch changes.

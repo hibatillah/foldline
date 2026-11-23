@@ -2,7 +2,9 @@
 
 > **How-to.** Read when: you build the MSIX package of Foldline, install it on your own PC to test it, or find where a packaged copy keeps its data. Skip if: you build the Inno Setup installer or publish a release (see [cut a release](cut-a-release.md)), or want the reasons for the package's settings (see [MSIX packaging](../explanation/msix-packaging.md)).
 
-The MSIX is built unsigned, for the Microsoft Store, which signs it. You do not need a certificate to test it: Developer Mode lets Windows register the package from its staging folder. Signing and Store submission are out of scope here.
+There is no Store release and no release ships the MSIX; the files are kept as history. See [the Microsoft Store attempt](../explanation/microsoft-store-attempt.md).
+
+The MSIX is built unsigned, only for local testing (it was built this way for the Microsoft Store, which would have signed it). You do not need a certificate to test it: Developer Mode lets Windows register the package from its staging folder. Signing and Store submission are out of scope here.
 
 ## Prerequisites
 
@@ -107,7 +109,6 @@ Treat these as open when you test; none is confirmed by a packaged run.
 - **Start with Windows from the settings window.** Whether `foldline-settings.exe`, started by `foldline.exe` with `CreateProcess`, inherits the package identity. Without identity the window falls back to the `Run` key and shows "Classic startup entry; the packaged app may ignore it" (`crates/settings/src/startup/mod.rs`). Open the General page from the packaged notch and switch the setting on and off, then read **Settings > Apps > Startup**.
 - **Notification listener access.** Whether the `userNotificationListener` capability gives the packaged notch the access prompt and the notifications.
 - **Uninstall leftovers.** What stays in `%APPDATA%\Foldline` and `HKCU` after `Remove-AppxPackage`. Uninstall runs none of the notch's code.
-- **Store acceptance of `unvirtualizedResources`.** Microsoft describes the capability as meant for specific cases; whether certification approves it for Foldline is not known.
 - **The Store version rule.** The first number must not be 0; see [the version rule](../explanation/msix-packaging.md#version-rule).
 - **Coexistence with an Inno install.** The two have separate identities but share `%APPDATA%\Foldline` and the `Run` value name `Foldline`. Do not run both at once until this is checked.
 

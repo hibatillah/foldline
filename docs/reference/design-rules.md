@@ -167,7 +167,7 @@ The picture of the redesigned window leads where it differs from earlier text. T
   the card and 3:1 as an icon on a block; as an icon on the frame it is held at 2:1 (over a bright wallpaper in the dark
   theme, over a mid-grey desktop in the light theme).
 - **The sidebar** is 216 px wide with 16 px of padding above, 10 px at the sides and 12 px below. It opens with the brand (the tile 16 px from the window top and 18 px from the left edge; the squared tile logo, 28 px, then "Foldline" in `text_lg`
-  semibold and the version in `text_xs`, muted, 8 px apart, with 36 px below it before the first item), then the group "Foldline" (General, Pages, Behavior, Advanced) with no label and the labelled group "Page settings" (`text_sm`, muted, 12 px above the label and 5 px below: Calendar, Timer, Shalat, System stats, Weather), with **About** at the bottom, without a label. The empty sidebar (the strips between and below the items, at their sides, and the group labels) moves the window like the header; the items never do. Items are 36 px
+  semibold and the version in `text_xs`, muted, 8 px apart, with 36 px below it before the first item), then the group "Foldline" (General, Behavior, Pages, Advanced) with no label and the labelled group "Page settings" (`text_sm`, muted, 12 px above the label and 5 px below: Calendar, Timer, Shalat, System stats, Weather), with **About** at the bottom, without a label. The empty sidebar (the strips between and below the items, at their sides, and the group labels) moves the window like the header; the items never do. Items are 36 px
   high and 1 px apart, 14 px text 9 px from a 17 px blue icon, 10 px of side padding, all in the foreground color; the selected one differs only by a rounded (8 px), faint fill: its text keeps the same color and weight. The tile is blue in a
   stable build and indigo in a pre-release build, in both themes. The icons are General the hex nut (the same drawing as
   the notch's gear), Pages Lucide "layers", Behavior "puzzle", Calendar "calendar-days", Timer "timer", Shalat "moon-star" (the shalat
@@ -178,7 +178,7 @@ The picture of the redesigned window leads where it differs from earlier text. T
   "Settings › <Page>" (`text_base`, 22 px from the pane's edge, 10 px around the chevron; Settings muted, the page in the accent blue and medium weight) with the window buttons (minimize, maximize, close) at
   the right end, and it is the drag area together with the brand strip. The window draws it itself and not the component
   library's title bar: the header has square corners because the pane is flush with the window, so the close button's red hover fills the window's top-right corner.
-- **A redesigned page opens with its first section**, as the v7 boards do: General, Pages, Behavior, Advanced
+- **A redesigned page opens with its first section**, as the v7 boards do: General, Behavior, Pages, Advanced
   and About have no description sentence (`Page::plain`); the page settings keep theirs (one sentence in `text_base`
   and the full title color) until their boards are built. A section heading has no icon; a block that needs no name (the files on About) has no heading.
 - **Pictures explain a setting where words alone would not**: the three Hide-when-idle pictures, the city map, the two

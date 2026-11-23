@@ -18,7 +18,7 @@ New to the project? Start with [ONBOARDING.md](../ONBOARDING.md) at the reposito
 | [Test and snapshot](how-to/test-and-snapshot.md) | writing a test, rendering page pictures, the manual checklist |
 | [Run the performance check](how-to/run-the-perf-check.md) | after host, animation, timer or drawing changes, and before a release |
 | [Cut a release](how-to/cut-a-release.md) | publishing a version, the installer, license list, how users update |
-| [Build and test the MSIX](how-to/build-and-test-the-msix.md) | building the Store package, installing it locally, checking where a packaged copy keeps its data |
+| [Build and test the MSIX](how-to/build-and-test-the-msix.md) | building the MSIX (unused, kept for a later attempt), installing it locally, checking where a packaged copy keeps its data |
 
 ## Reference: look something up
 
@@ -43,4 +43,5 @@ New to the project? Start with [ONBOARDING.md](../ONBOARDING.md) at the reposito
 | [Drawing model](explanation/drawing-model.md) | changing how something is drawn, adding a widget, or asking why the notch uses no UI framework |
 | [Performance budget](explanation/performance-budget.md) | changing timers, animation or drawing |
 | [MSIX packaging](explanation/msix-packaging.md) | changing the MSIX manifest or version rule, or asking why the package declares what it does |
-| [Notification delivery](explanation/notification-delivery.md) | changing the notification listener, or explaining why the installer version shows notifications later than the Store version |
+| [The Microsoft Store attempt](explanation/microsoft-store-attempt.md) | asking why Foldline is not on the Microsoft Store, or planning to try again |
+| [Notification delivery](explanation/notification-delivery.md) | changing the notification listener, or explaining why the installer version shows notifications later than a packaged build |

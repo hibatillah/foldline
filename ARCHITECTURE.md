@@ -75,13 +75,13 @@ The two programs never call each other's code. The settings file and one window 
 | calendar cache | `%APPDATA%\Foldline\calendar.ics` | `pages/calendar/` |
 | `ShowBanner` values the notch replaced | `%APPDATA%\Foldline\notification-banners.txt`, put back after a crash | `host/notification_banners/` |
 | clipboard history | memory only | `pages/clipboard/history.rs` |
-| Start with Windows | the user's `Run` registry value (stable installer), or the package's `FoldlineStartup` task (Store version) | `crates/settings/src/startup/` |
+| Start with Windows | the user's `Run` registry value (stable installer), or the packaged build's `FoldlineStartup` task (the MSIX is not released) | `crates/settings/src/startup/` |
 
 What the user is told about each is in [README privacy](README.md#privacy).
 
 ## External integrations
 
-Network requests use WinRT `Windows.Web.Http.HttpClient` on a worker thread. Nothing in either program contacts a Foldline server: there is no account, sign-in or update check.
+Network requests use WinRT `Windows.Web.Http.HttpClient` on a worker thread. Nothing in either program contacts a Foldline server: there is no account or sign-in, and the only update check is the About page's button, which asks GitHub for the latest release on a click.
 
 | Service | Used for | Code |
 | --- | --- | --- |

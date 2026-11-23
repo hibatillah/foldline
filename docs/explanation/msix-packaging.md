@@ -2,7 +2,9 @@
 
 > **Explanation.** Read when: you change the MSIX manifest, the version rule, or how Start with Windows works in a packaged build, or you ask why the package declares what it does. Skip if: you only build or install the package (see [build and test the MSIX](../how-to/build-and-test-the-msix.md)).
 
-Foldline ships two ways: the Inno Setup installer (`installer/foldline.iss`) and an unsigned MSIX for the Microsoft Store (`installer/msix/AppxManifest.xml`, built by `scripts/build-msix.sh`). The programs are the same; the package changes how Windows treats their files, registry writes and startup entry. This page gives the reasons for each manifest choice and says what has been tested.
+There is no Store release and no release ships the MSIX; the files are kept as history. See [the Microsoft Store attempt](microsoft-store-attempt.md).
+
+The Inno Setup installer (`installer/foldline.iss`) is the only build Foldline ships. The MSIX (`installer/msix/AppxManifest.xml`, built by `scripts/build-msix.sh`) is built only for local testing; it was built unsigned for the Microsoft Store while that release was attempted. The programs are the same; the package changes how Windows treats their files, registry writes and startup entry. This page gives the reasons for each manifest choice and says what has been tested.
 
 ## Shape of the package
 
@@ -35,7 +37,7 @@ Tested on 2026-11-18 on Windows 11 (build 26300), with commands run through `Inv
 
 The registry result matters for [hiding Windows' notification banners](../how-to/hide-windows-popups.md): that feature writes `HKCU` notification settings that Windows itself reads, and a redirected write would change nothing.
 
-Not tested: whether the Store accepts `unvirtualizedResources` (Microsoft describes it as a capability for specific cases), and what an uninstall leaves behind. The elements are kept in the manifest as tested.
+The Store denied `unvirtualizedResources` in certification ([the Microsoft Store attempt](microsoft-store-attempt.md#result)). Not tested: what an uninstall leaves behind. The elements are kept in the manifest as tested.
 
 ## Start with Windows
 
@@ -57,7 +59,7 @@ An MSIX version has four numbers. `scripts/build-msix.sh` takes the workspace ve
 
 The same plain version is passed to the build as `FOLDLINE_RELEASE_VERSION`, so both programs carry the blue stable tile; `scripts/check-icon.sh` then refuses an executable with the indigo `tile-dev` icon, because the package's logos are blue.
 
-The Store documentation says the first number cannot be 0, so the workspace version must start at `1.0.0` or later; the script does not map a `0.x` version.
+The Store documentation says the first number cannot be 0. The workspace version is `0.6.0`, and the script accepts it (it is `major.minor.patch`) and builds `0.6.0.0` without mapping it, a version the Store refuses. Building the MSIX again needs a workspace version of `1.0.0` or later, or a mapping added to `scripts/build-msix.sh`.
 
 ## Two installs side by side
 
