@@ -6,6 +6,7 @@ use std::rc::Rc;
 use gpui::{AnyElement, App, ElementId, Window, div, img, prelude::*, px};
 use gpui_component::{ActiveTheme as _, Icon, IconName, h_flex, v_flex};
 
+use super::update_card::UpdateView;
 use crate::{brand, palette, version};
 
 /// What a button does when clicked.
@@ -54,23 +55,16 @@ pub fn pill(id: &str, label: &'static str, icon: Option<IconName>, handler: Hand
         .into_any_element()
 }
 
-/// The app card: the tile, the name and version at the left, where updates come from at the right. The store link is
-/// left out while it has no handler.
-pub fn app_card(open_store: Option<Handler>, cx: &App) -> AnyElement {
+/// The app card: the tile, the name and version at the left, the update note and button at the right.
+pub(super) fn app_card(update: UpdateView, on_click: Handler, cx: &App) -> AnyElement {
     let theme = cx.theme();
-    let store_link = open_store
-        .map(|handler| pill("open-store", tr!("about.open_in_store"), Some(IconName::ExternalLink), handler, cx));
+    let UpdateView { note, button, .. } = update;
     let updates = h_flex()
         .flex_none()
         .gap_3()
         .items_center()
-        .child(
-            div()
-                .text_size(px(UPDATES_NOTE_SIZE))
-                .text_color(palette::muted(cx))
-                .child(tr!("about.updates_from_store")),
-        )
-        .children(store_link);
+        .children(note.map(|note| div().text_size(px(UPDATES_NOTE_SIZE)).text_color(palette::muted(cx)).child(note)))
+        .child(pill("update", button, None, on_click, cx));
     h_flex()
         .w_full()
         .items_center()

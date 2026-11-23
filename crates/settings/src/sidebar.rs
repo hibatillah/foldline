@@ -261,6 +261,15 @@ mod tests {
     }
 
     #[test]
+    fn the_notch_group_reads_general_behavior_pages_advanced() {
+        let entries = crate::sections::all();
+        let notch_group =
+            grouped(&entries).into_iter().find(|(group, _)| *group == NavGroup::Notch).expect("notch group");
+        let titles = notch_group.1.iter().map(|&index| entries[index].page.title).collect::<Vec<_>>();
+        assert_eq!(titles, ["General", "Behavior", "Pages", "Advanced"]);
+    }
+
+    #[test]
     fn advanced_sits_in_the_notch_group() {
         let entries = crate::sections::all();
         let advanced = entries.iter().find(|entry| entry.icon == crate::icons::ADVANCED).expect("advanced entry");

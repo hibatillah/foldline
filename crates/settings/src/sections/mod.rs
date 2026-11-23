@@ -38,8 +38,8 @@ pub fn apply_all(settings: &mut Settings, values: &[(&str, String)]) {
 pub fn all() -> Vec<NavEntry> {
     vec![
         NavEntry::new(NavGroup::Notch, icons::GENERAL, general::page()),
-        NavEntry::new(NavGroup::Notch, icons::PAGES, pages::page()),
         NavEntry::new(NavGroup::Notch, icons::BEHAVIOR, behavior::page()),
+        NavEntry::new(NavGroup::Notch, icons::PAGES, pages::page()),
         NavEntry::new(NavGroup::Notch, icons::ADVANCED, advanced::page()),
         NavEntry::new(NavGroup::PageSettings, icons::CALENDAR, calendar::page()),
         NavEntry::new(NavGroup::PageSettings, icons::TIMER, timer::page()),

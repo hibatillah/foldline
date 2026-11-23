@@ -26,6 +26,7 @@ mod startup;
 mod stepper;
 mod switch;
 mod tag;
+mod updates;
 mod version;
 
 use std::rc::Rc;

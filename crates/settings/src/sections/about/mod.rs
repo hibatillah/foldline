@@ -2,6 +2,7 @@
 
 mod licenses;
 mod paths;
+mod update_card;
 pub(super) mod widgets;
 
 use crate::i18n::tr;
@@ -12,12 +13,12 @@ use gpui_component::{IconName, WindowExt as _, notification::Notification};
 
 use crate::{
     layout::{Group, Item, Page},
-    links::{RELEASES_URL, REPOSITORY_URL},
+    links::{LATEST_RELEASE_URL, RELEASES_URL, REPOSITORY_URL},
+    updates,
 };
 use paths::{DataPaths, Opening};
+use update_card::{UpdateAction, update_view};
 use widgets::Handler;
-
-const STORE_PRODUCT_ID: &str = "9NGTV96SZDS7";
 
 /// What a row's button does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -109,15 +110,13 @@ fn handler_for(action: Action) -> Handler {
     }
 }
 
-/// The Microsoft Store address of the app, or nothing while there is no product id.
-fn store_address(product_id: &str) -> Option<String> {
-    (!product_id.is_empty()).then(|| format!("ms-windows-store://pdp/?productid={product_id}"))
-}
-
-/// Opens the app's Store page; none while `STORE_PRODUCT_ID` is empty, so the link stays hidden.
-fn open_store() -> Option<Handler> {
-    let address = store_address(STORE_PRODUCT_ID)?;
-    Some(Rc::new(move |_window, cx| cx.open_url(&address)))
+/// The click handler of the card's button; only the check button starts a check, and the download opens the fixed address.
+fn update_handler(action: UpdateAction) -> Handler {
+    match action {
+        UpdateAction::Check => Rc::new(|_window, cx| updates::start(cx)),
+        UpdateAction::Download => widgets::open_url_handler(LATEST_RELEASE_URL),
+        UpdateAction::None => Rc::new(|_window, _cx| {}),
+    }
 }
 
 fn items(rows: Vec<Row>) -> Vec<Item> {
@@ -134,7 +133,9 @@ fn items(rows: Vec<Row>) -> Vec<Item> {
 
 pub fn page() -> Page {
     let card = Item::picture_row(|_window, cx| {
-        div().px(px(2.0)).py(px(4.0)).child(widgets::app_card(open_store(), cx)).into_any_element()
+        let update = update_view(&updates::state());
+        let on_click = update_handler(update.action);
+        div().px(px(2.0)).py(px(4.0)).child(widgets::app_card(update, on_click, cx)).into_any_element()
     });
     Page::plain(
         tr!("about.title"),
@@ -163,23 +164,13 @@ mod tests {
     #[test]
     fn whats_new_opens_the_release_notes_and_the_source_button_opens_the_repository() {
         let rows = link_rows();
-        assert_eq!(rows[0].action, Action::Link("https://fold.encure.id/releases"));
+        assert_eq!(rows[0].action, Action::Link("https://fold.hibatillah.com/releases"));
         assert_eq!(rows[1].action, Action::Link("https://github.com/hibatillah/foldline"));
     }
 
     #[test]
     fn the_source_button_carries_the_github_icon() {
         assert!(matches!(link_rows()[1].icon, Some(IconName::GitHub)));
-    }
-
-    #[test]
-    fn an_empty_product_id_gives_no_store_address() {
-        assert_eq!(store_address(""), None);
-    }
-
-    #[test]
-    fn a_product_id_gives_the_store_page_address() {
-        assert_eq!(store_address("9ABC123DEF45").as_deref(), Some("ms-windows-store://pdp/?productid=9ABC123DEF45"));
     }
 
     #[test]

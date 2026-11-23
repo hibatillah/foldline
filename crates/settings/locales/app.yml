@@ -455,12 +455,24 @@ about.source_note:
 about.github:
   en: "GitHub"
   id: "GitHub"
-about.updates_from_store:
-  en: "Updates come from the Microsoft Store"
-  id: "Pembaruan datang dari Microsoft Store"
-about.open_in_store:
-  en: "Open in Store"
-  id: "Buka di Store"
+about.check_updates:
+  en: "Check for updates"
+  id: "Periksa pembaruan"
+about.checking:
+  en: "Checking..."
+  id: "Memeriksa..."
+about.up_to_date:
+  en: "Foldline is up to date"
+  id: "Foldline sudah yang terbaru"
+about.update_available:
+  en: "Version %{version} is available"
+  id: "Versi %{version} tersedia"
+about.check_failed:
+  en: "Could not check for updates"
+  id: "Tidak bisa memeriksa pembaruan"
+about.download:
+  en: "Download"
+  id: "Unduh"
 about.version:
   en: "Version %{version}"
   id: "Versi %{version}"
