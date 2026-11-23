@@ -1,0 +1,654 @@
+{
+	"navAria": "Main",
+	"langLabel": "Language",
+	"nav": {
+		"features": "Features",
+		"install": "Install",
+		"faq": "FAQ",
+		"releases": "Releases",
+		"cta": "Download"
+	},
+	"hero": {
+		"a": "Meet Foldline",
+		"b": "A tiny, extensible notch for the top of your Windows screen. Written in Rust.",
+		"cta": "Download for Windows",
+		"meta": "Version 0.6.0 · Windows 10 and 11 · Free and open source",
+		"side1": "Point at the pill.",
+		"side2": "It opens into the page you need and closes when you move away.",
+		"own": "Add your own content"
+	},
+	"proof": {
+		"a": "Built to stay out of the way",
+		"b": "0 % CPU and 23.8 MB of memory while idle",
+		"link": "Read the performance baseline",
+		"quote": "Measured on 22 November 2026: 23.8 MB of memory and 0 % CPU while idle, and 116 ms of CPU for each open and close.",
+		"source": "scripts/perf.sh · release build · Windows 11, Ryzen 5 8645HS"
+	},
+	"all": {
+		"a": "Everything at the top of your screen",
+		"b": "Ten pages and eleven short messages, each one optional"
+	},
+	"strip": {
+		"weather": {
+			"t": "Weather",
+			"d": "The next hours or days, with an optional rain alert."
+		},
+		"todo": {
+			"t": "Todo",
+			"d": "A list with no limit, and undo for the last removal."
+		},
+		"shelf": {
+			"t": "File shelf",
+			"d": "Hold up to twelve files, then drag them out."
+		},
+		"stats": {
+			"t": "System stats",
+			"d": "CPU, memory, GPU, network and disks."
+		}
+	},
+	"f": {
+		"open": {
+			"label": "Open",
+			"a": "Every page opens where you look",
+			"b": "and closes when you move away",
+			"p": "Point at the pill and it opens on your last page. Scroll, swipe two fingers or press 1 to 9 to switch, in the order you set."
+		},
+		"notice": {
+			"label": "Notice",
+			"a": "The pill tells you what changed",
+			"b": "then gives the space back",
+			"p": "Notifications open into a card with Dismiss and Open, and Reply when the app allows it. Volume, battery, Bluetooth and Caps Lock take the pill for a moment."
+		},
+		"plan": {
+			"label": "Plan",
+			"a": "Your day, one glance up",
+			"b": "calendar, timer, todo and weather",
+			"p": "The next events, a focus session with breaks, a list with undo and the coming hours of weather sit one move of the pointer away. Countdowns wait in the closed pill."
+		},
+		"keep": {
+			"label": "Keep",
+			"a": "Files and copies at hand",
+			"b": "without opening a window",
+			"p": "Drop files on the pill to park them and drag them out when you need them. The clipboard page keeps your last seven copies in memory only."
+		}
+	},
+	"light": {
+		"label": "Light",
+		"a": "Light on your PC",
+		"b": "and nothing to sign in to",
+		"p": "No account, no analytics and no automatic update check. The numbers come from one measured run.",
+		"perfTitle": "Performance",
+		"perf": [
+			{
+				"a": "Memory at start",
+				"b": "23.8 MB"
+			},
+			{
+				"a": "CPU while idle",
+				"b": "0 %"
+			},
+			{
+				"a": "CPU per open and close",
+				"b": "116 ms"
+			},
+			{
+				"a": "Memory growth over 10 cycles",
+				"b": "0.3 MB"
+			}
+		],
+		"note": "22 November 2026, Windows 11, Ryzen 5 8645HS, release build with the shelf page open. Music playback was not measured.",
+		"privTitle": "What leaves your PC",
+		"priv": [
+			{
+				"a": "Check for updates",
+				"b": "GitHub, only when you click it"
+			},
+			{
+				"a": "Synced lyrics",
+				"b": "Track details to LRCLIB"
+			},
+			{
+				"a": "Calendar",
+				"b": "Your iCal link, every 15 minutes"
+			},
+			{
+				"a": "Weather",
+				"b": "Your place to MET Norway"
+			}
+		],
+		"privNote": "Weather is sent only while its page is on. Settings, the todo list and the shelf stay in %APPDATA%\\Foldline."
+	},
+	"own": {
+		"label": "Extend",
+		"a": "Add a page of your own",
+		"b": "in its own folder",
+		"p": "Foldline is open source under GPL-3.0. A page, an activity or a page's settings live in their own folder, so a pull request touches only your files.",
+		"steps": [
+			{
+				"t": "Scaffold",
+				"d": "One script creates the folders and the one-line registration."
+			},
+			{
+				"t": "Build",
+				"d": "Describe it to the add-content agent, or follow the guide by hand."
+			},
+			{
+				"t": "Check",
+				"d": "A script lists anything outside your files for the pull request."
+			}
+		]
+	},
+	"install": {
+		"a": "Install in a minute",
+		"b": "from GitHub releases",
+		"steps": [
+			{
+				"n": "1",
+				"t": "Download the installer from the latest release."
+			},
+			{
+				"n": "2",
+				"t": "Windows shows Windows protected your PC. Choose More info, then Run anyway."
+			},
+			{
+				"n": "3",
+				"t": "Point at the pill at the top of your screen."
+			}
+		],
+		"latest": "Latest",
+		"installer": "Installer · Start menu shortcut, can start with Windows",
+		"portable": "Portable · runs without installing",
+		"req": "Windows 10 or 11, 64-bit. Not code-signed yet."
+	},
+	"faqTitle": {
+		"a": "Questions",
+		"b": "and straight answers"
+	},
+	"faq": [
+		{
+			"q": "Is it really free?",
+			"a": "Yes. No price, no paid tier, no ads. The code is GPL-3.0-or-later on GitHub."
+		},
+		{
+			"q": "Why does Windows warn me when I install it?",
+			"a": "The installer is not code-signed yet, so SmartScreen shows Windows protected your PC. Choose More info, then Run anyway."
+		},
+		{
+			"q": "Will it slow my PC down?",
+			"a": "It idles at 0 % CPU and starts at about 24 MB of memory. Nothing runs on a timer while nothing changes."
+		},
+		{
+			"q": "Which music apps work?",
+			"a": "Any player that shows in the Windows media controls, browsers included."
+		},
+		{
+			"q": "Does it work with several monitors?",
+			"a": "It sits at the top of one screen: the main one, the focused one, or one you choose in Settings."
+		},
+		{
+			"q": "Why do notifications arrive a little late?",
+			"a": "The installer version reads the Windows notification database, which usually adds about a third of a second."
+		}
+	],
+	"final": {
+		"a": "Put the top of your screen to work",
+		"b": "Free, open source, no account",
+		"notes": "Release notes"
+	},
+	"footTag": "A tiny, extensible notch for Windows. Written in Rust.",
+	"foot": [
+		{
+			"h": "Product",
+			"links": [
+				{
+					"label": "Features",
+					"href": "#features"
+				},
+				{
+					"label": "Install",
+					"href": "#install"
+				},
+				{
+					"label": "Releases",
+					"href": "https://fold.hibatillah.com/releases"
+				}
+			]
+		},
+		{
+			"h": "Project",
+			"links": [
+				{
+					"label": "GitHub",
+					"href": "https://github.com/hibatillah/foldline"
+				},
+				{
+					"label": "Contributing",
+					"href": "https://github.com/hibatillah/foldline"
+				},
+				{
+					"label": "License",
+					"href": "https://github.com/hibatillah/foldline"
+				}
+			]
+		},
+		{
+			"h": "Help",
+			"links": [
+				{
+					"label": "FAQ",
+					"href": "#faq"
+				},
+				{
+					"label": "Report a bug",
+					"href": "dialog:feedback"
+				},
+				{
+					"label": "Privacy Policy",
+					"href": "/privacy"
+				},
+				{
+					"label": "Terms of Service",
+					"href": "/terms"
+				}
+			]
+		}
+	],
+	"legal": "Inspired by Apple's Dynamic Island. Not affiliated with Apple.",
+	"word": {
+		"idle": "Idle",
+		"charging": "Charging",
+		"low": "Low",
+		"pinned": "Pinned",
+		"unpinned": "Unpinned",
+		"muted": "Muted",
+		"camera": "Camera",
+		"microphone": "Microphone",
+		"rainIn": "Rain in 30 min",
+		"rainThen": "Then a countdown in the pill"
+	},
+	"g": {
+		"open": {
+			"media": {
+				"t": "Media with synced lyrics",
+				"d": "The track and its controls, with the line being sung beside them."
+			},
+			"keys": {
+				"t": "Number keys",
+				"d": "1 to 9 jump to a page, 0 to the last one."
+			},
+			"pin": {
+				"t": "Pin it open",
+				"d": "Keeps the notch open over maximized and full-screen windows."
+			},
+			"calendar": {
+				"t": "Calendar",
+				"d": "The month or the week, and the day's events from an iCal link."
+			}
+		},
+		"notice": {
+			"notification": {
+				"t": "Notifications",
+				"d": "Two lines of the message. Hover for Dismiss and Open, and Reply when the app allows it."
+			},
+			"download": {
+				"t": "Downloads",
+				"d": "A card when a browser download finishes."
+			},
+			"volume": {
+				"t": "Volume and brightness",
+				"d": "Shown in place of Windows' own popups."
+			},
+			"rings": {
+				"t": "Battery ring",
+				"d": "Green while it lasts, a bolt while charging, red at 20 %."
+			},
+			"indicators": {
+				"t": "Status marks",
+				"d": "Caps Lock and mute while they stay on, and a dot while an app has the camera or microphone open."
+			}
+		},
+		"plan": {
+			"weather": {
+				"t": "Weather",
+				"d": "The next hours or days from MET Norway."
+			},
+			"prayer": {
+				"t": "Prayer times",
+				"d": "For any city, with the sun's path through the day and the next prayer counting down."
+			},
+			"timer": {
+				"t": "Focus timer",
+				"d": "Sessions with short and long breaks, counting down in the pill."
+			},
+			"rain": {
+				"t": "Rain alert",
+				"d": "A banner 30 minutes before rain, then a countdown in the pill."
+			}
+		},
+		"keep": {
+			"shelf": {
+				"t": "File shelf",
+				"d": "Drop up to twelve files on the pill, drag them out later."
+			},
+			"clipboard": {
+				"t": "Clipboard",
+				"d": "Your last 7 copies, in memory only. Double-click to paste."
+			},
+			"devices": {
+				"t": "Device batteries",
+				"d": "Bluetooth and 2.4 GHz receiver devices."
+			},
+			"stats": {
+				"t": "System stats",
+				"d": "CPU, memory, GPU, network and disks, read only while the page shows."
+			}
+		}
+	},
+	"grid": {
+		"media": "Media and lyrics",
+		"shelf": "File shelf",
+		"calendar": "Calendar",
+		"timer": "Focus timer",
+		"todo": "Todo",
+		"prayer": "Prayer times",
+		"weather": "Weather",
+		"stats": "System stats",
+		"clipboard": "Clipboard",
+		"devices": "Device batteries"
+	},
+	"gridSub": {
+		"media": "Track, controls, lyrics",
+		"shelf": "Twelve files at most",
+		"calendar": "From an iCal link",
+		"timer": "With short and long breaks",
+		"todo": "Undo the last removal",
+		"prayer": "Calculated on your PC",
+		"weather": "From MET Norway",
+		"stats": "CPU, memory, GPU, disks",
+		"clipboard": "Last 7 copies, memory only",
+		"devices": "Bluetooth and 2.4 GHz"
+	},
+	"heroList": [
+		"Media",
+		"Shelf",
+		"Calendar",
+		"Focus timer",
+		"Todo",
+		"Prayer times",
+		"Weather",
+		"System stats",
+		"Clipboard",
+		"Device batteries"
+	],
+	"gridHead": {
+		"a": "Ten pages",
+		"b": "turn on the ones you use",
+		"p": "Every page opens at the top of your screen in the order you set. Media, shelf, calendar, timer and todo come on by default; the rest wait in Settings."
+	},
+	"meta": {
+		"title": "Foldline: a tiny notch for Windows",
+		"description": "A tiny, extensible notch for the top of your Windows screen. Written in Rust."
+	},
+	"privacy": {
+		"title": "Privacy Policy",
+		"intro": "This policy covers the Foldline website and the Foldline app for Windows. Short version: the app has no accounts and contacts no Foldline server, the website counts visits without storing anything on your device, and nothing is sold.",
+		"sections": [
+			{
+				"h": "Who is responsible",
+				"p": [
+					"Foldline is made and run by one person, Hibatillah ([GitHub profile](https://github.com/hibatillah)). Questions and requests about this policy go through [a GitHub issue](https://github.com/hibatillah/foldline/issues). An issue is public, so do not put personal details in it; ask for a private way to reach me and I will reply there."
+				]
+			},
+			{
+				"h": "The website: what is measured",
+				"p": [
+					"The website uses PostHog, set to its US cloud, to count visits. Requests go through this site's own /ingest path, not straight to PostHog.",
+					"It records:"
+				],
+				"ul": [
+					"Page views and the time spent on a page.",
+					"Clicks on buttons and links.",
+					"Scroll depth, and where on a page people click (heatmaps).",
+					"JavaScript errors and page-speed numbers.",
+					"The referring page, browser, operating system and device type. No location is worked out: the IP address is hashed and discarded."
+				]
+			},
+			{
+				"h": "The website: what is not measured",
+				"p": [
+					"No names, emails or accounts: the site has none. No session recordings. Visitors get no person profile, so the events cannot be tied to a named person."
+				]
+			},
+			{
+				"h": "Cookies and storage",
+				"p": [
+					"The site stores nothing on your device: no cookie and no local storage, so there is no cookie banner. PostHog runs in its cookieless mode, which counts a visit with a hash it makes on its servers from the request. The IP address is hashed and then discarded, so no location is worked out, and a visit cannot be linked to your other visits or to you.",
+					"The language is decided by the address (/ for English, /id for Indonesian); the browser's language setting is ignored and nothing is remembered."
+				]
+			},
+			{
+				"h": "Bug reports from the website",
+				"p": [
+					"The footer has a Report a bug form. What you type, and the optional contact you add so I can reply, are sent to PostHog as a survey response, read by me to fix the problem and answer you, and kept for up to 24 months. Do not put passwords, secrets or other people's details in it. If you prefer to report in public, [open a GitHub issue](https://github.com/hibatillah/foldline/issues) instead."
+				]
+			},
+			{
+				"h": "Why, and on what basis",
+				"p": [
+					"The measurements show which parts of the site are used and which break, so they can be fixed. Where a law asks for a legal basis, such as the GDPR, the basis is the legitimate interest in keeping the site working and understanding how it is used. The data is not used for advertising or profiling."
+				]
+			},
+			{
+				"h": "The app",
+				"p": [
+					"The Foldline app has no account, no sign-in, no analytics and no automatic update check. It contacts no Foldline server. Only these things leave your computer:"
+				],
+				"ul": [
+					"Update check: only when you click Check for updates in the settings window. GitHub receives a request for the latest release, with Foldline's name and version in the User-Agent and nothing else about you.",
+					"Lyrics: when a track starts, LRCLIB receives the artist, title, album and length. Set FOLDLINE_LYRICS=off to stop lookups.",
+					"Calendar: if you set an iCal link, Foldline downloads that file every 15 minutes.",
+					"Weather: only with the Weather page on, MET Norway receives the coordinates of your chosen place, at start and every half hour."
+				]
+			},
+			{
+				"h": "What stays on your computer",
+				"p": [
+					"Settings, the todo list and the shelf are stored in %APPDATA%\\Foldline. The clipboard page, when switched on, keeps the last seven copies in memory only; nothing is written to disk or sent anywhere, and the history is dropped when the page is switched off or the app quits. The Copied activity never reads what was copied."
+				]
+			},
+			{
+				"h": "Who receives data",
+				"p": [
+					"PostHog (website analytics), GitHub (downloads, releases and the update check), LRCLIB (lyrics), MET Norway (weather), and the hosting provider of the website, which keeps ordinary server logs. Each has its own privacy policy. Nothing is sold, and nothing is shared for advertising."
+				]
+			},
+			{
+				"h": "Transfers across borders",
+				"p": [
+					"PostHog stores website data in the United States, and the other services above run outside Indonesia too. By using the website you accept that this data is processed in those countries."
+				]
+			},
+			{
+				"h": "How long data is kept",
+				"p": [
+					"Website analytics events and bug reports are kept for up to 24 months, then deleted. The app keeps nothing on a Foldline server, so there is nothing to delete there; your local files stay until you remove them."
+				]
+			},
+			{
+				"h": "Your rights",
+				"p": [
+					"You can ask to see, correct or delete data about you, to object to its use, and to complain to the data protection authority where you live. Because visitors get no profile and the data carries no name, I cannot pick out one visitor's events unless you give me something that identifies them. Ask through a GitHub issue as described above."
+				]
+			},
+			{
+				"h": "Security",
+				"p": [
+					"The website is served over HTTPS. The app keeps your data on your own computer, which is why there is no Foldline server to breach. No system is perfectly secure."
+				]
+			},
+			{
+				"h": "Children",
+				"p": [
+					"Foldline is not aimed at children, and the website does not knowingly collect personal data from them."
+				]
+			},
+			{
+				"h": "Links to other sites",
+				"p": [
+					"The website links to GitHub and other sites. Their privacy practices are theirs, not covered here."
+				]
+			},
+			{
+				"h": "Changes",
+				"p": [
+					"When this policy changes, the new text replaces this page and the date at the top changes. A change that affects what is collected is noted at the top of the page for 30 days."
+				]
+			},
+			{
+				"h": "Governing law",
+				"p": [
+					"This policy is governed by the law of Indonesia, including Law No. 27 of 2022 on Personal Data Protection. The site is open to visitors from anywhere, and rights you have under the law where you live still apply."
+				]
+			}
+		]
+	},
+	"terms": {
+		"title": "Terms of Service",
+		"intro": "These terms cover the Foldline website and the Foldline app for Windows. Foldline is free, open source software with no accounts and no payments, so the terms are short.",
+		"sections": [
+			{
+				"h": "Agreement",
+				"p": [
+					"By using the website or downloading or running the app, you agree to these terms. If you do not agree, do not use them. The terms are written by and for Hibatillah, who makes and runs Foldline ([GitHub profile](https://github.com/hibatillah))."
+				]
+			},
+			{
+				"h": "What Foldline is",
+				"p": [
+					"Foldline is a notch at the top of the Windows screen. It is free of charge: no price, paid tier, in-app purchase, advertising or account. It is inspired by Apple's Dynamic Island and is not affiliated with Apple. The releases of the Foldline repository are the official builds."
+				]
+			},
+			{
+				"h": "The code license",
+				"p": [
+					"The source code is free software under the GNU General Public License, version 3 or later. You may use, study, modify and share it under that license. These terms do not take away any right the license gives you. The code is at [github.com/hibatillah/foldline](https://github.com/hibatillah/foldline)."
+				]
+			},
+			{
+				"h": "The name and logo",
+				"p": [
+					"The name Foldline, the logo, the tile and the other marks are not part of the code license. You may build Foldline for yourself and redistribute the code under the GNU GPL, but a copy you redistribute must not carry the Foldline marks. You may say truthfully that your software is based on Foldline, as long as that does not suggest it was made, approved or supported by me. The details are in TRADEMARK.md in the repository."
+				]
+			},
+			{
+				"h": "Using the website",
+				"p": [
+					"Use the website the way a visitor would. Do not attack it, overload it, scrape it at a rate that harms it, or use it to break the law."
+				]
+			},
+			{
+				"h": "Information the app shows",
+				"p": [
+					"Prayer times are within a few minutes of published tables; check them against your local authority before relying on them. Weather comes from MET Norway and lyrics from LRCLIB, and either can be late, wrong or missing."
+				]
+			},
+			{
+				"h": "Third-party services",
+				"p": [
+					"The app and website use GitHub, LRCLIB, MET Norway, GeoNames and PostHog. Their own terms apply to what they provide, and I am not responsible for them."
+				]
+			},
+			{
+				"h": "No warranty",
+				"p": [
+					"Foldline is provided as is, without a warranty of any kind, as sections 15 and 16 of the GNU GPL say. I do not promise that it is free of errors, that it will always work, or that it suits a particular use."
+				]
+			},
+			{
+				"h": "Limit of liability",
+				"p": [
+					"To the extent the law allows, I am not liable for indirect or consequential loss, lost data or lost profit arising from using Foldline or the website. Nothing here limits liability that the law does not allow to be limited, and rights you have as a consumer under the law where you live still apply."
+				]
+			},
+			{
+				"h": "Contributions",
+				"p": [
+					"Contributions to the code follow the contributor agreement in CONTRIBUTING.md in the repository."
+				]
+			},
+			{
+				"h": "Ending",
+				"p": [
+					"There is no account to close: you can stop at any time by uninstalling the app and leaving the website. I may block access to the website for abuse."
+				]
+			},
+			{
+				"h": "Changes",
+				"p": [
+					"When these terms change, the new text replaces this page and the date at the top changes. Using Foldline after that means you accept the new terms. The terms that applied to a version you already installed do not take away the rights the GNU GPL gave you for it."
+				]
+			},
+			{
+				"h": "Governing law",
+				"p": [
+					"These terms are governed by the law of Indonesia, and disputes go to the courts of Indonesia. Foldline is open to people anywhere; if the law where you live gives you rights that cannot be waived, those rights stay."
+				]
+			},
+			{
+				"h": "Contact",
+				"p": [
+					"Use the Report a bug form in the footer, or open [a GitHub issue](https://github.com/hibatillah/foldline/issues). An issue is public, so keep personal details out of it."
+				]
+			}
+		]
+	},
+	"legalUpdated": "Last updated",
+	"legalUpdatedOn": "23 November 2026",
+	"legalHome": "Back to Foldline",
+	"feedback": {
+		"title": "Report a bug",
+		"text": "Tell us what went wrong. It goes to the maintainer, who reads every report.",
+		"message": "What happened?",
+		"contact": "Email or handle, if you want a reply (optional)",
+		"send": "Send",
+		"thanks": "Thank you. Your report was sent.",
+		"close": "Close",
+		"failed": "The report could not be sent. Please open a GitHub issue instead.",
+		"issue": "Or open a GitHub issue"
+	},
+	"download": {
+		"title": "Your download is starting",
+		"subtitle": "Foldline for Windows 10 and 11. Your browser and Windows may warn you about the file, so read the steps below first.",
+		"again": "Download again",
+		"meta": "Nothing happened? Use the button.",
+		"stepsTitle": "What to do when the warnings appear",
+		"stepsIntro": "You will see up to two warnings, one from the browser and one from Windows. Both can be passed:",
+		"steps": [
+			{
+				"h": "Keep the file",
+				"p": "Chrome and Edge may say the file is not commonly downloaded or could be harmful. Open the downloads list, open the menu of the file and choose Keep. Edge may ask once more: choose Keep anyway."
+			},
+			{
+				"h": "Open the installer",
+				"p": "Run the file you downloaded. Windows may show a blue window that says Windows protected your PC (Microsoft Defender SmartScreen). Click More info, then Run anyway."
+			},
+			{
+				"h": "Install",
+				"p": "Follow the installer. Foldline starts when it finishes and appears at the top of your screen."
+			},
+			{
+				"h": "Check the file (optional)",
+				"p": "Every release lists a SHA-256 checksum for the installer. In PowerShell, run Get-FileHash on the file and compare the result with the one on the release page."
+			}
+		],
+		"whyTitle": "Why the warnings appear",
+		"why": "Foldline is new, and its installer is not code-signed yet, so your browser and Windows have no record of it. The warning means unknown, not dangerous.",
+		"safeTitle": "Is it safe?",
+		"safe": [
+			"Foldline is not a virus and does not bundle other software. It has no account and no ads, and it sends nothing to a Foldline server. The few things it looks up, such as lyrics, weather, a calendar link and the update check, happen only when you use those features, and the Privacy Policy lists each one.",
+			"You do not have to take our word for it. The whole app is open source: read the code on GitHub, compare what it does with what we say, or build it yourself."
+		],
+		"source": "Read the code on GitHub",
+		"privacy": "Read the Privacy Policy"
+	}
+}

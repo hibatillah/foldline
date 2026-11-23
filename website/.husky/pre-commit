@@ -1,0 +1,3 @@
+# Only runs for commits that stage website files; the Rust side has its own checks.
+git diff --cached --name-only | grep -q '^website/' || exit 0
+cd website && bunx lint-staged

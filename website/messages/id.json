@@ -1,0 +1,654 @@
+{
+	"navAria": "Utama",
+	"langLabel": "Bahasa",
+	"nav": {
+		"features": "Fitur",
+		"install": "Pasang",
+		"faq": "FAQ",
+		"releases": "Rilis",
+		"cta": "Unduh"
+	},
+	"hero": {
+		"a": "Kenalan dengan Foldline",
+		"b": "Notch kecil yang bisa dikembangkan, untuk bagian atas layar Windows. Ditulis dengan Rust.",
+		"cta": "Unduh untuk Windows",
+		"meta": "Versi 0.6.0 · Windows 10 dan 11 · Gratis dan open source",
+		"side1": "Arahkan ke pil.",
+		"side2": "Ia terbuka ke halaman yang kamu butuhkan dan menutup saat kursor menjauh.",
+		"own": "Tambah kontenmu sendiri"
+	},
+	"proof": {
+		"a": "Dibuat agar tidak mengganggu",
+		"b": "CPU 0 % dan memori 23,8 MB saat diam",
+		"link": "Baca hasil pengukuran performa",
+		"quote": "Diukur pada 22 November 2026: memori 23,8 MB dan CPU 0 % saat diam, serta 116 ms CPU untuk setiap buka dan tutup.",
+		"source": "scripts/perf.sh · build rilis · Windows 11, Ryzen 5 8645HS"
+	},
+	"all": {
+		"a": "Semua ada di atas layar",
+		"b": "Sepuluh halaman dan sebelas pesan singkat, semuanya opsional"
+	},
+	"strip": {
+		"weather": {
+			"t": "Cuaca",
+			"d": "Beberapa jam atau hari ke depan, dengan peringatan hujan opsional."
+		},
+		"todo": {
+			"t": "Daftar tugas",
+			"d": "Tanpa batas, dengan urungkan untuk hapusan terakhir."
+		},
+		"shelf": {
+			"t": "Rak file",
+			"d": "Simpan sampai dua belas file, lalu tarik keluar."
+		},
+		"stats": {
+			"t": "Statistik sistem",
+			"d": "CPU, memori, GPU, jaringan, dan disk."
+		}
+	},
+	"f": {
+		"open": {
+			"label": "Buka",
+			"a": "Setiap halaman terbuka di tempat kamu melihat",
+			"b": "dan menutup saat kursor menjauh",
+			"p": "Arahkan kursor ke pil dan ia terbuka di halaman terakhirmu. Gulir, geser dua jari, atau tekan 1 sampai 9 untuk berpindah, sesuai urutan yang kamu atur."
+		},
+		"notice": {
+			"label": "Kabar",
+			"a": "Pil memberi tahu apa yang berubah",
+			"b": "lalu mengembalikan ruangnya",
+			"p": "Notifikasi terbuka jadi kartu dengan Tutup dan Buka, serta Balas jika aplikasinya mendukung. Volume, baterai, Bluetooth, dan Caps Lock mengisi pil sebentar."
+		},
+		"plan": {
+			"label": "Rencana",
+			"a": "Harimu, cukup sekali lirik",
+			"b": "kalender, timer, tugas, dan cuaca",
+			"p": "Acara berikutnya, sesi fokus dengan istirahat, daftar tugas dengan urungkan, dan cuaca beberapa jam ke depan ada satu gerakan kursor saja. Hitung mundur menunggu di pil yang tertutup."
+		},
+		"keep": {
+			"label": "Simpan",
+			"a": "File dan salinan selalu dekat",
+			"b": "tanpa membuka jendela",
+			"p": "Taruh file di pil untuk menyimpannya dan tarik keluar saat dibutuhkan. Halaman clipboard menyimpan tujuh salinan terakhir, hanya di memori."
+		}
+	},
+	"light": {
+		"label": "Ringan",
+		"a": "Ringan di PC-mu",
+		"b": "dan tanpa perlu login",
+		"p": "Tanpa akun, tanpa analitik, dan tanpa cek pembaruan otomatis. Angkanya dari satu kali pengukuran.",
+		"perfTitle": "Performa",
+		"perf": [
+			{
+				"a": "Memori saat mulai",
+				"b": "23,8 MB"
+			},
+			{
+				"a": "CPU saat diam",
+				"b": "0 %"
+			},
+			{
+				"a": "CPU per buka dan tutup",
+				"b": "116 ms"
+			},
+			{
+				"a": "Tambahan memori setelah 10 siklus",
+				"b": "0,3 MB"
+			}
+		],
+		"note": "22 November 2026, Windows 11, Ryzen 5 8645HS, build rilis dengan halaman rak terbuka. Pemutaran musik belum diukur.",
+		"privTitle": "Yang keluar dari PC-mu",
+		"priv": [
+			{
+				"a": "Cek pembaruan",
+				"b": "GitHub, hanya saat kamu klik"
+			},
+			{
+				"a": "Lirik tersinkron",
+				"b": "Info lagu ke LRCLIB"
+			},
+			{
+				"a": "Kalender",
+				"b": "Link iCal-mu, tiap 15 menit"
+			},
+			{
+				"a": "Cuaca",
+				"b": "Lokasimu ke MET Norway"
+			}
+		],
+		"privNote": "Cuaca hanya dikirim saat halamannya aktif. Pengaturan, daftar tugas, dan rak tersimpan di %APPDATA%\\Foldline."
+	},
+	"own": {
+		"label": "Kembangkan",
+		"a": "Tambahkan halamanmu sendiri",
+		"b": "di foldernya sendiri",
+		"p": "Foldline open source dengan lisensi GPL-3.0. Halaman, aktivitas, atau pengaturan halaman ada di foldernya sendiri, jadi pull request hanya menyentuh file milikmu.",
+		"steps": [
+			{
+				"t": "Siapkan",
+				"d": "Satu skrip membuat folder dan registrasi satu baris."
+			},
+			{
+				"t": "Bangun",
+				"d": "Jelaskan ke agent add-content, atau ikuti panduannya manual."
+			},
+			{
+				"t": "Periksa",
+				"d": "Skrip menampilkan apa pun di luar filemu untuk pull request."
+			}
+		]
+	},
+	"install": {
+		"a": "Terpasang dalam satu menit",
+		"b": "dari rilis GitHub",
+		"steps": [
+			{
+				"n": "1",
+				"t": "Unduh installer dari rilis terbaru."
+			},
+			{
+				"n": "2",
+				"t": "Windows menampilkan Windows protected your PC. Pilih More info, lalu Run anyway."
+			},
+			{
+				"n": "3",
+				"t": "Arahkan kursor ke pil di atas layar."
+			}
+		],
+		"latest": "Terbaru",
+		"installer": "Installer · pintasan Start menu, bisa menyala bersama Windows",
+		"portable": "Portabel · jalan tanpa dipasang",
+		"req": "Windows 10 atau 11, 64-bit. Belum ditandatangani."
+	},
+	"faqTitle": {
+		"a": "Pertanyaan",
+		"b": "dan jawaban langsung"
+	},
+	"faq": [
+		{
+			"q": "Benar-benar gratis?",
+			"a": "Ya. Tanpa harga, tanpa versi berbayar, tanpa iklan. Kodenya GPL-3.0-or-later di GitHub."
+		},
+		{
+			"q": "Kenapa Windows memberi peringatan saat memasang?",
+			"a": "Installer belum ditandatangani, jadi SmartScreen menampilkan Windows protected your PC. Pilih More info, lalu Run anyway."
+		},
+		{
+			"q": "Apakah membuat PC lambat?",
+			"a": "Saat diam CPU 0 % dan memori sekitar 24 MB saat mulai. Tak ada yang berjalan dengan timer selama tak ada yang berubah."
+		},
+		{
+			"q": "Aplikasi musik apa yang didukung?",
+			"a": "Pemutar apa pun yang muncul di kontrol media Windows, termasuk browser."
+		},
+		{
+			"q": "Bisa dipakai dengan beberapa monitor?",
+			"a": "Ia ada di atas satu layar: layar utama, layar yang aktif, atau layar yang kamu pilih di Settings."
+		},
+		{
+			"q": "Kenapa notifikasi datang sedikit terlambat?",
+			"a": "Versi installer membaca database notifikasi Windows, yang biasanya menambah sekitar sepertiga detik."
+		}
+	],
+	"final": {
+		"a": "Jadikan bagian atas layarmu berguna",
+		"b": "Gratis, open source, tanpa akun",
+		"notes": "Catatan rilis"
+	},
+	"footTag": "Notch kecil yang bisa dikembangkan untuk Windows. Ditulis dengan Rust.",
+	"foot": [
+		{
+			"h": "Produk",
+			"links": [
+				{
+					"label": "Fitur",
+					"href": "#features"
+				},
+				{
+					"label": "Pasang",
+					"href": "#install"
+				},
+				{
+					"label": "Rilis",
+					"href": "https://fold.hibatillah.com/releases"
+				}
+			]
+		},
+		{
+			"h": "Proyek",
+			"links": [
+				{
+					"label": "GitHub",
+					"href": "https://github.com/hibatillah/foldline"
+				},
+				{
+					"label": "Kontribusi",
+					"href": "https://github.com/hibatillah/foldline"
+				},
+				{
+					"label": "Lisensi",
+					"href": "https://github.com/hibatillah/foldline"
+				}
+			]
+		},
+		{
+			"h": "Bantuan",
+			"links": [
+				{
+					"label": "FAQ",
+					"href": "#faq"
+				},
+				{
+					"label": "Laporkan bug",
+					"href": "dialog:feedback"
+				},
+				{
+					"label": "Kebijakan Privasi",
+					"href": "/privacy"
+				},
+				{
+					"label": "Ketentuan Layanan",
+					"href": "/terms"
+				}
+			]
+		}
+	],
+	"legal": "Terinspirasi Dynamic Island dari Apple. Tidak berafiliasi dengan Apple.",
+	"word": {
+		"idle": "Diam",
+		"charging": "Mengisi",
+		"low": "Lemah",
+		"pinned": "Dipin",
+		"unpinned": "Tidak dipin",
+		"muted": "Senyap",
+		"camera": "Kamera",
+		"microphone": "Mikrofon",
+		"rainIn": "Hujan 30 mnt lagi",
+		"rainThen": "Lalu hitung mundur di pil"
+	},
+	"g": {
+		"open": {
+			"media": {
+				"t": "Media dengan lirik tersinkron",
+				"d": "Lagu dan kontrolnya, dengan baris yang sedang dinyanyikan di sampingnya."
+			},
+			"keys": {
+				"t": "Tombol angka",
+				"d": "1 sampai 9 melompat ke halaman, 0 ke halaman terakhir."
+			},
+			"pin": {
+				"t": "Pin tetap terbuka",
+				"d": "Menjaga notch tetap terbuka di atas jendela maksimal dan layar penuh."
+			},
+			"calendar": {
+				"t": "Kalender",
+				"d": "Bulan atau minggu, dan acara hari itu dari link iCal."
+			}
+		},
+		"notice": {
+			"notification": {
+				"t": "Notifikasi",
+				"d": "Dua baris pesan. Arahkan kursor untuk Tutup dan Buka, serta Balas jika aplikasinya mendukung."
+			},
+			"download": {
+				"t": "Unduhan",
+				"d": "Kartu saat unduhan browser selesai."
+			},
+			"volume": {
+				"t": "Volume dan kecerahan",
+				"d": "Menggantikan popup bawaan Windows."
+			},
+			"rings": {
+				"t": "Cincin baterai",
+				"d": "Hijau selama cukup, petir saat mengisi daya, merah di 20 %."
+			},
+			"indicators": {
+				"t": "Tanda status",
+				"d": "Caps Lock dan senyap selama aktif, dan titik saat aplikasi membuka kamera atau mikrofon."
+			}
+		},
+		"plan": {
+			"weather": {
+				"t": "Cuaca",
+				"d": "Beberapa jam atau hari ke depan dari MET Norway."
+			},
+			"prayer": {
+				"t": "Jadwal salat",
+				"d": "Untuk kota mana pun, dengan lintasan matahari dan hitung mundur ke salat berikutnya."
+			},
+			"timer": {
+				"t": "Timer fokus",
+				"d": "Sesi dengan istirahat pendek dan panjang, hitung mundur di pil."
+			},
+			"rain": {
+				"t": "Peringatan hujan",
+				"d": "Banner 30 menit sebelum hujan, lalu hitung mundur di pil."
+			}
+		},
+		"keep": {
+			"shelf": {
+				"t": "Rak file",
+				"d": "Taruh sampai dua belas file di pil, tarik keluar nanti."
+			},
+			"clipboard": {
+				"t": "Clipboard",
+				"d": "7 salinan terakhir, hanya di memori. Klik dua kali untuk menempel."
+			},
+			"devices": {
+				"t": "Baterai perangkat",
+				"d": "Perangkat Bluetooth dan receiver 2,4 GHz."
+			},
+			"stats": {
+				"t": "Statistik sistem",
+				"d": "CPU, memori, GPU, jaringan, dan disk, dibaca hanya saat halamannya tampil."
+			}
+		}
+	},
+	"grid": {
+		"media": "Media dan lirik",
+		"shelf": "Rak file",
+		"calendar": "Kalender",
+		"timer": "Timer fokus",
+		"todo": "Daftar tugas",
+		"prayer": "Jadwal salat",
+		"weather": "Cuaca",
+		"stats": "Statistik sistem",
+		"clipboard": "Clipboard",
+		"devices": "Baterai perangkat"
+	},
+	"gridSub": {
+		"media": "Lagu, kontrol, lirik",
+		"shelf": "Maksimal dua belas file",
+		"calendar": "Dari link iCal",
+		"timer": "Dengan istirahat pendek dan panjang",
+		"todo": "Urungkan hapusan terakhir",
+		"prayer": "Dihitung di PC-mu",
+		"weather": "Dari MET Norway",
+		"stats": "CPU, memori, GPU, disk",
+		"clipboard": "7 salinan, hanya di memori",
+		"devices": "Bluetooth dan 2,4 GHz"
+	},
+	"heroList": [
+		"Media",
+		"Rak",
+		"Kalender",
+		"Timer fokus",
+		"Daftar tugas",
+		"Jadwal salat",
+		"Cuaca",
+		"Statistik sistem",
+		"Clipboard",
+		"Baterai perangkat"
+	],
+	"gridHead": {
+		"a": "Sepuluh halaman",
+		"b": "aktifkan yang kamu pakai",
+		"p": "Setiap halaman terbuka di atas layar sesuai urutan yang kamu atur. Media, rak, kalender, timer, dan daftar tugas aktif sejak awal; sisanya menunggu di Settings."
+	},
+	"meta": {
+		"title": "Foldline: notch mungil untuk Windows",
+		"description": "Notch kecil yang bisa dikembangkan, untuk bagian atas layar Windows. Ditulis dengan Rust."
+	},
+	"privacy": {
+		"title": "Kebijakan Privasi",
+		"intro": "Kebijakan ini mencakup situs web Foldline dan aplikasi Foldline untuk Windows. Singkatnya: aplikasi tidak punya akun dan tidak menghubungi server Foldline, situs web menghitung kunjungan tanpa menyimpan apa pun di perangkat Anda, dan tidak ada data yang dijual.",
+		"sections": [
+			{
+				"h": "Siapa yang bertanggung jawab",
+				"p": [
+					"Foldline dibuat dan dijalankan oleh satu orang, Hibatillah ([profil GitHub](https://github.com/hibatillah)). Pertanyaan dan permintaan terkait kebijakan ini disampaikan lewat [issue GitHub](https://github.com/hibatillah/foldline/issues). Issue bersifat publik, jadi jangan menulis data pribadi di sana; minta jalur pribadi untuk menghubungi saya dan saya akan membalas lewat jalur itu."
+				]
+			},
+			{
+				"h": "Situs web: apa yang diukur",
+				"p": [
+					"Situs web memakai PostHog, yang diatur ke cloud AS, untuk menghitung kunjungan. Permintaan melewati jalur /ingest milik situs ini, tidak langsung ke PostHog.",
+					"PostHog mencatat:"
+				],
+				"ul": [
+					"Tampilan halaman dan lama waktu di halaman.",
+					"Klik pada tombol dan tautan.",
+					"Kedalaman gulir, dan di mana pada halaman orang mengklik (heatmap).",
+					"Galat JavaScript dan angka kecepatan halaman.",
+					"Halaman asal, peramban, sistem operasi, dan jenis perangkat. Lokasi tidak ditentukan: alamat IP di-hash lalu dibuang."
+				]
+			},
+			{
+				"h": "Situs web: apa yang tidak diukur",
+				"p": [
+					"Tidak ada nama, email, atau akun: situs ini tidak memilikinya. Tidak ada rekaman sesi. Pengunjung tidak mendapat profil pribadi, sehingga peristiwa tidak bisa dikaitkan dengan orang bernama."
+				]
+			},
+			{
+				"h": "Cookie dan penyimpanan",
+				"p": [
+					"Situs tidak menyimpan apa pun di perangkat Anda: tanpa cookie dan tanpa penyimpanan lokal, sehingga tidak ada banner cookie. PostHog berjalan dalam mode tanpa cookie, yang menghitung kunjungan dengan hash yang dibuatnya di servernya dari permintaan. Alamat IP di-hash lalu dibuang, sehingga lokasi tidak ditentukan, dan sebuah kunjungan tidak bisa dikaitkan dengan kunjungan Anda yang lain atau dengan Anda.",
+					"Bahasa ditentukan oleh alamat (/ untuk bahasa Inggris, /id untuk bahasa Indonesia); pengaturan bahasa peramban diabaikan dan tidak ada yang diingat."
+				]
+			},
+			{
+				"h": "Laporan bug dari situs web",
+				"p": [
+					"Footer memiliki formulir Laporkan bug. Apa yang Anda ketik, dan kontak opsional yang Anda tambahkan agar saya bisa membalas, dikirim ke PostHog sebagai jawaban survei, dibaca oleh saya untuk memperbaiki masalah dan menjawab Anda, dan disimpan hingga 24 bulan. Jangan memasukkan kata sandi, rahasia, atau data orang lain. Bila Anda lebih suka melapor secara publik, [buka issue GitHub](https://github.com/hibatillah/foldline/issues)."
+				]
+			},
+			{
+				"h": "Untuk apa, dan atas dasar apa",
+				"p": [
+					"Pengukuran ini menunjukkan bagian situs mana yang dipakai dan mana yang rusak, agar bisa diperbaiki. Bila hukum meminta dasar hukum, seperti GDPR, dasarnya adalah kepentingan sah untuk menjaga situs tetap berjalan dan memahami cara pemakaiannya. Data tidak dipakai untuk iklan atau pembuatan profil."
+				]
+			},
+			{
+				"h": "Aplikasi",
+				"p": [
+					"Aplikasi Foldline tidak punya akun, tidak ada masuk, tidak ada analitik, dan tidak ada pengecekan pembaruan otomatis. Aplikasi tidak menghubungi server Foldline. Hanya hal berikut yang keluar dari komputer Anda:"
+				],
+				"ul": [
+					"Pengecekan pembaruan: hanya saat Anda mengklik Check for updates di jendela pengaturan. GitHub menerima permintaan rilis terbaru, dengan nama dan versi Foldline pada User-Agent dan tidak ada hal lain tentang Anda.",
+					"Lirik: saat sebuah lagu mulai, LRCLIB menerima artis, judul, album, dan durasi. Setel FOLDLINE_LYRICS=off untuk menghentikan pencarian.",
+					"Kalender: bila Anda mengatur tautan iCal, Foldline mengunduh berkas itu setiap 15 menit.",
+					"Cuaca: hanya bila halaman Cuaca aktif, MET Norway menerima koordinat tempat pilihan Anda, saat mulai dan setiap setengah jam."
+				]
+			},
+			{
+				"h": "Yang tetap di komputer Anda",
+				"p": [
+					"Pengaturan, daftar tugas, dan shelf disimpan di %APPDATA%\\Foldline. Halaman papan klip, bila diaktifkan, menyimpan tujuh salinan terakhir hanya di memori; tidak ada yang ditulis ke disk atau dikirim ke mana pun, dan riwayat dibuang saat halaman dimatikan atau aplikasi ditutup. Aktivitas Copied tidak pernah membaca apa yang disalin."
+				]
+			},
+			{
+				"h": "Siapa yang menerima data",
+				"p": [
+					"PostHog (analitik situs web), GitHub (unduhan, rilis, dan pengecekan pembaruan), LRCLIB (lirik), MET Norway (cuaca), dan penyedia hosting situs web, yang menyimpan log server biasa. Masing-masing punya kebijakan privasi sendiri. Tidak ada yang dijual, dan tidak ada yang dibagikan untuk iklan."
+				]
+			},
+			{
+				"h": "Transfer lintas negara",
+				"p": [
+					"PostHog menyimpan data situs web di Amerika Serikat, dan layanan lain di atas juga berjalan di luar Indonesia. Dengan memakai situs web, Anda menerima bahwa data ini diproses di negara-negara tersebut."
+				]
+			},
+			{
+				"h": "Berapa lama data disimpan",
+				"p": [
+					"Peristiwa analitik situs web dan laporan bug disimpan hingga 24 bulan, lalu dihapus. Aplikasi tidak menyimpan apa pun di server Foldline, jadi tidak ada yang perlu dihapus di sana; berkas lokal Anda tetap ada sampai Anda menghapusnya."
+				]
+			},
+			{
+				"h": "Hak Anda",
+				"p": [
+					"Anda dapat meminta untuk melihat, memperbaiki, atau menghapus data tentang Anda, menolak penggunaannya, dan mengadu kepada otoritas perlindungan data di tempat Anda tinggal. Karena pengunjung tidak mendapat profil dan data tidak memuat nama, saya tidak bisa memilah peristiwa satu pengunjung kecuali Anda memberi sesuatu yang mengidentifikasinya. Ajukan lewat issue GitHub seperti dijelaskan di atas."
+				]
+			},
+			{
+				"h": "Keamanan",
+				"p": [
+					"Situs web disajikan lewat HTTPS. Aplikasi menyimpan data Anda di komputer Anda sendiri, sehingga tidak ada server Foldline yang bisa dibobol. Tidak ada sistem yang aman sepenuhnya."
+				]
+			},
+			{
+				"h": "Anak-anak",
+				"p": [
+					"Foldline tidak ditujukan untuk anak-anak, dan situs web tidak dengan sengaja mengumpulkan data pribadi dari mereka."
+				]
+			},
+			{
+				"h": "Tautan ke situs lain",
+				"p": [
+					"Situs web menautkan ke GitHub dan situs lain. Praktik privasi mereka adalah milik mereka sendiri dan tidak tercakup di sini."
+				]
+			},
+			{
+				"h": "Perubahan",
+				"p": [
+					"Bila kebijakan ini berubah, teks baru menggantikan halaman ini dan tanggal di bagian atas berubah. Perubahan yang memengaruhi data yang dikumpulkan dicatat di bagian atas halaman selama 30 hari."
+				]
+			},
+			{
+				"h": "Hukum yang berlaku",
+				"p": [
+					"Kebijakan ini diatur oleh hukum Indonesia, termasuk Undang-Undang Nomor 27 Tahun 2022 tentang Pelindungan Data Pribadi. Situs terbuka bagi pengunjung dari mana pun, dan hak Anda menurut hukum di tempat Anda tinggal tetap berlaku."
+				]
+			}
+		]
+	},
+	"terms": {
+		"title": "Ketentuan Layanan",
+		"intro": "Ketentuan ini mencakup situs web Foldline dan aplikasi Foldline untuk Windows. Foldline adalah perangkat lunak bebas dan sumber terbuka tanpa akun dan tanpa pembayaran, sehingga ketentuannya singkat.",
+		"sections": [
+			{
+				"h": "Persetujuan",
+				"p": [
+					"Dengan memakai situs web atau mengunduh atau menjalankan aplikasi, Anda menyetujui ketentuan ini. Bila tidak setuju, jangan memakainya. Ketentuan ini ditulis oleh dan untuk Hibatillah, yang membuat dan menjalankan Foldline ([profil GitHub](https://github.com/hibatillah))."
+				]
+			},
+			{
+				"h": "Apa itu Foldline",
+				"p": [
+					"Foldline adalah notch di bagian atas layar Windows. Gratis: tanpa harga, tingkat berbayar, pembelian dalam aplikasi, iklan, atau akun. Foldline terinspirasi Dynamic Island milik Apple dan tidak berafiliasi dengan Apple. Rilis pada repositori Foldline adalah build resmi."
+				]
+			},
+			{
+				"h": "Lisensi kode",
+				"p": [
+					"Kode sumber adalah perangkat lunak bebas di bawah GNU General Public License, versi 3 atau lebih baru. Anda boleh memakai, mempelajari, mengubah, dan membagikannya di bawah lisensi itu. Ketentuan ini tidak mengurangi hak apa pun yang diberikan lisensi kepada Anda. Kode ada di [github.com/hibatillah/foldline](https://github.com/hibatillah/foldline)."
+				]
+			},
+			{
+				"h": "Nama dan logo",
+				"p": [
+					"Nama Foldline, logo, tile, dan merek lainnya bukan bagian dari lisensi kode. Anda boleh membangun Foldline untuk diri sendiri dan mendistribusikan ulang kodenya di bawah GNU GPL, tetapi salinan yang Anda distribusikan tidak boleh membawa merek Foldline. Anda boleh menyatakan dengan jujur bahwa perangkat lunak Anda berbasis Foldline, selama itu tidak menyiratkan bahwa saya yang membuat, menyetujui, atau mendukungnya. Rinciannya ada di TRADEMARK.md pada repositori."
+				]
+			},
+			{
+				"h": "Memakai situs web",
+				"p": [
+					"Pakailah situs web seperti seorang pengunjung. Jangan menyerangnya, membebaninya, mengambil datanya dengan laju yang merusak, atau memakainya untuk melanggar hukum."
+				]
+			},
+			{
+				"h": "Informasi yang ditampilkan aplikasi",
+				"p": [
+					"Waktu salat berbeda beberapa menit dari tabel yang diterbitkan; periksa dengan otoritas setempat sebelum mengandalkannya. Cuaca berasal dari MET Norway dan lirik dari LRCLIB, dan keduanya bisa terlambat, keliru, atau tidak ada."
+				]
+			},
+			{
+				"h": "Layanan pihak ketiga",
+				"p": [
+					"Aplikasi dan situs web memakai GitHub, LRCLIB, MET Norway, GeoNames, dan PostHog. Ketentuan mereka sendiri berlaku untuk apa yang mereka sediakan, dan saya tidak bertanggung jawab atas mereka."
+				]
+			},
+			{
+				"h": "Tanpa jaminan",
+				"p": [
+					"Foldline disediakan apa adanya, tanpa jaminan jenis apa pun, sebagaimana dinyatakan pasal 15 dan 16 GNU GPL. Saya tidak menjanjikan bahwa ia bebas galat, selalu berfungsi, atau cocok untuk kegunaan tertentu."
+				]
+			},
+			{
+				"h": "Batas tanggung jawab",
+				"p": [
+					"Sejauh diizinkan hukum, saya tidak bertanggung jawab atas kerugian tidak langsung atau konsekuensial, kehilangan data, atau kehilangan keuntungan yang timbul dari penggunaan Foldline atau situs web. Tidak ada yang di sini membatasi tanggung jawab yang menurut hukum tidak boleh dibatasi, dan hak Anda sebagai konsumen menurut hukum di tempat Anda tinggal tetap berlaku."
+				]
+			},
+			{
+				"h": "Kontribusi",
+				"p": [
+					"Kontribusi pada kode mengikuti perjanjian kontributor dalam CONTRIBUTING.md pada repositori."
+				]
+			},
+			{
+				"h": "Mengakhiri",
+				"p": [
+					"Tidak ada akun yang perlu ditutup: Anda dapat berhenti kapan saja dengan menghapus aplikasi dan meninggalkan situs web. Saya dapat memblokir akses ke situs web bila ada penyalahgunaan."
+				]
+			},
+			{
+				"h": "Perubahan",
+				"p": [
+					"Bila ketentuan ini berubah, teks baru menggantikan halaman ini dan tanggal di bagian atas berubah. Memakai Foldline setelah itu berarti Anda menerima ketentuan baru. Ketentuan yang berlaku untuk versi yang sudah Anda pasang tidak mencabut hak yang diberikan GNU GPL untuk versi itu."
+				]
+			},
+			{
+				"h": "Hukum yang berlaku",
+				"p": [
+					"Ketentuan ini diatur oleh hukum Indonesia, dan sengketa diajukan ke pengadilan di Indonesia. Foldline terbuka bagi siapa pun di mana pun; bila hukum di tempat Anda tinggal memberi hak yang tidak dapat dikesampingkan, hak itu tetap berlaku."
+				]
+			},
+			{
+				"h": "Kontak",
+				"p": [
+					"Gunakan formulir Laporkan bug di footer, atau buka [issue GitHub](https://github.com/hibatillah/foldline/issues). Issue bersifat publik, jadi jangan menulis data pribadi di sana."
+				]
+			}
+		]
+	},
+	"legalUpdated": "Terakhir diperbarui",
+	"legalUpdatedOn": "23 November 2026",
+	"legalHome": "Kembali ke Foldline",
+	"feedback": {
+		"title": "Laporkan bug",
+		"text": "Ceritakan apa yang salah. Laporan masuk ke pengelola, yang membaca setiap laporan.",
+		"message": "Apa yang terjadi?",
+		"contact": "Email atau akun, bila Anda ingin dibalas (opsional)",
+		"send": "Kirim",
+		"thanks": "Terima kasih. Laporan Anda sudah terkirim.",
+		"close": "Tutup",
+		"failed": "Laporan tidak bisa dikirim. Silakan buka issue GitHub.",
+		"issue": "Atau buka issue GitHub"
+	},
+	"download": {
+		"title": "Unduhan Anda dimulai",
+		"subtitle": "Foldline untuk Windows 10 dan 11. Peramban dan Windows mungkin memperingatkan Anda tentang file ini, jadi baca langkah di bawah dulu.",
+		"again": "Unduh lagi",
+		"meta": "Tidak terjadi apa-apa? Pakai tombol ini.",
+		"stepsTitle": "Apa yang dilakukan saat peringatan muncul",
+		"stepsIntro": "Anda akan melihat hingga dua peringatan, satu dari peramban dan satu dari Windows. Keduanya bisa dilewati:",
+		"steps": [
+			{
+				"h": "Simpan file-nya",
+				"p": "Chrome dan Edge bisa menyebut file ini jarang diunduh atau berbahaya. Buka daftar unduhan, buka menu file tersebut, lalu pilih Keep (Simpan). Edge mungkin bertanya sekali lagi: pilih Keep anyway."
+			},
+			{
+				"h": "Buka installer",
+				"p": "Jalankan file yang Anda unduh. Windows bisa menampilkan jendela biru bertuliskan Windows protected your PC (Microsoft Defender SmartScreen). Klik More info, lalu Run anyway."
+			},
+			{
+				"h": "Pasang",
+				"p": "Ikuti installer. Foldline berjalan setelah selesai dan muncul di bagian atas layar Anda."
+			},
+			{
+				"h": "Periksa file (opsional)",
+				"p": "Setiap rilis mencantumkan checksum SHA-256 untuk installer. Di PowerShell, jalankan Get-FileHash pada file tersebut dan bandingkan hasilnya dengan yang ada di halaman rilis."
+			}
+		],
+		"whyTitle": "Mengapa peringatan muncul",
+		"why": "Foldline masih baru, dan installernya belum ditandatangani secara digital, sehingga peramban dan Windows belum punya catatan tentangnya. Peringatan ini berarti tidak dikenal, bukan berbahaya.",
+		"safeTitle": "Apakah aman?",
+		"safe": [
+			"Foldline bukan virus dan tidak menyertakan perangkat lunak lain. Tidak ada akun dan iklan, dan aplikasi tidak mengirim apa pun ke server Foldline. Hal yang dicarinya, seperti lirik, cuaca, tautan kalender, dan pengecekan pembaruan, hanya terjadi saat Anda memakai fitur itu, dan Kebijakan Privasi mencantumkan masing-masing.",
+			"Anda tidak perlu percaya begitu saja. Seluruh aplikasi bersumber terbuka: baca kodenya di GitHub, bandingkan perilakunya dengan yang kami katakan, atau bangun sendiri."
+		],
+		"source": "Baca kodenya di GitHub",
+		"privacy": "Baca Kebijakan Privasi"
+	}
+}
