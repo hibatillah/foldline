@@ -53,7 +53,7 @@ none; commits not pushed yet are not in them.
 
 Show what now exists locally: the tag and the commit it points to (`git log --oneline -1 <tag>`), whether it is a
 pre-release, the version commit if one was made, and what the pushes will do (the tag push starts `release.yml`, which
-builds the installer and publishes a GitHub release of the same name; for a tag without a suffix the `store` job then sends the MSIX to the Microsoft Store after a reviewer approves it, see "Publish to the Microsoft Store" in `docs/how-to/cut-a-release.md`). The notes end with a Contributors section for outside contributors only. Then ask the user whether to push. On yes, run
+builds the installer and publishes a GitHub release of the same name). The notes end with a Contributors section for outside contributors only. Then ask the user whether to push. On yes, run
 `git push origin master` when a version commit was made, then `git push origin <tag>`, and show the run it started with
 `gh run list --workflow release.yml --limit 1`. On no, leave everything as it is and mention how to undo it
 (`git tag -d <tag>`, and `git reset --hard HEAD~1` only if the version commit was made and the user wants it gone).
