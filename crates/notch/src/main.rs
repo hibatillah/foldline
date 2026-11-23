@@ -13,6 +13,9 @@ mod pages;
 mod platform;
 #[cfg(test)]
 mod source_scan;
+#[cfg(test)]
+#[path = "../../../scripts/sparse_identity.rs"]
+mod sparse_identity;
 mod ui;
 
 fn main() {
