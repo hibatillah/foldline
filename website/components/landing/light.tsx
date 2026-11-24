@@ -9,10 +9,13 @@ export function Light() {
 	const lightPerf = t.raw("light.perf") as Messages["light"]["perf"];
 
 	return (
-		<section className="mx-auto box-border max-w-[1280px] px-[clamp(16px,5vw,80px)] pt-[clamp(120px,13vw,200px)] max-[640px]:pt-24">
+		<section
+			id="light"
+			className="mx-auto box-border max-w-[1280px] px-[clamp(16px,5vw,80px)] pt-[clamp(120px,13vw,200px)] max-[640px]:pt-24"
+		>
 			<div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-12 gap-y-6 mb-[72px] max-[900px]:grid-cols-[minmax(0,1fr)] max-[640px]:mb-10 max-[640px]:gap-4">
 				<p className="text-[clamp(24px,2.2vw,30px)] font-medium tracking-[-0.02em] m-0">
-					<span className="text-muted-foreground">05</span>
+					<span className="text-muted-foreground">02</span>
 					{"\u00a0\u00a0"}
 					{t("light.label")}
 				</p>
@@ -27,7 +30,7 @@ export function Light() {
 					</p>
 				</div>
 			</div>
-			<div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-12 max-[900px]:grid-cols-[minmax(0,1fr)]">
+			<div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-12 max-[900px]:grid-cols-[minmax(0,1fr)] max-[900px]:[&>div:nth-child(2)]:order-first">
 				<div>
 					<p className="m-[0_0_14px] text-[15px] font-medium flex items-center gap-[8px]">
 						<span className="w-[8px] h-[8px] rounded-[2px] bg-primary" />

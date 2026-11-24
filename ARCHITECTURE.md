@@ -9,7 +9,7 @@ The notch is one window at the top of the screen that shows one page at a time, 
 - **collapsed**: a slim pill, shown while the pointer is away (`Mode::Resting` in `crates/notch/src/page.rs`).
 - **open**: the full notch with its header and the page's content (`Mode::Expanded`). The pointer opens it and it closes when the pointer leaves, or the pin in the header holds it open until unpinned.
 
-The app is two programs. `foldline.exe` is the notch, drawn with Direct2D and no UI framework, and it alone is held to the [performance budget](docs/explanation/performance-budget.md). `foldline-settings.exe` is the settings window, built with GPUI and started from the gear in the open header or the tray's **Settings** item. What each shows the user is in [README.md](README.md).
+The app is two programs, and the repository holds a third thing beside them, the website. `foldline.exe` is the notch, drawn with Direct2D and no UI framework, and it alone is held to the [performance budget](docs/explanation/performance-budget.md). `foldline-settings.exe` is the settings window, built with GPUI and started from the gear in the open header or the tray's **Settings** item. What each shows the user is in [README.md](README.md). The website is a separate Next.js program that never links the Rust code (see [The website](#the-website)).
 
 ## Project structure
 
@@ -19,6 +19,7 @@ crates/settings/   foldline-settings.exe, the settings window (GPUI)
 crates/store/      the settings file code both programs share: language, data folder, pause, snooze, screens
 crates/places/     the bundled city list and the location.* keys
 vendor/salah/      the prayer-time crate with one fix
+website/           the landing, download, releases and policy pages (Next.js, Bun, Vercel); not part of the Cargo workspace
 scripts/           reload, watch, perf, test-build, release notes, licenses, the city list
 installer/         the Inno Setup script and the MSIX package files
 assets/            branding, fonts, images, cities.tsv
@@ -61,9 +62,14 @@ The two programs never call each other's code. The settings file and one window 
 | `foldline.exe` (`crates/notch`) | `host/` owns the window, the monitor, opening and closing, the pin, the pause, the springs, input, the tray and the launcher of the settings window, and names no page. Pages and activities are each listed in one registry (`pages/mod.rs`, `activities/mod.rs`). `gfx/` and `ui/` draw with Direct2D and DirectWrite in a unit space that `host/notch/units.rs` converts to device pixels. | [host and pages](docs/explanation/host-and-pages.md), [drawing model](docs/explanation/drawing-model.md), [page API](docs/reference/page-api.md), [activities](docs/reference/activities.md) |
 | `foldline-settings.exe` (`crates/settings`) | GPUI and gpui-component, one file per section, one window at a time. It writes keys and tells the notch. | [settings window](docs/reference/settings-window.md), [add a setting](docs/how-to/add-a-setting.md) |
 | `store` (`crates/store`) | the settings file as `key=value` lines with per-key atomic writes, the data folder `%APPDATA%\Foldline`, and what both programs share (language, pause, snooze, countdown, screens) | [settings keys](docs/reference/settings-keys.md) |
+| `website/` | the public site `fold.hibatillah.com`: the landing page (hero, feature grid, notch anatomy, performance and privacy numbers, extend guide, the ten pages with hover cards, FAQ), the download, releases, privacy and terms pages, in English and Indonesian. The notch drawings are web components in `components/notch/`, the page sections in `components/landing/`, and the text in `messages/`. | [website/README.md](website/README.md) |
 | `places` (`crates/places`) | the city list behind the location search and the `location.*` keys that prayer times and weather share | [settings keys](docs/reference/settings-keys.md) |
 
 `crates/notch` and `crates/settings` depend on `store` and `places` and never on each other, so the notch links no UI framework. Both programs look up their texts in English and Indonesian with `tr!` ([text in two languages](docs/explanation/host-and-pages.md#text-in-two-languages)).
+
+## The website
+
+`website/` is a separate program from the two above: Cargo ignores it, it has its own `bun.lock`, and neither Rust program reads or writes anything of it. It deploys to Vercel from the `website/` root directory, and a commit that touches only the Rust workspace does not redeploy it. The download button sends a visitor to the installer of the latest GitHub release (`website/app/api/download/route.ts`). The site's analytics (PostHog, cookieless, no session replay), its bug-report form, the share image and the SEO files are described in [website/README.md](website/README.md); the privacy page states what the site collects.
 
 ## Data stores
 
@@ -111,6 +117,7 @@ Windows APIs by area:
 
 ## Build, test and release
 
+- [website/README.md](website/README.md) for running, testing and deploying the website (`bun run dev`, `bun run lint`, `bun test`). `.github/workflows/website.yml` runs the type check, format check, lint and build on pull requests into `master` that touch `website/`.
 - [Build, run and debug](docs/how-to/build-run-and-debug.md)
 - [Test and snapshot](docs/how-to/test-and-snapshot.md), [test map](docs/reference/test-map.md)
 - [Run the performance check](docs/how-to/run-the-perf-check.md)

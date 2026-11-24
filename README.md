@@ -6,7 +6,7 @@ Foldline puts a slim black pill at the top of your Windows screen. Point at it a
 
 It is written in Rust and draws straight to the screen with Direct2D: no UI framework, no web view. It idles at 0 % CPU and stays under 50 MB of memory. Foldline is free and open source, with no account and no paid tier.
 
-![The open notch on the media page with the track, the controls and synced lyrics](assets/images/notch-media.png)
+![The features of Foldline in one grid: the media page with synced lyrics, short messages, the file shelf, clipboard, device batteries, system stats, calendar and focus timer, weather, and the numbers behind the idle budget](assets/images/bento-grid.png)
 
 ## Make it yours
 

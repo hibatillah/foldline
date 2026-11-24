@@ -21,7 +21,7 @@ export function Extend() {
 		>
 			<div className="mb-[72px] grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-12 gap-y-6 max-[900px]:grid-cols-[minmax(0,1fr)] max-[640px]:mb-10 max-[640px]:gap-4">
 				<p className="m-0 text-[clamp(24px,2.2vw,30px)] font-medium tracking-[-0.02em]">
-					<span className="text-muted-foreground">06</span>
+					<span className="text-muted-foreground">03</span>
 					{"  "}
 					{t("own.label")}
 				</p>
@@ -48,7 +48,7 @@ export function Extend() {
 			</div>
 			<div className="grid grid-cols-[repeat(2,minmax(0,1fr))] items-stretch gap-6 max-[900px]:grid-cols-[minmax(0,1fr)]">
 				<div
-					className={`${PANEL} ${TEXTURE.universtock} ${TEXTURE_FILL} min-h-[300px] bg-[position:30%_60%]`}
+					className={`${PANEL} ${TEXTURE.universtock} ${TEXTURE_FILL} min-h-[300px] max-[640px]:min-h-0 max-[640px]:pb-10 bg-[position:30%_60%]`}
 				>
 					<div
 						className={`relative [zoom:1.1] max-[900px]:[zoom:0.75]! ${PHONE_ZOOM_CLASS.countdown}`}
@@ -57,9 +57,9 @@ export function Extend() {
 					</div>
 				</div>
 				<div
-					className={`${PANEL} ${TEXTURE.henrikLight} ${TEXTURE_FILL} min-h-[300px] items-center bg-[position:50%_40%] px-4 py-[clamp(24px,4vw,40px)]`}
+					className={`${PANEL} ${TEXTURE.henrikLight} ${TEXTURE_FILL} min-h-[300px] max-[640px]:min-h-0 items-center bg-[position:50%_40%] px-4 py-[clamp(24px,4vw,40px)]`}
 				>
-					<pre className="m-0 box-border w-[min(520px,100%)] overflow-x-auto rounded-xl bg-[#0b0b0c] p-[22px_24px] font-mono text-[14px] leading-[1.9] whitespace-pre-wrap text-[#e4e4e7] max-[640px]:p-[18px] max-[640px]:text-[12.5px] max-[640px]:whitespace-pre">
+					<pre className="m-0 box-border w-[min(520px,100%)] overflow-x-auto rounded-xl bg-[#0b0b0c] p-[22px_24px] font-mono text-[14px] leading-[1.9] whitespace-pre-wrap break-words text-[#e4e4e7] max-[640px]:p-[16px] max-[640px]:text-[12px] max-[640px]:leading-[1.7]">
 						<span className="text-[#8e8e99]">{"$"}</span>
 						{" scripts/new-content.sh page countdown\n"}
 						<span className="text-[#8e8e99]">{"›"}</span>

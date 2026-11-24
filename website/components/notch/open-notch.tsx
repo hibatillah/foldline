@@ -50,7 +50,7 @@ export function MediaStatus() {
 
 const PAGE_COUNT = 10;
 
-function NotchHeader({ activePage, status }: { activePage: number; status: ReactNode }) {
+export function NotchHeader({ activePage, status }: { activePage: number; status: ReactNode }) {
 	return (
 		<div className="relative h-[16px] flex items-center justify-between">
 			<div className="flex items-center gap-[4px]">

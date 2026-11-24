@@ -6,6 +6,7 @@ import type en from "@/messages/en.json";
 import { AutoDownload } from "./auto-download";
 import { CtaLink } from "./cta-link";
 import { PageShell } from "./page-shell";
+import { Reveal } from "./reveal";
 import { WindowsIcon } from "./windows-icon";
 
 type Messages = typeof en;
@@ -57,47 +58,53 @@ export function DownloadPage() {
 					<span className="text-[14px] text-muted-foreground">{content.meta}</span>
 				</div>
 
-				<h2 className={HEADING}>{content.stepsTitle}</h2>
-				<p className={BODY}>{content.stepsIntro}</p>
-				<ol className="[list-style:none] m-[16px_0_0] p-0 grid gap-[20px]">
-					{content.steps.map((step, index) => (
-						<li key={step.h} className="flex gap-[16px]">
-							<span
-								aria-hidden="true"
-								className="flex-none w-[28px] h-[28px] rounded-full grid place-items-center text-[14px] font-semibold bg-primary text-primary-foreground"
-							>
-								{index + 1}
-							</span>
-							<div>
-								<h3 className="m-[2px_0_6px] text-[16px] font-semibold">{step.h}</h3>
-								<p className={`${BODY} mb-0`}>
-									<Emphasized text={step.p} />
-								</p>
-							</div>
-						</li>
+				<Reveal>
+					<h2 className={HEADING}>{content.stepsTitle}</h2>
+					<p className={BODY}>{content.stepsIntro}</p>
+					<ol className="[list-style:none] m-[16px_0_0] p-0 grid gap-[20px]">
+						{content.steps.map((step, index) => (
+							<li key={step.h} className="flex gap-[16px]">
+								<span
+									aria-hidden="true"
+									className="flex-none w-[28px] h-[28px] rounded-full grid place-items-center text-[14px] font-semibold bg-primary text-primary-foreground"
+								>
+									{index + 1}
+								</span>
+								<div>
+									<h3 className="m-[2px_0_6px] text-[16px] font-semibold">{step.h}</h3>
+									<p className={`${BODY} mb-0`}>
+										<Emphasized text={step.p} />
+									</p>
+								</div>
+							</li>
+						))}
+					</ol>
+				</Reveal>
+
+				<Reveal>
+					<h2 className={HEADING}>{content.whyTitle}</h2>
+					<p className={BODY}>{content.why}</p>
+				</Reveal>
+
+				<Reveal>
+					<h2 className={HEADING}>{content.safeTitle}</h2>
+					{content.safe.map((paragraph) => (
+						<p key={paragraph} className={BODY}>
+							{paragraph}
+						</p>
 					))}
-				</ol>
-
-				<h2 className={HEADING}>{content.whyTitle}</h2>
-				<p className={BODY}>{content.why}</p>
-
-				<h2 className={HEADING}>{content.safeTitle}</h2>
-				{content.safe.map((paragraph) => (
-					<p key={paragraph} className={BODY}>
-						{paragraph}
-					</p>
-				))}
-				<div className="flex flex-wrap gap-[12px] mt-[20px]">
-					<CtaLink href={REPOSITORY} size="lg" variant="outline">
-						{content.source}
-					</CtaLink>
-					<Link
-						href="/privacy"
-						className="inline-flex items-center h-[44px] p-[0_4px] text-[15px] text-primary"
-					>
-						{content.privacy}
-					</Link>
-				</div>
+					<div className="flex flex-wrap gap-[12px] mt-[20px]">
+						<CtaLink href={REPOSITORY} size="lg" variant="muted">
+							{content.source}
+						</CtaLink>
+						<Link
+							href="/privacy"
+							className="inline-flex items-center h-[44px] p-[0_4px] text-[15px] text-primary"
+						>
+							{content.privacy}
+						</Link>
+					</div>
+				</Reveal>
 			</article>
 		</PageShell>
 	);

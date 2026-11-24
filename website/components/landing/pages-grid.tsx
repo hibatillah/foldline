@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { PageTile } from "./page-tile";
 import { TwoTone } from "./two-tone";
 
 type PageKey =
@@ -40,7 +41,34 @@ const PAGES: Array<[PageKey, LucideIcon]> = [
 	["devices", BatteryMedium],
 ];
 
-/** The ten pages as a grid of square tiles. */
+/** The pictures of `public/pages`, taken from the final designs on a dither background; each is as wide as its notch plus a margin. */
+const PAGE_PICTURE: Record<PageKey, { width: number; height: number }> = {
+	media: { width: 734, height: 184 },
+	shelf: { width: 660, height: 184 },
+	calendar: { width: 660, height: 250 },
+	timer: { width: 442, height: 184 },
+	todo: { width: 660, height: 242 },
+	prayer: { width: 660, height: 184 },
+	weather: { width: 660, height: 184 },
+	stats: { width: 844, height: 184 },
+	clipboard: { width: 660, height: 277 },
+	devices: { width: 592, height: 184 },
+};
+
+/** A hover card shows a picture at this share of its size, so every notch has the same scale. */
+const CARD_SCALE = 0.8;
+
+const COLUMNS = 5;
+
+/** Where the hover card sits above its tile: the first column keeps its left edge, the last its right edge. */
+function cardAlignment(index: number) {
+	const column = index % COLUMNS;
+	if (column === 0) return "left-0";
+	if (column === COLUMNS - 1) return "right-0";
+	return "left-1/2 -translate-x-1/2";
+}
+
+/** The ten pages as a grid of square tiles; on a pointer device each tile shows its page when hovered. */
 export function PagesGrid() {
 	const t = useTranslations();
 
@@ -58,9 +86,13 @@ export function PagesGrid() {
 			</div>
 			<div className="grid grid-cols-[repeat(5,minmax(0,1fr))] gap-[18px] max-[1000px]:grid-cols-[repeat(3,minmax(0,1fr))] max-[640px]:grid-cols-[repeat(2,minmax(0,1fr))] max-[640px]:gap-3">
 				{PAGES.map(([key, Icon], index) => (
-					<div
+					<PageTile
 						key={key}
-						className="box-border flex aspect-square flex-col justify-between rounded-[14px] bg-card p-5 [box-shadow:0_0_0_1px_var(--border)] transition-shadow duration-200 hover:[box-shadow:0_0_0_1px_color-mix(in_oklch,var(--primary)_45%,transparent)] max-[640px]:p-4"
+						picture={`/pages/${key}.jpg`}
+						width={PAGE_PICTURE[key].width * CARD_SCALE + 12}
+						height={PAGE_PICTURE[key].height}
+						alignment={cardAlignment(index)}
+						className="group relative box-border flex aspect-square flex-col justify-between rounded-[14px] bg-card p-5 [box-shadow:0_0_0_1px_var(--border)] transition-shadow duration-200 hover:[box-shadow:0_0_0_1px_color-mix(in_oklch,var(--primary)_45%,transparent)] max-[640px]:p-4"
 					>
 						<div className="flex justify-between items-start">
 							<span className="w-[44px] h-[44px] rounded-[11px] bg-[color:color-mix(in_oklch,_var(--primary)_10%,_transparent)] text-[color:oklch(0.42_0.19_263)] flex items-center justify-center">
@@ -76,7 +108,7 @@ export function PagesGrid() {
 								{t(`gridSub.${key}`)}
 							</span>
 						</div>
-					</div>
+					</PageTile>
 				))}
 			</div>
 		</section>

@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import type en from "@/messages/en.json";
 import { ExternalLink } from "./external-link";
 import { FeedbackDialog } from "./feedback-dialog";
+import { FooterWordmark } from "./footer-wordmark";
 import { ExternalArrow } from "./external-arrow";
 
 type Messages = typeof en;
@@ -17,12 +18,7 @@ export function SiteFooter() {
 
 	return (
 		<footer className="relative overflow-hidden mt-[96px]">
-			<div
-				aria-hidden="true"
-				className="select-none whitespace-nowrap text-[clamp(120px,21vw,300px)] font-semibold leading-[0.8] tracking-[-0.06em] text-[oklch(0.935_0.012_250)] max-[640px]:text-[25vw] absolute left-[50%] bottom-[-0.2em] [transform:translateX(-50%)]"
-			>
-				Foldline
-			</div>
+			<FooterWordmark />
 			<div className="mx-auto box-border max-w-[1280px] relative pt-[24px] pb-[clamp(110px,12.5vw,195px)] px-[clamp(16px,5vw,80px)] max-[640px]:pb-[28vw]">
 				<div className="grid grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] gap-8 pb-7 max-[640px]:grid-cols-[repeat(2,minmax(0,1fr))] max-[640px]:gap-x-4 max-[640px]:gap-y-8 max-[640px]:[&>div:first-child]:col-span-2">
 					<div className="flex flex-col gap-[10px]">

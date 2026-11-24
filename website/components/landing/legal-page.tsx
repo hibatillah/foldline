@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import type en from "@/messages/en.json";
 
 import { PageShell } from "./page-shell";
+import { Reveal } from "./reveal";
 
 type LegalDocument = Messages["privacy"];
 type Messages = typeof en;
@@ -39,7 +40,7 @@ export function LegalPage({ document }: { document: "privacy" | "terms" }) {
 				</p>
 				<p className="m-[0_0_40px] text-[17px] leading-[1.6]">{content.intro}</p>
 				{content.sections.map((section, index) => (
-					<section key={section.h} className="mb-[36px]">
+					<Reveal key={section.h} className="mb-[36px]">
 						<h2 className="leading-[1.25] m-[0_0_12px] font-semibold text-[20px]">
 							{index + 1}. {section.h}
 						</h2>
@@ -60,7 +61,7 @@ export function LegalPage({ document }: { document: "privacy" | "terms" }) {
 								))}
 							</ul>
 						)}
-					</section>
+					</Reveal>
 				))}
 			</article>
 		</PageShell>

@@ -3,6 +3,8 @@ import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { Anatomy } from "@/components/landing/anatomy";
+import { Bento } from "@/components/landing/bento";
 import { Extend } from "@/components/landing/extend";
 import { Faq } from "@/components/landing/faq";
 import { Finale } from "@/components/landing/finale";
@@ -10,15 +12,9 @@ import { Hero } from "@/components/landing/hero";
 import { Light } from "@/components/landing/light";
 import { PagesGrid } from "@/components/landing/pages-grid";
 import { Proof } from "@/components/landing/proof";
-import {
-	SectionKeep,
-	SectionNotice,
-	SectionOpen,
-	SectionPlan,
-} from "@/components/landing/sections";
+import { Reveal } from "@/components/landing/reveal";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteNav } from "@/components/landing/site-nav";
-import { Strip } from "@/components/landing/strip";
 import { LANDING } from "@/components/landing/landing-classes";
 import { JsonLd } from "@/components/landing/json-ld";
 import { routing } from "@/i18n/routing";
@@ -52,17 +48,26 @@ export default async function Home({ params }: LocaleParams) {
 			<SiteNav />
 			<main id="top">
 				<Hero />
-				<Proof />
-				<Strip />
-				<SectionOpen />
-				<SectionNotice />
-				<SectionPlan />
-				<SectionKeep />
-				<PagesGrid />
-				<Light />
-				<Extend />
-				<Faq />
-				<Finale />
+				<Reveal>
+					<Proof />
+				</Reveal>
+				<Bento />
+				<Anatomy />
+				<Reveal>
+					<Light />
+				</Reveal>
+				<Reveal>
+					<Extend />
+				</Reveal>
+				<Reveal>
+					<PagesGrid />
+				</Reveal>
+				<Reveal>
+					<Faq />
+				</Reveal>
+				<Reveal>
+					<Finale />
+				</Reveal>
 			</main>
 			<SiteFooter />
 		</div>

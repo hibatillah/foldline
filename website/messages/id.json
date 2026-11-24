@@ -166,8 +166,92 @@
 		{
 			"q": "Bisa dipakai dengan beberapa monitor?",
 			"a": "Ia ada di atas satu layar: layar utama, layar yang aktif, atau layar yang kamu pilih di Settings."
+		},
+		{
+			"q": "Apakah perlu akun, atau mengirim datamu ke mana pun?",
+			"a": "Tanpa akun dan tanpa analitik. Empat fitur menghubungi layanan luar, masing-masing hanya saat kamu memakainya: cek pembaruan (GitHub, saat kamu mengkliknya), lirik tersinkron (LRCLIB), tautan kalendermu (tiap 15 menit), dan cuaca (MET Norway, selama halamannya aktif). Pengaturan, daftar tugas, dan rak tetap di PC-mu.",
+			"more": {
+				"label": "Lihat apa yang keluar dari PC-mu",
+				"href": "#light"
+			}
+		},
+		{
+			"q": "Berjalan di Windows versi berapa?",
+			"a": "Windows 10 dan 11, 64-bit, diuji di Windows 11. Halaman media butuh pemutar yang muncul di kontrol media Windows.",
+			"more": {
+				"label": "Unduh untuk Windows",
+				"href": "/download"
+			}
+		},
+		{
+			"q": "Apakah tampil di atas aplikasi layar penuh dan game?",
+			"a": "Secara bawaan ia bersembunyi di atas aplikasi layar penuh dan hanya menampilkan lirik di atas jendela yang dimaksimalkan. Settings punya opsi perilaku untuk keduanya: tampilkan tidak ada, aktivitas, lirik, atau musik. Pin di header yang terbuka menjaga notch tetap terbuka di atas keduanya sampai kamu mengkliknya lagi.",
+			"more": {
+				"label": "Sematkan tetap terbuka",
+				"href": "#features"
+			}
+		},
+		{
+			"q": "Bisa dipakai tanpa mouse?",
+			"a": "Bisa. Touchpad berfungsi, dan halamannya bisa digeser: gulir atau geser dua jari untuk berpindah. Saat kursor ada di notch yang terbuka, tombol angka 1 sampai 9 langsung melompat ke sebuah halaman dan 0 ke halaman terakhir.",
+			"more": {
+				"label": "Lihat tombol angka",
+				"href": "#features"
+			}
+		},
+		{
+			"q": "Perlu bisa pemrograman untuk menambah halamanku sendiri?",
+			"a": "Tidak. Repositorinya disiapkan untuk vibe coding: ada panduan, dokumen, agen add-content, perintah yang menyiapkan folder, dan skrip yang memeriksa perubahanmu. Jelaskan halamannya dengan kata-kata biasa, biarkan agen menulisnya, dan pull request hanya menyentuh file milikmu.",
+			"more": {
+				"label": "Tambahkan halamanmu sendiri",
+				"href": "#extend"
+			}
 		}
 	],
+	"bento": {
+		"windows": {
+			"label": "Windows 10 dan 11",
+			"t": "Jalan bersama Windows"
+		},
+		"free": {
+			"t": "Gratis dan open source"
+		},
+		"clipboard": {
+			"t": "Tujuh salinan terakhir",
+			"d": "Hanya di memori."
+		}
+	},
+	"anatomy": {
+		"label": "Anatomi",
+		"a": "Satu bingkai untuk setiap halaman",
+		"b": "halaman hanya mengisi areanya sendiri",
+		"p": "Host menggambar bentuk, padding, dan header di setiap halaman. Halaman hanya menggambar area kontennya, setinggi 86 px kecuali ia meminta lebih, jadi halaman baru tak perlu mengurus jendelanya.",
+		"legend": "Bagian-bagian notch",
+		"edge": {
+			"t": "Tepi atas layar",
+			"d": "Notch menggantung darinya, dengan lengkung di kedua sisi."
+		},
+		"host": {
+			"t": "Host · 136 px",
+			"d": "Bentuk, padding, dan header, setinggi 136 px dengan halaman bawaan."
+		},
+		"pills": {
+			"t": "Titik halaman",
+			"d": "Satu per halaman; yang panjang adalah halaman yang terbuka."
+		},
+		"clock": {
+			"t": "Jam",
+			"d": "Di tengah header setinggi 16 px."
+		},
+		"status": {
+			"t": "Bilah status",
+			"d": "Ikon status, pin, dan roda gigi, di tepi kanan."
+		},
+		"page": {
+			"t": "Halaman · 86 px",
+			"d": "Hanya area ini milik halaman."
+		}
+	},
 	"final": {
 		"a": "Jadikan bagian atas layarmu berguna",
 		"b": "Gratis, open source, tanpa akun",

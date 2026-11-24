@@ -1,0 +1,1 @@
+Foldline: a Dynamic Island notch for the top of your Windows screen, shown as a grid of its pages and messages
