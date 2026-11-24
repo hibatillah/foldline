@@ -31,6 +31,8 @@ export async function generateMetadata({ params }: LocaleParams): Promise<Metada
 		locale,
 		title: t("meta.title"),
 		description: t("meta.description"),
+		// The cards show the tagline of the hero, which fits the 125 characters a preview keeps.
+		shareDescription: t("hero.b"),
 		absoluteTitle: true,
 	});
 }

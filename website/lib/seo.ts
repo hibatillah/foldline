@@ -18,12 +18,22 @@ export function firstSentence(text: string): string {
 	return end === -1 ? text : text.slice(0, end + 1);
 }
 
+/** The one share image of every page; `app/opengraph-image.jpg` and `twitter-image.jpg` are the same picture. */
+const shareImage = {
+	url: "/opengraph-image.jpg",
+	width: 1200,
+	height: 630,
+	alt: "Foldline: a Dynamic Island notch for the top of your Windows screen, shown as a grid of its pages and messages",
+};
+
 type PageMetadataInput = {
 	locale: Locale;
 	/** The page path without the locale prefix: "" for the home page, "/privacy" for the policy. */
 	path?: string;
 	title: string;
 	description: string;
+	/** The text of the Open Graph and Twitter cards when it differs from the page description. */
+	shareDescription?: string;
 	/** The home page title already holds the site name, so the layout title template is skipped. */
 	absoluteTitle?: boolean;
 	index?: boolean;
@@ -35,6 +45,7 @@ export function pageMetadata({
 	path = "",
 	title,
 	description,
+	shareDescription = description,
 	absoluteTitle = false,
 	index = true,
 }: PageMetadataInput): Metadata {
@@ -55,14 +66,27 @@ export function pageMetadata({
 			type: "website",
 			siteName,
 			title: fullTitle,
-			description,
+			description: shareDescription,
 			url,
+			images: [shareImage],
 			locale: openGraphLocales[locale],
 			alternateLocale: routing.locales
 				.filter((entry) => entry !== locale)
 				.map((entry) => openGraphLocales[entry]),
 		},
-		twitter: { card: "summary_large_image", title: fullTitle, description },
+		twitter: {
+			card: "summary_large_image",
+			title: fullTitle,
+			description: shareDescription,
+			images: [
+				{
+					url: "/twitter-image.jpg",
+					width: shareImage.width,
+					height: shareImage.height,
+					alt: shareImage.alt,
+				},
+			],
+		},
 	};
 }
 
