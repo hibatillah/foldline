@@ -40,7 +40,7 @@ next-intl serves English at `/` and Indonesian at `/id`, both built statically (
 
 - `lib/site.ts` holds the public address (`https://fold.hibatillah.com`) and the author; change the address there if the domain moves.
 - `lib/seo.ts` (`pageMetadata`) gives each page its title, description, self-canonical, `hreflang` alternates (with `x-default`), Open Graph and Twitter tags. The download page is `noindex` and left out of the sitemap.
-- `app/opengraph-image.jpg` and `twitter-image.jpg` are the one share image of every page and language: the first three rows of the landing page's feature grid, 1200 × 630 at 2×, with their `.alt.txt` texts. Capture it again after the grid changes.
+- `app/opengraph-image.jpg` (1200 × 630) is the share image of every page and language, and `app/twitter-image.jpg` (1200 × 600, the 2:1 of Twitter's large card, `summary_large_image`) is the one for Twitter. Both show the first three rows of the landing page's feature grid at 2×, with their `.alt.txt` texts. `lib/seo.ts` sets both in every page's tags. Capture them again after the grid changes.
 - `lib/structured-data.ts` writes the home page JSON-LD: website, software application, author and the FAQ.
 - `app/robots.ts` and `app/sitemap.ts` are generated; `public/llms.txt` is a hand-written summary for AI assistants. Keep its facts in step with the home page.
 - Icons: `app/favicon.ico`, `app/icon.png` and `app/apple-icon.png` come from `assets/branding/tile-stable.*`.

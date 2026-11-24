@@ -18,7 +18,7 @@ export function firstSentence(text: string): string {
 	return end === -1 ? text : text.slice(0, end + 1);
 }
 
-/** The one share image of every page; `app/opengraph-image.jpg` and `twitter-image.jpg` are the same picture. */
+/** The share image of every page, 1200 × 630 (`app/opengraph-image.jpg`). Twitter's large card has its own 2:1 picture, `app/twitter-image.jpg`. */
 const shareImage = {
 	url: "/opengraph-image.jpg",
 	width: 1200,
@@ -78,14 +78,7 @@ export function pageMetadata({
 			card: "summary_large_image",
 			title: fullTitle,
 			description: shareDescription,
-			images: [
-				{
-					url: "/twitter-image.jpg",
-					width: shareImage.width,
-					height: shareImage.height,
-					alt: shareImage.alt,
-				},
-			],
+			images: [{ url: "/twitter-image.jpg", width: 1200, height: 600, alt: shareImage.alt }],
 		},
 	};
 }
