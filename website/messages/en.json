@@ -166,8 +166,92 @@
 		{
 			"q": "Does it work with several monitors?",
 			"a": "It sits at the top of one screen: the main one, the focused one, or one you choose in Settings."
+		},
+		{
+			"q": "Does it need an account, or send my data anywhere?",
+			"a": "No account and no analytics. Four features contact an outside service, each only when you use it: the update check (GitHub, when you click it), synced lyrics (LRCLIB), your calendar link (every 15 minutes) and weather (MET Norway, while that page is on). Settings, the todo list and the shelf stay on your PC.",
+			"more": {
+				"label": "See what leaves your PC",
+				"href": "#light"
+			}
+		},
+		{
+			"q": "Which versions of Windows does it run on?",
+			"a": "Windows 10 and 11, 64-bit, tested on Windows 11. The media page needs a player that shows in the Windows media controls.",
+			"more": {
+				"label": "Download for Windows",
+				"href": "/download"
+			}
+		},
+		{
+			"q": "Does it show over full-screen apps and games?",
+			"a": "By default it hides over full-screen apps and shows only lyrics over maximized windows. Settings has behavior options for both: show nothing, activities, lyrics or music. The pin in the open header keeps the notch open over either until you click it again.",
+			"more": {
+				"label": "Pin it open",
+				"href": "#features"
+			}
+		},
+		{
+			"q": "Can I use it without a mouse?",
+			"a": "Yes. A touchpad works, and the pages swipe: scroll or swipe two fingers to move between them. While the pointer is on the open notch, the number keys 1 to 9 jump straight to a page and 0 to the last one.",
+			"more": {
+				"label": "See the number keys",
+				"href": "#features"
+			}
+		},
+		{
+			"q": "Do I need to know programming to add my own page?",
+			"a": "No. The repository is set up for vibe coding: it ships a guide, docs, an add-content agent, a command that scaffolds the folders and a script that checks your change. Describe the page in plain words, let the agent write it, and the pull request touches only your own files.",
+			"more": {
+				"label": "Add a page of your own",
+				"href": "#extend"
+			}
 		}
 	],
+	"bento": {
+		"windows": {
+			"label": "Windows 10 and 11",
+			"t": "Start it with Windows"
+		},
+		"free": {
+			"t": "Free and open source"
+		},
+		"clipboard": {
+			"t": "Last seven copies",
+			"d": "In memory only."
+		}
+	},
+	"anatomy": {
+		"label": "Anatomy",
+		"a": "One frame for every page",
+		"b": "a page fills only its own area",
+		"p": "The host draws the shape, the padding and the header on every page. A page draws only its content area, 86 px high unless it asks for more, so a new page never has to deal with the window.",
+		"legend": "The parts of the notch",
+		"edge": {
+			"t": "Top edge of the screen",
+			"d": "The notch hangs from it, with a flare on each side."
+		},
+		"host": {
+			"t": "Host · 136 px",
+			"d": "Shape, padding and header, 136 px tall with a default page."
+		},
+		"pills": {
+			"t": "Page dots",
+			"d": "One per page; the long one is the page that is open."
+		},
+		"clock": {
+			"t": "Clock",
+			"d": "In the middle of the 16 px header."
+		},
+		"status": {
+			"t": "Status bar",
+			"d": "Status icons, pin and gear, at the right edge."
+		},
+		"page": {
+			"t": "The page · 86 px",
+			"d": "Only this area is the page's own."
+		}
+	},
 	"final": {
 		"a": "Put the top of your screen to work",
 		"b": "Free, open source, no account",

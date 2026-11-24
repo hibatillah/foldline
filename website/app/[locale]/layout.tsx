@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import Script from "next/script";
 
 import "../globals.css";
+import { MotionRoot } from "@/components/landing/reveal";
 import { ThemeProvider } from "@/components/theme-provider";
 import { routing } from "@/i18n/routing";
 import { authorName, authorUrl, siteName, siteUrl } from "@/lib/site";
@@ -69,7 +70,9 @@ export default async function RootLayout({
 			<body>
 				{/* The design has no dark version, so the page is light only. */}
 				<ThemeProvider forcedTheme="light">
-					<NextIntlClientProvider>{children}</NextIntlClientProvider>
+					<NextIntlClientProvider>
+						<MotionRoot>{children}</MotionRoot>
+					</NextIntlClientProvider>
 				</ThemeProvider>
 				{loadReactGrab && (
 					<Script

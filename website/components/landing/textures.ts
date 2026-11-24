@@ -4,6 +4,7 @@ export const TEXTURE = {
 	henrikLight: "bg-[url(/textures/henrik-mceh-dither.png)]",
 	henrikDark: "bg-[url(/textures/henrik-t2sai-dither.png)]",
 	blueWide: "bg-[url(/textures/blue-dither-wide.png)]",
+	warm: "bg-[url(/textures/warm-dither.png)]",
 } as const;
 
 export type TextureKey = keyof typeof TEXTURE;

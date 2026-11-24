@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { Reveal } from "./reveal";
 import { PANEL, TEXTURE, TEXTURE_FILL } from "./textures";
 
 /** The body of a status page (404, error): a notch showing the code, a headline and the actions. */
@@ -15,7 +16,7 @@ export function StatusPage({
 	children: ReactNode;
 }) {
 	return (
-		<div className="mx-auto max-w-[720px] pb-6">
+		<Reveal className="mx-auto max-w-[720px] pb-6">
 			<div
 				className={`${PANEL} ${TEXTURE.henrikLight} ${TEXTURE_FILL} min-h-[200px] bg-[position:50%_40%]`}
 			>
@@ -30,6 +31,6 @@ export function StatusPage({
 				{text}
 			</p>
 			<div className="mt-9 flex flex-wrap gap-3">{children}</div>
-		</div>
+		</Reveal>
 	);
 }

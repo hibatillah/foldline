@@ -20,6 +20,8 @@ const VARIANT = {
 		"bg-[color-mix(in_oklch,var(--foreground)_9%,transparent)]! text-foreground! hover:bg-[color-mix(in_oklch,var(--foreground)_14%,transparent)]!",
 	lightOutline:
 		"relative border-white! bg-transparent! text-white! hover:bg-white/15! dark:bg-transparent! dark:hover:bg-white/15!",
+	outlineOnly:
+		"border-[color-mix(in_oklch,var(--foreground)_18%,transparent)]! bg-transparent! text-foreground! hover:bg-muted!",
 } as const;
 
 /** A call-to-action link drawn as the site Button. */
@@ -46,7 +48,12 @@ export function CtaLink({
 	// The download route leaves the site for GitHub, so it is tracked like an outside link.
 	if (href.startsWith("http") || href.startsWith("/api/")) {
 		return (
-			<ExternalLink href={href} className={className} data-slot="button">
+			<ExternalLink
+				href={href}
+				className={className}
+				data-slot="button"
+				{...(href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+			>
 				{children}
 			</ExternalLink>
 		);

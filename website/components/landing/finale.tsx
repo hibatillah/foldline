@@ -25,7 +25,7 @@ export function Finale() {
 						className="absolute right-[-6px] top-0 w-[6px] h-[6px] [background:radial-gradient(circle_6px_at_100%_100%,_transparent_98%,_#000_100%)]"
 					/>
 				</div>
-				<h2 className="text-[clamp(26px,2.4vw,32px)] leading-[1.22] relative m-0 font-medium tracking-[-0.025em] text-[#fff]">
+				<h2 className="text-[clamp(26px,2.4vw,32px)] leading-[1.22] relative m-0 font-medium tracking-[-0.025em] text-[#fff] text-balance">
 					{t("final.a")}
 					<br />
 					<span className="text-[rgba(255,255,255,0.72)]">{t("final.b")}</span>
