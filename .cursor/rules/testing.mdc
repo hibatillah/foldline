@@ -1,0 +1,9 @@
+---
+description: "Testing: applies when you edit crates/notch/src/**/*.rs, scripts/**, crates/settings/src/**/*.rs and related files."
+globs: "crates/notch/src/**/*.rs, scripts/**, crates/settings/src/**/*.rs, crates/store/src/**/*.rs"
+alwaysApply: false
+---
+
+Read `.claude/rules/testing.md` and follow it in full. It is the single source of this rule.
+
+@.claude/rules/testing.md

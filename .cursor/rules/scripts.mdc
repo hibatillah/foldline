@@ -1,0 +1,9 @@
+---
+description: "Scripts: applies when you edit scripts/**."
+globs: "scripts/**"
+alwaysApply: false
+---
+
+Read `.claude/rules/scripts.md` and follow it in full. It is the single source of this rule.
+
+@.claude/rules/scripts.md

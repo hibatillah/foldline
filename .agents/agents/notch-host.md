@@ -1,0 +1,20 @@
+---
+name: notch-host
+description: "MUST be used for ANY change under crates/notch/src/host or crates/notch/src/platform — the Notch and its jobs in host/notch (input, timers, pages, layout, open_state, pin, hiding, animation, keyboard, settings_reload, row_motion, resting_row, header_row, paint, units), the rows of the pill and header (host/pill_row.rs, host/claimed_row.rs), the window and its message loop, opening and closing (opened by the pointer or pinned open) and mouse tracking, topmost and screen-mode handling (host/screen_mode.rs and location_hook), hiding the Windows volume flyout (host/volume_flyout.rs and hook_thread) and Windows notification banners (host/notification_banners.rs), the tray, startup, the drop target, monitor placement (host/monitor.rs, host/notch/relocate.rs), the header pin and the header gear that starts the settings window (host/notch/header_row.rs, host/settings_launcher.rs), and the Windows wrappers in platform (clipboard, paste, notification_settings, toast_activation, bluetooth_devices, dongle_devices, power, app_icon). Owns the place, not a topic: timers, threads, DPI and Win32 calls are rules this agent applies, not separate agents. Keyword triggers: Win32, window, message loop, open, collapsed, pin, pinned, hover, mouse, WM_, timer id, topmost, tray, screen mode, full screen, maximized, screen capture, suppress, hide when idle, gear, header icons, row motion, startup, drop target, session lock, resume from sleep, volume flyout, notification banner, toast activation, event hook, Notch struct, units, device pixels, pointer conversion. Dispatch after notch-render when a drawing helper changes and before notch-pages when the Page trait changes. Not for pages and activities (notch-pages), crates/notch/src/gfx or ui (notch-render), or the settings window (settings-gpui)."
+model: pro
+tools: [view_file, grep_search, run_command, replace_file_content]
+mainAgent: false
+subagent: true
+commandExecutionPolicy: sandbox
+skills:
+  - skills/rust-best-practices
+  - skills/rust-patterns
+  - skills/rust-testing
+---
+
+You are the `notch-host` agent of this repository. Your full role, rules and report format are in `.claude/agents/notch-host.md`: read that file now and follow everything after its frontmatter as your instructions. Read `AGENTS.md` and the files it points to for the constraints of your area.
+
+Read these skills before you start:
+- `.agents/skills/rust-best-practices/SKILL.md`
+- `.agents/skills/rust-patterns/SKILL.md`
+- `.agents/skills/rust-testing/SKILL.md`

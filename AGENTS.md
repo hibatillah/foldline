@@ -61,6 +61,24 @@ A task across areas goes in this order: `notch-render`, then `notch-host` and `n
 
 The agent files, `.claude/rules/` and this file belong to the main session, and `docs-writer` does not edit them. After editing an agent file, run `claude plugin validate .claude/agents`: one unescaped `'` in a description (write `''` inside a single-quoted one) stops that agent from loading.
 
+## Agent integrations
+
+`.claude/` is the source: `.claude/agents/*.md` (role, body, `model`, `effort`, `color`, `skills`), `.claude/rules/*.md` (constraints, loaded by path) and `.claude/commands/`. Every other harness points back to it, so a rule or a role is written once. Find yours here:
+
+| Harness | Subagents | Rules | Commands and skills |
+| --- | --- | --- | --- |
+| Claude Code | `.claude/agents/*.md` | `.claude/rules/*.md` | `.claude/commands/*.md` |
+| Codex | `.codex/agents/*.toml` (`name`, `description`, `model`, `model_reasoning_effort`, `developer_instructions`) | none for guidance: Codex `.rules` files only approve commands. Read the matching `.claude/rules/*.md` for the paths you edit | skills in `.agents/skills/`; no command file for now |
+| Cursor | reads `.claude/agents/` itself, so no `.cursor/agents/` | `.cursor/rules/*.mdc` (a pointer to the `.claude/rules/` file) | `.cursor/commands/*.md` |
+| Antigravity | `.agents/agents/*.md` (`name`, `description`, `model`, `tools`, `skills`) | `.agents/rules/*.md` (`trigger`, `globs`, a pointer to the `.claude/rules/` file) | skills in `.agents/skills/`; no workflows for now |
+
+The skills in `.agents/skills/` are tracked in git and listed in `skills-lock.json`. `/add-content` lives there as `.agents/skills/add-content/SKILL.md`.
+
+- Codex model names mirror the Claude model (`sonnet` and `opus` give `gpt-6.2-sol`, `haiku` gives `gpt-6-luna`); Antigravity uses `pro` for `sonnet` and `opus` and `flash` for `haiku`. Efforts carry over to `model_reasoning_effort`. Neither harness has a `color` field.
+- Codex ignores `sandbox_mode` in an agent file, so the read-only `perf-auditor` says so in its instructions.
+- When you change an agent's description, model, effort or skills in `.claude/agents/`, change the same fields in `.codex/agents/` and `.agents/agents/`. When you add a rule, add its pointer in `.cursor/rules/` and `.agents/rules/`.
+- Antigravity reads `.agents/` and also the older `.agent/`; use `.agents/` only.
+
 ## Contribute your own content
 
 A pull request that adds one page, one activity or the settings of a page stays inside the contributor's own files. Use the `add-content` agent (`/add-content <description>` in Claude Code), or follow `docs/how-to/add-your-content.md` by hand. `scripts/new-content.sh page|activity|settings <id>` scaffolds the folders and the one-line registrations, and `scripts/check-content-paths.sh --id <id>` lists anything outside the content area for the pull request description. For this route the agent replaces the area-agent chain above. A change to the host, the drawing code, the `Page` or `Activity` trait or another page is not a content pull request and goes through the area agents. When someone asks you to add a page, an activity or a page's settings, take this route.
