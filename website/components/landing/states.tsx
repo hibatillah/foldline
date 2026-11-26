@@ -64,7 +64,7 @@ export function States() {
 				</div>
 			</Reveal>
 
-			<Reveal className="flex flex-col gap-8">
+			<Reveal className="grid grid-cols-[repeat(2,minmax(0,1fr))] items-center gap-x-12 gap-y-8 max-[900px]:grid-cols-[minmax(0,1fr)]">
 				<div>
 					<h3 className={SUBTITLE}>{t("states.page.t")}</h3>
 					<p className="mt-3 max-w-[56ch] text-[17px] leading-[1.6] text-muted-foreground">
@@ -113,7 +113,7 @@ export function States() {
 			</div>
 
 			<Reveal className="mt-12">
-				<CtaLink href="/#pages" size="lg" variant="outlineOnly">
+				<CtaLink href="/#pages" size="lg" variant="muted">
 					{t("states.more")}
 					<span aria-hidden="true">→</span>
 				</CtaLink>

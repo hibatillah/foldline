@@ -3,6 +3,7 @@
 	"langLabel": "Language",
 	"nav": {
 		"features": "Features",
+		"pages": "Pages",
 		"faq": "FAQ",
 		"releases": "Releases",
 		"cta": "Download"
@@ -826,7 +827,6 @@
 		"more": "See each page"
 	},
 	"pageDetail": {
-		"navLabel": "Other pages",
 		"position": "Page {number} of {total}",
 		"openTitle": "When the notch is open",
 		"collapsedTitle": "When the notch is collapsed",
@@ -834,8 +834,6 @@
 		"noCollapsed": "This page has no activity of its own. It shows only when the notch is open.",
 		"noSettings": "No settings of its own. Turn the page on and set its place in the Pages section.",
 		"exampleNote": "An example of what the pill shows.",
-		"previous": "Previous page",
-		"next": "Next page",
 		"ctaTitle": "Try it on your screen",
 		"ctaText": "Foldline is free and runs on Windows 10 and 11.",
 		"pictureAlt": "The {page} page in the open notch",

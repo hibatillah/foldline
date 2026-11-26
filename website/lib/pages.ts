@@ -31,3 +31,17 @@ export const PAGE_PICTURE: Record<PageKey, { width: number; height: number }> = 
 export function isPageKey(value: string): value is PageKey {
 	return (PAGE_KEYS as readonly string[]).includes(value);
 }
+
+/** The cut-outs of `public/pages/notch`: the open notch alone, as wide as the notch itself. */
+export const NOTCH_PICTURE: Record<PageKey, { width: number; height: number }> = {
+	media: { width: 612, height: 184 },
+	shelf: { width: 554, height: 184 },
+	calendar: { width: 553, height: 250 },
+	timer: { width: 335, height: 184 },
+	todo: { width: 554, height: 242 },
+	prayer: { width: 554, height: 184 },
+	weather: { width: 554, height: 184 },
+	stats: { width: 737, height: 184 },
+	clipboard: { width: 553, height: 277 },
+	devices: { width: 485, height: 184 },
+};

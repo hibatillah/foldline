@@ -3,6 +3,7 @@
 	"langLabel": "Bahasa",
 	"nav": {
 		"features": "Fitur",
+		"pages": "Halaman",
 		"faq": "FAQ",
 		"releases": "Rilis",
 		"cta": "Unduh"
@@ -826,7 +827,6 @@
 		"more": "Lihat tiap halaman"
 	},
 	"pageDetail": {
-		"navLabel": "Halaman lain",
 		"position": "Halaman {number} dari {total}",
 		"openTitle": "Saat notch terbuka",
 		"collapsedTitle": "Saat notch tertutup",
@@ -834,8 +834,6 @@
 		"noCollapsed": "Halaman ini tidak punya aktivitas sendiri. Ia hanya tampil saat notch terbuka.",
 		"noSettings": "Tidak punya pengaturan sendiri. Aktifkan halamannya dan atur posisinya di bagian Pages.",
 		"exampleNote": "Contoh isi pil.",
-		"previous": "Halaman sebelumnya",
-		"next": "Halaman berikutnya",
 		"ctaTitle": "Coba di layarmu",
 		"ctaText": "Foldline gratis dan berjalan di Windows 10 dan 11.",
 		"pictureAlt": "Halaman {page} di notch yang terbuka",

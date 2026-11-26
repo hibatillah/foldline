@@ -20,14 +20,20 @@ export function SiteNav() {
 			>
 				<Link
 					href="/"
-					className="flex w-fit items-center justify-self-start gap-[10px] no-underline font-semibold text-[18px] tracking-[-0.01em]"
+					className="flex w-fit items-center justify-self-start no-underline font-semibold text-[18px] tracking-[-0.01em]"
 				>
 					<Image src="/logo.svg" alt="" width={26} height={26} className="block rounded-[7px]" />
-					Foldline
+					{/* The name shows only once the header floats. */}
+					<span className="max-w-0 overflow-hidden pl-0 opacity-0 transition-[max-width,padding,opacity] duration-250 group-data-[stuck=true]:max-w-[120px] group-data-[stuck=true]:pl-[10px] group-data-[stuck=true]:opacity-100 motion-reduce:transition-none">
+						Foldline
+					</span>
 				</Link>
 				<div className="flex max-[1000px]:hidden gap-[30px] text-[15px]">
 					<Link href="/#features" className="no-underline text-foreground transition-colors">
 						{t("nav.features")}
+					</Link>
+					<Link href="/#pages" className="no-underline text-foreground transition-colors">
+						{t("nav.pages")}
 					</Link>
 					<Link href="/#faq" className="no-underline text-foreground transition-colors">
 						{t("nav.faq")}
