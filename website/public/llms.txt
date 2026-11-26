@@ -9,8 +9,8 @@ Foldline is licensed GPL-3.0-or-later. The name and logo are not under the code 
 - Price: free, with no paid tier, in-app purchase or advertising.
 - Platform: Windows 10 and 11, 64-bit. Windows only.
 - Latest version: 0.6.0, released 23 November 2026. Installer size 5.76 MB.
-- Pages: media, shelf, calendar, focus timer, todo, prayer times, weather, system stats, clipboard, device batteries.
-- Activities in the collapsed pill: volume and brightness, battery, Bluetooth devices, microphone and camera in use, Caps Lock, Windows notifications, browser downloads.
+- Pages: media, shelf, calendar, focus timer, todo, prayer times, weather, system stats, clipboard, device batteries. A page is what the open notch shows.
+- Activities in the collapsed pill (an activity is what the pill shows while something happens, then goes away): volume and brightness, battery, Bluetooth devices, microphone and camera in use, Caps Lock, Windows notifications, browser downloads.
 - Extensible: a contributor can add a page, an activity or a page's settings in its own folder and send a pull request.
 - Installer: not code-signed yet, so Windows SmartScreen shows "Windows protected your PC". Choose More info, then Run anyway. Releases are published on GitHub only; Foldline is not on the Microsoft Store.
 
@@ -38,11 +38,26 @@ The website counts visits with PostHog in cookieless mode, stores nothing on you
 
 ## Pages
 
-- [Home](https://fold.hibatillah.com/): overview, features and FAQ.
+- [Home](https://fold.hibatillah.com/): overview, the notch anatomy, open and collapsed states, features and FAQ.
 - [Home in Indonesian](https://fold.hibatillah.com/id): the same page in Bahasa Indonesia.
 - [Releases](https://fold.hibatillah.com/releases): what changed in each version, in plain words.
 - [Privacy Policy](https://fold.hibatillah.com/privacy): what the website and the app collect.
 - [Terms of Service](https://fold.hibatillah.com/terms): license, trademark and warranty terms.
+
+## Page details
+
+Each page has its own page on the website, in English and, under `/id`, in Indonesian:
+
+- [Media and lyrics](https://fold.hibatillah.com/pages/media): the playing track, its controls and synced lyrics, from any player in the Windows media controls.
+- [File shelf](https://fold.hibatillah.com/pages/shelf): drop files and pick them up later, twelve at most.
+- [Calendar](https://fold.hibatillah.com/pages/calendar): events from an iCal link, by month or by week, with a reminder in the collapsed pill.
+- [Focus timer](https://fold.hibatillah.com/pages/timer): a focus timer with short and long breaks, with a ring in the collapsed pill.
+- [Todo](https://fold.hibatillah.com/pages/todo): a list with no limit. It has no collapsed view and no settings.
+- [Prayer times](https://fold.hibatillah.com/pages/prayer): prayer times for any city, calculated on your PC, with a countdown in the collapsed pill.
+- [Weather](https://fold.hibatillah.com/pages/weather): the next hours or days from MET Norway, with a rain alert in the collapsed pill.
+- [System stats](https://fold.hibatillah.com/pages/stats): CPU, memory, GPUs, network and disks at a glance. It has no collapsed view.
+- [Clipboard](https://fold.hibatillah.com/pages/clipboard): your last seven copies, kept in memory only.
+- [Device batteries](https://fold.hibatillah.com/pages/devices): the battery of your Bluetooth and 2.4 GHz receiver devices.
 
 ## Source and downloads
 

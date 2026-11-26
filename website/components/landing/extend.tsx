@@ -21,7 +21,7 @@ export function Extend() {
 		>
 			<div className="mb-[72px] grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-12 gap-y-6 max-[900px]:grid-cols-[minmax(0,1fr)] max-[640px]:mb-10 max-[640px]:gap-4">
 				<p className="m-0 text-[clamp(24px,2.2vw,30px)] font-medium tracking-[-0.02em]">
-					<span className="text-muted-foreground">03</span>
+					<span className="text-muted-foreground">04</span>
 					{"  "}
 					{t("own.label")}
 				</p>
