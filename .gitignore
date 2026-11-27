@@ -2,9 +2,9 @@
 /target-*
 /run
 */skills/
+!/.agents/skills/
 /.superpowers
 /docs/superpowers
 /.codegraph
 /dist
 /.delta
-/.agents

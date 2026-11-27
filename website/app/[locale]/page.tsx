@@ -13,6 +13,7 @@ import { Light } from "@/components/landing/light";
 import { PagesGrid } from "@/components/landing/pages-grid";
 import { Proof } from "@/components/landing/proof";
 import { Reveal } from "@/components/landing/reveal";
+import { States } from "@/components/landing/states";
 import { SiteFooter } from "@/components/landing/site-footer";
 import { SiteNav } from "@/components/landing/site-nav";
 import { LANDING } from "@/components/landing/landing-classes";
@@ -55,6 +56,7 @@ export default async function Home({ params }: LocaleParams) {
 				</Reveal>
 				<Bento />
 				<Anatomy />
+				<States />
 				<Reveal>
 					<Light />
 				</Reveal>

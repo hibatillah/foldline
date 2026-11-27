@@ -1,0 +1,9 @@
+---
+description: "Docs: applies when you edit docs/**, README.md, ARCHITECTURE.md."
+globs: "docs/**, README.md, ARCHITECTURE.md"
+alwaysApply: false
+---
+
+Read `.claude/rules/docs.md` and follow it in full. It is the single source of this rule.
+
+@.claude/rules/docs.md

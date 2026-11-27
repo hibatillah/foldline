@@ -1,0 +1,8 @@
+---
+description: "Workflow: always in force in this repository."
+alwaysApply: true
+---
+
+Read `.claude/rules/workflow.md` and follow it in full. It is the single source of this rule.
+
+@.claude/rules/workflow.md

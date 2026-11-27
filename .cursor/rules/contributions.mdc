@@ -1,0 +1,8 @@
+---
+description: "Contributions: always in force in this repository."
+alwaysApply: true
+---
+
+Read `.claude/rules/contributions.md` and follow it in full. It is the single source of this rule.
+
+@.claude/rules/contributions.md

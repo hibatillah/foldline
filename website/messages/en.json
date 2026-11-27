@@ -3,6 +3,7 @@
 	"langLabel": "Language",
 	"nav": {
 		"features": "Features",
+		"pages": "Pages",
 		"faq": "FAQ",
 		"releases": "Releases",
 		"cta": "Download"
@@ -796,5 +797,107 @@
 		],
 		"source": "Read the code on GitHub",
 		"privacy": "Read the Privacy Policy"
+	},
+	"states": {
+		"label": "States",
+		"a": "Open and collapsed",
+		"b": "pages in one, activities in both",
+		"p": "The notch is open when you point at it and collapsed when you don't. A page fills the open notch. An activity shows in either state.",
+		"page": {
+			"t": "Page",
+			"d": "One screen of the open notch: media, calendar, timer and more. Switch with the dots in the header, the scroll wheel or the number keys.",
+			"alt": "The media page in the open notch"
+		},
+		"activity": {
+			"t": "Activity",
+			"d": "A live signal from your PC or a page, such as a running timer, the battery or a volume change. It shows in the open notch, in the collapsed pill, or only at the moment it happens."
+		},
+		"open": {
+			"t": "In the open notch",
+			"d": "Small marks sit in the status bar at the top right of the header for as long as something lasts."
+		},
+		"collapsed": {
+			"t": "In the collapsed pill",
+			"d": "At rest the pill shows the clock, with marks beside it such as the timer ring and the battery ring."
+		},
+		"demand": {
+			"t": "On demand",
+			"d": "Volume, brightness and notifications take over the pill for a moment, then it goes back to rest."
+		},
+		"more": "See each page"
+	},
+	"pageDetail": {
+		"position": "Page {number} of {total}",
+		"openTitle": "When the notch is open",
+		"collapsedTitle": "When the notch is collapsed",
+		"settingsTitle": "In Settings",
+		"noCollapsed": "This page has no activity of its own. It shows only when the notch is open.",
+		"noSettings": "No settings of its own. Turn the page on and set its place in the Pages section.",
+		"exampleNote": "An example of what the pill shows.",
+		"ctaTitle": "Try it on your screen",
+		"ctaText": "Foldline is free and runs on Windows 10 and 11.",
+		"pictureAlt": "The {page} page in the open notch",
+		"items": {
+			"media": {
+				"lead": "The track that is playing, its controls and the synced lyrics, from any player that shows in the Windows media controls.",
+				"open": "Cover art, title and artist, play, pause and skip, and the lyric line that is playing. Lyrics come from LRCLIB.",
+				"collapsed": "A small wave sits in the pill while music plays, so you can see it without opening anything.",
+				"settings": null
+			},
+			"shelf": {
+				"lead": "A place to drop files and pick them up later. It holds twelve at most.",
+				"open": "Drop a file on the notch to keep it, and drag it out again when you need it.",
+				"collapsed": "A short message appears in the pill when something happens on the shelf.",
+				"settings": null
+			},
+			"calendar": {
+				"lead": "Your events from an iCal link, by month or by week.",
+				"open": "The month or the week, and the events of the day you pick.",
+				"collapsed": "A countdown to the next event stays in the pill, so a reminder shows even when the notch is closed.",
+				"settings": "The Calendar section sets the view, the iCal address and how often it downloads again."
+			},
+			"timer": {
+				"lead": "A focus timer with short and long breaks.",
+				"open": "Start, pause and reset a round of focus time, then take a short or a long break.",
+				"collapsed": "A ring in the pill shows the round that is running, and a short message appears when it changes.",
+				"settings": "The Timer section sets the focus, short break and long break lengths in minutes."
+			},
+			"todo": {
+				"lead": "A list with no limit.",
+				"open": "Add, tick and remove tasks. Remove one by mistake and you can undo it.",
+				"collapsed": null,
+				"settings": null
+			},
+			"prayer": {
+				"lead": "Prayer times for any city, calculated on your PC.",
+				"open": "The prayer times of the day, with the next one marked.",
+				"collapsed": "A countdown mark in the pill shows the time to the next prayer, and a message appears when it is time.",
+				"settings": "The Shalat section sets the calculation method and the Asr school. The city comes from General."
+			},
+			"weather": {
+				"lead": "The next hours or days from MET Norway, for the city you choose.",
+				"open": "A forecast you can switch between the next hours and the next days.",
+				"collapsed": "With the rain alert on, a card opens 30 minutes before the next rain, then a countdown mark stays until it starts.",
+				"settings": "The Weather section holds the rain alert switch. The city comes from General."
+			},
+			"stats": {
+				"lead": "CPU, memory, GPUs, network and disks at a glance.",
+				"open": "Cards for each of them, with charts that update while the page is on screen.",
+				"collapsed": null,
+				"settings": "The System stats section picks which disks (up to 3) and which GPUs (up to 2) to show."
+			},
+			"clipboard": {
+				"lead": "Your last seven copies, kept in memory only.",
+				"open": "The last seven copies as a list. Nothing is written to disk or sent anywhere, and the history goes when you switch the page off or quit.",
+				"collapsed": "The Copied activity puts a short message in the pill when you copy, with or without this page. It never reads what you copied.",
+				"settings": null
+			},
+			"devices": {
+				"lead": "The battery of your Bluetooth and 2.4 GHz receiver devices.",
+				"open": "Each connected device with its battery level.",
+				"collapsed": "Two activities work beside this page: a message when a Bluetooth device connects or disconnects, and a red warning when a battery falls to 20 % and 10 %.",
+				"settings": null
+			}
+		}
 	}
 }

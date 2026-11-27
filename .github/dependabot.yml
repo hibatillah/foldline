@@ -1,0 +1,35 @@
+# Version updates: one pull request per month (on the 1st) for each of the two programs, with every bump grouped in it.
+# Security updates are separate: GitHub opens them as soon as an advisory exists, outside this schedule and ungrouped.
+# Their switch is in the repository settings (Settings > Advanced Security > Dependabot), not in this file.
+version: 2
+
+updates:
+  # The notch and the settings window: the Cargo workspace at the root (Cargo.lock). vendor/salah is a path patch and stays out.
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: monthly
+      time: "06:00"
+      timezone: Asia/Jakarta
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      cargo-dependencies:
+        applies-to: version-updates
+        patterns: ["*"]
+
+  # The website: Next.js, installed with Bun (website/bun.lock).
+  - package-ecosystem: bun
+    directory: /website
+    schedule:
+      interval: monthly
+      time: "06:00"
+      timezone: Asia/Jakarta
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(website)"
+    groups:
+      website-dependencies:
+        applies-to: version-updates
+        patterns: ["*"]

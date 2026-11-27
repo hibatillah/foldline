@@ -3,6 +3,7 @@
 	"langLabel": "Bahasa",
 	"nav": {
 		"features": "Fitur",
+		"pages": "Halaman",
 		"faq": "FAQ",
 		"releases": "Rilis",
 		"cta": "Unduh"
@@ -796,5 +797,107 @@
 		],
 		"source": "Baca kodenya di GitHub",
 		"privacy": "Baca Kebijakan Privasi"
+	},
+	"states": {
+		"label": "Status",
+		"a": "Terbuka dan tertutup",
+		"b": "halaman di satu, aktivitas di keduanya",
+		"p": "Notch terbuka saat kamu mengarahkan kursor dan tertutup saat tidak. Halaman mengisi notch yang terbuka. Aktivitas tampil di kedua keadaan.",
+		"page": {
+			"t": "Halaman",
+			"d": "Satu layar di notch yang terbuka: media, kalender, timer, dan lainnya. Berpindah dengan titik di header, roda scroll, atau tombol angka.",
+			"alt": "Halaman media di notch yang terbuka"
+		},
+		"activity": {
+			"t": "Aktivitas",
+			"d": "Sinyal langsung dari PC atau sebuah halaman, seperti timer yang berjalan, baterai, atau perubahan volume. Ia tampil di notch yang terbuka, di pil yang tertutup, atau hanya saat sesuatu terjadi."
+		},
+		"open": {
+			"t": "Di notch yang terbuka",
+			"d": "Tanda kecil berada di bilah status di kanan atas header selama sesuatu berlangsung."
+		},
+		"collapsed": {
+			"t": "Di pil yang tertutup",
+			"d": "Saat diam, pil menampilkan jam dengan tanda di sampingnya, seperti cincin timer dan cincin baterai."
+		},
+		"demand": {
+			"t": "Sesuai kebutuhan",
+			"d": "Volume, kecerahan, dan notifikasi mengambil alih pil sesaat, lalu pil kembali diam."
+		},
+		"more": "Lihat tiap halaman"
+	},
+	"pageDetail": {
+		"position": "Halaman {number} dari {total}",
+		"openTitle": "Saat notch terbuka",
+		"collapsedTitle": "Saat notch tertutup",
+		"settingsTitle": "Di Settings",
+		"noCollapsed": "Halaman ini tidak punya aktivitas sendiri. Ia hanya tampil saat notch terbuka.",
+		"noSettings": "Tidak punya pengaturan sendiri. Aktifkan halamannya dan atur posisinya di bagian Pages.",
+		"exampleNote": "Contoh isi pil.",
+		"ctaTitle": "Coba di layarmu",
+		"ctaText": "Foldline gratis dan berjalan di Windows 10 dan 11.",
+		"pictureAlt": "Halaman {page} di notch yang terbuka",
+		"items": {
+			"media": {
+				"lead": "Lagu yang sedang diputar, kontrolnya, dan lirik yang tersinkron, dari pemutar apa pun yang muncul di kontrol media Windows.",
+				"open": "Sampul, judul dan artis, putar, jeda, dan lewati, serta baris lirik yang sedang berjalan. Lirik datang dari LRCLIB.",
+				"collapsed": "Gelombang kecil muncul di pil selama musik diputar, jadi kamu bisa melihatnya tanpa membuka apa pun.",
+				"settings": null
+			},
+			"shelf": {
+				"lead": "Tempat menaruh file dan mengambilnya nanti. Maksimal dua belas file.",
+				"open": "Jatuhkan file ke notch untuk menyimpannya, dan seret keluar lagi saat dibutuhkan.",
+				"collapsed": "Pesan singkat muncul di pil saat sesuatu terjadi di rak.",
+				"settings": null
+			},
+			"calendar": {
+				"lead": "Acaramu dari link iCal, per bulan atau per minggu.",
+				"open": "Bulan atau minggu, dan acara pada hari yang kamu pilih.",
+				"collapsed": "Hitung mundur ke acara berikutnya tetap ada di pil, jadi pengingat muncul walau notch tertutup.",
+				"settings": "Bagian Calendar mengatur tampilan, alamat iCal, dan seberapa sering diunduh ulang."
+			},
+			"timer": {
+				"lead": "Timer fokus dengan istirahat pendek dan panjang.",
+				"open": "Mulai, jeda, dan atur ulang satu ronde fokus, lalu ambil istirahat pendek atau panjang.",
+				"collapsed": "Cincin di pil menunjukkan ronde yang berjalan, dan pesan singkat muncul saat ronde berganti.",
+				"settings": "Bagian Timer mengatur lama fokus, istirahat pendek, dan istirahat panjang dalam menit."
+			},
+			"todo": {
+				"lead": "Daftar tanpa batas.",
+				"open": "Tambah, centang, dan hapus tugas. Salah hapus satu, dan kamu bisa membatalkannya.",
+				"collapsed": null,
+				"settings": null
+			},
+			"prayer": {
+				"lead": "Jadwal salat untuk kota mana pun, dihitung di PC-mu.",
+				"open": "Waktu salat hari ini, dengan yang berikutnya diberi tanda.",
+				"collapsed": "Tanda hitung mundur di pil menunjukkan waktu ke salat berikutnya, dan pesan muncul saat waktunya tiba.",
+				"settings": "Bagian Shalat mengatur metode perhitungan dan mazhab Asar. Kotanya dari General."
+			},
+			"weather": {
+				"lead": "Beberapa jam atau hari ke depan dari MET Norway, untuk kota yang kamu pilih.",
+				"open": "Prakiraan yang bisa kamu ganti antara jam-jam ke depan dan hari-hari ke depan.",
+				"collapsed": "Saat peringatan hujan menyala, kartu terbuka 30 menit sebelum hujan berikutnya, lalu tanda hitung mundur tetap ada sampai hujan mulai.",
+				"settings": "Bagian Weather memuat sakelar peringatan hujan. Kotanya dari General."
+			},
+			"stats": {
+				"lead": "CPU, memori, GPU, jaringan, dan disk sekilas pandang.",
+				"open": "Kartu untuk masing-masing, dengan grafik yang diperbarui selama halaman tampil di layar.",
+				"collapsed": null,
+				"settings": "Bagian System stats memilih disk mana (maksimal 3) dan GPU mana (maksimal 2) yang ditampilkan."
+			},
+			"clipboard": {
+				"lead": "Tujuh salinan terakhirmu, hanya disimpan di memori.",
+				"open": "Tujuh salinan terakhir sebagai daftar. Tidak ada yang ditulis ke disk atau dikirim ke mana pun, dan riwayatnya hilang saat halaman dimatikan atau aplikasi ditutup.",
+				"collapsed": "Aktivitas Copied menaruh pesan singkat di pil saat kamu menyalin, dengan atau tanpa halaman ini. Ia tak pernah membaca apa yang kamu salin.",
+				"settings": null
+			},
+			"devices": {
+				"lead": "Baterai perangkat Bluetooth dan penerima 2,4 GHz milikmu.",
+				"open": "Setiap perangkat yang tersambung beserta level baterainya.",
+				"collapsed": "Dua aktivitas bekerja di samping halaman ini: pesan saat perangkat Bluetooth tersambung atau terputus, dan peringatan merah saat baterai turun ke 20 % dan 10 %.",
+				"settings": null
+			}
+		}
 	}
 }
