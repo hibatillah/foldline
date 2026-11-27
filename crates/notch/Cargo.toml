@@ -18,4 +18,4 @@ windows-collections = "0.3.2"
 places = { path = "../places" }
 store = { path = "../store" }
 salah = "0.7.6"
-rust-i18n = "3"
+rust-i18n = "4"
